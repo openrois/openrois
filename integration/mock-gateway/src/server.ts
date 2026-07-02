@@ -29,6 +29,11 @@ import type {
   JsonRpcRequest,
   JsonRpcResponse,
 } from "@openrois/sdk/jsonrpc";
+import { ComponentRegistry } from "./registry";
+import type { Parameter } from "@openrois/interfaces";
+
+/** Shared component registry for all connections (global bind state). */
+const registry = new ComponentRegistry();
 
 /** Default listening port when none is supplied. */
 const DEFAULT_PORT = 8765;
@@ -136,8 +141,11 @@ function handleMessage(socket: WebSocket, data: RawData): void {
 /**
  * Route a validated request to its handler.
  *
- * The Week 1 skeleton only answers the System interface lifecycle methods.
- * Every other method is reported as not found.
+ * Week 1: System lifecycle (connect, disconnect).
+ * Week 2: System profile (get_profile) and Command interface (search, bind,
+ * release, set_parameter, get_parameter).
+ * Methods not yet implemented (execute, query, events, streaming) return
+ * MethodNotFound.
  */
 function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
   switch (request.method) {
@@ -145,6 +153,63 @@ function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
     case "rois.system.disconnect":
       send(socket, okResponse(request.id));
       return;
+
+    case "rois.system.get_profile":
+      send(socket, resultResponse(request.id, {
+        return_code: "OK",
+        profile: registry.getProfile(),
+      }));
+      return;
+
+    case "rois.command.search": {
+      const params = namedParams(request);
+      send(socket, resultResponse(request.id, {
+        return_code: "OK",
+        component_ref_list: registry.search(typeof params.condition === "string" ? params.condition : ""),
+      }));
+      return;
+    }
+
+    case "rois.command.bind": {
+      const params = namedParams(request);
+      const ref = asString(params.component_ref);
+      send(socket, resultResponse(request.id, {
+        return_code: registry.bind(ref),
+      }));
+      return;
+    }
+
+    case "rois.command.release": {
+      const params = namedParams(request);
+      const ref = asString(params.component_ref);
+      send(socket, resultResponse(request.id, {
+        return_code: registry.release(ref),
+      }));
+      return;
+    }
+
+    case "rois.command.set_parameter": {
+      const params = namedParams(request);
+      const ref = asString(params.component_ref);
+      const parameters = asParameterArray(params.parameters);
+      send(socket, resultResponse(request.id, {
+        return_code: registry.setParameter(ref, parameters),
+        command_id: "",
+      }));
+      return;
+    }
+
+    case "rois.command.get_parameter": {
+      const params = namedParams(request);
+      const ref = asString(params.component_ref);
+      const { returnCode, parameters } = registry.getParameter(ref);
+      send(socket, resultResponse(request.id, {
+        return_code: returnCode,
+        parameters,
+      }));
+      return;
+    }
+
     default:
       send(
         socket,
@@ -178,6 +243,60 @@ function okResponse(id: JsonRpcId): JsonRpcResponse {
     id,
     result: { return_code: "OK" },
   };
+}
+
+/** Build a success response with an arbitrary result object. */
+function resultResponse(id: JsonRpcId, result: Record<string, unknown>): JsonRpcResponse {
+  return {
+    jsonrpc: JSONRPC_VERSION,
+    id,
+    result,
+  };
+}
+
+/**
+ * Extract the named-params object from a validated request.
+ *
+ * The JSON-RPC spec allows array (positional) params, but OpenRoIS always uses
+ * objects. If params is missing or an array, return an empty record so callers
+ * get undefined for every key (which they handle via asString/asParameterArray).
+ */
+function namedParams(request: JsonRpcRequest): Record<string, unknown> {
+  if (request.params && !Array.isArray(request.params)) {
+    return request.params as Record<string, unknown>;
+  }
+  return {};
+}
+
+/** Safely coerce an unknown value to string, defaulting to empty string. */
+function asString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+/**
+ * Safely coerce an unknown value to a Parameter array.
+ *
+ * Performs a shallow shape check (name, data_type_ref, value must be strings).
+ * Values that do not match are dropped. This keeps the mock lenient: it does
+ * not reject malformed params with a JSON-RPC error, it just ignores bad
+ * entries. The real gateway would validate strictly.
+ */
+function asParameterArray(value: unknown): Parameter[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter(isParameter) as Parameter[];
+}
+
+/** Runtime guard for the Parameter shape: { name, data_type_ref, value }. */
+function isParameter(v: unknown): v is Parameter {
+  if (typeof v !== "object" || v === null) return false;
+  const obj = v as Record<string, unknown>;
+  return (
+    typeof obj.name === "string" &&
+    typeof obj.data_type_ref === "string" &&
+    typeof obj.value === "string"
+  );
 }
 
 /** Build a JSON-RPC error response. */
