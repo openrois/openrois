@@ -19,6 +19,13 @@ from openrois.interfaces.components.person_detection import (
     PersonDetectedEvent,
     PersonDetectionStatusResult,
 )
+from openrois.interfaces.components.reaction import (
+    REACTION_URN,
+    ReactionGetParameterResult,
+    ReactionSetParameter,
+    ReactionSetParameterResult,
+    ReactionStatusResult,
+)
 from openrois.interfaces.components.system_information import (
     SYSTEM_INFORMATION_URN,
     SystemInformationEngineStatusResult,
@@ -37,6 +44,12 @@ __all__ = [
     "NavigationGetParameterResult",
     "NavigationStatusResult",
     "NavigationReachedTargetEvent",
+    # Reaction
+    "REACTION_URN",
+    "ReactionSetParameter",
+    "ReactionSetParameterResult",
+    "ReactionGetParameterResult",
+    "ReactionStatusResult",
     # SystemInformation
     "SYSTEM_INFORMATION_URN",
     "SystemInformationRobotPositionResult",

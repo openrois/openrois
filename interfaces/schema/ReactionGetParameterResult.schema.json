@@ -1,0 +1,32 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "RoISIdentifier": {
+      "type": "string"
+    },
+    "RoISIdentifierList": {
+      "items": {
+        "$ref": "#/$defs/RoISIdentifier"
+      },
+      "type": "array"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Result payload for Reaction::Query::get_parameter.\n\nMaps to the get_parameter operation in RoIS_Reaction.idl, which returns the\nlist of available reactions and the currently selected reaction reference.\n\nAttributes:\n    available_reactions: List of reaction identifiers this host can perform.\n    reaction_ref: Currently selected reaction identifier.",
+  "properties": {
+    "available_reactions": {
+      "$ref": "#/$defs/RoISIdentifierList",
+      "description": "List of available reaction identifiers this host can perform"
+    },
+    "reaction_ref": {
+      "$ref": "#/$defs/RoISIdentifier",
+      "description": "Currently selected reaction identifier"
+    }
+  },
+  "required": [
+    "available_reactions",
+    "reaction_ref"
+  ],
+  "title": "ReactionGetParameterResult",
+  "type": "object"
+}

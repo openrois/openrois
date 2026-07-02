@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openrois-interfaces"
-version = "0.1.0a1"
+version = "0.1.0a2"
 description = "RoIS Framework 2.0 interface types for the OpenRoIS middleware"
 readme = "README.md"
 requires-python = ">=3.12"

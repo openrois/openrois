@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <LangVersion>latest</LangVersion>
     <PackageId>OpenRoIS.Interfaces</PackageId>
-    <Version>0.1.0-alpha.1</Version>
+    <Version>0.1.0-alpha.2</Version>
     <Description>RoIS Framework 2.0 interface types for the OpenRoIS middleware</Description>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <Authors>OpenRoIS Community</Authors>
