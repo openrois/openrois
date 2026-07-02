@@ -44,6 +44,12 @@ from openrois.interfaces.components.navigation import (
     NavigationSetParameterResult,
     NavigationStatusResult,
 )
+from openrois.interfaces.components.reaction import (
+    ReactionGetParameterResult,
+    ReactionSetParameter,
+    ReactionSetParameterResult,
+    ReactionStatusResult,
+)
 from openrois.interfaces.components.person_detection import (
     PersonDetectedEvent,
     PersonDetectionStatusResult,
@@ -123,8 +129,11 @@ MODELS: list[type[BaseModel]] = [
     NavigationSetParameterResult,
     NavigationGetParameterResult,
     NavigationStatusResult,
-    NavigationReachedTargetEvent,
-    # components/system_information
+    NavigationReachedTargetEvent,    # components/reaction
+    ReactionSetParameter,
+    ReactionSetParameterResult,
+    ReactionGetParameterResult,
+    ReactionStatusResult,    # components/system_information
     SystemInformationRobotPositionResult,
     SystemInformationEngineStatusResult,
 ]
@@ -188,6 +197,11 @@ MODULE_MAP: dict[type, str] = {
     NavigationGetParameterResult: "components/navigation",
     NavigationStatusResult: "components/navigation",
     NavigationReachedTargetEvent: "components/navigation",
+    # components/reaction
+    ReactionSetParameter: "components/reaction",
+    ReactionSetParameterResult: "components/reaction",
+    ReactionGetParameterResult: "components/reaction",
+    ReactionStatusResult: "components/reaction",
     # components/system-information
     SystemInformationRobotPositionResult: "components/system-information",
     SystemInformationEngineStatusResult: "components/system-information",

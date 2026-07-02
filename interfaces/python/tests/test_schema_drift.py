@@ -37,6 +37,12 @@ from openrois.interfaces.components.navigation import (
     NavigationSetParameterResult,
     NavigationStatusResult,
 )
+from openrois.interfaces.components.reaction import (
+    ReactionGetParameterResult,
+    ReactionSetParameter,
+    ReactionSetParameterResult,
+    ReactionStatusResult,
+)
 from openrois.interfaces.components.person_detection import (
     PersonDetectedEvent,
     PersonDetectionStatusResult,
@@ -116,6 +122,11 @@ MODELS: list[type[BaseModel]] = [
     NavigationGetParameterResult,
     NavigationStatusResult,
     NavigationReachedTargetEvent,
+    # components/reaction
+    ReactionSetParameter,
+    ReactionSetParameterResult,
+    ReactionGetParameterResult,
+    ReactionStatusResult,
     # components/system_information
     SystemInformationRobotPositionResult,
     SystemInformationEngineStatusResult,

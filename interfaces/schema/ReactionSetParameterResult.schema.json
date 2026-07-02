@@ -1,0 +1,20 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "CommandId": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Result of Reaction set_parameter command.\n\nAttributes:\n    command_id: The assigned command identifier for this reaction command.",
+  "properties": {
+    "command_id": {
+      "$ref": "#/$defs/CommandId"
+    }
+  },
+  "required": [
+    "command_id"
+  ],
+  "title": "ReactionSetParameterResult",
+  "type": "object"
+}

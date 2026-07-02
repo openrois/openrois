@@ -49,6 +49,12 @@
       "NavigationSetParameterResult.schema.json",
       "NavigationStatusResult.schema.json"
     ],
+    "components/reaction": [
+      "ReactionGetParameterResult.schema.json",
+      "ReactionSetParameter.schema.json",
+      "ReactionSetParameterResult.schema.json",
+      "ReactionStatusResult.schema.json"
+    ],
     "components/system-information": [
       "SystemInformationEngineStatusResult.schema.json",
       "SystemInformationRobotPositionResult.schema.json"

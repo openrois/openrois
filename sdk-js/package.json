@@ -1,27 +1,76 @@
 {
   "name": "@openrois/sdk",
   "version": "0.1.0-alpha.1",
-  "description": "",
+  "description": "TypeScript client SDK for the OpenRoIS middleware",
   "license": "Apache-2.0",
   "author": "OpenRoIS Community",
   "type": "module",
-  "main": "index.js",
+  "main": "./dist/jsonrpc.cjs",
+  "module": "./dist/jsonrpc.js",
+  "types": "./dist/jsonrpc.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/jsonrpc.d.ts",
+      "import": "./dist/jsonrpc.js",
+      "require": "./dist/jsonrpc.cjs"
+    },
+    "./jsonrpc": {
+      "types": "./dist/jsonrpc.d.ts",
+      "import": "./dist/jsonrpc.js",
+      "require": "./dist/jsonrpc.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
   "directories": {
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/ tests/",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@openrois/interfaces": "file:../interfaces/typescript",
-    "ws": "^8.21.0"
+    "ws": "^8.21.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/node": "^26.1.0",
     "@types/ws": "^8.18.1",
     "eslint": "^10.5.0",
+    "jiti": "^2.7.0",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
-    "vite": "^8.0.16",
+    "typescript-eslint": "^8.62.1",
+    "vite": "^8.1.0",
     "vitest": "^4.1.9"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openrois/openrois.git",
+    "directory": "sdk-js"
+  },
+  "homepage": "https://github.com/openrois/openrois/tree/main/sdk-js",
+  "bugs": {
+    "url": "https://github.com/openrois/openrois/issues"
+  },
+  "keywords": [
+    "rois",
+    "omg",
+    "robotics",
+    "hri",
+    "webrtc",
+    "ros2",
+    "avatar",
+    "middleware",
+    "sdk",
+    "json-rpc",
+    "websocket"
+  ]
 }

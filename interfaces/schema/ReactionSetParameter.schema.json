@@ -1,0 +1,27 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "RoISIdentifier": {
+      "type": "string"
+    },
+    "RoISIdentifierList": {
+      "items": {
+        "$ref": "#/$defs/RoISIdentifier"
+      },
+      "type": "array"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Command payload for Reaction::Command::set_parameter.\n\nMaps to the set_parameter operation in RoIS_Reaction.idl, which takes a\n``RoIS_IdentifierList`` of reaction references. The XML profile declares\n``reaction_ref`` as a single ``RoISIdentifier`` parameter, but the IDL\noperation signature accepts a list, so the model uses a list to match the\noperation contract.\n\nAttributes:\n    reaction_ref: List of reaction identifiers to trigger. Each identifier\n        is an opaque string whose meaning is defined by the host backend\n        (e.g., \"wave\", \"nod\", \"smile\" for an avatar, or \"led_green\" for a\n        robot).",
+  "properties": {
+    "reaction_ref": {
+      "$ref": "#/$defs/RoISIdentifierList",
+      "description": "Reaction identifiers to trigger"
+    }
+  },
+  "required": [
+    "reaction_ref"
+  ],
+  "title": "ReactionSetParameter",
+  "type": "object"
+}
