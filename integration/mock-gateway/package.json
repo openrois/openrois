@@ -1,0 +1,29 @@
+{
+  "name": "@openrois/mock-gateway",
+  "version": "0.1.0-alpha.1",
+  "description": "Mock RoIS gateway: a JSON-RPC 2.0 WebSocket test double for OpenRoIS client SDKs",
+  "license": "Apache-2.0",
+  "author": "OpenRoIS Community",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@openrois/interfaces": "file:../../interfaces/typescript",
+    "@openrois/sdk": "file:../../sdk-js",
+    "ws": "^8.21.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.7.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  },
+  "keywords": []
+}

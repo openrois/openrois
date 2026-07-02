@@ -6,6 +6,9 @@
   "author": "OpenRoIS Community",
   "type": "module",
   "main": "index.js",
+  "exports": {
+    "./jsonrpc": "./src/jsonrpc.ts"
+  },
   "directories": {
     "test": "tests"
   },
