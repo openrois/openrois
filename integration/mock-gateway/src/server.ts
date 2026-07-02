@@ -1,11 +1,12 @@
 /**
  * Mock RoIS gateway: a JSON-RPC 2.0 WebSocket test double.
  *
- * This is the Week 1 skeleton. It accepts WebSocket connections, parses
- * incoming JSON-RPC 2.0 messages, and answers the two System interface
- * lifecycle methods (connect, disconnect) with a canned OK. Any other method
- * returns a JSON-RPC "method not found" error, and malformed input returns the
- * appropriate parse or invalid-request error.
+ * Accepts WebSocket connections, parses incoming JSON-RPC 2.0 messages, and
+ * answers the System interface methods: connect, disconnect (canned OK),
+ * get_profile (canned HRI_Engine_Profile), and get_error_detail (canned
+ * Result[] keyed by error_id). Any other method returns a JSON-RPC "method
+ * not found" error, and malformed input returns the appropriate parse or
+ * invalid-request error.
  *
  * The message schemas are reused from the SDK (@openrois/sdk/jsonrpc) so the
  * mock and the real client stay on a single wire contract. Later milestones
@@ -23,12 +24,18 @@ import {
   JsonRpcErrorCode,
   JsonRpcRequestSchema,
 } from "@openrois/sdk/jsonrpc";
+
 import type {
   JsonRpcError,
   JsonRpcId,
   JsonRpcRequest,
   JsonRpcResponse,
 } from "@openrois/sdk/jsonrpc";
+
+import type { 
+  HRIEngineProfileType, 
+  Result 
+} from "@openrois/interfaces";
 
 /** Default listening port when none is supplied. */
 const DEFAULT_PORT = 8765;
@@ -136,8 +143,9 @@ function handleMessage(socket: WebSocket, data: RawData): void {
 /**
  * Route a validated request to its handler.
  *
- * The Week 1 skeleton only answers the System interface lifecycle methods.
- * Every other method is reported as not found.
+ * Answers the System interface lifecycle methods (connect, disconnect) and
+ * the two System query operations (get_profile, get_error_detail) with canned
+ * data. Every other method is reported as not found.
  */
 function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
   switch (request.method) {
@@ -145,6 +153,15 @@ function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
     case "rois.system.disconnect":
       send(socket, okResponse(request.id));
       return;
+
+    //New Additions
+    case "rois.system.get_profile":
+      send(socket, profileResponse(request.id, request.params));
+      return;
+    case "rois.system.get_error_detail":
+      send(socket, errorDetailResponse(request.id, request.params));
+      return;
+
     default:
       send(
         socket,
@@ -169,6 +186,119 @@ function extractId(payload: unknown): JsonRpcId {
     }
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Canned HRI Engine Profile
+// ---------------------------------------------------------------------------
+
+/**
+ * A canned HRI_Engine_Profile returned by rois.system.get_profile.
+ *
+ * Describes a mock gateway hosting three components (PersonDetection,
+ * Navigation, SystemInformation) with a nested perception sub-engine. The
+ * condition filter is accepted but not evaluated — the mock always returns
+ * the full profile.
+ */
+const CANNED_ENGINE_PROFILE: HRIEngineProfileType = {
+  identifier: {
+    authority: "OMG",
+    code: "MockGateway",
+    codebook_ref: "",
+    version: "2.0",
+  },
+  sub_profiles: [
+    {
+      identifier: {
+        authority: "OMG",
+        code: "PerceptionSubEngine",
+        codebook_ref: "",
+        version: "2.0",
+      },
+      component_ids: ["PersonDetection_0"],
+    },
+  ],
+  component_ids: ["PersonDetection_0", "Navigation_0", "SystemInformation_0"],
+  parameter_profiles: [],
+};
+
+/**
+ * Canned error details keyed by error_id.
+ *
+ * The mock gateway recognizes a small set of known error IDs and returns
+ * descriptive Result arrays. Unknown error IDs return an empty result list
+ * with return_code OK (the error was found but has no extra detail).
+ */
+const CANNED_ERROR_DETAILS: Record<string, Result[]> = {
+  "err-001": [
+    {
+      name: "component_ref",
+      data_type_ref: "string",
+      value: "robot-a1/Navigation",
+    },
+    {
+      name: "description",
+      data_type_ref: "string",
+      value: "Navigation action timed out after 30s",
+    },
+  ],
+  "err-002": [
+    {
+      name: "component_ref",
+      data_type_ref: "string",
+      value: "PersonDetection_0",
+    },
+    {
+      name: "description",
+      data_type_ref: "string",
+      value: "Component internal error: model failed to load",
+    },
+  ],
+};
+
+// ---------------------------------------------------------------------------
+// Response builders for System query operations
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a get_profile success response.
+ *
+ * The condition parameter is accepted but not evaluated — the mock always
+ * returns the full canned profile.
+ */
+function profileResponse(id: JsonRpcId, _params: unknown): JsonRpcResponse {
+  return {
+    jsonrpc: JSONRPC_VERSION,
+    id,
+    result: {
+      return_code: "OK",
+      profile: CANNED_ENGINE_PROFILE,
+    },
+  };
+}
+
+/**
+ * Build a get_error_detail success response.
+ *
+ * Looks up the error_id in the canned details table. Unknown IDs return an
+ * empty results array with return_code OK.
+ */
+function errorDetailResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
+  const errorId =
+    typeof params === "object" && params !== null && "error_id" in params
+      ? String((params as { error_id: unknown }).error_id)
+      : "";
+
+  const results = CANNED_ERROR_DETAILS[errorId] ?? [];
+
+  return {
+    jsonrpc: JSONRPC_VERSION,
+    id,
+    result: {
+      return_code: "OK",
+      results,
+    },
+  };
 }
 
 /** Build a success response carrying a RoIS return_code of OK. */
