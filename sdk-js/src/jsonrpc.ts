@@ -155,7 +155,7 @@ export type JsonRpcMethod = z.infer<typeof JsonRpcMethodSchema>;
  * Arrays are accepted here for spec compliance but are not emitted by the SDK.
  */
 export const JsonRpcParamsSchema = z.union([
-  z.record(z.unknown()), // named params (preferred by OpenRoIS)
+  z.record(z.string(), z.unknown()), // named params (preferred by OpenRoIS)
   z.array(z.unknown()),  // positional params (spec-compliant, not emitted by SDK)
 ]);
 export type JsonRpcParams = z.infer<typeof JsonRpcParamsSchema>;
