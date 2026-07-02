@@ -191,4 +191,366 @@ describe("mock gateway", () => {
       socket.close();
     });
   });
+
+  // -----------------------------------------------------------------------
+  // rois.command.search
+  // -----------------------------------------------------------------------
+
+  describe("rois.command.search", () => {
+    it("returns all registered component_refs with return_code OK", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "search-1",
+          method: "rois.command.search",
+          params: { condition: "" },
+        }),
+      );
+
+      expect(reply.id).toBe("search-1");
+      expect(reply.result.return_code).toBe("OK");
+      expect(reply.result.component_ref_list).toEqual([
+        "PersonDetection_0",
+        "Navigation_0",
+        "SystemInformation_0",
+      ]);
+      socket.close();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // rois.command.bind
+  // -----------------------------------------------------------------------
+
+  describe("rois.command.bind", () => {
+    it("returns OK for a registered component", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "bind-1",
+          method: "rois.command.bind",
+          params: { component_ref: "Navigation_0" },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("OK");
+      socket.close();
+    });
+
+    it("returns UNSUPPORTED for an unknown component", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "bind-2",
+          method: "rois.command.bind",
+          params: { component_ref: "Unknown_0" },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("UNSUPPORTED");
+      socket.close();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // rois.command.release
+  // -----------------------------------------------------------------------
+
+  describe("rois.command.release", () => {
+    it("returns OK for a registered component", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "rel-1",
+          method: "rois.command.release",
+          params: { component_ref: "PersonDetection_0" },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("OK");
+      socket.close();
+    });
+
+    it("returns UNSUPPORTED for an unknown component", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "rel-2",
+          method: "rois.command.release",
+          params: { component_ref: "Unknown_0" },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("UNSUPPORTED");
+      socket.close();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // rois.command.get_parameter
+  // -----------------------------------------------------------------------
+
+  describe("rois.command.get_parameter", () => {
+    it("returns all parameters when names is omitted", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "getparam-1",
+          method: "rois.command.get_parameter",
+          params: { component_ref: "Navigation_0" },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("OK");
+      expect(reply.result.results).toHaveLength(3);
+      const names = reply.result.results.map((r: any) => r.name);
+      expect(names).toContain("target_positions");
+      expect(names).toContain("time_limit");
+      expect(names).toContain("routing_policy");
+      socket.close();
+    });
+
+    it("returns only requested parameters when names is provided", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "getparam-2",
+          method: "rois.command.get_parameter",
+          params: { component_ref: "Navigation_0", names: ["time_limit"] },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("OK");
+      expect(reply.result.results).toHaveLength(1);
+      expect(reply.result.results[0].name).toBe("time_limit");
+      expect(reply.result.results[0].value).toBe("30");
+      socket.close();
+    });
+
+    it("returns UNSUPPORTED for an unknown component", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "getparam-3",
+          method: "rois.command.get_parameter",
+          params: { component_ref: "Unknown_0" },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("UNSUPPORTED");
+      socket.close();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // rois.command.set_parameter
+  // -----------------------------------------------------------------------
+
+  describe("rois.command.set_parameter", () => {
+    it("stores parameters and returns OK with command_id", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "setparam-1",
+          method: "rois.command.set_parameter",
+          params: {
+            component_ref: "Navigation_0",
+            parameters: [
+              { name: "time_limit", data_type_ref: "int", value: "60" },
+              { name: "routing_policy", data_type_ref: "string", value: "distance" },
+            ],
+          },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("OK");
+      expect(reply.result.command_id).toBe("");
+      socket.close();
+    });
+
+    it("persists values that get_parameter can read back", async () => {
+      const socket = await connect();
+
+      // Set a parameter.
+      await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "set-1",
+          method: "rois.command.set_parameter",
+          params: {
+            component_ref: "Navigation_0",
+            parameters: [
+              { name: "time_limit", data_type_ref: "int", value: "120" },
+            ],
+          },
+        }),
+      );
+
+      // Read it back.
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "get-1",
+          method: "rois.command.get_parameter",
+          params: {
+            component_ref: "Navigation_0",
+            names: ["time_limit"],
+          },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("OK");
+      expect(reply.result.results).toHaveLength(1);
+      expect(reply.result.results[0].value).toBe("120");
+      socket.close();
+    });
+
+    it("returns UNSUPPORTED for an unknown component", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "setparam-2",
+          method: "rois.command.set_parameter",
+          params: {
+            component_ref: "Unknown_0",
+            parameters: [
+              { name: "x", data_type_ref: "string", value: "1" },
+            ],
+          },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("UNSUPPORTED");
+      socket.close();
+    });
+
+    it("returns BAD_PARAMETER when parameters is not an array", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "setparam-3",
+          method: "rois.command.set_parameter",
+          params: {
+            component_ref: "Navigation_0",
+            parameters: "not-an-array",
+          },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("BAD_PARAMETER");
+      socket.close();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // rois.command.bind_any
+  // -----------------------------------------------------------------------
+
+  describe("rois.command.bind_any", () => {
+    it("returns OK with a component_ref", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "bindany-1",
+          method: "rois.command.bind_any",
+          params: { condition: "" },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("OK");
+      expect(reply.result.component_ref).toBeTruthy();
+      socket.close();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // rois.command.execute
+  // -----------------------------------------------------------------------
+
+  describe("rois.command.execute", () => {
+    it("returns OK with a command_id for a registered component", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "exec-1",
+          method: "rois.command.execute",
+          params: {
+            component_ref: "Navigation_0",
+            target_positions: ["3.0,1.5,0.0"],
+          },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("OK");
+      expect(reply.result.command_id).toBeTruthy();
+      socket.close();
+    });
+
+    it("returns UNSUPPORTED for an unknown component", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "exec-2",
+          method: "rois.command.execute",
+          params: { component_ref: "Unknown_0" },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("UNSUPPORTED");
+      socket.close();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // rois.command.get_command_result
+  // -----------------------------------------------------------------------
+
+  describe("rois.command.get_command_result", () => {
+    it("returns OK with results array", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "result-1",
+          method: "rois.command.get_command_result",
+          params: { command_id: "cmd-001" },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("OK");
+      expect(Array.isArray(reply.result.results)).toBe(true);
+      socket.close();
+    });
+  });
 });

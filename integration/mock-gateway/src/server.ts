@@ -32,9 +32,10 @@ import type {
   JsonRpcResponse,
 } from "@openrois/sdk/jsonrpc";
 
-import type { 
-  HRIEngineProfileType, 
-  Result 
+import type {
+  HRIEngineProfileType,
+  Result,
+  Parameter,
 } from "@openrois/interfaces";
 
 /** Default listening port when none is supplied. */
@@ -145,7 +146,9 @@ function handleMessage(socket: WebSocket, data: RawData): void {
  *
  * Answers the System interface lifecycle methods (connect, disconnect) and
  * the two System query operations (get_profile, get_error_detail) with canned
- * data. Every other method is reported as not found.
+ * data. Handles the full Command interface (search, bind, bind_any, release,
+ * get_parameter, set_parameter, execute, get_command_result) against an
+ * in-memory component registry. Every other method is reported as not found.
  */
 function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
   switch (request.method) {
@@ -160,6 +163,32 @@ function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
       return;
     case "rois.system.get_error_detail":
       send(socket, errorDetailResponse(request.id, request.params));
+      return;
+
+    // Command interface
+    case "rois.command.search":
+      send(socket, searchResponse(request.id, request.params));
+      return;
+    case "rois.command.bind":
+      send(socket, bindResponse(request.id, request.params));
+      return;
+    case "rois.command.bind_any":
+      send(socket, bindAnyResponse(request.id, request.params));
+      return;
+    case "rois.command.release":
+      send(socket, releaseResponse(request.id, request.params));
+      return;
+    case "rois.command.get_parameter":
+      send(socket, getParameterResponse(request.id, request.params));
+      return;
+    case "rois.command.set_parameter":
+      send(socket, setParameterResponse(request.id, request.params));
+      return;
+    case "rois.command.execute":
+      send(socket, executeResponse(request.id, request.params));
+      return;
+    case "rois.command.get_command_result":
+      send(socket, getCommandResultResponse(request.id, request.params));
       return;
 
     default:
@@ -297,6 +326,374 @@ function errorDetailResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
     result: {
       return_code: "OK",
       results,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Component registry
+// ---------------------------------------------------------------------------
+
+/**
+ * A registered component in the mock gateway.
+ *
+ * Each component has a ref, a human-readable name, and a parameter store
+ * (name -> Parameter) that set_parameter updates and get_parameter reads.
+ */
+interface MockComponent {
+  /** The component_ref identifier (e.g. "PersonDetection_0"). */
+  ref: string;
+  /** Human-readable component name. */
+  name: string;
+  /** Current parameter values, keyed by parameter name. */
+  parameters: Map<string, Parameter>;
+}
+
+/**
+ * The in-memory component registry.
+ *
+ * Pre-populated with three components matching the canned engine profile:
+ * PersonDetection_0, Navigation_0, and SystemInformation_0. Each starts with
+ * a set of default parameters.
+ */
+const COMPONENT_REGISTRY: Map<string, MockComponent> = createComponentRegistry();
+
+/**
+ * Create the initial component registry with default parameters.
+ */
+function createComponentRegistry(): Map<string, MockComponent> {
+  const registry = new Map<string, MockComponent>();
+
+  registry.set("PersonDetection_0", {
+    ref: "PersonDetection_0",
+    name: "PersonDetection",
+    parameters: new Map<string, Parameter>([
+      ["confidence_threshold", {
+        name: "confidence_threshold",
+        data_type_ref: "float",
+        value: "0.5",
+      }],
+      ["model_name", {
+        name: "model_name",
+        data_type_ref: "string",
+        value: "yolov8n",
+      }],
+    ]),
+  });
+
+  registry.set("Navigation_0", {
+    ref: "Navigation_0",
+    name: "Navigation",
+    parameters: new Map<string, Parameter>([
+      ["target_positions", {
+        name: "target_positions",
+        data_type_ref: "string[]",
+        value: "[]",
+      }],
+      ["time_limit", {
+        name: "time_limit",
+        data_type_ref: "int",
+        value: "30",
+      }],
+      ["routing_policy", {
+        name: "routing_policy",
+        data_type_ref: "string",
+        value: "time",
+      }],
+    ]),
+  });
+
+  registry.set("SystemInformation_0", {
+    ref: "SystemInformation_0",
+    name: "SystemInformation",
+    parameters: new Map<string, Parameter>([
+      ["robot_position", {
+        name: "robot_position",
+        data_type_ref: "string",
+        value: "0.0,0.0,0.0",
+      }],
+      ["battery_level", {
+        name: "battery_level",
+        data_type_ref: "int",
+        value: "85",
+      }],
+    ]),
+  });
+
+  return registry;
+}
+
+/**
+ * Extract a string param from the JSON-RPC params object.
+ */
+function paramStr(params: unknown, key: string): string {
+  if (typeof params === "object" && params !== null && key in params) {
+    return String((params as Record<string, unknown>)[key]);
+  }
+  return "";
+}
+
+/**
+ * Extract an array-of-strings param from the JSON-RPC params object.
+ */
+function paramStrArray(params: unknown, key: string): string[] {
+  if (typeof params === "object" && params !== null && key in params) {
+    const val = (params as Record<string, unknown>)[key];
+    if (Array.isArray(val)) {
+      return val.map((v) => String(v));
+    }
+  }
+  return [];
+}
+
+// ---------------------------------------------------------------------------
+// Response builders for Command operations
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a search (discover) response.
+ *
+ * The condition filter is accepted but not evaluated — the mock always
+ * returns all registered component_refs.
+ */
+function searchResponse(id: JsonRpcId, _params: unknown): JsonRpcResponse {
+  const componentRefList = Array.from(COMPONENT_REGISTRY.keys());
+  return {
+    jsonrpc: JSONRPC_VERSION,
+    id,
+    result: {
+      return_code: "OK",
+      component_ref_list: componentRefList,
+    },
+  };
+}
+
+/**
+ * Build a bind response.
+ *
+ * Returns OK if the component exists, UNSUPPORTED if it does not.
+ */
+function bindResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
+  const componentRef = paramStr(params, "component_ref");
+
+  if (!COMPONENT_REGISTRY.has(componentRef)) {
+    return {
+      jsonrpc: JSONRPC_VERSION,
+      id,
+      result: { return_code: "UNSUPPORTED" },
+    };
+  }
+
+  return {
+    jsonrpc: JSONRPC_VERSION,
+    id,
+    result: { return_code: "OK" },
+  };
+}
+
+/**
+ * Build a release response.
+ *
+ * Returns OK if the component exists, UNSUPPORTED if it does not.
+ */
+function releaseResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
+  const componentRef = paramStr(params, "component_ref");
+
+  if (!COMPONENT_REGISTRY.has(componentRef)) {
+    return {
+      jsonrpc: JSONRPC_VERSION,
+      id,
+      result: { return_code: "UNSUPPORTED" },
+    };
+  }
+
+  return {
+    jsonrpc: JSONRPC_VERSION,
+    id,
+    result: { return_code: "OK" },
+  };
+}
+
+/**
+ * Build a get_parameter response.
+ *
+ * If `names` is provided, only those parameters are returned. If `names` is
+ * empty or omitted, all parameters for the component are returned.
+ * Returns UNSUPPORTED if the component does not exist.
+ */
+function getParameterResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
+  const componentRef = paramStr(params, "component_ref");
+  const names = paramStrArray(params, "names");
+
+  const component = COMPONENT_REGISTRY.get(componentRef);
+  if (!component) {
+    return {
+      jsonrpc: JSONRPC_VERSION,
+      id,
+      result: { return_code: "UNSUPPORTED", results: [] },
+    };
+  }
+
+  let values: Parameter[];
+  if (names.length > 0) {
+    values = names
+      .map((n) => component.parameters.get(n))
+      .filter((p): p is Parameter => p !== undefined);
+  } else {
+    values = Array.from(component.parameters.values());
+  }
+
+  // Convert Parameter[] to Result[] (same shape: name, data_type_ref, value).
+  const results: Result[] = values.map((p) => ({
+    name: p.name,
+    data_type_ref: p.data_type_ref,
+    value: p.value,
+  }));
+
+  return {
+    jsonrpc: JSONRPC_VERSION,
+    id,
+    result: {
+      return_code: "OK",
+      results,
+    },
+  };
+}
+
+/**
+ * Build a set_parameter response.
+ *
+ * Updates the component's parameter store with the provided values.
+ * Returns OK with an empty command_id on success, UNSUPPORTED if the
+ * component does not exist, BAD_PARAMETER if a parameter has no name.
+ */
+function setParameterResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
+  const componentRef = paramStr(params, "component_ref");
+
+  const component = COMPONENT_REGISTRY.get(componentRef);
+  if (!component) {
+    return {
+      jsonrpc: JSONRPC_VERSION,
+      id,
+      result: { return_code: "UNSUPPORTED", command_id: "" },
+    };
+  }
+
+  // Extract the parameters array from the request.
+  let rawParameters: unknown;
+  if (typeof params === "object" && params !== null && "parameters" in params) {
+    rawParameters = (params as Record<string, unknown>).parameters;
+  }
+
+  if (!Array.isArray(rawParameters)) {
+    return {
+      jsonrpc: JSONRPC_VERSION,
+      id,
+      result: { return_code: "BAD_PARAMETER", command_id: "" },
+    };
+  }
+
+  // Update the component's parameter store.
+  for (const raw of rawParameters) {
+    if (typeof raw !== "object" || raw === null || !("name" in raw)) {
+      return {
+        jsonrpc: JSONRPC_VERSION,
+        id,
+        result: { return_code: "BAD_PARAMETER", command_id: "" },
+      };
+    }
+
+    const param = raw as Parameter;
+    component.parameters.set(param.name, {
+      name: param.name,
+      data_type_ref: param.data_type_ref ?? "string",
+      value: param.value ?? "",
+    });
+  }
+
+  return {
+    jsonrpc: JSONRPC_VERSION,
+    id,
+    result: {
+      return_code: "OK",
+      command_id: "",
+    },
+  };
+}
+
+/**
+ * Build a bind_any response.
+ *
+ * The condition filter is accepted but not evaluated — the mock returns the
+ * first registered component. If no components are registered, returns
+ * OUT_OF_RESOURCES.
+ */
+function bindAnyResponse(id: JsonRpcId, _params: unknown): JsonRpcResponse {
+  const firstRef = COMPONENT_REGISTRY.keys().next();
+  if (firstRef.done) {
+    return {
+      jsonrpc: JSONRPC_VERSION,
+      id,
+      result: { return_code: "OUT_OF_RESOURCES", component_ref: "" },
+    };
+  }
+
+  return {
+    jsonrpc: JSONRPC_VERSION,
+    id,
+    result: {
+      return_code: "OK",
+      component_ref: firstRef.value,
+    },
+  };
+}
+
+/**
+ * Build an execute response.
+ *
+ * Returns OK with a generated command_id. The mock does not actually execute
+ * anything — it acknowledges the command immediately. The caller should listen
+ * for "rois.command.completed" notifications (not yet implemented in the mock).
+ * Returns UNSUPPORTED if the component does not exist.
+ */
+function executeResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
+  const componentRef = paramStr(params, "component_ref");
+
+  if (!COMPONENT_REGISTRY.has(componentRef)) {
+    return {
+      jsonrpc: JSONRPC_VERSION,
+      id,
+      result: { return_code: "UNSUPPORTED", command_id: "" },
+    };
+  }
+
+  // Generate a simple command_id based on a counter.
+  const commandId = `cmd-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+
+  return {
+    jsonrpc: JSONRPC_VERSION,
+    id,
+    result: {
+      return_code: "OK",
+      command_id: commandId,
+      results: [],
+    },
+  };
+}
+
+/**
+ * Build a get_command_result response.
+ *
+ * The mock does not track command execution, so it returns an empty results
+ * array with return_code OK for any command_id.
+ */
+function getCommandResultResponse(id: JsonRpcId, _params: unknown): JsonRpcResponse {
+  return {
+    jsonrpc: JSONRPC_VERSION,
+    id,
+    result: {
+      return_code: "OK",
+      results: [],
     },
   };
 }
