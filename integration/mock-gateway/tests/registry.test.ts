@@ -67,19 +67,20 @@ describe("ComponentRegistry", () => {
     return new ComponentRegistry();
   }
 
-  it("search returns all three default component refs", () => {
+  it("search returns all four default component refs", () => {
     const reg = freshRegistry();
     const refs = reg.search("");
-    expect(refs).toHaveLength(3);
+    expect(refs).toHaveLength(4);
     expect(refs).toContain("PersonDetection_0");
     expect(refs).toContain("Navigation_0");
     expect(refs).toContain("SystemInformation_0");
+    expect(refs).toContain("Reaction_0");
   });
 
   it("search ignores the condition and returns all components", () => {
     const reg = freshRegistry();
     const refs = reg.search("component_type='PersonDetection'");
-    expect(refs).toHaveLength(3);
+    expect(refs).toHaveLength(4);
   });
 
   it("bind returns OK for a free component", () => {
@@ -93,9 +94,9 @@ describe("ComponentRegistry", () => {
     expect(reg.bind("Navigation_0")).toBe("ERROR");
   });
 
-  it("bind returns ERROR for an unknown component", () => {
+  it("bind returns UNSUPPORTED for an unknown component", () => {
     const reg = freshRegistry();
-    expect(reg.bind("Unknown_0")).toBe("ERROR");
+    expect(reg.bind("Unknown_0")).toBe("UNSUPPORTED");
   });
 
   it("release returns OK for a bound component", () => {
@@ -109,9 +110,9 @@ describe("ComponentRegistry", () => {
     expect(reg.release("Navigation_0")).toBe("ERROR");
   });
 
-  it("release returns ERROR for an unknown component", () => {
+  it("release returns UNSUPPORTED for an unknown component", () => {
     const reg = freshRegistry();
-    expect(reg.release("Unknown_0")).toBe("ERROR");
+    expect(reg.release("Unknown_0")).toBe("UNSUPPORTED");
   });
 
   it("setParameter and getParameter roundtrip", () => {
@@ -123,9 +124,11 @@ describe("ComponentRegistry", () => {
     expect(reg.setParameter("Navigation_0", params)).toBe("OK");
     const result = reg.getParameter("Navigation_0");
     expect(result.returnCode).toBe("OK");
-    expect(result.parameters).toHaveLength(2);
-    expect(result.parameters[0].name).toBe("target_positions");
-    expect(result.parameters[1].value).toBe("30");
+    // Navigation_0 starts with 3 default params, setParameter merges by name.
+    expect(result.parameters).toHaveLength(3);
+    const byName = Object.fromEntries(result.parameters.map((p) => [p.name, p]));
+    expect(byName["target_positions"].value).toBe('["3.0,1.5,0.0"]');
+    expect(byName["time_limit"].value).toBe("30");
   });
 
   it("setParameter merges params with the same name", () => {
@@ -137,23 +140,25 @@ describe("ComponentRegistry", () => {
       { name: "time_limit", data_type_ref: "int", value: "60" },
     ]);
     const result = reg.getParameter("Navigation_0");
-    expect(result.parameters).toHaveLength(1);
-    expect(result.parameters[0].value).toBe("60");
+    // Navigation_0 starts with 3 default params, only time_limit is updated.
+    expect(result.parameters).toHaveLength(3);
+    const timeLimit = result.parameters.find((p) => p.name === "time_limit");
+    expect(timeLimit?.value).toBe("60");
   });
 
-  it("setParameter returns ERROR for an unknown component", () => {
+  it("setParameter returns UNSUPPORTED for an unknown component", () => {
     const reg = freshRegistry();
     expect(
       reg.setParameter("Unknown_0", [
         { name: "x", data_type_ref: "string", value: "1" },
       ]),
-    ).toBe("ERROR");
+    ).toBe("UNSUPPORTED");
   });
 
-  it("getParameter returns ERROR for an unknown component", () => {
+  it("getParameter returns UNSUPPORTED for an unknown component", () => {
     const reg = freshRegistry();
     const result = reg.getParameter("Unknown_0");
-    expect(result.returnCode).toBe("ERROR");
+    expect(result.returnCode).toBe("UNSUPPORTED");
     expect(result.parameters).toEqual([]);
   });
 
@@ -162,8 +167,8 @@ describe("ComponentRegistry", () => {
     const profile = reg.getProfile();
     const parsed = JSON.parse(profile);
     expect(parsed.identifier.authority).toBe("OMG");
-    expect(parsed.identifier.code).toBe("MockEngine");
-    expect(parsed.component_ids).toHaveLength(3);
+    expect(parsed.identifier.code).toBe("MockGateway");
+    expect(parsed.component_ids).toHaveLength(4);
     expect(parsed.component_ids).toContain("PersonDetection_0");
   });
 });
@@ -173,12 +178,12 @@ describe("ComponentRegistry", () => {
 // ---------------------------------------------------------------------------
 
 describe("mock gateway: registry methods", () => {
-  it("rois.command.search returns all three component refs", async () => {
+  it("rois.command.search returns all four component refs", async () => {
     const socket = await connect();
     const reply = await roundtrip(socket, req("s1", "rois.command.search", { condition: "" }));
     expect(reply.id).toBe("s1");
     expect(reply.result.return_code).toBe("OK");
-    expect(reply.result.component_ref_list).toHaveLength(3);
+    expect(reply.result.component_ref_list).toHaveLength(4);
     expect(reply.result.component_ref_list).toContain("PersonDetection_0");
     socket.close();
   });
@@ -192,10 +197,10 @@ describe("mock gateway: registry methods", () => {
     socket.close();
   });
 
-  it("rois.command.bind on unknown component returns ERROR", async () => {
+  it("rois.command.bind on unknown component returns UNSUPPORTED", async () => {
     const socket = await connect();
     const reply = await roundtrip(socket, req("b2", "rois.command.bind", { component_ref: "Unknown_0" }));
-    expect(reply.result.return_code).toBe("ERROR");
+    expect(reply.result.return_code).toBe("UNSUPPORTED");
     socket.close();
   });
 
@@ -210,6 +215,7 @@ describe("mock gateway: registry methods", () => {
     expect(setReply.result.return_code).toBe("OK");
     const getReply = await roundtrip(socket, req("gp1", "rois.command.get_parameter", {
       component_ref: "Navigation_0",
+      names: ["time_limit"],
     }));
     expect(getReply.result.return_code).toBe("OK");
     expect(getReply.result.parameters).toHaveLength(1);
@@ -224,8 +230,8 @@ describe("mock gateway: registry methods", () => {
     expect(reply.result.return_code).toBe("OK");
     expect(typeof reply.result.profile).toBe("string");
     const profile = JSON.parse(reply.result.profile);
-    expect(profile.identifier.code).toBe("MockEngine");
-    expect(profile.component_ids).toHaveLength(3);
+    expect(profile.identifier.code).toBe("MockGateway");
+    expect(profile.component_ids).toHaveLength(4);
     socket.close();
   });
 });

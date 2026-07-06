@@ -1,16 +1,18 @@
 /**
  * Mock RoIS gateway: a JSON-RPC 2.0 WebSocket test double.
  *
- * This is the Week 1 skeleton. It accepts WebSocket connections, parses
- * incoming JSON-RPC 2.0 messages, and answers the two System interface
- * lifecycle methods (connect, disconnect) with a canned OK. Any other method
- * returns a JSON-RPC "method not found" error, and malformed input returns the
- * appropriate parse or invalid-request error.
+ * Accepts WebSocket connections, parses incoming JSON-RPC 2.0 messages, and
+ * answers the System interface methods (connect, disconnect, get_profile,
+ * get_error_detail) and the full Command interface (search, bind, bind_any,
+ * release, set_parameter, get_parameter, execute, get_command_result) against
+ * an in-memory component registry. Any other method returns a JSON-RPC
+ * "method not found" error, and malformed input returns the appropriate parse
+ * or invalid-request error.
  *
  * The message schemas are reused from the SDK (@openrois/sdk/jsonrpc) so the
  * mock and the real client stay on a single wire contract. Later milestones
- * add a component registry, mock components, events, queries, and async command
- * completion (see project-outline.md Weeks 2 and 3).
+ * add mock components, events, queries, and async command completion (see
+ * project-outline.md Weeks 3 and beyond).
  *
  * Architecture: docs/architecture.md section 4 (Client SDK layer)
  * Protocol surface: project-outline.md section 6
@@ -23,6 +25,7 @@ import {
   JsonRpcErrorCode,
   JsonRpcRequestSchema,
 } from "@openrois/sdk/jsonrpc";
+
 import type {
   JsonRpcError,
   JsonRpcId,
@@ -141,11 +144,11 @@ function handleMessage(socket: WebSocket, data: RawData): void {
 /**
  * Route a validated request to its handler.
  *
- * Week 1: System lifecycle (connect, disconnect).
- * Week 2: System profile (get_profile) and Command interface (search, bind,
- * release, set_parameter, get_parameter).
- * Methods not yet implemented (execute, query, events, streaming) return
- * MethodNotFound.
+ * Handles the System interface lifecycle methods (connect, disconnect) and
+ * the two System query operations (get_profile, get_error_detail) with canned
+ * data. Handles the full Command interface (search, bind, bind_any, release,
+ * get_parameter, set_parameter, execute, get_command_result) against the
+ * in-memory component registry. Every other method is reported as not found.
  */
 function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
   switch (request.method) {
@@ -161,11 +164,24 @@ function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
       }));
       return;
 
+    case "rois.system.get_error_detail": {
+      const params = namedParams(request);
+      const errorId = asString(params.error_id);
+      const { returnCode, results } = registry.getErrorDetail(errorId);
+      send(socket, resultResponse(request.id, {
+        return_code: returnCode,
+        results,
+      }));
+      return;
+    }
+
     case "rois.command.search": {
       const params = namedParams(request);
       send(socket, resultResponse(request.id, {
         return_code: "OK",
-        component_ref_list: registry.search(typeof params.condition === "string" ? params.condition : ""),
+        component_ref_list: registry.search(
+          typeof params.condition === "string" ? params.condition : "",
+        ),
       }));
       return;
     }
@@ -175,6 +191,18 @@ function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
       const ref = asString(params.component_ref);
       send(socket, resultResponse(request.id, {
         return_code: registry.bind(ref),
+      }));
+      return;
+    }
+
+    case "rois.command.bind_any": {
+      const params = namedParams(request);
+      const condition =
+        typeof params.condition === "string" ? params.condition : "";
+      const { returnCode, componentRef } = registry.bindAny(condition);
+      send(socket, resultResponse(request.id, {
+        return_code: returnCode,
+        component_ref: componentRef,
       }));
       return;
     }
@@ -191,6 +219,15 @@ function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
     case "rois.command.set_parameter": {
       const params = namedParams(request);
       const ref = asString(params.component_ref);
+      // Validate that parameters is an array before passing to the registry.
+      // The registry merges by name, so a non-array is a protocol error.
+      if (!Array.isArray(params.parameters)) {
+        send(socket, resultResponse(request.id, {
+          return_code: "BAD_PARAMETER",
+          command_id: "",
+        }));
+        return;
+      }
       const parameters = asParameterArray(params.parameters);
       send(socket, resultResponse(request.id, {
         return_code: registry.setParameter(ref, parameters),
@@ -202,10 +239,33 @@ function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
     case "rois.command.get_parameter": {
       const params = namedParams(request);
       const ref = asString(params.component_ref);
-      const { returnCode, parameters } = registry.getParameter(ref);
+      const names = asStringArray(params.names);
+      const { returnCode, parameters } = registry.getParameter(ref, names);
       send(socket, resultResponse(request.id, {
         return_code: returnCode,
         parameters,
+      }));
+      return;
+    }
+
+    case "rois.command.execute": {
+      const params = namedParams(request);
+      const ref = asString(params.component_ref);
+      const { returnCode, commandId } = registry.execute(ref);
+      send(socket, resultResponse(request.id, {
+        return_code: returnCode,
+        command_id: commandId,
+      }));
+      return;
+    }
+
+    case "rois.command.get_command_result": {
+      const params = namedParams(request);
+      const commandId = asString(params.command_id);
+      const { returnCode, results } = registry.getCommandResult(commandId);
+      send(socket, resultResponse(request.id, {
+        return_code: returnCode,
+        results,
       }));
       return;
     }
@@ -271,6 +331,17 @@ function namedParams(request: JsonRpcRequest): Record<string, unknown> {
 /** Safely coerce an unknown value to string, defaulting to empty string. */
 function asString(value: unknown): string {
   return typeof value === "string" ? value : "";
+}
+
+/**
+ * Safely coerce an unknown value to an array of strings, defaulting to an
+ * empty array. Non-string elements are coerced to string.
+ */
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.map((v) => String(v));
 }
 
 /**
