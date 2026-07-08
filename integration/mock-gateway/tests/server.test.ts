@@ -553,4 +553,259 @@ describe("mock gateway", () => {
       socket.close();
     });
   });
+
+  // -----------------------------------------------------------------------
+  // rois.query.query
+  // -----------------------------------------------------------------------
+
+  describe("rois.query.query", () => {
+    it("returns robot_position results for SystemInformation_0", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "query-1",
+          method: "rois.query.query",
+          params: {
+            component_ref: "SystemInformation_0",
+            query_type: "robot_position",
+            condition: "",
+          },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("OK");
+      expect(reply.result.results).toHaveLength(3);
+      const names = reply.result.results.map((r: any) => r.name);
+      expect(names).toContain("position");
+      expect(names).toContain("orientation");
+      expect(names).toContain("timestamp");
+      socket.close();
+    });
+
+    it("returns engine_status results for SystemInformation_0", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "query-2",
+          method: "rois.query.query",
+          params: {
+            component_ref: "SystemInformation_0",
+            query_type: "engine_status",
+          },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("OK");
+      expect(reply.result.results).toHaveLength(2);
+      expect(reply.result.results[0].name).toBe("status");
+      expect(reply.result.results[0].value).toBe("READY");
+      socket.close();
+    });
+
+    it("returns component_status for PersonDetection_0", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "query-3",
+          method: "rois.query.query",
+          params: {
+            component_ref: "PersonDetection_0",
+            query_type: "component_status",
+          },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("OK");
+      expect(reply.result.results).toHaveLength(1);
+      expect(reply.result.results[0].value).toBe("READY");
+      socket.close();
+    });
+
+    it("returns UNSUPPORTED for an unknown query type", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "query-4",
+          method: "rois.query.query",
+          params: {
+            component_ref: "SystemInformation_0",
+            query_type: "unknown_query",
+          },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("UNSUPPORTED");
+      socket.close();
+    });
+
+    it("returns UNSUPPORTED for an unknown component", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "query-5",
+          method: "rois.query.query",
+          params: {
+            component_ref: "Unknown_0",
+            query_type: "robot_position",
+          },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("UNSUPPORTED");
+      socket.close();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // rois.event.subscribe
+  // -----------------------------------------------------------------------
+
+  describe("rois.event.subscribe", () => {
+    it("returns OK with a subscribe_id for a registered component", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "sub-1",
+          method: "rois.event.subscribe",
+          params: {
+            component_ref: "PersonDetection_0",
+            event_type: "person_detected",
+            condition: "",
+          },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("OK");
+      expect(reply.result.subscribe_id).toBeTruthy();
+      socket.close();
+    });
+
+    it("returns UNSUPPORTED for an unknown component", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "sub-2",
+          method: "rois.event.subscribe",
+          params: {
+            component_ref: "Unknown_0",
+            event_type: "person_detected",
+          },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("UNSUPPORTED");
+      socket.close();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // rois.event.unsubscribe
+  // -----------------------------------------------------------------------
+
+  describe("rois.event.unsubscribe", () => {
+    it("returns OK for a valid subscribe_id", async () => {
+      const socket = await connect();
+
+      // Subscribe first.
+      const subReply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "sub-1",
+          method: "rois.event.subscribe",
+          params: {
+            component_ref: "PersonDetection_0",
+            event_type: "person_detected",
+          },
+        }),
+      );
+      const subscribeId = subReply.result.subscribe_id;
+
+      // Unsubscribe.
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "unsub-1",
+          method: "rois.event.unsubscribe",
+          params: { subscribe_id: subscribeId },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("OK");
+      socket.close();
+    });
+
+    it("returns OK even for an unknown subscribe_id (silently ignored)", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "unsub-2",
+          method: "rois.event.unsubscribe",
+          params: { subscribe_id: "sub-nonexistent" },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("OK");
+      socket.close();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // rois.event.get_event_detail
+  // -----------------------------------------------------------------------
+
+  describe("rois.event.get_event_detail", () => {
+    it("returns canned details for a known event_id", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "detail-1",
+          method: "rois.event.get_event_detail",
+          params: { event_id: "evt-001" },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("OK");
+      expect(reply.result.results).toHaveLength(2);
+      expect(reply.result.results[0].name).toBe("number");
+      expect(reply.result.results[0].value).toBe("3");
+      socket.close();
+    });
+
+    it("returns empty results for an unknown event_id", async () => {
+      const socket = await connect();
+      const reply = await roundtrip(
+        socket,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "detail-2",
+          method: "rois.event.get_event_detail",
+          params: { event_id: "evt-unknown" },
+        }),
+      );
+
+      expect(reply.result.return_code).toBe("OK");
+      expect(reply.result.results).toEqual([]);
+      socket.close();
+    });
+  });
 });

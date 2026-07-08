@@ -147,8 +147,10 @@ function handleMessage(socket: WebSocket, data: RawData): void {
  * Answers the System interface lifecycle methods (connect, disconnect) and
  * the two System query operations (get_profile, get_error_detail) with canned
  * data. Handles the full Command interface (search, bind, bind_any, release,
- * get_parameter, set_parameter, execute, get_command_result) against an
- * in-memory component registry. Every other method is reported as not found.
+ * get_parameter, set_parameter, execute, get_command_result), the Query
+ * interface (query), and the Event interface (subscribe, unsubscribe,
+ * get_event_detail) against an in-memory component registry. Every other
+ * method is reported as not found.
  */
 function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
   switch (request.method) {
@@ -189,6 +191,22 @@ function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
       return;
     case "rois.command.get_command_result":
       send(socket, getCommandResultResponse(request.id, request.params));
+      return;
+
+    // Query interface
+    case "rois.query.query":
+      send(socket, queryResponse(request.id, request.params));
+      return;
+
+    // Event interface
+    case "rois.event.subscribe":
+      send(socket, subscribeResponse(request.id, request.params));
+      return;
+    case "rois.event.unsubscribe":
+      send(socket, unsubscribeResponse(request.id, request.params));
+      return;
+    case "rois.event.get_event_detail":
+      send(socket, getEventDetailResponse(request.id, request.params));
       return;
 
     default:
@@ -694,6 +712,184 @@ function getCommandResultResponse(id: JsonRpcId, _params: unknown): JsonRpcRespo
     result: {
       return_code: "OK",
       results: [],
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Response builders for Query operations
+// ---------------------------------------------------------------------------
+
+/**
+ * Canned query results for SystemInformation_0.
+ *
+ * The mock gateway answers "robot_position" and "engine_status" queries for
+ * the SystemInformation component. Other query types on SystemInformation
+ * return UNSUPPORTED. Queries on unknown components return UNSUPPORTED.
+ */
+const CANNED_QUERY_RESULTS: Record<string, Record<string, Result[]>> = {
+  SystemInformation_0: {
+    robot_position: [
+      { name: "position", data_type_ref: "string", value: "1.5,2.0,0.0" },
+      { name: "orientation", data_type_ref: "string", value: "0.0,0.0,0.0,1.0" },
+      { name: "timestamp", data_type_ref: "DateTime", value: "2026-07-08T12:00:00Z" },
+    ],
+    engine_status: [
+      { name: "status", data_type_ref: "ComponentStatus", value: "READY" },
+      { name: "uptime", data_type_ref: "int", value: "3600" },
+    ],
+    component_status: [
+      { name: "status", data_type_ref: "ComponentStatus", value: "READY" },
+    ],
+  },
+  PersonDetection_0: {
+    component_status: [
+      { name: "status", data_type_ref: "ComponentStatus", value: "READY" },
+    ],
+  },
+  Navigation_0: {
+    component_status: [
+      { name: "status", data_type_ref: "ComponentStatus", value: "BUSY" },
+    ],
+  },
+};
+
+/**
+ * Build a query response.
+ *
+ * Looks up the component_ref and query_type in the canned query results table.
+ * Returns UNSUPPORTED if the component or query type is not recognized.
+ */
+function queryResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
+  const componentRef = paramStr(params, "component_ref");
+  const queryType = paramStr(params, "query_type");
+
+  const componentQueries = CANNED_QUERY_RESULTS[componentRef];
+  if (!componentQueries) {
+    return {
+      jsonrpc: JSONRPC_VERSION,
+      id,
+      result: { return_code: "UNSUPPORTED", results: [] },
+    };
+  }
+
+  const results = componentQueries[queryType];
+  if (!results) {
+    return {
+      jsonrpc: JSONRPC_VERSION,
+      id,
+      result: { return_code: "UNSUPPORTED", results: [] },
+    };
+  }
+
+  return {
+    jsonrpc: JSONRPC_VERSION,
+    id,
+    result: {
+      return_code: "OK",
+      results,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Response builders for Event operations
+// ---------------------------------------------------------------------------
+
+/**
+ * In-memory subscription registry.
+ *
+ * Maps subscribe_id to the subscription details (component_ref, event_type).
+ * Used to track active subscriptions and support unsubscribe.
+ */
+const SUBSCRIPTION_REGISTRY: Map<string, { componentRef: string; eventType: string }> =
+  new Map();
+
+/** Counter for generating unique subscribe_ids. */
+let subscriptionCounter = 0;
+
+/**
+ * Build a subscribe response.
+ *
+ * Registers the subscription in the in-memory registry and returns a unique
+ * subscribe_id. Returns UNSUPPORTED if the component does not exist.
+ */
+function subscribeResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
+  const componentRef = paramStr(params, "component_ref");
+  const eventType = paramStr(params, "event_type");
+
+  if (!COMPONENT_REGISTRY.has(componentRef)) {
+    return {
+      jsonrpc: JSONRPC_VERSION,
+      id,
+      result: { return_code: "UNSUPPORTED", subscribe_id: "" },
+    };
+  }
+
+  const subscribeId = `sub-${++subscriptionCounter}`;
+  SUBSCRIPTION_REGISTRY.set(subscribeId, { componentRef, eventType });
+
+  return {
+    jsonrpc: JSONRPC_VERSION,
+    id,
+    result: {
+      return_code: "OK",
+      subscribe_id: subscribeId,
+    },
+  };
+}
+
+/**
+ * Build an unsubscribe response.
+ *
+ * Removes the subscription from the registry. Per the RoIS spec, duplicate
+ * unsubscribe requests are silently ignored (return OK).
+ */
+function unsubscribeResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
+  const subscribeId = paramStr(params, "subscribe_id");
+  SUBSCRIPTION_REGISTRY.delete(subscribeId);
+
+  return {
+    jsonrpc: JSONRPC_VERSION,
+    id,
+    result: { return_code: "OK" },
+  };
+}
+
+/**
+ * Canned event details keyed by event_id.
+ *
+ * The mock gateway recognizes a small set of known event IDs and returns
+ * descriptive Result arrays. Unknown event IDs return an empty result list
+ * with return_code OK.
+ */
+const CANNED_EVENT_DETAILS: Record<string, Result[]> = {
+  "evt-001": [
+    { name: "number", data_type_ref: "int", value: "3" },
+    { name: "timestamp", data_type_ref: "DateTime", value: "2026-07-08T12:00:00Z" },
+  ],
+  "evt-002": [
+    { name: "number", data_type_ref: "int", value: "1" },
+    { name: "timestamp", data_type_ref: "DateTime", value: "2026-07-08T12:01:00Z" },
+  ],
+};
+
+/**
+ * Build a get_event_detail response.
+ *
+ * Looks up the event_id in the canned details table. Unknown IDs return an
+ * empty results array with return_code OK.
+ */
+function getEventDetailResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
+  const eventId = paramStr(params, "event_id");
+  const results = CANNED_EVENT_DETAILS[eventId] ?? [];
+
+  return {
+    jsonrpc: JSONRPC_VERSION,
+    id,
+    result: {
+      return_code: "OK",
+      results,
     },
   };
 }
