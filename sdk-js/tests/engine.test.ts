@@ -91,6 +91,17 @@ async function createConnectedEngine(): Promise<{
   const connectPromise = RoISEngine.connect("ws://test-gateway:8765", testOptions);
   // The factory runs synchronously inside connect(), so currentMock is set.
   currentMock.simulateOpen();
+  // The engine's connect() awaits transport.connect(), which resolves on
+  // simulateOpen(). After that, connect() sends rois.system.connect.
+  // We need to drain microtasks so the send runs before we respond.
+  // With fake timers, we need several awaits to let the promise chain
+  // progress from transport.connect() resolution to the transport.send()
+  // call inside engine.connect().
+  for (let i = 0; i < 5; i++) {
+    await Promise.resolve();
+  }
+  // Simulate the gateway responding with { return_code: "OK" }.
+  respondWithResult(currentMock, { return_code: "OK" });
   const engine = await connectPromise;
   return { engine, mock: currentMock };
 }
@@ -171,6 +182,27 @@ describe("RoISEngine", () => {
 
       await expect(connectPromise).rejects.toThrow();
     });
+
+    it("sends rois.system.connect with empty params", async () => {
+      const { mock } = await createConnectedEngine();
+      const connectMsg = mock.sent[0] as Record<string, unknown>;
+      expect(connectMsg.method).toBe("rois.system.connect");
+      // The token is NOT in the params. Auth is at the transport layer.
+      expect(connectMsg.params).toBeUndefined();
+    });
+
+    it("rejects if the gateway returns a non-OK return code", async () => {
+      const connectPromise = RoISEngine.connect("ws://test-gateway:8765", testOptions);
+      currentMock.simulateOpen();
+      // Drain microtasks so the engine sends rois.system.connect.
+      for (let i = 0; i < 5; i++) {
+        await Promise.resolve();
+      }
+      // Respond with UNSUPPORTED instead of OK.
+      respondWithResult(currentMock, { return_code: "UNSUPPORTED" });
+
+      await expect(connectPromise).rejects.toThrow(RoISError);
+    });
   });
 
   describe("disconnect()", () => {
@@ -219,7 +251,7 @@ describe("RoISEngine", () => {
       const result = await resultPromise;
       expect(result).toEqual({ profile: "<xml>...</xml>" });
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.system.get_profile");
     });
   });
@@ -234,7 +266,7 @@ describe("RoISEngine", () => {
       const result = await resultPromise;
       expect(result).toEqual({ detail: "component timeout" });
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.system.get_error_detail");
       expect(sent.params).toEqual({ error_id: "err-001" });
     });
@@ -262,7 +294,7 @@ describe("RoISEngine", () => {
       const { engine, mock } = await createConnectedEngine();
 
       engine.search();
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.params).toEqual({ condition: "" });
 
       respondWithResult(mock, { return_code: "OK", component_ref_list: [] });
@@ -272,7 +304,7 @@ describe("RoISEngine", () => {
       const { engine, mock } = await createConnectedEngine();
 
       engine.search("urn:x-rois:def:component:OMG::PersonDetection");
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect((sent.params as Record<string, unknown>).condition).toBe(
         "urn:x-rois:def:component:OMG::PersonDetection"
       );
@@ -316,7 +348,7 @@ describe("RoISEngine", () => {
       const returnCode = await resultPromise;
       expect(returnCode).toBe("OK");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.command.bind");
       expect(sent.params).toEqual({ component_ref: "PersonDetection_0" });
     });
@@ -341,7 +373,7 @@ describe("RoISEngine", () => {
       const returnCode = await resultPromise;
       expect(returnCode).toBe("OK");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.command.release");
     });
   });
@@ -385,7 +417,7 @@ describe("RoISEngine", () => {
       const response = await resultPromise;
       expect(response.command_id).toBe("cmd-nav-002");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.command.execute");
     });
 
@@ -415,7 +447,7 @@ describe("RoISEngine", () => {
       expect(results).toHaveLength(1);
       expect(results[0].name).toBe("status");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.params).toEqual({ command_id: "cmd-nav-002" });
     });
   });
@@ -440,7 +472,7 @@ describe("RoISEngine", () => {
       expect(results).toHaveLength(1);
       expect(results[0].value).toBe("READY");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.query.query");
       expect(sent.params).toEqual({
         component_ref: "PersonDetection_0",
@@ -453,7 +485,7 @@ describe("RoISEngine", () => {
       const { engine, mock } = await createConnectedEngine();
 
       engine.query("SystemInformation_0", "robot_position", "robot_ref=robot_1");
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect((sent.params as Record<string, unknown>).condition).toBe("robot_ref=robot_1");
 
       respondWithResult(mock, { return_code: "OK", results: [] });
@@ -496,7 +528,7 @@ describe("RoISEngine", () => {
       const subscribeId = await resultPromise;
       expect(subscribeId).toBe("sub-pd-001");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.event.subscribe");
       expect(sent.params).toEqual({
         component_ref: "PersonDetection_0",
@@ -525,7 +557,7 @@ describe("RoISEngine", () => {
       const returnCode = await resultPromise;
       expect(returnCode).toBe("OK");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.event.unsubscribe");
       expect(sent.params).toEqual({ subscribe_id: "sub-pd-001" });
     });
@@ -548,7 +580,7 @@ describe("RoISEngine", () => {
       const result = await resultPromise;
       expect(result).toHaveProperty("event_id", "evt-001");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.event.get_event_detail");
       expect(sent.params).toEqual({ event_id: "evt-001" });
     });

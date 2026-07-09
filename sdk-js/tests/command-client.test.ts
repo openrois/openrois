@@ -73,6 +73,11 @@ async function createConnectedCommandClient(): Promise<{
 }> {
   const connectPromise = RoISEngine.connect("ws://test-gateway:8765", testOptions);
   currentMock.simulateOpen();
+  // Drain microtasks so the rois.system.connect send fires before we respond.
+  for (let i = 0; i < 5; i++) {
+    await Promise.resolve();
+  }
+  respondWithResult(currentMock, { return_code: "OK" });
   const engine = await connectPromise;
   const command = new CommandClient(engine.getTransport);
   return { engine, command, mock: currentMock };
@@ -117,7 +122,7 @@ describe("CommandClient", () => {
       const refs = await resultPromise;
       expect(refs).toEqual(["PersonDetection_0", "Navigation_0"]);
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.command.search");
       expect(sent.params).toEqual({ condition: "" });
     });
@@ -126,7 +131,7 @@ describe("CommandClient", () => {
       const { command, mock } = await createConnectedCommandClient();
 
       command.search("component=Navigation");
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.params).toEqual({ condition: "component=Navigation" });
 
       respondWithResult(mock, { return_code: "OK", component_ref_list: [] });
@@ -172,7 +177,7 @@ describe("CommandClient", () => {
       const returnCode = await resultPromise;
       expect(returnCode).toBe("OK");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.command.bind");
       expect(sent.params).toEqual({ component_ref: "PersonDetection_0" });
     });
@@ -207,7 +212,7 @@ describe("CommandClient", () => {
       const returnCode = await resultPromise;
       expect(returnCode).toBe("OK");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.command.release");
       expect(sent.params).toEqual({ component_ref: "PersonDetection_0" });
     });
@@ -244,7 +249,7 @@ describe("CommandClient", () => {
       expect(results[0].name).toBe("time_limit");
       expect(results[0].value).toBe("30");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.command.get_parameter");
       expect(sent.params).toEqual({ component_ref: "Navigation_0" });
     });
@@ -253,7 +258,7 @@ describe("CommandClient", () => {
       const { command, mock } = await createConnectedCommandClient();
 
       command.getParameter("Navigation_0", ["time_limit", "routing_policy"]);
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.params).toEqual({
         component_ref: "Navigation_0",
         names: ["time_limit", "routing_policy"],
@@ -304,7 +309,7 @@ describe("CommandClient", () => {
       const response = await resultPromise;
       expect(response.return_code).toBe("OK");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.command.set_parameter");
       expect(sent.params).toEqual({
         component_ref: "Navigation_0",
@@ -356,7 +361,7 @@ describe("CommandClient", () => {
       const ref = await resultPromise;
       expect(ref).toBe("Navigation_0");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.command.bind_any");
       expect(sent.params).toEqual({ condition: "component=Navigation" });
     });
@@ -365,7 +370,7 @@ describe("CommandClient", () => {
       const { command, mock } = await createConnectedCommandClient();
 
       command.bindAny();
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.params).toEqual({ condition: "" });
 
       respondWithResult(mock, { return_code: "OK", component_ref: "PersonDetection_0" });
@@ -410,7 +415,7 @@ describe("CommandClient", () => {
       expect(response.return_code).toBe("OK");
       expect(response.command_id).toBe("cmd-nav-001");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.command.execute");
       expect(sent.params).toEqual({
         component_ref: "Navigation_0",
@@ -456,7 +461,7 @@ describe("CommandClient", () => {
       expect(results[0].name).toBe("status");
       expect(results[0].value).toBe("OK");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.command.get_command_result");
       expect(sent.params).toEqual({ command_id: "cmd-nav-001" });
     });
@@ -489,6 +494,10 @@ describe("CommandClient", () => {
     it("can be constructed from engine.transport after connect", async () => {
       const connectPromise = RoISEngine.connect("ws://test:8765", testOptions);
       currentMock.simulateOpen();
+      for (let i = 0; i < 5; i++) {
+        await Promise.resolve();
+      }
+      respondWithResult(currentMock, { return_code: "OK" });
       const engine = await connectPromise;
 
       const command = new CommandClient(engine.getTransport);

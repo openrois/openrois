@@ -89,6 +89,11 @@ async function createConnectedSystemClient(): Promise<{
 }> {
   const connectPromise = RoISEngine.connect("ws://test-gateway:8765", testOptions);
   currentMock.simulateOpen();
+  // Drain microtasks so the rois.system.connect send fires before we respond.
+  for (let i = 0; i < 5; i++) {
+    await Promise.resolve();
+  }
+  respondWithResult(currentMock, { return_code: "OK" });
   const engine = await connectPromise;
   const system = new SystemClient(engine.getTransport);
   return { engine, system, mock: currentMock };
@@ -169,7 +174,7 @@ describe("SystemClient", () => {
       expect(profile.sub_profiles).toHaveLength(1);
       expect(profile.sub_profiles![0].identifier.code).toBe("PerceptionSubEngine");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.system.get_profile");
       expect(sent.params).toEqual({ condition: "" });
     });
@@ -178,7 +183,7 @@ describe("SystemClient", () => {
       const { system, mock } = await createConnectedSystemClient();
 
       system.getProfile("component=Navigation");
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.params).toEqual({ condition: "component=Navigation" });
 
       respondWithResult(mock, { return_code: "OK", profile: CANNED_PROFILE });
@@ -236,7 +241,7 @@ describe("SystemClient", () => {
       expect(results[0].value).toBe("robot-a1/Navigation");
       expect(results[1].name).toBe("description");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.system.get_error_detail");
       expect(sent.params).toEqual({ error_id: "err-001" });
     });
@@ -288,6 +293,10 @@ describe("SystemClient", () => {
     it("can be constructed from engine.transport after connect", async () => {
       const connectPromise = RoISEngine.connect("ws://test:8765", testOptions);
       currentMock.simulateOpen();
+      for (let i = 0; i < 5; i++) {
+        await Promise.resolve();
+      }
+      respondWithResult(currentMock, { return_code: "OK" });
       const engine = await connectPromise;
 
       const system = new SystemClient(engine.getTransport);

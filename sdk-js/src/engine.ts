@@ -45,7 +45,8 @@
 import { EventEmitter } from "node:events";
 
 // 2. External packages
-import { z } from "zod";
+// (zod is not used directly in this module. Schemas are imported from
+// @openrois/interfaces, which re-exports zod-based schemas.)
 
 // 3. Internal packages (@openrois/*)
 import {
@@ -83,12 +84,18 @@ import {
  */
 export interface EngineOptions {
   /**
-   * Authentication token for the gateway (e.g. a JWT).
-   * Sent during the rois.system.connect handshake.
+   * Authentication token for the gateway (e.g. a JWT or bearer token).
    *
-   * TODO: define the exact auth handshake with Sebastian.
+   * The token is NOT sent in the `rois.system.connect` message params.
+   * Auth is a transport-layer concern. A custom `webSocketFactory` in
+   * `transport.webSocketFactory` can read this token from the
+   * `EngineOptions` and attach it to the WebSocket upgrade request
+   * (e.g. as an `Authorization` header or query parameter).
+   *
+   * The engine itself does not use this field. It is here so callers
+   * can pass it through to a custom factory in a type-safe way.
    */
-  token?: string; //JWT authentication (will require later)
+  token?: string;
 
   /**
    * Transport-level options (timeouts, WebSocket factory).
@@ -193,14 +200,21 @@ export class RoISEngine extends EventEmitter {
    * This is the primary entry point for the SDK. It:
    *   1. Creates a WebSocketTransport.
    *   2. Opens the WebSocket connection to the gateway.
-   *   3. Performs the rois.system.connect handshake (TODO).
+   *   3. Sends rois.system.connect with empty params and validates the
+   *      response. The bearer token, if any, is passed at the transport
+   *      layer (WebSocket upgrade headers or query params), not in the
+   *      message params. This keeps auth as a transport concern.
    *   4. Returns a connected RoISEngine instance.
    *
    * @param url     - Gateway WebSocket URL, e.g. "wss://gateway.example.com".
-   * @param options - Authentication token and transport configuration.
+   * @param options - Transport configuration. The `token` field, if
+   *   provided, is available to a custom `webSocketFactory` but is NOT
+   *   sent in the `rois.system.connect` message params.
    * @returns A connected RoISEngine ready for RoIS operations.
    *
    * @throws ConnectionError if the WebSocket connection fails.
+   * @throws RoISError if the gateway returns a non-OK return code for
+   *   the `rois.system.connect` handshake.
    */
   static async connect(
     url: string,
@@ -211,17 +225,24 @@ export class RoISEngine extends EventEmitter {
     const transport = new WebSocketTransport(options?.transport);
 
     // Step 2: Open the WebSocket connection.
+    // The bearer token, if any, is passed at the transport layer via
+    // the webSocketFactory (e.g. as a query param or upgrade header).
     await transport.connect(url);
 
     // Step 3: Create the engine.
     const engine = new RoISEngine(transport);
 
     // Step 4: Perform the RoIS system.connect handshake.
-    // TODO: send rois.system.connect with the auth token and validate
-    // the response. 
-    // For now, we consider the engine connected once the WebSocket is open.
-    engine.connected = true;
+    // Send rois.system.connect with empty params. The token is NOT in
+    // the message. Auth happened at the transport layer.
+    const result = await transport.send("rois.system.connect");
+    const parsed = result as Record<string, unknown>;
+    const returnCode = ReturnCodeSchema.parse(parsed.return_code);
+    if (returnCode !== "OK") {
+      throw new RoISError(returnCode, "rois.system.connect");
+    }
 
+    engine.connected = true;
     return engine;
   }
 
@@ -232,8 +253,9 @@ export class RoISEngine extends EventEmitter {
   /**
    * Disconnect from the gateway.
    *
-   * Sends rois.system.disconnect to the gateway, then closes the
-   * WebSocket connection. Safe to call multiple times.
+   * Closes the WebSocket connection directly. No `rois.system.disconnect`
+   * message is sent. The gateway is expected to detect the WebSocket close
+   * and clean up the session. Safe to call multiple times.
    */
   async disconnect(): Promise<void> {
     if (!this.connected) {

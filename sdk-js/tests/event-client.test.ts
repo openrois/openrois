@@ -73,6 +73,11 @@ async function createConnectedEventClient(): Promise<{
 }> {
   const connectPromise = RoISEngine.connect("ws://test-gateway:8765", testOptions);
   currentMock.simulateOpen();
+  // Drain microtasks so the rois.system.connect send fires before we respond.
+  for (let i = 0; i < 5; i++) {
+    await Promise.resolve();
+  }
+  respondWithResult(currentMock, { return_code: "OK" });
   const engine = await connectPromise;
   const events = new EventClient(engine.getTransport);
   return { engine, events, mock: currentMock };
@@ -132,7 +137,7 @@ describe("EventClient", () => {
       const subscribeId = await resultPromise;
       expect(subscribeId).toBe("sub-001");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.event.subscribe");
       expect(sent.params).toEqual({
         component_ref: "PersonDetection_0",
@@ -145,7 +150,7 @@ describe("EventClient", () => {
       const { events, mock } = await createConnectedEventClient();
 
       events.subscribe("PersonDetection_0", "person_detected", "confidence>0.8");
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect((sent.params as Record<string, unknown>).condition).toBe("confidence>0.8");
 
       respondWithResult(mock, { return_code: "OK", subscribe_id: "sub-002" });
@@ -181,7 +186,7 @@ describe("EventClient", () => {
       const returnCode = await resultPromise;
       expect(returnCode).toBe("OK");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.event.unsubscribe");
       expect(sent.params).toEqual({ subscribe_id: "sub-001" });
     });
@@ -218,7 +223,7 @@ describe("EventClient", () => {
       expect(results[0].name).toBe("number");
       expect(results[0].value).toBe("3");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.event.get_event_detail");
       expect(sent.params).toEqual({ event_id: "evt-001" });
     });
@@ -341,6 +346,10 @@ describe("EventClient", () => {
     it("can be constructed from engine.getTransport after connect", async () => {
       const connectPromise = RoISEngine.connect("ws://test:8765", testOptions);
       currentMock.simulateOpen();
+      for (let i = 0; i < 5; i++) {
+        await Promise.resolve();
+      }
+      respondWithResult(currentMock, { return_code: "OK" });
       const engine = await connectPromise;
 
       const events = new EventClient(engine.getTransport);

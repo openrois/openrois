@@ -72,6 +72,11 @@ async function createConnectedQueryClient(): Promise<{
 }> {
   const connectPromise = RoISEngine.connect("ws://test-gateway:8765", testOptions);
   currentMock.simulateOpen();
+  // Drain microtasks so the rois.system.connect send fires before we respond.
+  for (let i = 0; i < 5; i++) {
+    await Promise.resolve();
+  }
+  respondWithResult(currentMock, { return_code: "OK" });
   const engine = await connectPromise;
   const query = new QueryClient(engine.getTransport);
   return { engine, query, mock: currentMock };
@@ -121,7 +126,7 @@ describe("QueryClient", () => {
       expect(results[0].name).toBe("position");
       expect(results[0].value).toBe("1.5,2.0,0.0");
 
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.method).toBe("rois.query.query");
       expect(sent.params).toEqual({
         component_ref: "SystemInformation_0",
@@ -134,7 +139,7 @@ describe("QueryClient", () => {
       const { query, mock } = await createConnectedQueryClient();
 
       query.query("SystemInformation_0", "robot_position", "robot_ref=robot_1");
-      const sent = mock.sent[0] as Record<string, unknown>;
+      const sent = mock.sent[1] as Record<string, unknown>;
       expect((sent.params as Record<string, unknown>).condition).toBe("robot_ref=robot_1");
 
       respondWithResult(mock, { return_code: "OK", results: [] });
@@ -174,6 +179,10 @@ describe("QueryClient", () => {
     it("can be constructed from engine.getTransport after connect", async () => {
       const connectPromise = RoISEngine.connect("ws://test:8765", testOptions);
       currentMock.simulateOpen();
+      for (let i = 0; i < 5; i++) {
+        await Promise.resolve();
+      }
+      respondWithResult(currentMock, { return_code: "OK" });
       const engine = await connectPromise;
 
       const query = new QueryClient(engine.getTransport);
