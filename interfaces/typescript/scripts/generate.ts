@@ -19,6 +19,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,7 +50,7 @@ interface Manifest {
 // Paths
 // ---------------------------------------------------------------------------
 
-const SCRIPT_DIR = path.dirname(new URL(import.meta.url).pathname);
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const TS_ROOT = path.resolve(SCRIPT_DIR, "..");
 const SCHEMA_DIR = process.env.OPENROIS_SCHEMA_DIR
   ? path.resolve(process.env.OPENROIS_SCHEMA_DIR)
