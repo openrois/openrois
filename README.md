@@ -29,23 +29,21 @@ the gateway, bus adapters, components, SDKs, and documentation.
 
 ```
 openrois/
+├── examples/                # Runnable examples: mock-gateway, mock-robot, web-operator
+├── sdk/                     # Client SDKs
+│   ├── typescript/          #   @openrois/sdk (npm, web + Node)
+│   └── csharp/              #   OpenRoIS.Sdk (NuGet + UPM, Unity)
 ├── interfaces/              # Shared types: single source of truth
 │   ├── python/              #   Pydantic models (hand-authored, source of truth)
 │   ├── schema/              #   Canonical JSON Schema (generated, wire contract)
 │   ├── csharp/              #   Generated C# types (OpenRoIS.Interfaces)
 │   └── typescript/          #   Generated TypeScript types (@openrois/interfaces)
+├── gateway/                 # WebSocket server (Python), RoIS to BusAdapter, WebRTC bridge
 ├── engine/                  # Bus-independent engine (Python): lifecycle, bind/execute
 ├── bus/                     # BusAdapter contract + reference adapters
 │   ├── ros2/                #   ROS2BusAdapter (rclpy), primary robot adapter
-│   ├── in_process/          #   InProcessBusAdapter (avatar reference)
-│   └── grpc/                #   gRPCBusAdapter (distributed services)
-├── gateway/                 # WebSocket server (Python), RoIS to BusAdapter, WebRTC bridge
-├── components/              # Component nodes (Python), per-paradigm backends
-├── sdk-js/                  # TypeScript/JS client SDK (web, secondary)
-├── sdk-csharp/              # C# client SDK (Unity, primary)
-├── sdk-py/                  # Python client SDK (scripting, secondary)
-├── examples/                # Demo apps
-├── integration/             # Cross-stack tests + launch configs
+│   ├── in-process/          #   InProcessBusAdapter (test utility)
+│   └── universal/           #   UniversalBusAdapter (WS+JSON-RPC, any non-ROS host)
 └── docs/                    # Documentation
 ```
 
@@ -119,23 +117,23 @@ avatars, and distributed services. Only the BusAdapter and host layout changes.
 What it looks like to control a robot from a web application:
 
 ```ts
-import { RoISEngine } from "@openrois/sdk";
+import { RoISClient } from "@openrois/sdk";
 
-const engine = await RoISEngine.connect("wss://gateway.example.com", {
+const client = await RoISClient.connect("wss://gateway.example.com", {
   token: await getAccessToken(),
 });
 
 // Detect people (identical API whether the host is a robot or an avatar)
-const pd = await engine.bind("PersonDetection");
+const pd = await client.bind("PersonDetection");
 pd.on("person_detected", (e) => console.log(`${e.number} people`));
 await pd.start();
 
 // Navigate
-const nav = await engine.bind("Navigation");
+const nav = await client.bind("Navigation");
 await nav.execute({ target_positions: ["3.0,1.5,0.0"], time_limit: 30 });
 
 // Stream live video
-const video = await engine.bind("VideoStreaming");
+const video = await client.bind("VideoStreaming");
 const track = await video.connectStream();    // WebRTC track to <video> element
 ```
 

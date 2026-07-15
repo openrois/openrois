@@ -503,12 +503,12 @@ typed errors. Component proxies provide typed access to each RoIS component with
 event handlers.
 
 ```csharp
-var engine = await RoISEngine.ConnectAsync(
+var client = await RoISClient.ConnectAsync(
     "wss://gateway.example.com",
     new ConnectOptions { Token = token });
 
-var pd = await engine.BindAsync("PersonDetection");
-var nav = await engine.BindAsync("Navigation");
+var pd = await client.BindAsync("PersonDetection");
+var nav = await client.BindAsync("Navigation");
 
 pd.On("person_detected", e => UpdateCount(e.Number));
 await pd.StartAsync();
@@ -522,7 +522,7 @@ Key characteristics:
 - Targets `netstandard2.1` for Unity 6.3+ (Mono) through Unity 6.8 (CoreCLR).
 - SDK callbacks are marshaled to the Unity main thread (documented pattern, tested
   in Play Mode).
-- Typed component proxies: `engine.BindAsync("PersonDetection")` returns a typed
+- Typed component proxies: `client.BindAsync("PersonDetection")` returns a typed
   proxy with `.On(event)` handlers.
 
 ### 7.2 TypeScript SDK for web (secondary client)
@@ -532,17 +532,17 @@ dashboards, monitoring tools, configuration UIs, and automated testing. It runs 
 both browsers and Node.js.
 
 ```ts
-import { RoISEngine } from "@openrois/sdk";
+import { RoISClient } from "@openrois/sdk";
 
-const engine = await RoISEngine.connect("wss://gateway.example.com", {
+const client = await RoISClient.connect("wss://gateway.example.com", {
   token: await getAccessToken(),
 });
 
-const pd = await engine.bind("PersonDetection");
+const pd = await client.bind("PersonDetection");
 pd.on("person_detected", (e) => console.log(`${e.number} people`));
 await pd.start();
 
-const nav = await engine.bind("Navigation");
+const nav = await client.bind("Navigation");
 await nav.execute({ target_positions: ["3.0,1.5,0.0"], time_limit: 30 });
 
 const video = await engine.bind("VideoStreaming");
@@ -555,7 +555,7 @@ Key characteristics:
 - Runtime validation via zod schemas imported from `@openrois/interfaces`.
 - Dual ESM/CJS output (tsup), browser and Node.js compatible.
 - Auto-reconnect with exponential backoff, heartbeat, typed error hierarchy.
-- Ships with a mock gateway (`integration/mock-gateway/`) for testing all SDKs.
+- Ships with a mock gateway (`examples/mock-gateway/`) for testing all SDKs.
 
 ### 7.3 Python SDK for scripting (secondary client)
 
@@ -565,19 +565,19 @@ protocol surface defined by the other SDKs.
 
 ```python
 import asyncio
-from openrois.sdk import RoISEngine
+from openrois.sdk import RoISClient
 
 async def main():
-    engine = await RoISEngine.connect(
+    client = await RoISClient.connect(
         "wss://gateway.example.com",
         token=get_access_token(),
     )
 
-    pd = await engine.bind("PersonDetection")
+    pd = await client.bind("PersonDetection")
     pd.on("person_detected", lambda e: print(f"{e.number} people"))
     await pd.start()
 
-    nav = await engine.bind("Navigation")
+    nav = await client.bind("Navigation")
     await nav.execute(target_positions=["3.0,1.5,0.0"], time_limit=30)
 
 asyncio.run(main())
@@ -1602,7 +1602,7 @@ flowchart LR
 | M2 | Remote Gateway | `gateway` (WebSocket, JSON-RPC 2.0, auth hook) | TODO |
 | M3 | ROS 2 Bus Adapter | `ROS2BusAdapter` (rclpy), no core changes | TODO |
 | M4 | Mock ROS 2 Robot Components | `person_detection`, `navigation`, `system_information` nodes | TODO |
-| M5 | SDK and Robot MVP | `sdk-csharp` / `sdk-js`, operator app, **v0.1.0 release** | TODO |
+| M5 | SDK and Robot MVP | `sdk/csharp` / `sdk/typescript`, operator app, **v0.1.0 release** | TODO |
 | M8 | Real Robot Component and Mixed Paradigm | YOLO `person_detection`, robot + avatar on one gateway | TODO |
 | M9 | Auth and Bus Security | `auth`, `rbac`, per-fleet isolation | TODO |
 | M10 | WebRTC Media | Streaming components, telepresence | TODO |

@@ -206,9 +206,9 @@ RoIS Client SDK
 Target developer experience (TypeScript / web, primary client):
 
 ```ts
-import { RoISEngine } from "@openrois/sdk";
+import { RoISClient } from "@openrois/sdk";
 
-const engine = await RoISEngine.connect("wss://gateway.example.com", {
+const client = await RoISClient.connect("wss://gateway.example.com", {
   token: await getAccessToken(),
 });
 
@@ -669,14 +669,13 @@ openrois/
 │   ├── speech-synthesis/   #   robot: Piper to speaker, avatar: TTS to lip-sync
 │   ├── reaction/           #   robot: LED/gesture, avatar: animation
 │   └── ...                 #   remaining basic components
-├── sdk-js/                  # TypeScript/JS client SDK (web, PRIMARY)
-├── sdk-csharp/              # C# client SDK (Unity, secondary)
-├── sdk-py/                  # Python client SDK (secondary)
-├── examples/                # demo apps
-│   ├── web-operator/       #   Web operator app driving a ROS 2 robot (MVP demo)
+├── sdk/                     # client SDKs
+│   ├── typescript/          #   @openrois/sdk (npm, web + Node, PRIMARY)
+│   └── csharp/              #   OpenRoIS.Sdk (NuGet + UPM, Unity)
+├── examples/                # runnable examples and test tools
+│   ├── mock-gateway/       #   mock WebSocket gateway (JSON-RPC test double for SDKs)
+│   ├── web-operator/       #   web operator app driving a ROS 2 robot (MVP demo)
 │   └── mock-robot/         #   ROS 2 mock sub-engine + component nodes
-├── integration/             # cross-stack tests + launch configs
-│   └── mock-gateway/       #   Mock gateway (JSON-RPC test double for all SDKs)
 └── docs/                    # documentation
 ```
 

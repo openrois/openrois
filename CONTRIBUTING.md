@@ -132,7 +132,7 @@ feat(transport): add WebSocket transport with browser and Node.js support
 fix(jsonrpc): handle missing id field in notifications
 docs(readme): add quickstart guide and error handling section
 test(events): add unsubscribe cleanup test
-chore(ci): add sdk-js workflow with vitest and coverage
+chore(ci): add sdk typescript workflow with vitest and coverage
 ```
 
 **Rules:**
@@ -310,4 +310,4 @@ Use this template for every PR:
 - The CI pipeline (`.github/workflows/ci.yml`) runs on every push
 - CI must be green before merge
 - New packages should add their own workflow file (e.g.,
-  `.github/workflows/sdk-js.yml`)
+  `.github/workflows/sdk-typescript.yml`)

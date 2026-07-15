@@ -17,7 +17,7 @@ in a web operator application controlling a ROS 2 robot over WebSocket.
 | **M2** | Remote Gateway | `gateway` (WebSocket, JSON-RPC 2.0, auth hook) | todo |
 | **M3** | ROS 2 Bus Adapter | `ROS2BusAdapter` (rclpy), no core changes | todo |
 | **M4** | Mock ROS 2 Robot Components | `person_detection`, `navigation`, `system_information` nodes | todo |
-| **M5** | Web SDK and Robot MVP | `sdk-js`, web operator app, **v0.1.0 release** | todo |
+| **M5** | Web SDK and Robot MVP | `sdk/typescript`, web operator app, **v0.1.0 release** | todo |
 | **M8** | Real Robot Component and Mixed Paradigm | YOLO `person_detection`, robot + avatar on one gateway | todo |
 | **M9** | Auth and Bus Security | `auth`, `rbac`, per-fleet isolation | todo |
 | **M10** | WebRTC Media | Streaming components, telepresence | todo |
