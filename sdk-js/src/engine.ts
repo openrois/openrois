@@ -164,6 +164,16 @@ export class RoISEngine extends EventEmitter {
   /** Says whether the engine has completed the RoIS system.connect handshake. */
   private connected: boolean = false;
 
+  /**
+   * The underlying transport managing the WebSocket connection.
+   *
+   * Exposed so that interface-specific clients (SystemClient, CommandClient,
+   * etc.) can be constructed over the same connection without re-opening it.
+   */
+  get getTransport(): WebSocketTransport {
+    return this.transport;
+  }
+
   // -----------------------------------------------------------------------
   // Construction (private -- use RoISEngine.connect() instead)
   // -----------------------------------------------------------------------
