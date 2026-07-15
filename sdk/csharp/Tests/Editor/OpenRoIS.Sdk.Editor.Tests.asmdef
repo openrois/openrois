@@ -1,0 +1,14 @@
+{
+    "name": "OpenRoIS.Sdk.Editor.Tests",
+    "references": [
+        "OpenRoIS.Sdk.Editor",
+        "OpenRoIS.Sdk"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": []
+}

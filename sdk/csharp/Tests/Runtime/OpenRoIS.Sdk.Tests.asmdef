@@ -1,0 +1,11 @@
+{
+    "name": "OpenRoIS.Sdk.Tests",
+    "references": [
+        "OpenRoIS.Sdk"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": []
+}

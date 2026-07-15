@@ -1,0 +1,18 @@
+{
+	"name": "org.openrois.sdk",
+	"displayName": "OpenRoIS SDK",
+	"version": "0.1.0-alpha.1",
+	"unity": "6000.5",
+	"unityRelease": "3f1",
+	"description": "RoIS Framework 2.0 client SDK for the OpenRoIS middleware. Paradigm-neutral HRI middleware for Unity.",
+	"dependencies": {
+		"com.unity.test-framework": "1.6.0"
+	},
+	"author": {
+		"name": "OpenRoIS Community",
+		"url": "https://github.com/openrois/openrois"
+	},
+	"changelogUrl": "https://github.com/openrois/openrois/blob/main/sdk/CHANGELOG.md",
+	"documentationUrl": "https://github.com/openrois/openrois#readme",
+	"licensesUrl": "https://github.com/openrois/openrois/blob/main/LICENSE"
+}

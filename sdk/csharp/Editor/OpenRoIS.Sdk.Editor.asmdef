@@ -1,0 +1,10 @@
+{
+    "name": "OpenRoIS.Sdk.Editor",
+    "references": [
+      "OpenRoIS.Sdk"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": []
+}
