@@ -1,8 +1,8 @@
 /**
- * Unit tests for engine.ts -- RoISEngine high-level SDK entry point.
+ * RoISClient Unit tests for rois-client.ts -- RoISClient high-level SDK entry point.
  *
  * Uses the same MockWebSocket pattern as transport.test.ts to simulate
- * the gateway. The engine creates its own transport internally, so we
+ * the gateway. The client creates its own transport internally, so we
  * inject the mock via the webSocketFactory option.
  *
  * Run with: npx vitest run
@@ -10,10 +10,10 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
-  RoISEngine,
+  RoISClient,
   RoISError,
-  type EngineOptions,
-} from "../src/engine";
+  type ClientOptions,
+} from "../src/rois-client";
 import { TransportError } from "../src/transport";
 import { JSONRPC_VERSION, JsonRpcErrorCode } from "../src/jsonrpc";
 
@@ -71,7 +71,7 @@ class MockWebSocket {
 let currentMock: MockWebSocket;
 
 /** Engine options that inject our MockWebSocket. */
-const testOptions: EngineOptions = {
+const testOptions: ClientOptions = {
   transport: {
     webSocketFactory: (_url: string) => {
       currentMock = new MockWebSocket();
@@ -81,29 +81,29 @@ const testOptions: EngineOptions = {
 };
 
 /**
- * Create a connected RoISEngine wired to a MockWebSocket.
- * Returns the engine and the mock for simulating gateway responses.
+ * Create a connected RoISClient wired to a MockWebSocket.
+ * Returns the client and the mock for simulating gateway responses.
  */
-async function createConnectedEngine(): Promise<{
-  engine: RoISEngine;
+async function createConnectedClient(): Promise<{
+  client: RoISClient;
   mock: MockWebSocket;
 }> {
-  const connectPromise = RoISEngine.connect("ws://test-gateway:8765", testOptions);
+  const connectPromise = RoISClient.connect("ws://test-gateway:8765", testOptions);
   // The factory runs synchronously inside connect(), so currentMock is set.
   currentMock.simulateOpen();
-  // The engine's connect() awaits transport.connect(), which resolves on
+  // The client's connect() awaits transport.connect(), which resolves on
   // simulateOpen(). After that, connect() sends rois.system.connect.
   // We need to drain microtasks so the send runs before we respond.
   // With fake timers, we need several awaits to let the promise chain
   // progress from transport.connect() resolution to the transport.send()
-  // call inside engine.connect().
+  // call inside client.connect().
   for (let i = 0; i < 5; i++) {
     await Promise.resolve();
   }
   // Simulate the gateway responding with { return_code: "OK" }.
   respondWithResult(currentMock, { return_code: "OK" });
-  const engine = await connectPromise;
-  return { engine, mock: currentMock };
+  const client = await connectPromise;
+  return { client, mock: currentMock };
 }
 
 /**
@@ -157,7 +157,7 @@ function sendNotification(
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("RoISEngine", () => {
+describe("RoISClient", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -171,20 +171,20 @@ describe("RoISEngine", () => {
   // -----------------------------------------------------------------------
 
   describe("connect()", () => {
-    it("returns a connected engine instance", async () => {
-      const { engine } = await createConnectedEngine();
-      expect(engine).toBeInstanceOf(RoISEngine);
+    it("returns a connected client instance", async () => {
+      const { client } = await createConnectedClient();
+      expect(client).toBeInstanceOf(RoISClient);
     });
 
     it("rejects if the WebSocket connection fails", async () => {
-      const connectPromise = RoISEngine.connect("ws://bad-gateway:8765", testOptions);
+      const connectPromise = RoISClient.connect("ws://bad-gateway:8765", testOptions);
       currentMock.simulateError("connection refused");
 
       await expect(connectPromise).rejects.toThrow();
     });
 
     it("sends rois.system.connect with empty params", async () => {
-      const { mock } = await createConnectedEngine();
+      const { mock } = await createConnectedClient();
       const connectMsg = mock.sent[0] as Record<string, unknown>;
       expect(connectMsg.method).toBe("rois.system.connect");
       // The token is NOT in the params. Auth is at the transport layer.
@@ -192,9 +192,9 @@ describe("RoISEngine", () => {
     });
 
     it("rejects if the gateway returns a non-OK return code", async () => {
-      const connectPromise = RoISEngine.connect("ws://test-gateway:8765", testOptions);
+      const connectPromise = RoISClient.connect("ws://test-gateway:8765", testOptions);
       currentMock.simulateOpen();
-      // Drain microtasks so the engine sends rois.system.connect.
+      // Drain microtasks so the client sends rois.system.connect.
       for (let i = 0; i < 5; i++) {
         await Promise.resolve();
       }
@@ -207,17 +207,17 @@ describe("RoISEngine", () => {
 
   describe("disconnect()", () => {
     it("disconnects without error", async () => {
-      const { engine } = await createConnectedEngine();
-      await engine.disconnect();
+      const { client } = await createConnectedClient();
+      await client.disconnect();
 
       // Methods should throw after disconnect.
-      await expect(engine.search()).rejects.toThrow("not connected");
+      await expect(client.search()).rejects.toThrow("not connected");
     });
 
     it("is safe to call multiple times", async () => {
-      const { engine } = await createConnectedEngine();
-      await engine.disconnect();
-      await engine.disconnect(); // Should not throw.
+      const { client } = await createConnectedClient();
+      await client.disconnect();
+      await client.disconnect(); // Should not throw.
     });
   });
 
@@ -226,14 +226,14 @@ describe("RoISEngine", () => {
   // -----------------------------------------------------------------------
 
   describe("ensureConnected guard", () => {
-    it("throws TransportError when calling methods on a disconnected engine", async () => {
-      const { engine } = await createConnectedEngine();
-      await engine.disconnect();
+    it("throws TransportError when calling methods on a disconnected client", async () => {
+      const { client } = await createConnectedClient();
+      await client.disconnect();
 
-      await expect(engine.search()).rejects.toThrow(TransportError);
-      await expect(engine.query("x", "y")).rejects.toThrow(TransportError);
-      await expect(engine.subscribe("x", "y")).rejects.toThrow(TransportError);
-      await expect(engine.execute("x", {})).rejects.toThrow(TransportError);
+      await expect(client.search()).rejects.toThrow(TransportError);
+      await expect(client.query("x", "y")).rejects.toThrow(TransportError);
+      await expect(client.subscribe("x", "y")).rejects.toThrow(TransportError);
+      await expect(client.execute("x", {})).rejects.toThrow(TransportError);
     });
   });
 
@@ -243,9 +243,9 @@ describe("RoISEngine", () => {
 
   describe("getProfile()", () => {
     it("sends rois.system.get_profile and returns the result", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.getProfile();
+      const resultPromise = client.getProfile();
       respondWithResult(mock, { profile: "<xml>...</xml>" });
 
       const result = await resultPromise;
@@ -258,9 +258,9 @@ describe("RoISEngine", () => {
 
   describe("getErrorDetail()", () => {
     it("sends rois.system.get_error_detail with the error_id", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.getErrorDetail("err-001");
+      const resultPromise = client.getErrorDetail("err-001");
       respondWithResult(mock, { detail: "component timeout" });
 
       const result = await resultPromise;
@@ -278,9 +278,9 @@ describe("RoISEngine", () => {
 
   describe("search()", () => {
     it("returns component_ref_list from a DiscoverResponse", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.search();
+      const resultPromise = client.search();
       respondWithResult(mock, {
         return_code: "OK",
         component_ref_list: ["PersonDetection_0", "Navigation_0", "SystemInformation_0"],
@@ -291,9 +291,9 @@ describe("RoISEngine", () => {
     });
 
     it("sends an empty condition by default", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      engine.search();
+      client.search();
       const sent = mock.sent[1] as Record<string, unknown>;
       expect(sent.params).toEqual({ condition: "" });
 
@@ -301,9 +301,9 @@ describe("RoISEngine", () => {
     });
 
     it("passes a custom condition", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      engine.search("urn:x-rois:def:component:OMG::PersonDetection");
+      client.search("urn:x-rois:def:component:OMG::PersonDetection");
       const sent = mock.sent[1] as Record<string, unknown>;
       expect((sent.params as Record<string, unknown>).condition).toBe(
         "urn:x-rois:def:component:OMG::PersonDetection"
@@ -313,9 +313,9 @@ describe("RoISEngine", () => {
     });
 
     it("returns empty array when component_ref_list is undefined", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.search();
+      const resultPromise = client.search();
       respondWithResult(mock, { return_code: "OK" });
 
       const components = await resultPromise;
@@ -323,9 +323,9 @@ describe("RoISEngine", () => {
     });
 
     it("throws RoISError on non-OK return code", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.search("bad-filter");
+      const resultPromise = client.search("bad-filter");
       respondWithResult(mock, { return_code: "BAD_PARAMETER" });
 
       await expect(resultPromise).rejects.toThrow(RoISError);
@@ -340,9 +340,9 @@ describe("RoISEngine", () => {
 
   describe("bind()", () => {
     it("sends rois.command.bind with the component_ref", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.bind("PersonDetection_0");
+      const resultPromise = client.bind("PersonDetection_0");
       respondWithResult(mock, { return_code: "OK" });
 
       const returnCode = await resultPromise;
@@ -354,9 +354,9 @@ describe("RoISEngine", () => {
     });
 
     it("throws RoISError when binding a nonexistent component", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.bind("UnknownComponent_0");
+      const resultPromise = client.bind("UnknownComponent_0");
       respondWithResult(mock, { return_code: "UNSUPPORTED" });
 
       await expect(resultPromise).rejects.toThrow(RoISError);
@@ -365,9 +365,9 @@ describe("RoISEngine", () => {
 
   describe("release()", () => {
     it("sends rois.command.release and returns the ReturnCode", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.release("PersonDetection_0");
+      const resultPromise = client.release("PersonDetection_0");
       respondWithResult(mock, { return_code: "OK" });
 
       const returnCode = await resultPromise;
@@ -380,9 +380,9 @@ describe("RoISEngine", () => {
 
   describe("setParameter()", () => {
     it("sends rois.command.set_parameter and returns InvokeResponse", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.setParameter("Navigation_0", [
+      const resultPromise = client.setParameter("Navigation_0", [
         { name: "target_positions", data_type_ref: "string[]", value: '["3.0,1.5,0.0"]' },
         { name: "time_limit", data_type_ref: "int", value: "30" },
         { name: "routing_policy", data_type_ref: "string", value: "time" },
@@ -401,9 +401,9 @@ describe("RoISEngine", () => {
 
   describe("execute()", () => {
     it("sends rois.command.execute and returns InvokeResponse with command_id", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.execute("Navigation_0", {
+      const resultPromise = client.execute("Navigation_0", {
         target_positions: ["3.0,1.5,0.0"],
         time_limit: 30,
       });
@@ -422,9 +422,9 @@ describe("RoISEngine", () => {
     });
 
     it("throws RoISError on non-OK return code", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.execute("Navigation_0", {});
+      const resultPromise = client.execute("Navigation_0", {});
       respondWithResult(mock, { return_code: "ERROR", command_id: "" });
 
       await expect(resultPromise).rejects.toThrow(RoISError);
@@ -433,9 +433,9 @@ describe("RoISEngine", () => {
 
   describe("getCommandResult()", () => {
     it("sends rois.command.get_command_result and returns results", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.getCommandResult("cmd-nav-002");
+      const resultPromise = client.getCommandResult("cmd-nav-002");
       respondWithResult(mock, {
         return_code: "OK",
         results: [
@@ -458,9 +458,9 @@ describe("RoISEngine", () => {
 
   describe("query()", () => {
     it("sends rois.query.query and returns validated results", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.query("PersonDetection_0", "component_status");
+      const resultPromise = client.query("PersonDetection_0", "component_status");
       respondWithResult(mock, {
         return_code: "OK",
         results: [
@@ -482,9 +482,9 @@ describe("RoISEngine", () => {
     });
 
     it("passes a custom condition", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      engine.query("SystemInformation_0", "robot_position", "robot_ref=robot_1");
+      client.query("SystemInformation_0", "robot_position", "robot_ref=robot_1");
       const sent = mock.sent[1] as Record<string, unknown>;
       expect((sent.params as Record<string, unknown>).condition).toBe("robot_ref=robot_1");
 
@@ -492,9 +492,9 @@ describe("RoISEngine", () => {
     });
 
     it("returns empty array when results is undefined", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.query("PersonDetection_0", "component_status");
+      const resultPromise = client.query("PersonDetection_0", "component_status");
       respondWithResult(mock, { return_code: "OK" });
 
       const results = await resultPromise;
@@ -502,9 +502,9 @@ describe("RoISEngine", () => {
     });
 
     it("throws RoISError on non-OK return code", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.query("PersonDetection_0", "unknown_query");
+      const resultPromise = client.query("PersonDetection_0", "unknown_query");
       respondWithResult(mock, { return_code: "UNSUPPORTED" });
 
       await expect(resultPromise).rejects.toThrow(RoISError);
@@ -517,9 +517,9 @@ describe("RoISEngine", () => {
 
   describe("subscribe()", () => {
     it("sends rois.event.subscribe and returns the subscribe_id", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.subscribe("PersonDetection_0", "person_detected");
+      const resultPromise = client.subscribe("PersonDetection_0", "person_detected");
       respondWithResult(mock, {
         return_code: "OK",
         subscribe_id: "sub-pd-001",
@@ -538,9 +538,9 @@ describe("RoISEngine", () => {
     });
 
     it("throws RoISError on non-OK return code", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.subscribe("PersonDetection_0", "unknown_event");
+      const resultPromise = client.subscribe("PersonDetection_0", "unknown_event");
       respondWithResult(mock, { return_code: "UNSUPPORTED", subscribe_id: "" });
 
       await expect(resultPromise).rejects.toThrow(RoISError);
@@ -549,9 +549,9 @@ describe("RoISEngine", () => {
 
   describe("unsubscribe()", () => {
     it("sends rois.event.unsubscribe and returns the ReturnCode", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.unsubscribe("sub-pd-001");
+      const resultPromise = client.unsubscribe("sub-pd-001");
       respondWithResult(mock, { return_code: "OK" });
 
       const returnCode = await resultPromise;
@@ -565,9 +565,9 @@ describe("RoISEngine", () => {
 
   describe("getEventDetail()", () => {
     it("sends rois.event.get_event_detail with the event_id", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.getEventDetail("evt-001");
+      const resultPromise = client.getEventDetail("evt-001");
       respondWithResult(mock, {
         event_id: "evt-001",
         event_type: "person_detected",
@@ -592,9 +592,9 @@ describe("RoISEngine", () => {
 
   describe("event forwarding", () => {
     it("emits 'notification' for any server push", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
       const handler = vi.fn();
-      engine.on("notification", handler);
+      client.on("notification", handler);
 
       sendNotification(mock, "rois.event.notify", {
         event_id: "evt-001",
@@ -606,9 +606,9 @@ describe("RoISEngine", () => {
     });
 
     it("emits 'rois.event.notify' for component events", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
       const handler = vi.fn();
-      engine.on("rois.event.notify", handler);
+      client.on("rois.event.notify", handler);
 
       sendNotification(mock, "rois.event.notify", {
         event_id: "evt-001",
@@ -619,9 +619,9 @@ describe("RoISEngine", () => {
     });
 
     it("emits the specific event_type for convenience", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
       const handler = vi.fn();
-      engine.on("person_detected", handler);
+      client.on("person_detected", handler);
 
       sendNotification(mock, "rois.event.notify", {
         event_id: "evt-001",
@@ -636,9 +636,9 @@ describe("RoISEngine", () => {
     });
 
     it("emits 'rois.command.completed' for command completions", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
       const handler = vi.fn();
-      engine.on("rois.command.completed", handler);
+      client.on("rois.command.completed", handler);
 
       sendNotification(mock, "rois.command.completed", {
         command_id: "cmd-nav-002",
@@ -652,9 +652,9 @@ describe("RoISEngine", () => {
     });
 
     it("emits 'rois.system.notify_error' for gateway errors", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
       const handler = vi.fn();
-      engine.on("rois.system.notify_error", handler);
+      client.on("rois.system.notify_error", handler);
 
       sendNotification(mock, "rois.system.notify_error", {
         error_id: "err-001",
@@ -665,16 +665,16 @@ describe("RoISEngine", () => {
     });
 
     it("emits 'close' and marks disconnected on unexpected close", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
       const closeHandler = vi.fn();
-      engine.on("close", closeHandler);
+      client.on("close", closeHandler);
 
       mock.simulateClose(1006, "abnormal closure");
 
       expect(closeHandler).toHaveBeenCalledWith(1006, "abnormal closure");
 
       // Engine should be disconnected now.
-      await expect(engine.search()).rejects.toThrow("not connected");
+      await expect(client.search()).rejects.toThrow("not connected");
     });
   });
 
@@ -684,9 +684,9 @@ describe("RoISEngine", () => {
 
   describe("error handling", () => {
     it("throws RpcError when the gateway returns a JSON-RPC error", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.search();
+      const resultPromise = client.search();
       respondWithError(
         mock,
         JsonRpcErrorCode.InternalError,
@@ -697,9 +697,9 @@ describe("RoISEngine", () => {
     });
 
     it("throws RoISError with the specific ReturnCode on domain errors", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.bind("UnknownComponent_0");
+      const resultPromise = client.bind("UnknownComponent_0");
       respondWithResult(mock, { return_code: "UNSUPPORTED" });
 
       try {
@@ -714,9 +714,9 @@ describe("RoISEngine", () => {
     });
 
     it("throws RoISError with TIMEOUT return code", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const resultPromise = engine.execute("Navigation_0", {});
+      const resultPromise = client.execute("Navigation_0", {});
       respondWithResult(mock, {
         return_code: "TIMEOUT",
         command_id: "",
@@ -732,10 +732,10 @@ describe("RoISEngine", () => {
     });
 
     it("rejects pending requests when the connection drops", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
-      const searchPromise = engine.search();
-      const queryPromise = engine.query("PersonDetection_0", "component_status");
+      const searchPromise = client.search();
+      const queryPromise = client.query("PersonDetection_0", "component_status");
 
       mock.simulateClose(1006, "unexpected disconnect");
 
@@ -750,10 +750,10 @@ describe("RoISEngine", () => {
 
   describe("full workflow", () => {
     it("completes a search -> bind -> execute -> release cycle", async () => {
-      const { engine, mock } = await createConnectedEngine();
+      const { client, mock } = await createConnectedClient();
 
       // 1. Search for components.
-      const searchPromise = engine.search();
+      const searchPromise = client.search();
       respondWithResult(mock, {
         return_code: "OK",
         component_ref_list: ["Navigation_0"],
@@ -762,12 +762,12 @@ describe("RoISEngine", () => {
       expect(components).toContain("Navigation_0");
 
       // 2. Bind the component.
-      const bindPromise = engine.bind("Navigation_0");
+      const bindPromise = client.bind("Navigation_0");
       respondWithResult(mock, { return_code: "OK" });
       await bindPromise;
 
       // 3. Execute a navigation command.
-      const execPromise = engine.execute("Navigation_0", {
+      const execPromise = client.execute("Navigation_0", {
         target_positions: ["3.0,1.5,0.0"],
         time_limit: 30,
       });
@@ -781,7 +781,7 @@ describe("RoISEngine", () => {
 
       // 4. Receive command completion notification.
       const completedHandler = vi.fn();
-      engine.on("rois.command.completed", completedHandler);
+      client.on("rois.command.completed", completedHandler);
 
       sendNotification(mock, "rois.command.completed", {
         command_id: "cmd-nav-001",
@@ -790,13 +790,13 @@ describe("RoISEngine", () => {
       expect(completedHandler).toHaveBeenCalledOnce();
 
       // 5. Release the component.
-      const releasePromise = engine.release("Navigation_0");
+      const releasePromise = client.release("Navigation_0");
       respondWithResult(mock, { return_code: "OK" });
       const releaseCode = await releasePromise;
       expect(releaseCode).toBe("OK");
 
       // 6. Disconnect.
-      await engine.disconnect();
+      await client.disconnect();
     });
   });
 });

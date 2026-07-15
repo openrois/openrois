@@ -1,20 +1,20 @@
 /**
- * Unit tests for query-client.ts -- QueryClient (QueryIF operations).
+ * Unit tests for query-rois-client.ts -- QueryClient (QueryIF operations).
  *
- * Uses the same MockWebSocket pattern as engine.test.ts to simulate the
- * gateway. QueryClient is constructed over the engine's transport.
+ * Uses the same MockWebSocket pattern as rois-client.test.ts to simulate the
+ * gateway. QueryClient is constructed over the client's transport.
  *
  * Run with: npx vitest run
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { RoISEngine, RoISError, type EngineOptions } from "../src/engine";
+import { RoISClient, RoISError, type EngineOptions } from "../src/rois-client";
 import { QueryClient } from "../src/query-client";
 import { TransportError } from "../src/transport";
 import { JSONRPC_VERSION } from "../src/jsonrpc";
 
 // ---------------------------------------------------------------------------
-// MockWebSocket (same pattern as engine.test.ts)
+// MockWebSocket (same pattern as rois-client.test.ts)
 // ---------------------------------------------------------------------------
 
 class MockWebSocket {
@@ -66,20 +66,20 @@ const testOptions: EngineOptions = {
 };
 
 async function createConnectedQueryClient(): Promise<{
-  engine: RoISEngine;
+  client: RoISClient;
   query: QueryClient;
   mock: MockWebSocket;
 }> {
-  const connectPromise = RoISEngine.connect("ws://test-gateway:8765", testOptions);
+  const connectPromise = RoISClient.connect("ws://test-gateway:8765", testOptions);
   currentMock.simulateOpen();
   // Drain microtasks so the rois.system.connect send fires before we respond.
   for (let i = 0; i < 5; i++) {
     await Promise.resolve();
   }
   respondWithResult(currentMock, { return_code: "OK" });
-  const engine = await connectPromise;
-  const query = new QueryClient(engine.getTransport);
-  return { engine, query, mock: currentMock };
+  const client = await connectPromise;
+  const query = new QueryClient(client.getTransport);
+  return { client, query, mock: currentMock };
 }
 
 function respondWithResult(mock: MockWebSocket, result: unknown): void {
@@ -172,28 +172,28 @@ describe("QueryClient", () => {
   });
 
   // -----------------------------------------------------------------------
-  // Integration with RoISEngine
+  // Integration with RoISClient
   // -----------------------------------------------------------------------
 
-  describe("integration with RoISEngine", () => {
-    it("can be constructed from engine.getTransport after connect", async () => {
-      const connectPromise = RoISEngine.connect("ws://test:8765", testOptions);
+  describe("integration with RoISClient", () => {
+    it("can be constructed from client.getTransport after connect", async () => {
+      const connectPromise = RoISClient.connect("ws://test:8765", testOptions);
       currentMock.simulateOpen();
       for (let i = 0; i < 5; i++) {
         await Promise.resolve();
       }
       respondWithResult(currentMock, { return_code: "OK" });
-      const engine = await connectPromise;
+      const client = await connectPromise;
 
-      const query = new QueryClient(engine.getTransport);
+      const query = new QueryClient(client.getTransport);
       expect(query).toBeInstanceOf(QueryClient);
 
-      await engine.disconnect();
+      await client.disconnect();
     });
 
     it("throws TransportError when the transport is not connected", async () => {
-      const { engine, query } = await createConnectedQueryClient();
-      await engine.disconnect();
+      const { client, query } = await createConnectedQueryClient();
+      await client.disconnect();
 
       await expect(query.query("x", "y")).rejects.toThrow(TransportError);
     });

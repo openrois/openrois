@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/engine.ts", "src/jsonrpc.ts", "src/transport.ts"],
+  entry: ["src/rois-client.ts", "src/jsonrpc.ts", "src/transport.ts"],
   format: ["esm", "cjs"],
   dts: true,
   clean: true,

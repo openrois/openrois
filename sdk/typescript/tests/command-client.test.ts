@@ -1,21 +1,21 @@
 /**
- * Unit tests for command-client.ts -- CommandClient (CommandIF operations).
+ * Unit tests for command-rois-client.ts -- CommandClient (CommandIF operations).
  *
- * Uses the same MockWebSocket pattern as engine.test.ts to simulate the
- * gateway. CommandClient is constructed over the engine's transport.
+ * Uses the same MockWebSocket pattern as rois-client.test.ts to simulate the
+ * gateway. CommandClient is constructed over the client's transport.
  *
  * Run with: npx vitest run
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { RoISEngine, RoISError, type EngineOptions } from "../src/engine";
+import { RoISClient, RoISError, type EngineOptions } from "../src/rois-client";
 import { CommandClient } from "../src/command-client";
 import { TransportError } from "../src/transport";
 import { JSONRPC_VERSION } from "../src/jsonrpc";
 import type { Parameter } from "@openrois/interfaces";
 
 // ---------------------------------------------------------------------------
-// MockWebSocket (same pattern as engine.test.ts)
+// MockWebSocket (same pattern as rois-client.test.ts)
 // ---------------------------------------------------------------------------
 
 class MockWebSocket {
@@ -67,20 +67,20 @@ const testOptions: EngineOptions = {
 };
 
 async function createConnectedCommandClient(): Promise<{
-  engine: RoISEngine;
+  client: RoISClient;
   command: CommandClient;
   mock: MockWebSocket;
 }> {
-  const connectPromise = RoISEngine.connect("ws://test-gateway:8765", testOptions);
+  const connectPromise = RoISClient.connect("ws://test-gateway:8765", testOptions);
   currentMock.simulateOpen();
   // Drain microtasks so the rois.system.connect send fires before we respond.
   for (let i = 0; i < 5; i++) {
     await Promise.resolve();
   }
   respondWithResult(currentMock, { return_code: "OK" });
-  const engine = await connectPromise;
-  const command = new CommandClient(engine.getTransport);
-  return { engine, command, mock: currentMock };
+  const client = await connectPromise;
+  const command = new CommandClient(client.getTransport);
+  return { client, command, mock: currentMock };
 }
 
 function respondWithResult(mock: MockWebSocket, result: unknown): void {
@@ -487,28 +487,28 @@ describe("CommandClient", () => {
   });
 
   // -----------------------------------------------------------------------
-  // Integration with RoISEngine
+  // Integration with RoISClient
   // -----------------------------------------------------------------------
 
-  describe("integration with RoISEngine", () => {
-    it("can be constructed from engine.transport after connect", async () => {
-      const connectPromise = RoISEngine.connect("ws://test:8765", testOptions);
+  describe("integration with RoISClient", () => {
+    it("can be constructed from client.transport after connect", async () => {
+      const connectPromise = RoISClient.connect("ws://test:8765", testOptions);
       currentMock.simulateOpen();
       for (let i = 0; i < 5; i++) {
         await Promise.resolve();
       }
       respondWithResult(currentMock, { return_code: "OK" });
-      const engine = await connectPromise;
+      const client = await connectPromise;
 
-      const command = new CommandClient(engine.getTransport);
+      const command = new CommandClient(client.getTransport);
       expect(command).toBeInstanceOf(CommandClient);
 
-      await engine.disconnect();
+      await client.disconnect();
     });
 
     it("throws TransportError when the transport is not connected", async () => {
-      const { engine, command } = await createConnectedCommandClient();
-      await engine.disconnect();
+      const { client, command } = await createConnectedCommandClient();
+      await client.disconnect();
 
       await expect(command.search()).rejects.toThrow(TransportError);
       await expect(command.bind("x")).rejects.toThrow(TransportError);

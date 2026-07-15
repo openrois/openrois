@@ -7,7 +7,7 @@
  *   getProfile(condition)  -> rois.system.get_profile
  *   getErrorDetail(errorId) -> rois.system.get_error_detail
  *
- * The connect/disconnect lifecycle methods remain on RoISEngine (engine.ts)
+ * The connect/disconnect lifecycle methods remain on RoISClient (rois-client.ts)
  * because they own the transport and connection state. SystemClient focuses on
  * the two query-style System operations that run over an established
  * connection.
@@ -34,7 +34,7 @@ import type {
 
 // 4. Local modules
 import { type WebSocketTransport } from "./transport";
-import { RoISError } from "./engine";
+import { RoISError } from "./rois-client";
 
 // ---------------------------------------------------------------------------
 // Response helpers (lightweight inline schemas)
@@ -79,7 +79,7 @@ interface GetErrorDetailResponse {
  * be connected before constructing or using a SystemClient.
  *
  * Usage:
- *   const engine = await RoISEngine.connect("wss://gateway.example.com");
+ *   const client = await RoISClient.connect("wss://gateway.example.com");
  *   const system = new SystemClient(engine.transport);
  *
  *   const profile = await system.getProfile();
@@ -175,7 +175,7 @@ export class SystemClient {
   /**
    * Check a ReturnCode and throw a RoISError if it is not OK.
    *
-   * Mirrors the pattern in RoISEngine.checkReturnCode().
+   * Mirrors the pattern in RoISClient.checkReturnCode().
    */
   private checkReturnCode(returnCode: ReturnCode, method: string): void {
     if (returnCode !== "OK") {

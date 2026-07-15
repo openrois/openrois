@@ -1,5 +1,5 @@
 /**
- * RoISEngine: top-level entry point for the OpenRoIS TypeScript SDK.
+ * RoISClient: top-level client for the OpenRoIS TypeScript SDK.
  *
  * Wraps the WebSocket transport and JSON-RPC protocol into a clean,
  * high-level API that mirrors the five RoIS interfaces:
@@ -12,31 +12,31 @@
  *   Streaming -> (deferred, not in scope for Week 1-2)
  *
  * Usage:
- *   import { RoISEngine } from "@openrois/sdk";
+ *   import { RoISClient } from "@openrois/sdk";
  *
- *   const engine = await RoISEngine.connect("wss://gateway.example.com", {
+ *   const client = await RoISClient.connect("wss://gateway.example.com", {
  *     token: await getAccessToken(),
  *   });
  *
  *   // Search for available components
- *   const components = await engine.search();
+ *   const components = await client.search();
  *
  *   // Query a component's status
- *   const status = await engine.query("PersonDetection_0", "component_status");
+ *   const status = await client.query("PersonDetection_0", "component_status");
  *
  *   // Subscribe to events
- *   const subId = await engine.subscribe("PersonDetection_0", "person_detected");
- *   engine.on("person_detected", (event) => {
+ *   const subId = await client.subscribe("PersonDetection_0", "person_detected");
+ *   client.on("person_detected", (event) => {
  *     console.log(`${event.params.number} people detected`);
  *   });
  *
  *   // Navigate
- *   const cmdId = await engine.execute("Navigation_0", {
+ *   const cmdId = await client.execute("Navigation_0", {
  *     target_positions: ["3.0,1.5,0.0"],
  *     time_limit: 30,
  *   });
  *
- *   await engine.disconnect();
+ *   await client.disconnect();
  *
  * Architecture: docs/architecture.md section 4 (Client SDK layer)
  */
@@ -80,19 +80,19 @@ import {
 // ---------------------------------------------------------------------------
 
 /**
- * Options for creating a RoISEngine connection.
+ * Options for creating a RoISClient connection.
  */
-export interface EngineOptions {
+export interface ClientOptions {
   /**
    * Authentication token for the gateway (e.g. a JWT or bearer token).
    *
    * The token is NOT sent in the `rois.system.connect` message params.
    * Auth is a transport-layer concern. A custom `webSocketFactory` in
    * `transport.webSocketFactory` can read this token from the
-   * `EngineOptions` and attach it to the WebSocket upgrade request
+   * `ClientOptions` and attach it to the WebSocket upgrade request
    * (e.g. as an `Authorization` header or query parameter).
    *
-   * The engine itself does not use this field. It is here so callers
+   * The client itself does not use this field. It is here so callers
    * can pass it through to a custom factory in a type-safe way.
    */
   token?: string;
@@ -136,17 +136,17 @@ export class RoISError extends Error {
 }
 
 // ---------------------------------------------------------------------------
-// RoISEngine
+// RoISClient
 // ---------------------------------------------------------------------------
 
 /**
  * High-level client for communicating with an OpenRoIS gateway.
  *
- * The engine manages the WebSocket connection, serializes RoIS operations
+ * The client manages the WebSocket connection, serializes RoIS operations
  * into JSON-RPC requests, validates responses against the canonical schemas,
  * and routes async notifications to event listeners.
  *
- * Use the static RoISEngine.connect() factory to create an instance.
+ * Use the static RoISClient.connect() factory to create an instance.
  * Do not call the constructor directly.
  *
  * Events emitted:
@@ -157,11 +157,11 @@ export class RoISError extends Error {
  *   "close"                     - The connection was lost.
  *   "error"                     - A transport-level error occurred.
  */
-export class RoISEngine extends EventEmitter {
+export class RoISClient extends EventEmitter {
   /** The underlying transport managing the WebSocket connection. */
   private transport: WebSocketTransport;
 
-  /** Says whether the engine has completed the RoIS system.connect handshake. */
+  /** Says whether the client has completed the RoIS system.connect handshake. */
   private connected: boolean = false;
 
   /**
@@ -175,14 +175,14 @@ export class RoISEngine extends EventEmitter {
   }
 
   // -----------------------------------------------------------------------
-  // Construction (private -- use RoISEngine.connect() instead)
+  // Construction (private -- use RoISClient.connect() instead)
   // -----------------------------------------------------------------------
 
   /**
-   * Private constructor. Use RoISEngine.connect() to create an engine.
+   * Private constructor. Use RoISClient.connect() to create a client.
    *
    * The constructor wires up event forwarding from the transport so
-   * callers can listen on the engine directly.
+   * callers can listen on the client directly.
    */
   private constructor(transport: WebSocketTransport) {
     super();
@@ -195,7 +195,7 @@ export class RoISEngine extends EventEmitter {
   // -----------------------------------------------------------------------
 
   /**
-   * Connect to an OpenRoIS gateway and return a ready-to-use engine.
+   * Connect to an OpenRoIS gateway and return a ready-to-use client.
    *
    * This is the primary entry point for the SDK. It:
    *   1. Creates a WebSocketTransport.
@@ -204,13 +204,13 @@ export class RoISEngine extends EventEmitter {
    *      response. The bearer token, if any, is passed at the transport
    *      layer (WebSocket upgrade headers or query params), not in the
    *      message params. This keeps auth as a transport concern.
-   *   4. Returns a connected RoISEngine instance.
+   *   4. Returns a connected RoISClient instance.
    *
    * @param url     - Gateway WebSocket URL, e.g. "wss://gateway.example.com".
    * @param options - Transport configuration. The `token` field, if
    *   provided, is available to a custom `webSocketFactory` but is NOT
    *   sent in the `rois.system.connect` message params.
-   * @returns A connected RoISEngine ready for RoIS operations.
+   * @returns A connected RoISClient ready for RoIS operations.
    *
    * @throws ConnectionError if the WebSocket connection fails.
    * @throws RoISError if the gateway returns a non-OK return code for
@@ -218,8 +218,8 @@ export class RoISEngine extends EventEmitter {
    */
   static async connect(
     url: string,
-    options?: EngineOptions,
-  ): Promise<RoISEngine> {
+    options?: ClientOptions,
+  ): Promise<RoISClient> {
 
     // Step 1: Create the transport with any caller-provided options.
     const transport = new WebSocketTransport(options?.transport);
@@ -229,8 +229,8 @@ export class RoISEngine extends EventEmitter {
     // the webSocketFactory (e.g. as a query param or upgrade header).
     await transport.connect(url);
 
-    // Step 3: Create the engine.
-    const engine = new RoISEngine(transport);
+    // Step 3: Create the client.
+    const client = new RoISClient(transport);
 
     // Step 4: Perform the RoIS system.connect handshake.
     // Send rois.system.connect with empty params. The token is NOT in
@@ -242,8 +242,8 @@ export class RoISEngine extends EventEmitter {
       throw new RoISError(returnCode, "rois.system.connect");
     }
 
-    engine.connected = true;
-    return engine;
+    client.connected = true;
+    return client;
   }
 
   // -----------------------------------------------------------------------
@@ -453,7 +453,7 @@ export class RoISEngine extends EventEmitter {
    * Set parameter values on a bound component.
    *
    * For example, setting navigation targets:
-   *   await engine.setParameter("Navigation_0", [
+   *   await client.setParameter("Navigation_0", [
    *     { name: "target_positions", data_type_ref: "string[]", value: '["3.0,1.5,0.0"]' },
    *     { name: "time_limit", data_type_ref: "int", value: "30" },
    *   ]);
@@ -488,8 +488,8 @@ export class RoISEngine extends EventEmitter {
    * command_id. Listen for "rois.command.completed" events to know when
    * the command finishes:
    *
-   *   const cmdId = await engine.execute("Navigation_0", { ... });
-   *   engine.on("rois.command.completed", (notification) => {
+   *   const cmdId = await client.execute("Navigation_0", { ... });
+   *   client.on("rois.command.completed", (notification) => {
    *     if (notification.params.command_id === cmdId) {
    *       console.log("Navigation complete:", notification.params.status);
    *     }
@@ -596,7 +596,7 @@ export class RoISEngine extends EventEmitter {
    *
    * After subscribing, the gateway pushes notifications to the SDK
    * whenever the event fires. Listen for them with:
-   *   engine.on("rois.event.notify", handler)
+   *   client.on("rois.event.notify", handler)
    *
    * Maps to: rois.event.subscribe
    * Request schema:  SubscribeRequest  { component_ref, event_type, condition }
@@ -672,13 +672,13 @@ export class RoISEngine extends EventEmitter {
   // -----------------------------------------------------------------------
 
   /**
-   * Forward transport events to the engine so callers can listen on
-   * the engine directly instead of reaching into the transport.
+   * Forward transport events to the client so callers can listen on
+   * the client directly instead of reaching into the transport.
    *
    * This means callers can do:
-   *   engine.on("rois.event.notify", handler)
+   *   client.on("rois.event.notify", handler)
    * instead of:
-   *   engine.transport.on("rois.event.notify", handler)
+   *   client.transport.on("rois.event.notify", handler)
    */
   private forwardTransportEvents(): void {
     // Forward all notifications.
@@ -691,7 +691,7 @@ export class RoISEngine extends EventEmitter {
       this.emit("rois.event.notify", notification);
 
       // Also emit the specific event_type for convenience.
-      // This lets callers do: engine.on("person_detected", handler)
+      // This lets callers do: client.on("person_detected", handler)
       const params = notification.params as Record<string, unknown> | undefined;
       if (params?.event_type && typeof params.event_type === "string") {
         this.emit(params.event_type, notification);
@@ -722,7 +722,7 @@ export class RoISEngine extends EventEmitter {
   // -----------------------------------------------------------------------
 
   /**
-   * Guard that throws if the engine is not connected.
+   * Guard that throws if the client is not connected.
    *
    * Called at the top of every public method to give a clear error
    * message instead of a confusing transport-level failure.
@@ -730,7 +730,7 @@ export class RoISEngine extends EventEmitter {
   private ensureConnected(operation: string): void {
     if (!this.connected) {
       throw new TransportError(
-        `Cannot call ${operation}: engine is not connected`
+        `Cannot call ${operation}: client is not connected`
       );
     }
   }

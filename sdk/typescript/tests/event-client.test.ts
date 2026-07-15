@@ -1,21 +1,21 @@
 /**
- * Unit tests for event-client.ts -- EventClient (EventIF operations).
+ * Unit tests for event-rois-client.ts -- EventClient (EventIF operations).
  *
- * Uses the same MockWebSocket pattern as engine.test.ts to simulate the
- * gateway. EventClient is constructed over the engine's transport and
+ * Uses the same MockWebSocket pattern as rois-client.test.ts to simulate the
+ * gateway. EventClient is constructed over the client's transport and
  * listens for rois.event.notify notifications.
  *
  * Run with: npx vitest run
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { RoISEngine, RoISError, type EngineOptions } from "../src/engine";
+import { RoISClient, RoISError, type EngineOptions } from "../src/rois-client";
 import { EventClient } from "../src/event-client";
 import { TransportError } from "../src/transport";
 import { JSONRPC_VERSION } from "../src/jsonrpc";
 
 // ---------------------------------------------------------------------------
-// MockWebSocket (same pattern as engine.test.ts)
+// MockWebSocket (same pattern as rois-client.test.ts)
 // ---------------------------------------------------------------------------
 
 class MockWebSocket {
@@ -67,20 +67,20 @@ const testOptions: EngineOptions = {
 };
 
 async function createConnectedEventClient(): Promise<{
-  engine: RoISEngine;
+  client: RoISClient;
   events: EventClient;
   mock: MockWebSocket;
 }> {
-  const connectPromise = RoISEngine.connect("ws://test-gateway:8765", testOptions);
+  const connectPromise = RoISClient.connect("ws://test-gateway:8765", testOptions);
   currentMock.simulateOpen();
   // Drain microtasks so the rois.system.connect send fires before we respond.
   for (let i = 0; i < 5; i++) {
     await Promise.resolve();
   }
   respondWithResult(currentMock, { return_code: "OK" });
-  const engine = await connectPromise;
-  const events = new EventClient(engine.getTransport);
-  return { engine, events, mock: currentMock };
+  const client = await connectPromise;
+  const events = new EventClient(client.getTransport);
+  return { client, events, mock: currentMock };
 }
 
 function respondWithResult(mock: MockWebSocket, result: unknown): void {
@@ -339,28 +339,28 @@ describe("EventClient", () => {
   });
 
   // -----------------------------------------------------------------------
-  // Integration with RoISEngine
+  // Integration with RoISClient
   // -----------------------------------------------------------------------
 
-  describe("integration with RoISEngine", () => {
-    it("can be constructed from engine.getTransport after connect", async () => {
-      const connectPromise = RoISEngine.connect("ws://test:8765", testOptions);
+  describe("integration with RoISClient", () => {
+    it("can be constructed from client.getTransport after connect", async () => {
+      const connectPromise = RoISClient.connect("ws://test:8765", testOptions);
       currentMock.simulateOpen();
       for (let i = 0; i < 5; i++) {
         await Promise.resolve();
       }
       respondWithResult(currentMock, { return_code: "OK" });
-      const engine = await connectPromise;
+      const client = await connectPromise;
 
-      const events = new EventClient(engine.getTransport);
+      const events = new EventClient(client.getTransport);
       expect(events).toBeInstanceOf(EventClient);
 
-      await engine.disconnect();
+      await client.disconnect();
     });
 
     it("throws TransportError when the transport is not connected", async () => {
-      const { engine, events } = await createConnectedEventClient();
-      await engine.disconnect();
+      const { client, events } = await createConnectedEventClient();
+      await client.disconnect();
 
       await expect(events.subscribe("x", "y")).rejects.toThrow(TransportError);
       await expect(events.unsubscribe("x")).rejects.toThrow(TransportError);

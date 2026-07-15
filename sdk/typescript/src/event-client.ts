@@ -40,7 +40,7 @@ import type {
 
 // 4. Local modules
 import { type WebSocketTransport } from "./transport";
-import { RoISError } from "./engine";
+import { RoISError } from "./rois-client";
 
 // ---------------------------------------------------------------------------
 // Response helpers (lightweight inline schemas)
@@ -81,7 +81,7 @@ interface GetEventDetailResponse {
  * EventClient.
  *
  * Usage:
- *   const engine = await RoISEngine.connect("wss://gateway.example.com");
+ *   const client = await RoISClient.connect("wss://gateway.example.com");
  *   const events = new EventClient(engine.getTransport);
  *
  *   // Subscribe to person_detected events.
@@ -284,7 +284,7 @@ export class EventClient extends EventEmitter {
   /**
    * Check a ReturnCode and throw a RoISError if it is not OK.
    *
-   * Mirrors the pattern in RoISEngine.checkReturnCode().
+   * Mirrors the pattern in RoISClient.checkReturnCode().
    */
   private checkReturnCode(returnCode: ReturnCode, method: string): void {
     if (returnCode !== "OK") {

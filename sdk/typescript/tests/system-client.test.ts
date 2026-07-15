@@ -1,22 +1,22 @@
 /**
- * Unit tests for system-client.ts -- SystemClient (SystemIF query operations).
+ * Unit tests for system-rois-client.ts -- SystemClient (SystemIF query operations).
  *
- * Uses the same MockWebSocket pattern as engine.test.ts to simulate the
- * gateway. SystemClient is constructed over the engine's transport, so we
- * create a connected RoISEngine first and then wrap its transport.
+ * Uses the same MockWebSocket pattern as rois-client.test.ts to simulate the
+ * gateway. SystemClient is constructed over the client's transport, so we
+ * create a connected RoISClient first and then wrap its transport.
  *
  * Run with: npx vitest run
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { RoISEngine, RoISError, type EngineOptions } from "../src/engine";
+import { RoISClient, RoISError, type EngineOptions } from "../src/rois-client";
 import { SystemClient } from "../src/system-client";
 import { TransportError } from "../src/transport";
 import { JSONRPC_VERSION } from "../src/jsonrpc";
 import type { HRIEngineProfileType } from "@openrois/interfaces";
 
 // ---------------------------------------------------------------------------
-// MockWebSocket (same pattern as engine.test.ts)
+// MockWebSocket (same pattern as rois-client.test.ts)
 // ---------------------------------------------------------------------------
 
 class MockWebSocket {
@@ -79,24 +79,24 @@ const testOptions: EngineOptions = {
 };
 
 /**
- * Create a connected RoISEngine and a SystemClient over its transport.
- * Returns the engine, the system client, and the mock for simulating responses.
+ * Create a connected RoISClient and a SystemClient over its transport.
+ * Returns the client, the system client, and the mock for simulating responses.
  */
 async function createConnectedSystemClient(): Promise<{
-  engine: RoISEngine;
+  client: RoISClient;
   system: SystemClient;
   mock: MockWebSocket;
 }> {
-  const connectPromise = RoISEngine.connect("ws://test-gateway:8765", testOptions);
+  const connectPromise = RoISClient.connect("ws://test-gateway:8765", testOptions);
   currentMock.simulateOpen();
   // Drain microtasks so the rois.system.connect send fires before we respond.
   for (let i = 0; i < 5; i++) {
     await Promise.resolve();
   }
   respondWithResult(currentMock, { return_code: "OK" });
-  const engine = await connectPromise;
-  const system = new SystemClient(engine.getTransport);
-  return { engine, system, mock: currentMock };
+  const client = await connectPromise;
+  const system = new SystemClient(client.getTransport);
+  return { client, system, mock: currentMock };
 }
 
 /**
@@ -286,28 +286,28 @@ describe("SystemClient", () => {
   });
 
   // -----------------------------------------------------------------------
-  // Integration with RoISEngine
+  // Integration with RoISClient
   // -----------------------------------------------------------------------
 
-  describe("integration with RoISEngine", () => {
-    it("can be constructed from engine.transport after connect", async () => {
-      const connectPromise = RoISEngine.connect("ws://test:8765", testOptions);
+  describe("integration with RoISClient", () => {
+    it("can be constructed from client.transport after connect", async () => {
+      const connectPromise = RoISClient.connect("ws://test:8765", testOptions);
       currentMock.simulateOpen();
       for (let i = 0; i < 5; i++) {
         await Promise.resolve();
       }
       respondWithResult(currentMock, { return_code: "OK" });
-      const engine = await connectPromise;
+      const client = await connectPromise;
 
-      const system = new SystemClient(engine.getTransport);
+      const system = new SystemClient(client.getTransport);
       expect(system).toBeInstanceOf(SystemClient);
 
-      await engine.disconnect();
+      await client.disconnect();
     });
 
     it("throws TransportError when the transport is not connected", async () => {
-      const { engine, system } = await createConnectedSystemClient();
-      await engine.disconnect();
+      const { client, system } = await createConnectedSystemClient();
+      await client.disconnect();
 
       await expect(system.getProfile()).rejects.toThrow(TransportError);
       await expect(system.getErrorDetail("err-001")).rejects.toThrow(TransportError);

@@ -32,7 +32,7 @@ import type {
 
 // 4. Local modules
 import { type WebSocketTransport } from "./transport";
-import { RoISError } from "./engine";
+import { RoISError } from "./rois-client";
 
 // ---------------------------------------------------------------------------
 // QueryClient
@@ -46,7 +46,7 @@ import { RoISError } from "./engine";
  * before constructing or using a QueryClient.
  *
  * Usage:
- *   const engine = await RoISEngine.connect("wss://gateway.example.com");
+ *   const client = await RoISClient.connect("wss://gateway.example.com");
  *   const query = new QueryClient(engine.getTransport);
  *
  *   // Query robot position from SystemInformation.
@@ -124,7 +124,7 @@ export class QueryClient {
   /**
    * Check a ReturnCode and throw a RoISError if it is not OK.
    *
-   * Mirrors the pattern in RoISEngine.checkReturnCode().
+   * Mirrors the pattern in RoISClient.checkReturnCode().
    */
   private checkReturnCode(returnCode: ReturnCode, method: string): void {
     if (returnCode !== "OK") {
