@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@openrois/interfaces": "file:../../interfaces/typescript",
-    "@openrois/sdk": "file:../../sdk-js",
+    "@openrois/sdk": "file:../../sdk/typescript",
     "ws": "^8.21.0",
     "zod": "^4.4.3"
   },
