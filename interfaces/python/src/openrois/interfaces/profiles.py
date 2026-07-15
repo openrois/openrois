@@ -4,7 +4,7 @@ This module maps the XSD profile types that describe RoIS component capabilities
 parameters, and message signatures. These models represent the structure found
 in XML profile files like PersonDetection.xml, Navigation.xml, etc.
 
-Source: normative/machine-readable/XML-Profiles.xsd
+Source: OMG RoIS Framework 2.0-beta2, XML-Profiles.xsd
 """
 
 from __future__ import annotations

@@ -1,8 +1,8 @@
 """Navigation component typed message models.
 
 Derived from:
-  - normative/machine-readable/RoIS_Navigation.idl
-  - normative/machine-readable/Navigation.xml
+  - OMG RoIS Framework 2.0-beta2, RoIS_Navigation.idl
+  - OMG RoIS Framework 2.0-beta2, Navigation.xml
 
 Component URN: urn:x-rois:def:component:OMG::Navigation
 

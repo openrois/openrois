@@ -5,7 +5,7 @@ models. These types define the callback interface (ServiceApplicationBase) that
 the HRI Engine uses to notify service applications of errors, command completion,
 and events.
 
-Source: normative/machine-readable/RoIS_Service.idl
+Source: OMG RoIS Framework 2.0-beta2, RoIS_Service.idl
 """
 
 from __future__ import annotations

@@ -1,8 +1,8 @@
 """System Information component typed message models.
 
 Derived from:
-  - normative/machine-readable/RoIS_System_Information.idl
-  - normative/machine-readable/SystemInformation.xml
+  - OMG RoIS Framework 2.0-beta2, RoIS_System_Information.idl
+  - OMG RoIS Framework 2.0-beta2, SystemInformation.xml
 
 Component URN: urn:x-rois:def:component:OMG::SystemInformation
 

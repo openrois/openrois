@@ -1,8 +1,8 @@
 """Reaction component typed message models.
 
 Derived from:
-  - normative/machine-readable/RoIS_Reaction.idl
-  - normative/machine-readable/Reaction.xml
+  - OMG RoIS Framework 2.0-beta2, RoIS_Reaction.idl
+  - OMG RoIS Framework 2.0-beta2, Reaction.xml
 
 Component URN: urn:x-rois:def:component:OMG::Reaction
 

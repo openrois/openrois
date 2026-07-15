@@ -46,7 +46,6 @@ openrois/
 ├── sdk-py/                  # Python client SDK (scripting, secondary)
 ├── examples/                # Demo apps
 ├── integration/             # Cross-stack tests + launch configs
-├── normative/               # OMG/JARA normative IDL, HPP, XML profiles (read-only)
 └── docs/                    # Documentation
 ```
 
@@ -177,7 +176,6 @@ See the [roadmap](docs/roadmap.md) for milestone details and dependencies.
 - Python 3.12+, Pydantic v2, `from __future__ import annotations`, PEP 695 `type` statements, mypy strict, ruff line-length 100
 - TypeScript ESM, strict typecheck, vitest
 - C# `netstandard2.1` (Unity 6.3+), `sealed class`, `Nullable` enabled
-- `normative/` is read-only (OMG/JARA copyright). Never modify.
 - `interfaces/python/src/` must stay transport-neutral. No ROS, DDS, gRPC, or WebSocket imports.
 - Don't change the `BusAdapter` protocol without reading `docs/architecture.md` section 7.5.
 
@@ -209,9 +207,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ```
-
-The normative files in `normative/` retain their upstream copyright (JARA, ETRI, KAR,
-OMG) and are not modified.
 
 ---
 

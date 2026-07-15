@@ -201,7 +201,8 @@ against every adapter, catching paradigm leakage.
 
 ### 3.2 Spec-first, symbolic data only
 
-Every interface traces back to the normative IDL in `normative/machine-readable/`.
+Every interface traces back to the normative IDL in the OMG machine-readable files
+at <https://www.omg.org/spec/RoIS/2.0/Beta2#docs-normative-machine>.
 Messages carry only symbolic data ("person detected, count: 2"), never raw sensor
 buffers. This keeps the control plane lightweight and lets scenario logic use simple
 conditional branching on structured results.

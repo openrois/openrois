@@ -4,8 +4,7 @@ This module maps the OMG RoIS Framework 2.0 HRI IDL types to Python Pydantic
 models. These are the fundamental data types used across all RoIS interfaces:
 SystemIF, CommandIF, QueryIF, and EventIF.
 
-Source: normative/machine-readable/RoIS_HRI.idl
-        normative/machine-readable/RoIS_HRI.hpp
+Source: OMG RoIS Framework 2.0-beta2, RoIS_HRI.idl and RoIS_HRI.hpp
 
 Design decisions:
   - ReturnCode is a string enum for JSON readability.

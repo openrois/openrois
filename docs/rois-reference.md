@@ -8,8 +8,9 @@
 > - **Copyright:** © 2012-2025 JARA, ETRI, KAR, and Object Management Group, Inc.
 
 This document summarizes and explains the specification that the machine-readable
-artifacts in `normative/machine-readable/` implement (IDL/HPP headers,
-component XML profiles, the `XML-Profiles.xsd` schema, and the `OWL.ttl` ontology).
+artifacts at <https://www.omg.org/spec/RoIS/2.0/Beta2#docs-normative-machine>
+implement (IDL/HPP headers, component XML profiles, the `XML-Profiles.xsd`
+schema, and the `OWL.ttl` ontology).
 
 ---
 
@@ -338,7 +339,7 @@ specification.
   - `hasTimeLimit` → `cmns-dt:TimeInstant`
 
 Ontology IRI: `https://www.omg.org/spec/RoIS/RoboticInteractionServiceComponentOntology/`
-(see `normative/machine-readable/OWL.ttl`).
+(see `OWL.ttl` in the OMG machine-readable files).
 
 The notation in class tables follows a subset of OWL 2 / Description Logic (∩, ∪,
 ∀R.C, ∃R.C, cardinality restrictions, etc.).
@@ -380,8 +381,8 @@ Normative references include: Commons 1.1, CORBA 3.4, DDS 1.4, ISO 639/8601/1488
 
 ## 14. Map to the Machine-Readable Files
 
-The spec's PSMs correspond to files in
-`normative/machine-readable/`:
+The spec's PSMs correspond to the OMG machine-readable files at
+<https://www.omg.org/spec/RoIS/2.0/Beta2#docs-normative-machine>:
 
 | Artifact | Files |
 |----------|-------|
@@ -435,4 +436,4 @@ component-profile PSM). Known divergences:
 *This reference is a non-normative summary. For the milestone roadmap, see
 [roadmap.md](roadmap.md). For authoritative requirements, consult the
 official OMG specification at <https://www.omg.org/spec/RoIS/2.0/Beta2> and the
-machine-readable files under `normative/machine-readable/`.*
+machine-readable files at <https://www.omg.org/spec/RoIS/2.0/Beta2#docs-normative-machine>.*

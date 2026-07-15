@@ -4,7 +4,7 @@ This module maps the OMG RoIS Framework 2.0 Common IDL types to Python Pydantic
 models. These types define the base interfaces that every RoIS component inherits:
 Command (start/stop/suspend/resume), Query (component_status), and Event.
 
-Source: normative/machine-readable/RoIS_Common.idl
+Source: OMG RoIS Framework 2.0-beta2, RoIS_Common.idl
 """
 
 from __future__ import annotations
