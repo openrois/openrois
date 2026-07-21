@@ -42,7 +42,7 @@
  */
 
 // 1. Node.js built-ins
-import { EventEmitter } from "node:events";
+import { EventEmitter } from "events";
 
 // 2. External packages
 // (zod is not used directly in this module. Schemas are imported from

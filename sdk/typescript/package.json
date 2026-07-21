@@ -47,6 +47,7 @@
   },
   "dependencies": {
     "@openrois/interfaces": "file:../../interfaces/typescript",
+    "events": "^3.3.0",
     "ws": "^8.21.0",
     "zod": "^4.4.3"
   },

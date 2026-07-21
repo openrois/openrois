@@ -22,7 +22,7 @@
  */
 
 // 1. Node.js built-ins
-import { EventEmitter } from "node:events";
+import { EventEmitter } from "events";
 
 // 3. Internal packages (@openrois/*)
 import {

@@ -29,7 +29,7 @@
  */
 
 // 1. Node.js built-ins
-import { EventEmitter } from "node:events";
+import { EventEmitter } from "events";
 
 // 2. External packages
 import { z } from "zod";
