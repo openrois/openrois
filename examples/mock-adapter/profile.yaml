@@ -1,0 +1,34 @@
+# Mock adapter profile for testing without a real robot.
+
+fleet_id: mock_robot
+
+connection:
+  ws:
+    host: "127.0.0.1"
+    port: 8765
+
+components:
+  - ref: "SystemInformation"
+    type: basic
+    bind_required: false
+    queries: [robot_position, battery_level, component_status]
+
+  - ref: "Navigation"
+    type: basic
+    bind_required: true
+    commands: [execute, stop]
+    queries: [waypoints, component_status]
+    events: [reached_target]
+
+  - ref: "ObjectDetection"
+    type: user-defined
+    bind_required: false
+    queries: [list_objects, component_status]
+    events: [object_detected, object_lost]
+
+  - ref: "ObjectManipulation"
+    type: user-defined
+    bind_required: true
+    commands: [execute, stop]
+    queries: [component_status, gripper_state, current_grasped_object]
+    events: [manipulation_complete]
