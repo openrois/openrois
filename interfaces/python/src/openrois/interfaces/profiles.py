@@ -163,6 +163,10 @@ class HRIEngineProfileType(BaseModel):
         identifier: The engine's structured identifier.
         sub_profiles: Nested sub-engine profiles.
         component_ids: IDs of components hosted by this engine.
+        component_profiles: Full capability profiles for each component.
+            Populated from adapter registration data. Optional (default
+            empty) for backward compatibility with engines that only
+            return component_ids.
         parameter_profiles: Engine-level parameter declarations.
     """
 
@@ -171,4 +175,5 @@ class HRIEngineProfileType(BaseModel):
     identifier: RoISIdentifierType
     sub_profiles: list[HRIEngineProfileType] = Field(default_factory=list)
     component_ids: list[str] = Field(default_factory=list)
+    component_profiles: list[HRIComponentProfile] = Field(default_factory=list)
     parameter_profiles: list[ParameterProfile] = Field(default_factory=list)

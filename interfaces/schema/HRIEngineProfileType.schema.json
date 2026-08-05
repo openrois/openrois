@@ -1,9 +1,126 @@
 {
   "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
   "$defs": {
+    "CommandMessageProfile": {
+      "additionalProperties": false,
+      "description": "A command message profile with arguments and optional timeout.\n\nMaps to CommandMessageProfileType in XML-Profiles.xsd.\n\nAttributes:\n    arguments: The input arguments for this command.\n    timeout: Optional timeout in milliseconds.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/$defs/ParameterProfile"
+          },
+          "title": "Results",
+          "type": "array"
+        },
+        "arguments": {
+          "items": {
+            "$ref": "#/$defs/ParameterProfile"
+          },
+          "title": "Arguments",
+          "type": "array"
+        },
+        "timeout": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeout"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "CommandMessageProfile",
+      "type": "object"
+    },
+    "EventMessageProfile": {
+      "additionalProperties": false,
+      "description": "An event message profile.\n\nMaps to EventMessageProfileType in XML-Profiles.xsd.\n\nEvents have results (the event payload) but no arguments.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/$defs/ParameterProfile"
+          },
+          "title": "Results",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "EventMessageProfile",
+      "type": "object"
+    },
+    "HRIComponentProfile": {
+      "additionalProperties": false,
+      "description": "Describes a RoIS component's capabilities, messages, and parameters.\n\nMaps to HRIComponentProfileType in XML-Profiles.xsd.\n\nAttributes:\n    identifier: The component's structured identifier (URN).\n    name: A short human-readable name (e.g., 'person_detecter').\n    sub_component_profiles: URNs of sub-component profiles (e.g., RoISCommon).\n    command_profiles: Command message profiles this component supports.\n    query_profiles: Query message profiles this component supports.\n    event_profiles: Event message profiles this component supports.\n    parameter_profiles: Parameter declarations for this component.",
+      "properties": {
+        "identifier": {
+          "$ref": "#/$defs/RoISIdentifierType"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "sub_component_profiles": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Sub Component Profiles",
+          "type": "array"
+        },
+        "command_profiles": {
+          "items": {
+            "$ref": "#/$defs/CommandMessageProfile"
+          },
+          "title": "Command Profiles",
+          "type": "array"
+        },
+        "query_profiles": {
+          "items": {
+            "$ref": "#/$defs/QueryMessageProfile"
+          },
+          "title": "Query Profiles",
+          "type": "array"
+        },
+        "event_profiles": {
+          "items": {
+            "$ref": "#/$defs/EventMessageProfile"
+          },
+          "title": "Event Profiles",
+          "type": "array"
+        },
+        "parameter_profiles": {
+          "items": {
+            "$ref": "#/$defs/ParameterProfile"
+          },
+          "title": "Parameter Profiles",
+          "type": "array"
+        }
+      },
+      "required": [
+        "identifier",
+        "name"
+      ],
+      "title": "HRIComponentProfile",
+      "type": "object"
+    },
     "HRIEngineProfileType": {
       "additionalProperties": false,
-      "description": "Describes an HRI Engine's composition of sub-engines and components.\n\nMaps to HRIEngineProfileType in XML-Profiles.xsd.\n\nAttributes:\n    identifier: The engine's structured identifier.\n    sub_profiles: Nested sub-engine profiles.\n    component_ids: IDs of components hosted by this engine.\n    parameter_profiles: Engine-level parameter declarations.",
+      "description": "Describes an HRI Engine's composition of sub-engines and components.\n\nMaps to HRIEngineProfileType in XML-Profiles.xsd.\n\nAttributes:\n    identifier: The engine's structured identifier.\n    sub_profiles: Nested sub-engine profiles.\n    component_ids: IDs of components hosted by this engine.\n    component_profiles: Full capability profiles for each component.\n        Populated from adapter registration data. Optional (default\n        empty) for backward compatibility with engines that only\n        return component_ids.\n    parameter_profiles: Engine-level parameter declarations.",
       "properties": {
         "identifier": {
           "$ref": "#/$defs/RoISIdentifierType"
@@ -20,6 +137,13 @@
             "type": "string"
           },
           "title": "Component Ids",
+          "type": "array"
+        },
+        "component_profiles": {
+          "items": {
+            "$ref": "#/$defs/HRIComponentProfile"
+          },
+          "title": "Component Profiles",
           "type": "array"
         },
         "parameter_profiles": {
@@ -63,6 +187,28 @@
         "data_type_ref"
       ],
       "title": "ParameterProfile",
+      "type": "object"
+    },
+    "QueryMessageProfile": {
+      "additionalProperties": false,
+      "description": "A query message profile.\n\nMaps to QueryMessageProfileType in XML-Profiles.xsd.\n\nQueries have results but no arguments (the query_type and condition\nare passed separately, not as message arguments).",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/$defs/ParameterProfile"
+          },
+          "title": "Results",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "QueryMessageProfile",
       "type": "object"
     },
     "RoISIdentifierType": {

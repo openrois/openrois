@@ -98,32 +98,6 @@ export const QueryMessageProfileSchema = z.object({
 export type QueryMessageProfile = z.infer<typeof QueryMessageProfileSchema>;
 
 /**
- * Describes an HRI Engine's composition of sub-engines and components.
- * 
- * Maps to HRIEngineProfileType in XML-Profiles.xsd.
- * 
- * Attributes:
- *     identifier: The engine's structured identifier.
- *     sub_profiles: Nested sub-engine profiles.
- *     component_ids: IDs of components hosted by this engine.
- *     parameter_profiles: Engine-level parameter declarations.
- */
-
-export interface HRIEngineProfileType {
-  identifier: RoISIdentifierType;
-  sub_profiles?: HRIEngineProfileType[];
-  component_ids?: string[];
-  parameter_profiles?: ParameterProfile[];
-}
-export const HRIEngineProfileTypeSchema: z.ZodType<any> = z.lazy(() => z.object({
-    identifier: RoISIdentifierTypeSchema,
-    sub_profiles: z.array(HRIEngineProfileTypeSchema).optional(),
-    component_ids: z.array(z.string()).optional(),
-    parameter_profiles: z.array(ParameterProfileSchema).optional(),
-  }).strict());
-
-
-/**
  * Describes a RoIS component's capabilities, messages, and parameters.
  * 
  * Maps to HRIComponentProfileType in XML-Profiles.xsd.
@@ -148,6 +122,38 @@ export const HRIComponentProfileSchema = z.object({
   parameter_profiles: z.array(ParameterProfileSchema).optional(),
 }).strict();
 export type HRIComponentProfile = z.infer<typeof HRIComponentProfileSchema>;
+
+/**
+ * Describes an HRI Engine's composition of sub-engines and components.
+ * 
+ * Maps to HRIEngineProfileType in XML-Profiles.xsd.
+ * 
+ * Attributes:
+ *     identifier: The engine's structured identifier.
+ *     sub_profiles: Nested sub-engine profiles.
+ *     component_ids: IDs of components hosted by this engine.
+ *     component_profiles: Full capability profiles for each component.
+ *         Populated from adapter registration data. Optional (default
+ *         empty) for backward compatibility with engines that only
+ *         return component_ids.
+ *     parameter_profiles: Engine-level parameter declarations.
+ */
+
+export interface HRIEngineProfileType {
+  identifier: RoISIdentifierType;
+  sub_profiles?: HRIEngineProfileType[];
+  component_ids?: string[];
+  component_profiles?: HRIComponentProfile[];
+  parameter_profiles?: ParameterProfile[];
+}
+export const HRIEngineProfileTypeSchema: z.ZodType<any> = z.lazy(() => z.object({
+    identifier: RoISIdentifierTypeSchema,
+    sub_profiles: z.array(HRIEngineProfileTypeSchema).optional(),
+    component_ids: z.array(z.string()).optional(),
+    component_profiles: z.array(HRIComponentProfileSchema).optional(),
+    parameter_profiles: z.array(ParameterProfileSchema).optional(),
+  }).strict());
+
 
 /**
  * Base message profile describing a command, query, or event message.
