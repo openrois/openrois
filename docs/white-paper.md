@@ -555,7 +555,7 @@ Key characteristics:
 - Runtime validation via zod schemas imported from `@openrois/interfaces`.
 - Dual ESM/CJS output (tsup), browser and Node.js compatible.
 - Auto-reconnect with exponential backoff, heartbeat, typed error hierarchy.
-- Ships with a mock gateway (`examples/mock-gateway/`) for testing all SDKs.
+- Ships with a mock engine (`examples/mock-engine/`) for testing all SDKs.
 
 ### 7.3 Python SDK for scripting (secondary client)
 

@@ -1,38 +1,38 @@
 /**
- * Tests for the mock gateway component registry and its integration with the
+ * Tests for the mock engine component registry and its integration with the
  * WebSocket server dispatch.
  *
  * Two describe blocks:
  *   - "ComponentRegistry" — unit tests against the registry class directly
  *     (no socket, no JSON-RPC).
- *   - "mock gateway: registry methods" — integration tests over a real
+ *   - "mock engine: registry methods" — integration tests over a real
  *     WebSocket connection, exercising the full parse -> dispatch -> respond
  *     path for the Week 2 methods.
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { WebSocket } from "ws";
-import { createMockGateway } from "../src/server";
-import type { MockGateway } from "../src/server";
+import { createMockEngine } from "../src/server";
+import type { MockEngine } from "../src/server";
 import { ComponentRegistry } from "../src/registry";
 
 // ---------------------------------------------------------------------------
 // Helpers for integration tests
 // ---------------------------------------------------------------------------
 
-let gateway: MockGateway;
+let engine: MockEngine;
 
 beforeAll(async () => {
-  gateway = await createMockGateway({ port: 0 });
+  engine = await createMockEngine({ port: 0 });
 });
 
 afterAll(async () => {
-  await gateway.close();
+  await engine.close();
 });
 
 function connect(): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
-    const socket = new WebSocket(`ws://127.0.0.1:${gateway.port}`);
+    const socket = new WebSocket(`ws://127.0.0.1:${engine.port}`);
     socket.once("open", () => resolve(socket));
     socket.once("error", reject);
   });
@@ -157,14 +157,27 @@ describe("ComponentRegistry", () => {
     expect(result.parameters).toEqual([]);
   });
 
-  it("getProfile returns valid JSON with component_ids", () => {
+  it("getProfile returns a profile with component_ids and component_profiles", () => {
     const reg = freshRegistry();
     const profile = reg.getProfile();
-    const parsed = JSON.parse(profile);
-    expect(parsed.identifier.authority).toBe("OMG");
-    expect(parsed.identifier.code).toBe("MockEngine");
-    expect(parsed.component_ids).toHaveLength(3);
-    expect(parsed.component_ids).toContain("PersonDetection_0");
+    expect(profile.identifier.authority).toBe("OMG");
+    expect(profile.identifier.code).toBe("MockEngine");
+    expect(profile.component_ids).toHaveLength(3);
+    expect(profile.component_ids).toContain("PersonDetection_0");
+    expect(profile.component_profiles).toHaveLength(3);
+    const navProfile = profile.component_profiles!.find(
+      (p) => p.name === "Navigation_0",
+    );
+    expect(navProfile).toBeDefined();
+    expect(navProfile!.command_profiles.map((p) => p.name)).toEqual(
+      expect.arrayContaining(["execute", "stop"]),
+    );
+    expect(navProfile!.query_profiles.map((p) => p.name)).toEqual(
+      expect.arrayContaining(["waypoints", "component_status"]),
+    );
+    expect(navProfile!.event_profiles.map((p) => p.name)).toEqual(
+      expect.arrayContaining(["reached_target"]),
+    );
   });
 });
 
@@ -172,7 +185,7 @@ describe("ComponentRegistry", () => {
 // Integration tests: server dispatch of registry methods
 // ---------------------------------------------------------------------------
 
-describe("mock gateway: registry methods", () => {
+describe("mock engine: registry methods", () => {
   it("rois.command.search returns all three component refs", async () => {
     const socket = await connect();
     const reply = await roundtrip(socket, req("s1", "rois.command.search", { condition: "" }));
@@ -218,14 +231,14 @@ describe("mock gateway: registry methods", () => {
     socket.close();
   });
 
-  it("rois.system.get_profile returns a profile string", async () => {
+  it("rois.system.get_profile returns a profile with component_profiles", async () => {
     const socket = await connect();
     const reply = await roundtrip(socket, req("p1", "rois.system.get_profile", { condition: "" }));
     expect(reply.result.return_code).toBe("OK");
-    expect(typeof reply.result.profile).toBe("string");
-    const profile = JSON.parse(reply.result.profile);
+    const profile = reply.result.profile;
     expect(profile.identifier.code).toBe("MockEngine");
     expect(profile.component_ids).toHaveLength(3);
+    expect(profile.component_profiles).toHaveLength(3);
     socket.close();
   });
 });

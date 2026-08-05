@@ -1,10 +1,10 @@
 /**
- * Component registry for the mock RoIS gateway.
+ * Component registry for the mock RoIS engine.
  *
  * Manages the set of mock components (PersonDetection, Navigation,
  * SystemInformation) and their state: bound/free status and stored parameters.
  * The registry is a server-side concept. It is not sent over the wire. The
- * gateway's JSON-RPC dispatch calls into this registry to answer search, bind,
+ * engine's JSON-RPC dispatch calls into this registry to answer search, bind,
  * release, set_parameter, get_parameter, and get_profile requests.
  *
  * The URN constants below identify component *types* per the RoIS spec's
@@ -12,11 +12,15 @@
  * @openrois/interfaces package does not yet export URN string constants. When
  * they are added there, this file should import them instead.
  *
- * Architecture: docs/architecture.md section 5 (Gateway) and section 7 (Hosts)
+ * Architecture: docs/architecture.md section 5 (Engine) and section 7 (Hosts)
  * Protocol surface: project-outline.md section 6.2
  */
 
 import type { Parameter, ReturnCode } from "@openrois/interfaces";
+import type {
+  HRIComponentProfile,
+  HRIEngineProfileType,
+} from "@openrois/interfaces/profiles";
 
 // ---------------------------------------------------------------------------
 // Component type URNs
@@ -203,14 +207,17 @@ export class ComponentRegistry {
   }
 
   /**
-   * Return a canned HRI Engine Profile as a JSON string.
+   * Return the HRI Engine Profile with embedded component profiles.
    *
-   * The shape matches HRIEngineProfileType from @openrois/interfaces/profiles:
-   * an identifier (authority + code) and the list of component_ids hosted by
-   * this engine. The string is opaque to the SDK, which treats it as a string.
+   * The shape matches HRIEngineProfileType from @openrois/interfaces/profiles.
+   * Includes component_ids (the registered refs) and component_profiles
+   * (full capability descriptions built from the component type URNs).
+   *
+   * Returns a structured object, not a JSON string. The server wraps it in
+   * the JSON-RPC response.
    */
-  getProfile(): string {
-    const profile = {
+  getProfile(): HRIEngineProfileType {
+    return {
       identifier: {
         authority: "OMG",
         code: "MockEngine",
@@ -218,7 +225,83 @@ export class ComponentRegistry {
         version: "",
       },
       component_ids: [...this.components.keys()],
+      component_profiles: [...this.components.values()].map((entry) =>
+        this.buildComponentProfile(entry),
+      ),
     };
-    return JSON.stringify(profile);
+  }
+
+  /**
+   * Build an HRIComponentProfile from a registered component entry.
+   *
+   * Maps the component type URN to canned command, query, and event
+   * message profiles matching the RoIS spec component definitions.
+   */
+  private buildComponentProfile(entry: ComponentEntry): HRIComponentProfile {
+    const code = entry.typeUrn.split("::").pop() ?? entry.ref;
+    return {
+      identifier: {
+        authority: "OMG",
+        code,
+        codebook_ref: "",
+        version: "",
+      },
+      name: entry.ref,
+      command_profiles: COMPONENT_COMMAND_PROFILES[code] ?? [],
+      query_profiles: COMPONENT_QUERY_PROFILES[code] ?? [],
+      event_profiles: COMPONENT_EVENT_PROFILES[code] ?? [],
+    };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Canned message profiles per component type
+// ---------------------------------------------------------------------------
+
+import type {
+  CommandMessageProfile,
+  QueryMessageProfile,
+  EventMessageProfile,
+} from "@openrois/interfaces/profiles";
+
+/** Command profiles for each component type, keyed by code. */
+const COMPONENT_COMMAND_PROFILES: Record<string, CommandMessageProfile[]> = {
+  Navigation: [
+    { name: "execute", results: [], arguments: [], timeout: null },
+    { name: "stop", results: [], arguments: [], timeout: null },
+  ],
+  PersonDetection: [
+    { name: "start", results: [], arguments: [], timeout: null },
+    { name: "stop", results: [], arguments: [], timeout: null },
+    { name: "set_parameter", results: [], arguments: [], timeout: null },
+  ],
+  SystemInformation: [],
+};
+
+/** Query profiles for each component type, keyed by code. */
+const COMPONENT_QUERY_PROFILES: Record<string, QueryMessageProfile[]> = {
+  Navigation: [
+    { name: "waypoints", results: [] },
+    { name: "component_status", results: [] },
+  ],
+  PersonDetection: [
+    { name: "list_objects", results: [] },
+    { name: "component_status", results: [] },
+  ],
+  SystemInformation: [
+    { name: "robot_position", results: [] },
+    { name: "component_status", results: [] },
+  ],
+};
+
+/** Event profiles for each component type, keyed by code. */
+const COMPONENT_EVENT_PROFILES: Record<string, EventMessageProfile[]> = {
+  Navigation: [
+    { name: "reached_target", results: [] },
+  ],
+  PersonDetection: [
+    { name: "object_detected", results: [] },
+    { name: "object_lost", results: [] },
+  ],
+  SystemInformation: [],
+};

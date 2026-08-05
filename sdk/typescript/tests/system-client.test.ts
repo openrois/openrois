@@ -118,7 +118,7 @@ function respondWithResult(mock: MockWebSocket, result: unknown): void {
 const CANNED_PROFILE: HRIEngineProfileType = {
   identifier: {
     authority: "OMG",
-    code: "MockGateway",
+    code: "MockEngine",
     codebook_ref: "",
     version: "2.0",
   },
@@ -165,7 +165,7 @@ describe("SystemClient", () => {
       });
 
       const profile = await resultPromise;
-      expect(profile.identifier.code).toBe("MockGateway");
+      expect(profile.identifier.code).toBe("MockEngine");
       expect(profile.component_ids).toEqual([
         "PersonDetection_0",
         "Navigation_0",

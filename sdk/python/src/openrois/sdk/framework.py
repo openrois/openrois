@@ -86,6 +86,11 @@ class AdapterFramework:
         This is the main entry point. It blocks until the WS connection
         closes. If rclpy is installed and the adapter has a .node attribute,
         the ROS 2 node is spun in a background thread.
+
+        If the adapter has an async ``connect`` method, it is called inside
+        the framework's event loop before connecting to the avatar. This
+        ensures that gRPC clients and other async resources created in
+        ``connect()`` are bound to the same loop as the framework.
         """
         asyncio.run(self._run_async())
 
@@ -97,20 +102,33 @@ class AdapterFramework:
         self._emitter = EventEmitter(self._ws_send, self._loop)
         self.adapter.emit = self._emitter.emit  # type: ignore[attr-defined]
 
+        # Call the adapter's async connect() if it exists.
+        # This runs inside the framework's event loop so that gRPC
+        # channels and other async resources bind to the same loop.
+        connect_method = getattr(self.adapter, "connect", None)
+        if connect_method is not None and asyncio.iscoroutinefunction(connect_method):
+            logger.info("Calling adapter.connect()")
+            await connect_method()
+
         # Start rclpy in a background thread if available.
         self._maybe_start_rclpy()
 
         try:
-            logger.info("Connecting to %s", self.ws_url)
-            async with websockets.connect(self.ws_url) as ws:
-                self._ws = ws
-                logger.info("Connected to avatar at %s", self.ws_url)
+            # Connect to the avatar with retry.
+            # The avatar may not be running yet. Retry with backoff
+            # instead of crashing on first failure.
+            ws = await self._connect_with_retry()
+            if ws is None:
+                return
 
-                # Register components.
-                await self._register()
+            self._ws = ws
+            logger.info("Connected to avatar at %s", self.ws_url)
 
-                # Dispatch loop.
-                await self._dispatch_loop()
+            # Register components.
+            await self._register()
+
+            # Dispatch loop.
+            await self._dispatch_loop()
         except websockets.ConnectionClosed:
             logger.info("WebSocket connection closed")
         except Exception as exc:
@@ -120,7 +138,59 @@ class AdapterFramework:
             self._maybe_stop_rclpy()
             if self._emitter:
                 self._emitter.remove_all_subscriptions()
+            # Call the adapter's async disconnect() if it exists.
+            disconnect_method = getattr(self.adapter, "disconnect", None)
+            if disconnect_method is not None and asyncio.iscoroutinefunction(disconnect_method):
+                try:
+                    await disconnect_method()
+                except Exception as exc:
+                    logger.warning("Adapter disconnect error: %s", exc)
             logger.info("Adapter framework stopped")
+
+    async def _connect_with_retry(
+        self,
+        max_retries: int = 0,
+        initial_delay: float = 1.0,
+        max_delay: float = 30.0,
+    ) -> Any | None:
+        """Connect to the avatar with exponential backoff retry.
+
+        If max_retries is 0, retry forever. The adapter waits for the
+        avatar to start instead of crashing on connection refused.
+
+        Args:
+            max_retries: Maximum number of retries (0 = infinite).
+            initial_delay: Initial delay between retries in seconds.
+            max_delay: Maximum delay between retries in seconds.
+
+        Returns:
+            The WebSocket connection, or None if retries exhausted.
+        """
+        delay = initial_delay
+        attempt = 0
+        while True:
+            try:
+                logger.info("Connecting to %s", self.ws_url)
+                ws = await websockets.connect(self.ws_url)
+                return ws
+            except (
+                ConnectionRefusedError,
+                OSError,
+                websockets.ConnectionClosed,
+            ) as exc:
+                attempt += 1
+                if max_retries > 0 and attempt > max_retries:
+                    logger.error(
+                        "Failed to connect after %d retries: %s",
+                        max_retries, exc,
+                    )
+                    return None
+                logger.warning(
+                    "Cannot connect to %s: %s. Retrying in %.1fs...",
+                    self.ws_url, exc, delay,
+                )
+                await asyncio.sleep(delay)
+                delay = min(delay * 1.5, max_delay)
 
     async def _ws_send(self, msg: str) -> None:
         """Send a raw JSON string over the WebSocket."""

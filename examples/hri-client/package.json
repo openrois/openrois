@@ -1,0 +1,29 @@
+{
+  "name": "@openrois/hri-client",
+  "version": "0.1.0-alpha.1",
+  "description": "Generic RoIS HRI Client: a browser-based component inspector for any RoIS engine",
+  "license": "Apache-2.0",
+  "author": "OpenRoIS Community",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@openrois/interfaces": "file:../../interfaces/typescript",
+    "@openrois/sdk": "file:../../sdk/typescript",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1"
+  }
+}

@@ -1,7 +1,7 @@
 {
-  "name": "@openrois/mock-gateway",
+  "name": "@openrois/mock-engine",
   "version": "0.1.0-alpha.1",
-  "description": "Mock RoIS gateway: a JSON-RPC 2.0 WebSocket test double for OpenRoIS client SDKs",
+  "description": "Mock RoIS engine: a JSON-RPC 2.0 WebSocket test double for OpenRoIS client SDKs",
   "license": "Apache-2.0",
   "author": "OpenRoIS Community",
   "private": true,

@@ -29,7 +29,7 @@ the gateway, bus adapters, components, SDKs, and documentation.
 
 ```
 openrois/
-├── examples/                # Runnable examples: mock-gateway, mock-robot, web-operator
+├── examples/                # Runnable examples: mock-engine, mock-robot, web-operator
 ├── sdk/                     # Client SDKs
 │   ├── typescript/          #   @openrois/sdk (npm, web + Node)
 │   └── csharp/              #   OpenRoIS.Sdk (NuGet + UPM, Unity)

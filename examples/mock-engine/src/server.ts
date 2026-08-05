@@ -37,7 +37,6 @@ import { ComponentRegistry } from "./registry";
 const registry = new ComponentRegistry();
 
 import type {
-  HRIEngineProfileType,
   Result,
   Parameter,
 } from "@openrois/interfaces";
@@ -47,8 +46,8 @@ const DEFAULT_PORT = 8765;
 /** Default host: loopback only, so the mock is not exposed on the network. */
 const DEFAULT_HOST = "127.0.0.1";
 
-/** Options for {@link createMockGateway}. */
-export interface MockGatewayOptions {
+/** Options for {@link createMockEngine}. */
+export interface MockEngineOptions {
   /**
    * TCP port to listen on. Use 0 to bind an ephemeral port chosen by the OS,
    * which is what tests do to avoid collisions. Defaults to 8765.
@@ -58,8 +57,8 @@ export interface MockGatewayOptions {
   host?: string;
 }
 
-/** A running mock gateway handle. */
-export interface MockGateway {
+/** A running mock engine handle. */
+export interface MockEngine {
   /** The underlying ws WebSocketServer. */
   readonly wss: WebSocketServer;
   /** The actual bound port, resolved even when port 0 was requested. */
@@ -69,15 +68,15 @@ export interface MockGateway {
 }
 
 /**
- * Start a mock gateway and resolve once it is listening.
+ * Start a mock engine and resolve once it is listening.
  *
  * The returned promise resolves after the "listening" event so the caller can
  * read the actual bound port, which matters when port 0 is used to request an
  * ephemeral port.
  */
-export function createMockGateway(
-  options: MockGatewayOptions = {},
-): Promise<MockGateway> {
+export function createMockEngine(
+  options: MockEngineOptions = {},
+): Promise<MockEngine> {
   const port = options.port ?? DEFAULT_PORT;
   const host = options.host ?? DEFAULT_HOST;
 
@@ -162,17 +161,13 @@ function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
       case "rois.system.disconnect":
         send(socket, okResponse(request.id));
         return;
-        
-    //New Additions
+
     case "rois.system.get_profile":
       send(socket, resultResponse(request.id, {
         return_code: "OK",
         profile: registry.getProfile(),
       }));
       return;
-    // case "rois.system.get_profile":
-    //   send(socket, profileResponse(request.id, request.params));
-    //   return;
     case "rois.system.get_error_detail":
       send(socket, errorDetailResponse(request.id, request.params));
       return;
@@ -301,39 +296,9 @@ function extractId(payload: unknown): JsonRpcId {
 // ---------------------------------------------------------------------------
 
 /**
- * A canned HRI_Engine_Profile returned by rois.system.get_profile.
- *
- * Describes a mock gateway hosting three components (PersonDetection,
- * Navigation, SystemInformation) with a nested perception sub-engine. The
- * condition filter is accepted but not evaluated — the mock always returns
- * the full profile.
- */
-const CANNED_ENGINE_PROFILE: HRIEngineProfileType = {
-  identifier: {
-    authority: "OMG",
-    code: "MockGateway",
-    codebook_ref: "",
-    version: "2.0",
-  },
-  sub_profiles: [
-    {
-      identifier: {
-        authority: "OMG",
-        code: "PerceptionSubEngine",
-        codebook_ref: "",
-        version: "2.0",
-      },
-      component_ids: ["PersonDetection_0"],
-    },
-  ],
-  component_ids: ["PersonDetection_0", "Navigation_0", "SystemInformation_0"],
-  parameter_profiles: [],
-};
-
-/**
  * Canned error details keyed by error_id.
  *
- * The mock gateway recognizes a small set of known error IDs and returns
+ * The mock engine recognizes a small set of known error IDs and returns
  * descriptive Result arrays. Unknown error IDs return an empty result list
  * with return_code OK (the error was found but has no extra detail).
  */
@@ -367,23 +332,6 @@ const CANNED_ERROR_DETAILS: Record<string, Result[]> = {
 // ---------------------------------------------------------------------------
 // Response builders for System query operations
 // ---------------------------------------------------------------------------
-
-/**
- * Build a get_profile success response.
- *
- * The condition parameter is accepted but not evaluated — the mock always
- * returns the full canned profile.
- */
-function profileResponse(id: JsonRpcId, _params: unknown): JsonRpcResponse {
-  return {
-    jsonrpc: JSONRPC_VERSION,
-    id,
-    result: {
-      return_code: "OK",
-      profile: CANNED_ENGINE_PROFILE,
-    },
-  };
-}
 
 /**
  * Build a get_error_detail success response.

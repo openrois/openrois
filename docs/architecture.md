@@ -659,7 +659,7 @@ openrois/
 │   ├── typescript/          #   @openrois/sdk (npm, web + Node, PRIMARY)
 │   └── csharp/              #   OpenRoIS.Sdk (NuGet + UPM, Unity)
 ├── examples/                # runnable examples and test tools
-│   ├── mock-gateway/       #   mock WebSocket gateway (JSON-RPC test double for SDKs)
+│   ├── mock-engine/       #   mock WebSocket engine (JSON-RPC test double for SDKs)
 │   ├── web-operator/       #   web operator app driving a ROS 2 robot (MVP demo)
 │   └── mock-robot/         #   ROS 2 mock sub-engine + component nodes
 └── docs/                    # documentation

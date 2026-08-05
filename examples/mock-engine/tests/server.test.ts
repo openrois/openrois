@@ -1,30 +1,30 @@
 /**
- * Self-tests for the mock gateway WebSocket server (Week 1 skeleton).
+ * Self-tests for the mock engine WebSocket server (Week 1 skeleton).
  *
- * Each test starts a gateway on an ephemeral port, connects a real ws client,
+ * Each test starts an engine on an ephemeral port, connects a real ws client,
  * sends a JSON-RPC message, and asserts on the reply. This exercises the full
  * parse -> validate -> dispatch -> respond path over an actual socket.
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { WebSocket } from "ws";
-import { createMockGateway } from "../src/server";
-import type { MockGateway } from "../src/server";
+import { createMockEngine } from "../src/server";
+import type { MockEngine } from "../src/server";
 
-let gateway: MockGateway;
+let engine: MockEngine;
 
 beforeAll(async () => {
-  gateway = await createMockGateway({ port: 0 });
+  engine = await createMockEngine({ port: 0 });
 });
 
 afterAll(async () => {
-  await gateway.close();
+  await engine.close();
 });
 
-/** Open a client connection to the running gateway. */
+/** Open a client connection to the running engine. */
 function connect(): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
-    const socket = new WebSocket(`ws://127.0.0.1:${gateway.port}`);
+    const socket = new WebSocket(`ws://127.0.0.1:${engine.port}`);
     socket.once("open", () => resolve(socket));
     socket.once("error", reject);
   });
@@ -44,7 +44,7 @@ function roundtrip(socket: WebSocket, payload: string): Promise<any> {
   });
 }
 
-describe("mock gateway", () => {
+describe("mock engine", () => {
   it("answers rois.system.connect with return_code OK", async () => {
     const socket = await connect();
     const reply = await roundtrip(
@@ -118,15 +118,21 @@ describe("mock gateway", () => {
       expect(reply.result.return_code).toBe("OK");
 
       const profile = reply.result.profile;
-      expect(profile.identifier.code).toBe("MockGateway");
+      expect(profile.identifier.code).toBe("MockEngine");
       expect(profile.identifier.authority).toBe("OMG");
       expect(profile.component_ids).toEqual([
         "PersonDetection_0",
         "Navigation_0",
         "SystemInformation_0",
       ]);
-      expect(profile.sub_profiles).toHaveLength(1);
-      expect(profile.sub_profiles[0].identifier.code).toBe("PerceptionSubEngine");
+      expect(profile.component_profiles).toHaveLength(3);
+      const navProfile = profile.component_profiles.find(
+        (p: { name: string }) => p.name === "Navigation_0",
+      );
+      expect(navProfile).toBeDefined();
+      expect(navProfile.command_profiles.map((p: { name: string }) => p.name)).toEqual(
+        expect.arrayContaining(["execute", "stop"]),
+      );
       socket.close();
     });
 
@@ -143,7 +149,7 @@ describe("mock gateway", () => {
       );
 
       expect(reply.result.return_code).toBe("OK");
-      expect(reply.result.profile.identifier.code).toBe("MockGateway");
+      expect(reply.result.profile.identifier.code).toBe("MockEngine");
       socket.close();
     });
   });
