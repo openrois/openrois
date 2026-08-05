@@ -65,11 +65,11 @@
 ### Non-Goals
 
 - We do **not** invent a new wire protocol. RoIS defines messages, not transport. We
-  choose existing transports (WebSocket, in-process, gRPC, DDS, WebRTC).
+  choose existing transports (WebSocket, DDS, WebRTC).
 - We do **not** define media codecs. Streaming media formats are out of RoIS scope.
 - We do **not** mandate any single middleware. ROS 2 is the **primary, reference
-  robot adapter**. In-process is the reference avatar adapter. Neither is privileged
-  in the core. The web-ROS demo is the first proof, not a special case.
+  robot adapter**. The UniversalBusAdapter (WebSocket + JSON-RPC) is the adapter
+  for any non-ROS host (avatars, services). Neither is privileged in the core.
 
 ---
 
@@ -82,7 +82,7 @@ The output of this effort is **not a protocol and not a single SDK**. It is a
 |----------|----------|-------------|
 | **RoIS Interfaces** | Implementers | **Transport-independent** type/interface definitions derived from the normative IDL. Authored as **Python (Pydantic)**, exported to **JSON Schema** (canonical wire format), and generated into **C#** and **TypeScript**. |
 | **RoIS Engine + Gateway** | Operators | The **bus-independent** runtime (Python) that manages components and exposes them remotely. |
-| **RoIS BusAdapters** | Platform integrators | Pluggable bindings: `ROS 2` (robot, primary), `InProcess` (avatar), `gRPC` (services). All implement one common contract. |
+| **RoIS BusAdapters** | Platform integrators | Pluggable bindings: `ROS 2` (robot, primary), `Universal` (avatars and services, WebSocket + JSON-RPC). All implement one common contract. |
 | **RoIS Components** | Integrators | The 17 basic components backed by real perception/actuation libraries, with per-paradigm backends. |
 | **RoIS Client SDK** | Application developers | The user-facing library (**TypeScript for web first**, C# and Python second). |
 
@@ -109,24 +109,24 @@ and it is **identical** whether the host is a robot or an avatar.
                 ▼
 ┌──────────────────────────────────────────────────────────────────────┐
 │  LAYER 3 - INTERNAL BUS  (pluggable: choose one adapter per host)     │
-└──┬─────────────────────┬─────────────────────┬───────────────────────┘
-   ▼                     ▼                     ▼
-┌─────────────┐   ┌─────────────┐   ┌─────────────┐
-│ ROS 2 / DDS │   │ InProcess   │   │ gRPC        │
-│ (robot)     │   │ (avatar)    │   │ (services)  │
-│ PRIMARY     │   │             │   │             │
-│ Sub-engines │   │ Unity/Godot │   │ Distributed │
-│ per robot,  │   │ /Web comp-  │   │ AI / per-   │
-│ Nav2 /      │   │ onents in   │   │ ception     │
-│ perception  │   │ process     │   │ services    │
-└─────────────┘   └─────────────┘   └─────────────┘
+└──┬─────────────────────────────────────────────────┬───────────────┘
+   ▼                                                   ▼
+┌─────────────┐                                   ┌─────────────┐
+│ ROS 2 / DDS │                                   │ Universal   │
+│ (robot)     │                                   │ (avatar/svc)│
+│ PRIMARY     │                                   │             │
+│ Sub-engines │                                   │ WS+JSON-RPC │
+│ per robot,  │                                   │ host        │
+│ Nav2 /      │                                   │ connectors  │
+│ perception  │                                   │             │
+└─────────────┘                                   └─────────────┘
 ```
 
 The spec's "main HRI Engine" maps to the **Gateway**. Each "sub HRI Engine" maps to
-a **per-host node** (a robot node, an avatar process, or a service). "HRI
-Components" map to whatever the chosen BusAdapter addresses: in-process objects,
-gRPC services, or ROS 2 component nodes. The client only ever talks to the Gateway.
-The host topology *and paradigm* are hidden, exactly as the spec requires.
+a **per-host node** (a robot node or a host connector). "HRI Components" map to
+whatever the chosen BusAdapter addresses: ROS 2 component nodes or host connector
+objects. The client only ever talks to the Gateway. The host topology *and paradigm*
+are hidden, exactly as the spec requires.
 
 ---
 
@@ -151,37 +151,24 @@ gateway bridges DDS to the remote web client over WebSocket.
 ### B. Mixed Fleet (multiple adapters at once)
 
 One gateway can host several adapters simultaneously. For example, a physical robot
-(ROS 2) **and** a virtual concierge avatar (in-process) behind the same SDK
+(ROS 2) **and** a virtual concierge avatar (UniversalBusAdapter) behind the same SDK
 endpoint. This is the strongest proof the interfaces are paradigm-neutral.
 
 ```
-            ┌─ ROS2BusAdapter ──────► Robot sub-engines
+            ┌─ ROS2BusAdapter ──────► Robot sub-engines (ROS 2 / DDS)
   Gateway ──┤
-            └─ InProcessBusAdapter ─► Avatar components
+            └─ UniversalBusAdapter ─► Avatar host connector (WS+JSON-RPC)
 ```
 
-### C. Single-Process Avatar (`InProcessBusAdapter`) - secondary
+### C. Distributed Avatar/Service (`UniversalBusAdapter`) - secondary
 
-The simplest deployment: engine, gateway, and components live in one process (e.g. a
-Unity game, a Godot app, or a Node/browser runtime). No serialization, no network
-bus.
-
-```
-┌──────────────────────────── Avatar Process ───────────────────────────┐
-│  Engine + Gateway      InProcessBusAdapter      Components (in-proc)    │
-│  ───────────────  ───►  ─────────────────  ───►  FaceDetection         │
-│   (WS to remote)         direct method calls      Reaction, SpeechSynth │
-└────────────────────────────────────────────────────────────────────────┘
-```
-
-### D. Multi-Process Services (`gRPCBusAdapter`) - secondary
-
-A front-end plus separate AI services (perception, ASR/TTS) that may run on a GPU
-box or in containers.
+Avatars and AI services run as host connector processes that register with the
+gateway over WebSocket + JSON-RPC. This works for a single avatar on the LAN or
+multiple avatars across the network.
 
 ```
-  Web/Unity  ──gRPC──►  Perception svc · ASR svc · TTS svc
-  (engine+gateway)      (components as gRPC services)
+  Web/Unity  ──WS+JSON-RPC──►  Avatar host connector · GPU service host connector
+  (engine+gateway)             (components as host connector processes)
 ```
 
 ---
@@ -261,7 +248,7 @@ Responsibilities:
 - **Terminate the remote transport** (WebSocket/TLS) and authenticate every
   connection before any RoIS message is processed.
 - **Translate** JSON-RPC RoIS calls to bus adapter operations (service/action/topic
-  for ROS 2, method calls for in-process, gRPC for distributed services).
+  for ROS 2, WS+JSON-RPC for UniversalBusAdapter hosts).
 - **Aggregate profiles** from all authorized sub-engines into one
   `HRI_Engine_Profile` returned by `get_profile()`.
 - **Filter** `search()`/`query()` results and **guard** `bind()`/`execute()` per the
@@ -275,13 +262,14 @@ Responsibilities:
 
 The internal bus is **not fixed**. The engine talks only to a `BusAdapter`
 (see [§7.5](#75-the-busadapter-interface)). Concrete adapters bind that contract to a
-specific transport. Three reference adapters ship with OpenRoIS:
+specific transport. Two production adapters ship with OpenRoIS:
 
 | Adapter | Best for | Discovery | Invoke | Event |
 |---------|----------|-----------|--------|-------|
-| **InProcess** | Single-process avatars (Unity/Godot/Web) | local registry | direct method call | callback / language event |
-| **gRPC** | Distributed avatar/AI services | service registry | gRPC unary | gRPC server-stream |
 | **ROS 2 / DDS** | Physical robots & fleets | DDS discovery | service / action | topic subscription |
+| **Universal** (WS+JSON-RPC) | Avatars, services, any non-ROS host | host self-registration | WS+JSON-RPC call | WS push notification |
+
+A `RosBridgeBusAdapter` (for any ROS via rosbridge) is a future addition.
 
 ### ROS 2 / DDS adapter (robot reference)
 
@@ -305,14 +293,15 @@ Fleet isolation options (ROS 2 adapter):
 | **DDS-Security permissions per topic** | Granular | Medium |
 | **Single domain + Gateway-only filtering** | Weak (bus is trusted) | Lowest |
 
-### InProcess adapter (avatar reference)
+### Universal adapter (avatar and service reference)
 
-For a single-process avatar, the bus is just a **local registry**: components
-register themselves and `invoke`/`query` are direct method calls. There is no
-serialization, no discovery protocol, and no network hop. This is ideal for a
-Unity/Godot game loop or a browser runtime. QoS, deadlines, and reliability are not
-the engine's concern. They belong to whichever adapter needs them (only the ROS 2
-adapter does).
+For any non-ROS host (avatars, GPU services, custom hardware), the `UniversalBusAdapter`
+uses WebSocket + JSON-RPC. Each host runs a **host connector** process that
+registers its components with the gateway at startup. The gateway discovers
+components via this self-registration. `invoke`, `query`, and `subscribe` are
+WS+JSON-RPC calls to the host connector. This works for a single avatar on the LAN
+or multiple avatars distributed across the network. No DDS dependency, no
+cross-network multicast requirement.
 
 ---
 
@@ -339,16 +328,16 @@ component implements the `Command` / `Query` / `Event` interfaces it inherits fr
 │  VideoStreaming    → GStreamer webrtc  │  notify_stream_status(stream_id, status)
 └──────────────────────────────────────┘
 
-  Host: Robot A (ROS2BusAdapter)            Host: Avatar (InProcessBusAdapter)
+  Host: Robot A (ROS2BusAdapter)            Host: Avatar (UniversalBusAdapter)
   ─ camera/mic input, physical actuation     ─ webcam input, rendered output
-  ─ components are ROS 2 nodes                ─ components are in-process objects
+  ─ components are ROS 2 nodes                ─ components are host connector objects
 ```
 
 The component method categories map to whatever the active adapter provides:
 
-- **Command Method** → ROS 2 action/service, gRPC call, or in-process method.
-- **Event Method** → ROS 2 topic, gRPC stream, or in-process callback.
-- **Query Method** → ROS 2 service, gRPC unary, or in-process method.
+- **Command Method** → ROS 2 action/service or WS+JSON-RPC call.
+- **Event Method** → ROS 2 topic or WS push notification.
+- **Query Method** → ROS 2 service or WS+JSON-RPC call.
 
 The component's *logic* is the same across adapters. Only the binding differs.
 
@@ -386,8 +375,7 @@ public:
 
 | Adapter | Paradigm | Discovery | Invoke | Event |
 |---------|----------|-----------|--------|-------|
-| **InProcessBusAdapter** | Avatar (single process) | registry lookup | direct method call | language event / callback |
-| **gRPCBusAdapter** | Distributed services | service registry | gRPC unary | gRPC server-stream |
+| **UniversalBusAdapter** | Avatars, services, any non-ROS host | host self-registration (WS) | WS+JSON-RPC call | WS push notification |
 | **ROS2BusAdapter** | Physical robot | DDS discovery | service / action | topic subscription |
 
 Because the engine sees only `BusAdapter`, **adding a new paradigm is an additive
@@ -437,15 +425,14 @@ at each boundary** rather than forcing one everywhere.
 | Boundary | Transport | Why |
 |----------|-----------|-----|
 | Remote client to Gateway | **WebSocket + TLS** | NAT/firewall friendly, browser-native, easy auth, async events. Matches the spec's Annex F.2.3 WebSocket example. |
-| Gateway to avatar components (same process) | **In-process calls** | Zero serialization/latency. Ideal for Unity/Godot/Web hosts. |
-| Gateway to distributed services | **gRPC** | Typed, cross-language, efficient. Good for GPU/AI services. |
+| Gateway to non-ROS hosts (avatars, services) | **WebSocket + JSON-RPC** | NAT-friendly, self-registration, one protocol for all non-ROS hosts. |
 | Gateway to robot fleet | **ROS 2 / DDS** | Reliable pub/sub, QoS, discovery, ecosystem (Nav2, perception). |
 | Media (camera/mic or rendered) | **WebRTC (SRTP/DTLS)** | Built-in NAT traversal (ICE/STUN/TURN), adaptive bitrate, encrypted, browser-native. |
 
 Each is selected by the active **BusAdapter** at Layer 3, except WebSocket (always
 the remote edge) and WebRTC (always the media plane).
 
-These are complementary, not competing: in-process/gRPC/DDS each solve a different
+These are complementary, not competing: DDS and WS+JSON-RPC each solve a different
 *host* boundary. WebSocket solves the *remote control* boundary. WebRTC solves
 *real-time media*.
 
@@ -654,8 +641,7 @@ openrois/
 ├── engine/                  # Bus-independent engine (Python): lifecycle, bind/execute
 ├── bus/                     # BusAdapter contract + reference adapters
 │   ├── ros2/               #   ROS2BusAdapter (Python/rclpy), PRIMARY
-│   ├── in_process/         #   InProcessBusAdapter (avatar reference)
-│   └── grpc/               #   gRPCBusAdapter (distributed services)
+│   └── universal/          #   UniversalBusAdapter (WS+JSON-RPC, avatars and services)
 ├── gateway/                 # WebSocket server (Python), RoIS to BusAdapter, WebRTC bridge
 │   ├── auth/               #   JWT/OIDC verification
 │   ├── rbac/               #   fleet + component authorization policy
@@ -690,8 +676,8 @@ openrois/
 | Engine / gateway language | **Python (rclpy, asyncio)** | C++ (rclcpp), Node |
 | Interface source of truth | **Pydantic to JSON Schema to C#/TS** | Protobuf, raw IDL |
 | Avatar host | Unity / Godot / Web (Three.js, Babylon.js) | Unreal, MMDAgent, Live2D |
-| Internal bus (robot) | ROS 2 / DDS | gRPC |
-| Internal bus (avatar) | In-process registry | gRPC for distributed services |
+| Internal bus (robot) | ROS 2 / DDS | — |
+| Internal bus (avatar/services) | WebSocket + JSON-RPC (UniversalBusAdapter) | — |
 | Remote transport | WebSocket + TLS | gRPC-web, MQTT |
 | RPC envelope | JSON-RPC 2.0 | Protobuf, CBOR |
 | Media | WebRTC (aiortc / GStreamer webrtcbin) | RTSP, HLS |

@@ -13,7 +13,7 @@ in a web operator application controlling a ROS 2 robot over WebSocket.
 | Milestone | Theme | Output | Status |
 |-----------|-------|--------|--------|
 | **M0** | Paradigm-Neutral Interfaces | `interfaces` (Pydantic to JSON Schema to C#/TS), `BusAdapter` contract | done |
-| **M1** | Engine and In-Process Bus | `engine`, `InProcessBusAdapter`, mock components | todo |
+| **M1** | Engine and Bus | `engine`, `UniversalBusAdapter`, mock components | todo |
 | **M2** | Remote Gateway | `gateway` (WebSocket, JSON-RPC 2.0, auth hook) | todo |
 | **M3** | ROS 2 Bus Adapter | `ROS2BusAdapter` (rclpy), no core changes | todo |
 | **M4** | Mock ROS 2 Robot Components | `person_detection`, `navigation`, `system_information` nodes | todo |
@@ -58,11 +58,11 @@ wire contract), and generated into C# and TypeScript. Includes the `BusAdapter`
 protocol: the four-method contract (`discover`, `invoke`, `query`, `subscribe`)
 that decouples the engine from any specific middleware.
 
-### M1: Engine and In-Process Bus
+### M1: Engine and Bus
 
 A bus-independent engine running the RoIS interfaces (`SystemIF`, `CommandIF`,
-`QueryIF`, `EventIF`) against the `InProcessBusAdapter` with mock components. The
-engine has zero references to ROS, DDS, gRPC, or any game engine.
+`QueryIF`, `EventIF`) against the `UniversalBusAdapter` with mock components. The
+engine has zero references to ROS, DDS, or any game engine.
 
 ### M2: Remote Gateway
 

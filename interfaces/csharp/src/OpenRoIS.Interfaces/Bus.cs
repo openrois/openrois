@@ -49,8 +49,8 @@ namespace OpenRoIS.Interfaces.Bus
 
     /// <summary>
     /// Transport-neutral contract between the RoIS engine and a concrete bus.
-    /// Implementations include InProcessBusAdapter (M1), ROS2BusAdapter (M3),
-    /// gRPCBusAdapter (future), WebSocketBusAdapter (future).
+    /// Implementations include UniversalBusAdapter (M1, WS+JSON-RPC), ROS2BusAdapter (M3),
+    /// RosBridgeBusAdapter (future).
     /// </summary>
     public interface IBusAdapter
     {

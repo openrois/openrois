@@ -270,10 +270,9 @@ class BusAdapter(Protocol):
     """Transport-neutral contract between the RoIS engine and a concrete bus.
 
     Implementations include:
-      - InProcessBusAdapter   (M1)
+      - UniversalBusAdapter  (M1, WS+JSON-RPC for non-ROS hosts)
       - ROS2BusAdapter        (M3)
-      - gRPCBusAdapter        (future)
-      - WebSocketBusAdapter   (future)
+      - RosBridgeBusAdapter   (future)
 
  * The contract is intentionally limited to five async methods. Adapters must
     not leak transport-specific types through these signatures.

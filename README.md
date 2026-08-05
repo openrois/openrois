@@ -42,8 +42,7 @@ openrois/
 ├── engine/                  # Bus-independent engine (Python): lifecycle, bind/execute
 ├── bus/                     # BusAdapter contract + reference adapters
 │   ├── ros2/                #   ROS2BusAdapter (rclpy), primary robot adapter
-│   ├── in-process/          #   InProcessBusAdapter (test utility)
-│   └── universal/           #   UniversalBusAdapter (WS+JSON-RPC, any non-ROS host)
+│   └── universal/           #   UniversalBusAdapter (WS+JSON-RPC, avatars and services)
 └── docs/                    # Documentation
 ```
 
@@ -98,8 +97,8 @@ flowchart TB
     subgraph L4["Layer 4: Hosts"]
         direction LR
         Robot["ROS 2 Robot<br/>(Nav2, YOLO)"]
-        Avatar["InProcess Avatar<br/>(Unity, Godot)"]
-        Services["gRPC Services<br/>(perception, ASR)"]
+        Avatar["Universal Avatar<br/>(WS+JSON-RPC)"]
+        Services["Universal Services<br/>(WS+JSON-RPC)"]
     end
 
     L1 -->|"WebSocket / TLS"| L2

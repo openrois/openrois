@@ -43,7 +43,7 @@ CI (`.github/workflows/ci.yml`) runs all three on changes to `interfaces/**`.
 - Python 3.12+, Pydantic v2, `from __future__ import annotations`, PEP 695 `type` statements, mypy strict, ruff line-length 100
 - TypeScript ESM, strict typecheck, vitest
 - C# `netstandard2.1` (Unity 6.3+), `sealed class`, `Nullable` enabled
-- `interfaces/python/src/` must stay transport-neutral. No ROS, DDS, gRPC, or WebSocket imports.
+- `interfaces/python/src/` must stay transport-neutral. No ROS, DDS, or WebSocket imports.
 - Don't change the `BusAdapter` protocol without reading
   `docs/architecture.md` section 7.5.
 
