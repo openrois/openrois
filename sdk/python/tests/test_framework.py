@@ -234,6 +234,49 @@ async def test_framework_returns_unsupported_for_unknown_component(avatar_and_ad
     assert response["result"]["return_code"] == "UNSUPPORTED"
 
 
+async def test_framework_get_profile_returns_component_metadata(avatar_and_adapter):
+    """get_profile returns component_ids and capability profiles."""
+    avatar, adapter, framework = avatar_and_adapter
+    await avatar.send({
+        "jsonrpc": "2.0",
+        "id": "req-profile",
+        "method": "rois.system.get_profile",
+        "params": {},
+    })
+    response = await avatar.recv_response()
+    assert response["id"] == "req-profile"
+    result = response["result"]
+    assert result["return_code"] == "OK"
+
+    # component_ids have the fleet_id prefix.
+    ids = result["component_ids"]
+    assert "test_robot/SystemInformation" in ids
+    assert "test_robot/Navigation" in ids
+
+    # Find the Navigation profile and check its capabilities.
+    nav_idx = ids.index("test_robot/Navigation")
+    nav_profile = result["component_profiles"][nav_idx]
+
+    query_names = [q["name"] for q in nav_profile["query_profiles"]]
+    assert "waypoints" in query_names
+
+    cmd_names = [c["name"] for c in nav_profile["command_profiles"]]
+    assert "EXECUTE" in cmd_names
+    assert "STOP" in cmd_names
+
+    event_names = [e["name"] for e in nav_profile["event_profiles"]]
+    assert "reached_target" in event_names
+
+    # SystemInformation has robot_position but no commands or events.
+    sys_idx = ids.index("test_robot/SystemInformation")
+    sys_profile = result["component_profiles"][sys_idx]
+
+    sys_query_names = [q["name"] for q in sys_profile["query_profiles"]]
+    assert "robot_position" in sys_query_names
+    assert sys_profile["command_profiles"] == []
+    assert sys_profile["event_profiles"] == []
+
+
 async def test_framework_emit_sends_notification(avatar_and_adapter):
     """emit() sends an event notification to the avatar."""
     avatar, adapter, framework = avatar_and_adapter
@@ -254,7 +297,7 @@ async def test_framework_emit_sends_notification(avatar_and_adapter):
     adapter.emit(  # type: ignore[attr-defined]
         "Navigation",
         "reached_target",
-        results.reached_target(target="desk", success=True),
+        results.reached_target(target="desk", is_final_target=True),
     )
     await asyncio.sleep(0.1)
 

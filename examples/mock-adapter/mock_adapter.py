@@ -4,7 +4,7 @@ Connects to the avatar, registers 4 components, and responds with
 hardcoded data. Fires events on a timer to simulate robot activity.
 
 Usage:
-    python mock_adapter.py --config profile.yaml
+    python mock_adapter.py --config openrois-profile.yaml
 """
 
 from __future__ import annotations
@@ -77,6 +77,7 @@ class MockAdapter(RobotAdapter):
             target = parameters[0].value if parameters else "unknown"
             logger.info("Navigate to: %s", target)
             self.parent._nav_busy = True
+            self.parent._nav_target = target
             return InvokeResponse(return_code=ReturnCode.OK, command_id="cmd-nav")
 
         @invoke("STOP")
@@ -93,10 +94,13 @@ class MockAdapter(RobotAdapter):
         async def _fire_reached(self):
             await asyncio.sleep(5.0)
             self.parent._nav_busy = False
+            target_name = getattr(self.parent, "_nav_target", "unknown")
             self.parent.emit(  # type: ignore[attr-defined]
                 "Navigation",
                 "reached_target",
-                results.reached_target(target="desk", success=True),
+                results.reached_target(
+                    target=target_name, is_final_target=True,
+                ),
             )
             logger.info("Fired reached_target event")
 
@@ -198,8 +202,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Mock OpenRoIS adapter")
     parser.add_argument(
         "--config",
-        default="profile.yaml",
-        help="Path to the profile YAML file (default: profile.yaml)",
+        default="openrois-profile.yaml",
+        help="Path to the profile YAML file (default: openrois-profile.yaml)",
     )
     args = parser.parse_args()
 

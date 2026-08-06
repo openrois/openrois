@@ -12,7 +12,7 @@ pip install openrois-adapter-sdk
 
 2. Copy this directory to your robot's machine.
 
-3. Copy `profile.yaml.example` to `profile.yaml` and edit it to declare
+3. Copy `openrois-profile.yaml.example` to `openrois-profile.yaml` and edit it to declare
    your robot's components.
 
 4. Edit `my_adapter.py` and fill in the `# IMPLEMENT YOUR CODE HERE #`
@@ -21,7 +21,7 @@ pip install openrois-adapter-sdk
 5. Run the adapter:
 
 ```bash
-python my_adapter.py --config profile.yaml
+python my_adapter.py --config openrois-profile.yaml
 ```
 
 The adapter connects to the avatar's WebSocket server, registers its
@@ -49,9 +49,9 @@ async def robot_position(self):
 
 ## Config file
 
-The `profile.yaml` file declares your robot's components, their access
+The `openrois-profile.yaml` file declares your robot's components, their access
 policies, and the connection info for the avatar. See
-`profile.yaml.example` for the format.
+`openrois-profile.yaml.example` for the format.
 
 ## Learn more
 

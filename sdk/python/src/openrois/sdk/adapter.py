@@ -192,7 +192,7 @@ class RobotAdapter:
         for ref, meta in self._metadata.items():
             components.append({
                 "ref": ref,
-                "type": "user-defined",
+                "type": "custom",
                 "bind_required": meta.bind_required,
                 "queries": list(meta.queries.keys()),
                 "commands": list(meta.invokes.keys()),

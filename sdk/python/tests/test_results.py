@@ -63,12 +63,12 @@ def test_waypoints():
 
 
 def test_reached_target():
-    """reached_target() returns 2 Results with target and success."""
-    result = results.reached_target(target="desk", success=True)
+    """reached_target() returns 2 Results with target and is_final_target."""
+    result = results.reached_target(target="desk", is_final_target=True)
     assert len(result) == 2
     assert result[0].name == "target"
     assert result[0].value == "desk"
-    assert result[1].name == "success"
+    assert result[1].name == "is_final_target"
     assert result[1].value == "true"
 
 

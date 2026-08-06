@@ -12,7 +12,7 @@ with hardcoded data.
 2. Run the mock adapter:
 
 ```bash
-python mock_adapter.py --config profile.yaml
+python mock_adapter.py --config openrois-profile.yaml
 ```
 
 3. From an operator SDK, call `search()`, `query()`, `execute()`, and

@@ -170,10 +170,10 @@ describe("ComponentRegistry", () => {
     );
     expect(navProfile).toBeDefined();
     expect(navProfile!.command_profiles.map((p) => p.name)).toEqual(
-      expect.arrayContaining(["execute", "stop"]),
+      expect.arrayContaining(["start", "stop", "suspend", "resume", "set_parameter", "execute"]),
     );
     expect(navProfile!.query_profiles.map((p) => p.name)).toEqual(
-      expect.arrayContaining(["waypoints", "component_status"]),
+      expect.arrayContaining(["component_status", "get_parameter"]),
     );
     expect(navProfile!.event_profiles.map((p) => p.name)).toEqual(
       expect.arrayContaining(["reached_target"]),

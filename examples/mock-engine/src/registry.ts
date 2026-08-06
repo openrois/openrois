@@ -266,42 +266,45 @@ import type {
 
 /** Command profiles for each component type, keyed by code. */
 const COMPONENT_COMMAND_PROFILES: Record<string, CommandMessageProfile[]> = {
+  SystemInformation: [],
   Navigation: [
-    { name: "execute", results: [], arguments: [], timeout: null },
+    { name: "start", results: [], arguments: [], timeout: null },
     { name: "stop", results: [], arguments: [], timeout: null },
+    { name: "suspend", results: [], arguments: [], timeout: null },
+    { name: "resume", results: [], arguments: [], timeout: null },
+    { name: "set_parameter", results: [], arguments: [], timeout: null },
+    { name: "execute", results: [], arguments: [], timeout: null },
   ],
   PersonDetection: [
     { name: "start", results: [], arguments: [], timeout: null },
     { name: "stop", results: [], arguments: [], timeout: null },
-    { name: "set_parameter", results: [], arguments: [], timeout: null },
+    { name: "suspend", results: [], arguments: [], timeout: null },
+    { name: "resume", results: [], arguments: [], timeout: null },
   ],
-  SystemInformation: [],
 };
 
 /** Query profiles for each component type, keyed by code. */
 const COMPONENT_QUERY_PROFILES: Record<string, QueryMessageProfile[]> = {
-  Navigation: [
-    { name: "waypoints", results: [] },
-    { name: "component_status", results: [] },
-  ],
-  PersonDetection: [
-    { name: "list_objects", results: [] },
-    { name: "component_status", results: [] },
-  ],
   SystemInformation: [
     { name: "robot_position", results: [] },
+    { name: "engine_status", results: [] },
+  ],
+  Navigation: [
+    { name: "component_status", results: [] },
+    { name: "get_parameter", results: [] },
+  ],
+  PersonDetection: [
     { name: "component_status", results: [] },
   ],
 };
 
 /** Event profiles for each component type, keyed by code. */
 const COMPONENT_EVENT_PROFILES: Record<string, EventMessageProfile[]> = {
+  SystemInformation: [],
   Navigation: [
     { name: "reached_target", results: [] },
   ],
   PersonDetection: [
-    { name: "object_detected", results: [] },
-    { name: "object_lost", results: [] },
+    { name: "person_detected", results: [] },
   ],
-  SystemInformation: [],
 };

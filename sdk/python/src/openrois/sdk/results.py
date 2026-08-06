@@ -101,19 +101,23 @@ def waypoints(locations: list[dict[str, object]]) -> list[Result]:
     ]
 
 
-def reached_target(target: str, success: bool) -> list[Result]:
+def reached_target(target: str, is_final_target: bool) -> list[Result]:
     """Build a reached_target event Result list.
 
     Args:
-        target: The target WayPoint name or identifier.
-        success: Whether the target was reached successfully.
+        target: The reached target destination.
+        is_final_target: Whether this is the final destination point.
 
     Returns:
-        A list of 2 Result objects (target, success).
+        A list of 2 Result objects (target, is_final_target).
     """
     return [
         Result(name="target", data_type_ref="string", value=target),
-        Result(name="success", data_type_ref="bool", value=str(success).lower()),
+        Result(
+            name="is_final_target",
+            data_type_ref="bool",
+            value=str(is_final_target).lower(),
+        ),
     ]
 
 

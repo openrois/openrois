@@ -9,25 +9,26 @@ connection:
 
 components:
   - ref: "SystemInformation"
-    type: basic
+    type: standard
     bind_required: false
-    queries: [robot_position, battery_level, component_status]
+    queries: [robot_position, engine_status]
 
   - ref: "Navigation"
-    type: basic
+    type: standard
     bind_required: true
-    commands: [execute, stop]
-    queries: [waypoints, component_status]
+    commands: [start, stop, suspend, resume, set_parameter, execute]
+    queries: [component_status, get_parameter]
     events: [reached_target]
 
-  - ref: "ObjectDetection"
-    type: user-defined
+  - ref: "PersonDetection"
+    type: standard
     bind_required: false
-    queries: [list_objects, component_status]
-    events: [object_detected, object_lost]
+    commands: [start, stop, suspend, resume]
+    queries: [component_status]
+    events: [person_detected]
 
   - ref: "ObjectManipulation"
-    type: user-defined
+    type: custom
     bind_required: true
     commands: [execute, stop]
     queries: [component_status, gripper_state, current_grasped_object]

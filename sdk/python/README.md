@@ -10,7 +10,7 @@ pip install openrois-adapter-sdk
 
 ## Quick start
 
-1. Write a config file (e.g., `profile.yaml`):
+1. Write a config file (e.g., `openrois-profile.yaml`):
 
 ```yaml
 fleet_id: robot_1
@@ -41,5 +41,5 @@ class MyAdapter(RobotAdapter):
 3. Run (framework coming in days 4-5):
 
 ```bash
-python my_adapter.py --config profile.yaml
+python my_adapter.py --config openrois-profile.yaml
 ```

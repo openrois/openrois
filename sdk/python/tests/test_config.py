@@ -9,7 +9,7 @@ from openrois.sdk.config import load_config
 
 def test_load_valid_config(tmp_path):
     """load_config returns a dict from a valid YAML file."""
-    config_file = tmp_path / "profile.yaml"
+    config_file = tmp_path / "openrois-profile.yaml"
     config_file.write_text(
         "fleet_id: robot_1\n"
         "connection:\n"

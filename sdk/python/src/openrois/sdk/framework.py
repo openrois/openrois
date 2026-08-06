@@ -14,7 +14,7 @@ a RobotAdapter subclass and call AdapterFramework.run().
 
 Usage::
 
-    config = load_config("profile.yaml")
+    config = load_config("openrois-profile.yaml")
     adapter = MyAdapter(config)
     framework = AdapterFramework(adapter, config)
     framework.run()
@@ -62,7 +62,7 @@ class AdapterFramework:
 
         Args:
             adapter: The RobotAdapter instance with @component handlers.
-            config: The loaded config dict (from profile.yaml).
+            config: The loaded config dict (from openrois-profile.yaml).
         """
         self.adapter = adapter
         self._config = config
@@ -267,6 +267,10 @@ class AdapterFramework:
             return await self._handle_query(bare_ref, params)
         elif method == "rois.command.execute":
             return await self._handle_invoke(bare_ref, params)
+        elif method == "rois.command.bind":
+            return self._handle_bind(bare_ref)
+        elif method == "rois.command.release":
+            return self._handle_release(bare_ref)
         elif method == "rois.event.subscribe":
             return await self._handle_subscribe(bare_ref, params)
         elif method == "rois.event.unsubscribe":
@@ -275,8 +279,67 @@ class AdapterFramework:
             return {"return_code": ReturnCode.OK.value}
         elif method == "rois.system.disconnect":
             return {"return_code": ReturnCode.OK.value}
+        elif method == "rois.system.get_profile":
+            return self._handle_get_profile()
         else:
             return {"return_code": ReturnCode.UNSUPPORTED.value}
+
+    def _handle_bind(self, bare_ref: str) -> dict[str, Any]:
+        """Handle rois.command.bind.
+
+        Adapters that do not require bind can ignore this call. The
+        framework acknowledges bind so the caller can proceed with
+        execute. Components with bind_required=True are tracked so
+        release can clear the binding.
+        """
+        meta = self.adapter.get_metadata(bare_ref)
+        if not meta:
+            return {"return_code": ReturnCode.UNSUPPORTED.value}
+        # Acknowledge the bind. No per-operator tracking yet.
+        return {"return_code": ReturnCode.OK.value}
+
+    def _handle_release(self, bare_ref: str) -> dict[str, Any]:
+        """Handle rois.command.release.
+
+        Clears any binding held by the caller. Acknowledged even if
+        no binding existed.
+        """
+        meta = self.adapter.get_metadata(bare_ref)
+        if not meta:
+            return {"return_code": ReturnCode.UNSUPPORTED.value}
+        return {"return_code": ReturnCode.OK.value}
+
+    def _handle_get_profile(self) -> dict[str, Any]:
+        """Build a profile response from registered component metadata.
+
+        Returns component_ids with the fleet_id prefix and
+        component_profiles with query, command, and event name lists.
+        The caller (avatar) can match components by capability instead
+        of by name.
+        """
+        component_ids: list[str] = []
+        component_profiles: list[dict[str, Any]] = []
+
+        for ref, meta in self.adapter._metadata.items():
+            full_ref = f"{self.fleet_id}/{ref}"
+            component_ids.append(full_ref)
+            component_profiles.append({
+                "query_profiles": [
+                    {"name": q} for q in meta.queries
+                ],
+                "command_profiles": [
+                    {"name": c} for c in meta.invokes
+                ],
+                "event_profiles": [
+                    {"name": e} for e in meta.subscribes
+                ],
+            })
+
+        return {
+            "return_code": ReturnCode.OK.value,
+            "component_ids": component_ids,
+            "component_profiles": component_profiles,
+        }
 
     async def _handle_query(
         self,

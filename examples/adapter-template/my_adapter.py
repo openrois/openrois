@@ -4,7 +4,7 @@ Copy this file, rename the class, and fill in the # IMPLEMENT YOUR CODE HERE #
 blocks with your robot's API calls.
 
 Usage:
-    python my_adapter.py --config profile.yaml
+    python my_adapter.py --config openrois-profile.yaml
 """
 
 from __future__ import annotations
@@ -196,8 +196,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="OpenRoIS adapter")
     parser.add_argument(
         "--config",
-        default="profile.yaml",
-        help="Path to the profile YAML file (default: profile.yaml)",
+        default="openrois-profile.yaml",
+        help="Path to the profile YAML file (default: openrois-profile.yaml)",
     )
     args = parser.parse_args()
 
