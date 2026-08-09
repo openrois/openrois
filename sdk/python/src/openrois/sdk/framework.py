@@ -328,7 +328,7 @@ class AdapterFramework:
             component_ids.append(full_ref)
             component_profiles.append({
                 "identifier": {
-                    "authority": "openrois",
+                    "authority": "OpenRoIS",
                     "code": ref,
                     "codebook_ref": "",
                     "version": "",
@@ -348,7 +348,7 @@ class AdapterFramework:
             "return_code": ReturnCode.OK.value,
             "profile": {
                 "identifier": {
-                    "authority": "openrois",
+                    "authority": "OpenRoIS",
                     "code": self.fleet_id or "AdapterFramework",
                     "codebook_ref": "",
                     "version": "",
