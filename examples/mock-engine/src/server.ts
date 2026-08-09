@@ -171,31 +171,28 @@ function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
     case "rois.system.get_error_detail":
       send(socket, errorDetailResponse(request.id, request.params));
       return;
-      
+
     // Command interface
 
-    // case "rois.command.search":
-    //   send(socket, searchResponse(request.id, request.params));
-    //   return;
-
-    // case "rois.command.bind":
-    //   send(socket, bindResponse(request.id, request.params));
-    //   return;
-    case "rois.command.bind_any":
-      send(socket, bindAnyResponse(request.id, request.params));
+    case "rois.command.bind_any": {
+      const result = registry.bindAny();
+      send(socket, resultResponse(request.id, {
+        return_code: result.returnCode,
+        component_ref: result.componentRef,
+      }));
       return;
-    // case "rois.command.release":
-    //   send(socket, releaseResponse(request.id, request.params));
-    //   return;
-    // case "rois.command.get_parameter":
-    //   send(socket, getParameterResponse(request.id, request.params));
-    //   return;
-    // case "rois.command.set_parameter":
-    //   send(socket, setParameterResponse(request.id, request.params));
-    //   return;
-    case "rois.command.execute":
-      send(socket, executeResponse(request.id, request.params));
+    }
+    case "rois.command.execute": {
+      const params = namedParams(request);
+      const ref = asString(params.component_ref);
+      const result = registry.execute(ref);
+      send(socket, resultResponse(request.id, {
+        return_code: result.returnCode,
+        command_id: result.commandId,
+        results: [],
+      }));
       return;
+    }
     case "rois.command.get_command_result":
       send(socket, getCommandResultResponse(request.id, request.params));
       return;
@@ -207,7 +204,7 @@ function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
 
     // Event interface
     case "rois.event.subscribe":
-      send(socket, subscribeResponse(request.id, request.params));
+      send(socket, subscribeResponse(socket, request.id, request.params));
       return;
     case "rois.event.unsubscribe":
       send(socket, unsubscribeResponse(request.id, request.params));
@@ -246,6 +243,16 @@ function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
     case "rois.command.set_parameter": {
       const params = namedParams(request);
       const ref = asString(params.component_ref);
+      // Reject non-array parameters with BAD_PARAMETER before the
+      // registry coerces them to an empty array (which would mask
+      // the error as a successful no-op).
+      if (!Array.isArray(params.parameters)) {
+        send(socket, resultResponse(request.id, {
+          return_code: "BAD_PARAMETER",
+          command_id: "",
+        }));
+        return;
+      }
       const parameters = asParameterArray(params.parameters);
       send(socket, resultResponse(request.id, {
         return_code: registry.setParameter(ref, parameters),
@@ -257,10 +264,22 @@ function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
     case "rois.command.get_parameter": {
       const params = namedParams(request);
       const ref = asString(params.component_ref);
+      const names = paramStrArray(request.params, "names");
       const { returnCode, parameters } = registry.getParameter(ref);
+      // Filter by names if provided. Otherwise return all parameters.
+      const filtered = names.length > 0
+        ? parameters.filter((p) => names.includes(p.name))
+        : parameters;
+      // Convert Parameter[] to Result[] (same shape: name, data_type_ref,
+      // value) so the response matches the RoIS spec Result format.
+      const results = filtered.map((p) => ({
+        name: p.name,
+        data_type_ref: p.data_type_ref,
+        value: p.value,
+      }));
       send(socket, resultResponse(request.id, {
         return_code: returnCode,
-        parameters,
+        results,
       }));
       return;
     }
@@ -358,97 +377,8 @@ function errorDetailResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Component registry
+// Helper functions
 // ---------------------------------------------------------------------------
-
-/**
- * A registered component in the mock gateway.
- *
- * Each component has a ref, a human-readable name, and a parameter store
- * (name -> Parameter) that set_parameter updates and get_parameter reads.
- */
-interface MockComponent {
-  /** The component_ref identifier (e.g. "PersonDetection_0"). */
-  ref: string;
-  /** Human-readable component name. */
-  name: string;
-  /** Current parameter values, keyed by parameter name. */
-  parameters: Map<string, Parameter>;
-}
-
-/**
- * The in-memory component registry.
- *
- * Pre-populated with three components matching the canned engine profile:
- * PersonDetection_0, Navigation_0, and SystemInformation_0. Each starts with
- * a set of default parameters.
- */
-const COMPONENT_REGISTRY: Map<string, MockComponent> = createComponentRegistry();
-
-/**
- * Create the initial component registry with default parameters.
- */
-function createComponentRegistry(): Map<string, MockComponent> {
-  const registry = new Map<string, MockComponent>();
-
-  registry.set("PersonDetection_0", {
-    ref: "PersonDetection_0",
-    name: "PersonDetection",
-    parameters: new Map<string, Parameter>([
-      ["confidence_threshold", {
-        name: "confidence_threshold",
-        data_type_ref: "float",
-        value: "0.5",
-      }],
-      ["model_name", {
-        name: "model_name",
-        data_type_ref: "string",
-        value: "yolov8n",
-      }],
-    ]),
-  });
-
-  registry.set("Navigation_0", {
-    ref: "Navigation_0",
-    name: "Navigation",
-    parameters: new Map<string, Parameter>([
-      ["target_positions", {
-        name: "target_positions",
-        data_type_ref: "string[]",
-        value: "[]",
-      }],
-      ["time_limit", {
-        name: "time_limit",
-        data_type_ref: "int",
-        value: "30",
-      }],
-      ["routing_policy", {
-        name: "routing_policy",
-        data_type_ref: "string",
-        value: "time",
-      }],
-    ]),
-  });
-
-  registry.set("SystemInformation_0", {
-    ref: "SystemInformation_0",
-    name: "SystemInformation",
-    parameters: new Map<string, Parameter>([
-      ["robot_position", {
-        name: "robot_position",
-        data_type_ref: "string",
-        value: "0.0,0.0,0.0",
-      }],
-      ["battery_level", {
-        name: "battery_level",
-        data_type_ref: "int",
-        value: "85",
-      }],
-    ]),
-  });
-
-  return registry;
-}
 
 /**
  * Extract a string param from the JSON-RPC params object.
@@ -471,241 +401,6 @@ function paramStrArray(params: unknown, key: string): string[] {
     }
   }
   return [];
-}
-
-// ---------------------------------------------------------------------------
-// Response builders for Command operations
-// ---------------------------------------------------------------------------
-
-/**
- * Build a search (discover) response.
- *
- * The condition filter is accepted but not evaluated — the mock always
- * returns all registered component_refs.
- */
-function searchResponse(id: JsonRpcId, _params: unknown): JsonRpcResponse {
-  const componentRefList = Array.from(COMPONENT_REGISTRY.keys());
-  return {
-    jsonrpc: JSONRPC_VERSION,
-    id,
-    result: {
-      return_code: "OK",
-      component_ref_list: componentRefList,
-    },
-  };
-}
-
-/**
- * Build a bind response.
- *
- * Returns OK if the component exists, UNSUPPORTED if it does not.
- */
-function bindResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
-  const componentRef = paramStr(params, "component_ref");
-
-  if (!COMPONENT_REGISTRY.has(componentRef)) {
-    return {
-      jsonrpc: JSONRPC_VERSION,
-      id,
-      result: { return_code: "UNSUPPORTED" },
-    };
-  }
-
-  return {
-    jsonrpc: JSONRPC_VERSION,
-    id,
-    result: { return_code: "OK" },
-  };
-}
-
-/**
- * Build a release response.
- *
- * Returns OK if the component exists, UNSUPPORTED if it does not.
- */
-function releaseResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
-  const componentRef = paramStr(params, "component_ref");
-
-  if (!COMPONENT_REGISTRY.has(componentRef)) {
-    return {
-      jsonrpc: JSONRPC_VERSION,
-      id,
-      result: { return_code: "UNSUPPORTED" },
-    };
-  }
-
-  return {
-    jsonrpc: JSONRPC_VERSION,
-    id,
-    result: { return_code: "OK" },
-  };
-}
-
-/**
- * Build a get_parameter response.
- *
- * If `names` is provided, only those parameters are returned. If `names` is
- * empty or omitted, all parameters for the component are returned.
- * Returns UNSUPPORTED if the component does not exist.
- */
-function getParameterResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
-  const componentRef = paramStr(params, "component_ref");
-  const names = paramStrArray(params, "names");
-
-  const component = COMPONENT_REGISTRY.get(componentRef);
-  if (!component) {
-    return {
-      jsonrpc: JSONRPC_VERSION,
-      id,
-      result: { return_code: "UNSUPPORTED", results: [] },
-    };
-  }
-
-  let values: Parameter[];
-  if (names.length > 0) {
-    values = names
-      .map((n) => component.parameters.get(n))
-      .filter((p): p is Parameter => p !== undefined);
-  } else {
-    values = Array.from(component.parameters.values());
-  }
-
-  // Convert Parameter[] to Result[] (same shape: name, data_type_ref, value).
-  const results: Result[] = values.map((p) => ({
-    name: p.name,
-    data_type_ref: p.data_type_ref,
-    value: p.value,
-  }));
-
-  return {
-    jsonrpc: JSONRPC_VERSION,
-    id,
-    result: {
-      return_code: "OK",
-      results,
-    },
-  };
-}
-
-/**
- * Build a set_parameter response.
- *
- * Updates the component's parameter store with the provided values.
- * Returns OK with an empty command_id on success, UNSUPPORTED if the
- * component does not exist, BAD_PARAMETER if a parameter has no name.
- */
-function setParameterResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
-  const componentRef = paramStr(params, "component_ref");
-
-  const component = COMPONENT_REGISTRY.get(componentRef);
-  if (!component) {
-    return {
-      jsonrpc: JSONRPC_VERSION,
-      id,
-      result: { return_code: "UNSUPPORTED", command_id: "" },
-    };
-  }
-
-  // Extract the parameters array from the request.
-  let rawParameters: unknown;
-  if (typeof params === "object" && params !== null && "parameters" in params) {
-    rawParameters = (params as Record<string, unknown>).parameters;
-  }
-
-  if (!Array.isArray(rawParameters)) {
-    return {
-      jsonrpc: JSONRPC_VERSION,
-      id,
-      result: { return_code: "BAD_PARAMETER", command_id: "" },
-    };
-  }
-
-  // Update the component's parameter store.
-  for (const raw of rawParameters) {
-    if (typeof raw !== "object" || raw === null || !("name" in raw)) {
-      return {
-        jsonrpc: JSONRPC_VERSION,
-        id,
-        result: { return_code: "BAD_PARAMETER", command_id: "" },
-      };
-    }
-
-    const param = raw as Parameter;
-    component.parameters.set(param.name, {
-      name: param.name,
-      data_type_ref: param.data_type_ref ?? "string",
-      value: param.value ?? "",
-    });
-  }
-
-  return {
-    jsonrpc: JSONRPC_VERSION,
-    id,
-    result: {
-      return_code: "OK",
-      command_id: "",
-    },
-  };
-}
-
-/**
- * Build a bind_any response.
- *
- * The condition filter is accepted but not evaluated — the mock returns the
- * first registered component. If no components are registered, returns
- * OUT_OF_RESOURCES.
- */
-function bindAnyResponse(id: JsonRpcId, _params: unknown): JsonRpcResponse {
-  const firstRef = COMPONENT_REGISTRY.keys().next();
-  if (firstRef.done) {
-    return {
-      jsonrpc: JSONRPC_VERSION,
-      id,
-      result: { return_code: "OUT_OF_RESOURCES", component_ref: "" },
-    };
-  }
-
-  return {
-    jsonrpc: JSONRPC_VERSION,
-    id,
-    result: {
-      return_code: "OK",
-      component_ref: firstRef.value,
-    },
-  };
-}
-
-/**
- * Build an execute response.
- *
- * Returns OK with a generated command_id. The mock does not actually execute
- * anything — it acknowledges the command immediately. The caller should listen
- * for "rois.command.completed" notifications (not yet implemented in the mock).
- * Returns UNSUPPORTED if the component does not exist.
- */
-function executeResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
-  const componentRef = paramStr(params, "component_ref");
-
-  if (!COMPONENT_REGISTRY.has(componentRef)) {
-    return {
-      jsonrpc: JSONRPC_VERSION,
-      id,
-      result: { return_code: "UNSUPPORTED", command_id: "" },
-    };
-  }
-
-  // Generate a simple command_id based on a counter.
-  const commandId = `cmd-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-
-  return {
-    jsonrpc: JSONRPC_VERSION,
-    id,
-    result: {
-      return_code: "OK",
-      command_id: commandId,
-      results: [],
-    },
-  };
 }
 
 /**
@@ -823,11 +518,11 @@ let subscriptionCounter = 0;
  * Registers the subscription in the in-memory registry and returns a unique
  * subscribe_id. Returns UNSUPPORTED if the component does not exist.
  */
-function subscribeResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
+function subscribeResponse(socket: WebSocket, id: JsonRpcId, params: unknown): JsonRpcResponse {
   const componentRef = paramStr(params, "component_ref");
   const eventType = paramStr(params, "event_type");
 
-  if (!COMPONENT_REGISTRY.has(componentRef)) {
+  if (!registry.has(componentRef)) {
     return {
       jsonrpc: JSONRPC_VERSION,
       id,
@@ -837,6 +532,14 @@ function subscribeResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
 
   const subscribeId = `sub-${++subscriptionCounter}`;
   SUBSCRIPTION_REGISTRY.set(subscribeId, { componentRef, eventType });
+
+  // Start firing events for this subscription. The mock engine fires
+  // person_detected events every 5 seconds for PersonDetection_0
+  // subscriptions, simulating periodic detections. Other event types
+  // are accepted but do not fire (the mock has no data for them).
+  if (eventType === "person_detected") {
+    startEventTimer(socket, subscribeId, componentRef, eventType);
+  }
 
   return {
     jsonrpc: JSONRPC_VERSION,
@@ -849,6 +552,56 @@ function subscribeResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
 }
 
 /**
+ * Fire periodic event notifications for a subscription.
+ *
+ * Sends a rois.event.notify notification every 5 seconds with a canned
+ * person_detected result. The timer is cleared on unsubscribe or socket
+ * close. Each subscription gets its own timer keyed by subscribe_id.
+ */
+const EVENT_TIMERS: Map<string, NodeJS.Timeout> = new Map();
+
+function startEventTimer(
+  socket: WebSocket,
+  subscribeId: string,
+  componentRef: string,
+  eventType: string,
+): void {
+  // Clear any existing timer for this subscription.
+  const existing = EVENT_TIMERS.get(subscribeId);
+  if (existing) {
+    clearInterval(existing);
+  }
+
+  const timer = setInterval(() => {
+    // Stop if the socket is no longer open.
+    if (socket.readyState !== socket.OPEN) {
+      clearInterval(timer);
+      EVENT_TIMERS.delete(subscribeId);
+      return;
+    }
+    const event_id = `evt-${Date.now()}`;
+    const notification = {
+      jsonrpc: JSONRPC_VERSION,
+      method: "rois.event.notify",
+      params: {
+        event_id,
+        subscribe_id: subscribeId,
+        component_ref: componentRef,
+        event_type: eventType,
+        expire: "",
+        results: [
+          { name: "number", data_type_ref: "int", value: "1" },
+          { name: "timestamp", data_type_ref: "DateTime", value: new Date().toISOString() },
+        ],
+      },
+    };
+    socket.send(JSON.stringify(notification));
+  }, 5000);
+
+  EVENT_TIMERS.set(subscribeId, timer);
+}
+
+/**
  * Build an unsubscribe response.
  *
  * Removes the subscription from the registry. Per the RoIS spec, duplicate
@@ -857,6 +610,13 @@ function subscribeResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
 function unsubscribeResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
   const subscribeId = paramStr(params, "subscribe_id");
   SUBSCRIPTION_REGISTRY.delete(subscribeId);
+
+  // Clear the event timer if one was running for this subscription.
+  const timer = EVENT_TIMERS.get(subscribeId);
+  if (timer) {
+    clearInterval(timer);
+    EVENT_TIMERS.delete(subscribeId);
+  }
 
   return {
     jsonrpc: JSONRPC_VERSION,

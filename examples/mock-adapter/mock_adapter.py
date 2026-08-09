@@ -70,7 +70,7 @@ class MockAdapter(RobotAdapter):
         async def status(self):
             return results.status("BUSY" if self.parent._nav_busy else "READY")
 
-        @invoke("EXECUTE")
+        @invoke("execute")
         async def navigate(self, parameters):
             if self.parent._nav_busy:
                 return InvokeResponse(return_code=ReturnCode.ERROR, command_id="")
@@ -80,7 +80,7 @@ class MockAdapter(RobotAdapter):
             self.parent._nav_target = target
             return InvokeResponse(return_code=ReturnCode.OK, command_id="cmd-nav")
 
-        @invoke("STOP")
+        @invoke("stop")
         async def stop(self, parameters):
             self.parent._nav_busy = False
             return InvokeResponse(return_code=ReturnCode.OK, command_id="")
@@ -164,7 +164,7 @@ class MockAdapter(RobotAdapter):
         async def current_grasped_object(self):
             return results.current_grasped_object("")
 
-        @invoke("EXECUTE")
+        @invoke("execute")
         async def execute(self, parameters):
             if self.parent._arm_busy:
                 return InvokeResponse(return_code=ReturnCode.ERROR, command_id="")
@@ -173,7 +173,7 @@ class MockAdapter(RobotAdapter):
             self.parent._arm_busy = True
             return InvokeResponse(return_code=ReturnCode.OK, command_id="cmd-manip")
 
-        @invoke("STOP")
+        @invoke("stop")
         async def stop(self, parameters):
             self.parent._arm_busy = False
             return InvokeResponse(return_code=ReturnCode.OK, command_id="")

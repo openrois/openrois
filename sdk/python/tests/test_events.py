@@ -72,9 +72,12 @@ async def test_emit_sends_to_subscribers(emitter):
     assert len(emitter._sent_messages) == 2  # type: ignore[attr-defined]
     for msg in emitter._sent_messages:  # type: ignore[attr-defined]
         parsed = json.loads(msg)
-        assert parsed["method"] == "rois.event.notification"
+        assert parsed["method"] == "rois.event.notify"
         assert parsed["params"]["event_type"] == "object_detected"
         assert parsed["params"]["subscribe_id"] in (sid1, sid2)
+        assert "event_id" in parsed["params"]
+        assert parsed["params"]["component_ref"] == "ObjectDetection"
+        assert parsed["params"]["expire"] == ""
 
 
 async def test_emit_noop_without_subscribers(emitter):
@@ -104,4 +107,7 @@ async def test_emit_async_sends_to_subscribers(emitter):
     await emitter.emit_async("Navigation", "reached_target", results)
     assert len(emitter._sent_messages) == 1  # type: ignore[attr-defined]
     parsed = json.loads(emitter._sent_messages[0])  # type: ignore[attr-defined]
+    assert parsed["method"] == "rois.event.notify"
     assert parsed["params"]["event_type"] == "reached_target"
+    assert parsed["params"]["component_ref"] == "Navigation"
+    assert "event_id" in parsed["params"]

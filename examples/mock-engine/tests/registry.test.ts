@@ -93,9 +93,9 @@ describe("ComponentRegistry", () => {
     expect(reg.bind("Navigation_0")).toBe("ERROR");
   });
 
-  it("bind returns ERROR for an unknown component", () => {
+  it("bind returns UNSUPPORTED for an unknown component", () => {
     const reg = freshRegistry();
-    expect(reg.bind("Unknown_0")).toBe("ERROR");
+    expect(reg.bind("Unknown_0")).toBe("UNSUPPORTED");
   });
 
   it("release returns OK for a bound component", () => {
@@ -104,14 +104,14 @@ describe("ComponentRegistry", () => {
     expect(reg.release("PersonDetection_0")).toBe("OK");
   });
 
-  it("release returns ERROR for a component that was not bound", () => {
+  it("release returns OK for a component that was not bound (silently ignored)", () => {
     const reg = freshRegistry();
-    expect(reg.release("Navigation_0")).toBe("ERROR");
+    expect(reg.release("Navigation_0")).toBe("OK");
   });
 
-  it("release returns ERROR for an unknown component", () => {
+  it("release returns UNSUPPORTED for an unknown component", () => {
     const reg = freshRegistry();
-    expect(reg.release("Unknown_0")).toBe("ERROR");
+    expect(reg.release("Unknown_0")).toBe("UNSUPPORTED");
   });
 
   it("setParameter and getParameter roundtrip", () => {
@@ -123,9 +123,13 @@ describe("ComponentRegistry", () => {
     expect(reg.setParameter("Navigation_0", params)).toBe("OK");
     const result = reg.getParameter("Navigation_0");
     expect(result.returnCode).toBe("OK");
-    expect(result.parameters).toHaveLength(2);
-    expect(result.parameters[0].name).toBe("target_positions");
-    expect(result.parameters[1].value).toBe("30");
+    expect(result.parameters.length).toBeGreaterThanOrEqual(2);
+    const targetPos = result.parameters.find((p) => p.name === "target_positions");
+    expect(targetPos).toBeDefined();
+    expect(targetPos!.value).toBe('["3.0,1.5,0.0"]');
+    const timeLimit = result.parameters.find((p) => p.name === "time_limit");
+    expect(timeLimit).toBeDefined();
+    expect(timeLimit!.value).toBe("30");
   });
 
   it("setParameter merges params with the same name", () => {
@@ -137,23 +141,27 @@ describe("ComponentRegistry", () => {
       { name: "time_limit", data_type_ref: "int", value: "60" },
     ]);
     const result = reg.getParameter("Navigation_0");
-    expect(result.parameters).toHaveLength(1);
-    expect(result.parameters[0].value).toBe("60");
+    const timeLimit = result.parameters.find((p) => p.name === "time_limit");
+    expect(timeLimit).toBeDefined();
+    expect(timeLimit!.value).toBe("60");
+    // Only one entry for time_limit (merged, not duplicated).
+    const timeLimitCount = result.parameters.filter((p) => p.name === "time_limit").length;
+    expect(timeLimitCount).toBe(1);
   });
 
-  it("setParameter returns ERROR for an unknown component", () => {
+  it("setParameter returns UNSUPPORTED for an unknown component", () => {
     const reg = freshRegistry();
     expect(
       reg.setParameter("Unknown_0", [
         { name: "x", data_type_ref: "string", value: "1" },
       ]),
-    ).toBe("ERROR");
+    ).toBe("UNSUPPORTED");
   });
 
-  it("getParameter returns ERROR for an unknown component", () => {
+  it("getParameter returns UNSUPPORTED for an unknown component", () => {
     const reg = freshRegistry();
     const result = reg.getParameter("Unknown_0");
-    expect(result.returnCode).toBe("ERROR");
+    expect(result.returnCode).toBe("UNSUPPORTED");
     expect(result.parameters).toEqual([]);
   });
 
@@ -205,10 +213,10 @@ describe("mock engine: registry methods", () => {
     socket.close();
   });
 
-  it("rois.command.bind on unknown component returns ERROR", async () => {
+  it("rois.command.bind on unknown component returns UNSUPPORTED", async () => {
     const socket = await connect();
     const reply = await roundtrip(socket, req("b2", "rois.command.bind", { component_ref: "Unknown_0" }));
-    expect(reply.result.return_code).toBe("ERROR");
+    expect(reply.result.return_code).toBe("UNSUPPORTED");
     socket.close();
   });
 
@@ -225,9 +233,12 @@ describe("mock engine: registry methods", () => {
       component_ref: "Navigation_0",
     }));
     expect(getReply.result.return_code).toBe("OK");
-    expect(getReply.result.parameters).toHaveLength(1);
-    expect(getReply.result.parameters[0].name).toBe("time_limit");
-    expect(getReply.result.parameters[0].value).toBe("30");
+    expect(getReply.result.results.length).toBeGreaterThanOrEqual(1);
+    const timeLimit = getReply.result.results.find(
+      (r: { name: string }) => r.name === "time_limit",
+    );
+    expect(timeLimit).toBeDefined();
+    expect(timeLimit.value).toBe("30");
     socket.close();
   });
 

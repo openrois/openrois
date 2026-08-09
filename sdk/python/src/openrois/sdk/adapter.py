@@ -76,7 +76,9 @@ def invoke(command_type: str) -> Callable[[Callable], Callable]:
     """Decorator: register a method as an invoke (command) handler.
 
     Args:
-        command_type: The command type name (e.g., "EXECUTE", "STOP").
+        command_type: The command type name (e.g., "execute", "stop").
+            Values are lowercase per the RoIS spec CommandType enum:
+            start, stop, suspend, resume, set_parameter, execute.
     """
     def decorator(method: Callable) -> Callable:
         setattr(method, "_rois_command_type", command_type)

@@ -101,24 +101,34 @@ export class ComponentRegistry {
    * uses a zero-indexed suffix to leave room for multiple instances later.
    */
   private seedDefaults(): void {
-    this.register("PersonDetection_0", PERSON_DETECTION_URN);
-    this.register("Navigation_0", NAVIGATION_URN);
-    this.register("SystemInformation_0", SYSTEM_INFORMATION_URN);
+    this.register("PersonDetection_0", PERSON_DETECTION_URN, [
+      { name: "confidence_threshold", data_type_ref: "float", value: "0.5" },
+      { name: "model_name", data_type_ref: "string", value: "yolov8n" },
+    ]);
+    this.register("Navigation_0", NAVIGATION_URN, [
+      { name: "target_positions", data_type_ref: "string[]", value: "[]" },
+      { name: "time_limit", data_type_ref: "int", value: "30" },
+      { name: "routing_policy", data_type_ref: "string", value: "time" },
+    ]);
+    this.register("SystemInformation_0", SYSTEM_INFORMATION_URN, [
+      { name: "robot_position", data_type_ref: "string", value: "0.0,0.0,0.0" },
+      { name: "battery_level", data_type_ref: "int", value: "85" },
+    ]);
   }
 
   /**
-   * Register a component instance.
+   * Register a component instance with optional default parameters.
    *
    * Called during construction for the default components. Exposed as a method
    * so Week 3+ can add more components dynamically if needed.
    */
-  register(ref: string, typeUrn: string): void {
+  register(ref: string, typeUrn: string, parameters: Parameter[] = []): void {
     this.components.set(ref, {
       ref,
       typeUrn,
       status: "READY",
       bound: false,
-      parameters: [],
+      parameters: [...parameters],
     });
   }
 
@@ -142,7 +152,7 @@ export class ComponentRegistry {
   bind(ref: string): ReturnCode {
     const entry = this.components.get(ref);
     if (!entry) {
-      return "ERROR";
+      return "UNSUPPORTED";
     }
     if (entry.bound) {
       return "ERROR";
@@ -160,12 +170,14 @@ export class ComponentRegistry {
   release(ref: string): ReturnCode {
     const entry = this.components.get(ref);
     if (!entry) {
-      return "ERROR";
+      return "UNSUPPORTED";
     }
-    if (!entry.bound) {
-      return "ERROR";
+    // Silently ignore release of an unbound component (per the RoIS
+    // spec, duplicate unsubscribe/release requests are silently
+    // ignored).
+    if (entry.bound) {
+      entry.bound = false;
     }
-    entry.bound = false;
     return "OK";
   }
 
@@ -178,7 +190,7 @@ export class ComponentRegistry {
   setParameter(ref: string, params: Parameter[]): ReturnCode {
     const entry = this.components.get(ref);
     if (!entry) {
-      return "ERROR";
+      return "UNSUPPORTED";
     }
     // Merge: replace existing params with the same name, append new ones.
     for (const param of params) {
@@ -201,9 +213,46 @@ export class ComponentRegistry {
   getParameter(ref: string): { returnCode: ReturnCode; parameters: Parameter[] } {
     const entry = this.components.get(ref);
     if (!entry) {
-      return { returnCode: "ERROR", parameters: [] };
+      return { returnCode: "UNSUPPORTED", parameters: [] };
     }
     return { returnCode: "OK", parameters: [...entry.parameters] };
+  }
+
+  /**
+   * Execute a command on a component.
+   *
+   * The mock does not actually execute anything. It acknowledges the
+   * command with a generated command_id. Returns UNSUPPORTED if the
+   * component does not exist.
+   */
+  execute(ref: string): { returnCode: ReturnCode; commandId: string } {
+    const entry = this.components.get(ref);
+    if (!entry) {
+      return { returnCode: "UNSUPPORTED", commandId: "" };
+    }
+    const commandId = `cmd-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    return { returnCode: "OK", commandId };
+  }
+
+  /**
+   * Auto-select a component for bind_any.
+   *
+   * Returns the first registered component ref, or OUT_OF_RESOURCES if
+   * no components are registered.
+   */
+  bindAny(): { returnCode: ReturnCode; componentRef: string } {
+    const first = this.components.keys().next();
+    if (first.done) {
+      return { returnCode: "OUT_OF_RESOURCES", componentRef: "" };
+    }
+    return { returnCode: "OK", componentRef: first.value };
+  }
+
+  /**
+   * Check whether a component ref is registered.
+   */
+  has(ref: string): boolean {
+    return this.components.has(ref);
   }
 
   /**

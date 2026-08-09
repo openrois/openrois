@@ -312,10 +312,13 @@ class AdapterFramework:
     def _handle_get_profile(self) -> dict[str, Any]:
         """Build a profile response from registered component metadata.
 
-        Returns component_ids with the fleet_id prefix and
-        component_profiles with query, command, and event name lists.
-        The caller (avatar) can match components by capability instead
-        of by name.
+        Returns a profile wrapper with an identifier, component_ids
+        (with the fleet_id prefix), and component_profiles (with query,
+        command, and event name lists). The caller (avatar) can match
+        components by capability instead of by name. Matches the RoIS
+        spec HRI_Engine_Profile shape: the component_ids and
+        component_profiles are nested under a "profile" key with an
+        identifier.
         """
         component_ids: list[str] = []
         component_profiles: list[dict[str, Any]] = []
@@ -324,6 +327,12 @@ class AdapterFramework:
             full_ref = f"{self.fleet_id}/{ref}"
             component_ids.append(full_ref)
             component_profiles.append({
+                "identifier": {
+                    "authority": "openrois",
+                    "code": ref,
+                    "codebook_ref": "",
+                    "version": "",
+                },
                 "query_profiles": [
                     {"name": q} for q in meta.queries
                 ],
@@ -337,8 +346,16 @@ class AdapterFramework:
 
         return {
             "return_code": ReturnCode.OK.value,
-            "component_ids": component_ids,
-            "component_profiles": component_profiles,
+            "profile": {
+                "identifier": {
+                    "authority": "openrois",
+                    "code": self.fleet_id or "AdapterFramework",
+                    "codebook_ref": "",
+                    "version": "",
+                },
+                "component_ids": component_ids,
+                "component_profiles": component_profiles,
+            },
         }
 
     async def _handle_query(
@@ -385,14 +402,24 @@ class AdapterFramework:
         if not meta:
             return {"return_code": ReturnCode.UNSUPPORTED.value, "command_id": ""}
 
-        command_type = str(params.get("command_type", "EXECUTE"))
+        # Support both the spec structured format (command_unit_list)
+        # and the legacy flat format (command_type + parameters). The
+        # command_type values are lowercase per the RoIS spec
+        # (start, stop, suspend, resume, set_parameter, execute).
+        command_unit_list = params.get("command_unit_list", [])
+        if isinstance(command_unit_list, list) and len(command_unit_list) > 0:
+            unit = command_unit_list[0]
+            command_type = str(unit.get("command_type", "execute"))
+            raw_params = unit.get("arguments", [])
+        else:
+            command_type = str(params.get("command_type", "execute"))
+            raw_params = params.get("parameters", params.get("arguments", []))
         method_name = meta.invokes.get(command_type)
         if not method_name:
             return {"return_code": ReturnCode.UNSUPPORTED.value, "command_id": ""}
 
         method = getattr(handler, method_name)
         # Parse parameters from the request.
-        raw_params = params.get("parameters", [])
         parameters = self._parse_parameters(raw_params)
 
         try:

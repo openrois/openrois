@@ -42,17 +42,17 @@ class MockAdapter(RobotAdapter):
                 {"id": "desk", "name": "desk", "x": 2.0, "y": 1.5},
             ])
 
-        @invoke("EXECUTE")
+        @invoke("execute")
         async def navigate(self, parameters):
-            self.parent.invoke_called.append("EXECUTE")
+            self.parent.invoke_called.append("execute")
             return InvokeResponse(
                 return_code=ReturnCode.OK,
                 command_id="cmd-test",
             )
 
-        @invoke("STOP")
+        @invoke("stop")
         async def stop(self, parameters):
-            self.parent.invoke_called.append("STOP")
+            self.parent.invoke_called.append("stop")
             return InvokeResponse(return_code=ReturnCode.OK, command_id="")
 
         @subscribe("reached_target")
@@ -188,15 +188,21 @@ async def test_framework_dispatches_invoke(avatar_and_adapter):
         "method": "rois.command.execute",
         "params": {
             "component_ref": "test_robot/Navigation",
-            "command_type": "EXECUTE",
-            "parameters": [],
+            "command_unit_list": [
+                {
+                    "component_ref": "test_robot/Navigation",
+                    "command_type": "execute",
+                    "command_id": "cmd-2",
+                    "arguments": [],
+                },
+            ],
         },
     })
     response = await avatar.recv_response()
     assert response["id"] == "req-2"
     assert response["result"]["return_code"] == "OK"
     assert response["result"]["command_id"] == "cmd-test"
-    assert "EXECUTE" in adapter.invoke_called
+    assert "execute" in adapter.invoke_called
 
 
 async def test_framework_dispatches_subscribe(avatar_and_adapter):
@@ -248,28 +254,32 @@ async def test_framework_get_profile_returns_component_metadata(avatar_and_adapt
     result = response["result"]
     assert result["return_code"] == "OK"
 
+    # The profile is wrapped under a "profile" key with an identifier.
+    profile = result["profile"]
+    assert profile["identifier"]["code"] == "test_robot"
+
     # component_ids have the fleet_id prefix.
-    ids = result["component_ids"]
+    ids = profile["component_ids"]
     assert "test_robot/SystemInformation" in ids
     assert "test_robot/Navigation" in ids
 
     # Find the Navigation profile and check its capabilities.
     nav_idx = ids.index("test_robot/Navigation")
-    nav_profile = result["component_profiles"][nav_idx]
+    nav_profile = profile["component_profiles"][nav_idx]
 
     query_names = [q["name"] for q in nav_profile["query_profiles"]]
     assert "waypoints" in query_names
 
     cmd_names = [c["name"] for c in nav_profile["command_profiles"]]
-    assert "EXECUTE" in cmd_names
-    assert "STOP" in cmd_names
+    assert "execute" in cmd_names
+    assert "stop" in cmd_names
 
     event_names = [e["name"] for e in nav_profile["event_profiles"]]
     assert "reached_target" in event_names
 
     # SystemInformation has robot_position but no commands or events.
     sys_idx = ids.index("test_robot/SystemInformation")
-    sys_profile = result["component_profiles"][sys_idx]
+    sys_profile = profile["component_profiles"][sys_idx]
 
     sys_query_names = [q["name"] for q in sys_profile["query_profiles"]]
     assert "robot_position" in sys_query_names
@@ -303,5 +313,8 @@ async def test_framework_emit_sends_notification(avatar_and_adapter):
 
     # The notification should arrive at the avatar.
     notification = await avatar.recv_response()
-    assert notification["method"] == "rois.event.notification"
+    assert notification["method"] == "rois.event.notify"
     assert notification["params"]["event_type"] == "reached_target"
+    assert "event_id" in notification["params"]
+    assert notification["params"]["component_ref"] == "Navigation"
+    assert notification["params"]["expire"] == ""

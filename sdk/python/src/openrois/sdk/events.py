@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import uuid
 import logging
 import uuid
 from collections.abc import Awaitable, Callable
@@ -139,10 +140,13 @@ class EventEmitter:
         for subscribe_id in matching:
             notification = {
                 "jsonrpc": "2.0",
-                "method": "rois.event.notification",
+                "method": "rois.event.notify",
                 "params": {
+                    "event_id": str(uuid.uuid4()),
                     "subscribe_id": subscribe_id,
+                    "component_ref": component_ref,
                     "event_type": event_type,
+                    "expire": "",
                     "results": [r.model_dump() for r in results],
                 },
             }
@@ -182,10 +186,13 @@ class EventEmitter:
             for subscribe_id in matching:
                 notification = {
                     "jsonrpc": "2.0",
-                    "method": "rois.event.notification",
+                    "method": "rois.event.notify",
                     "params": {
+                        "event_id": str(uuid.uuid4()),
                         "subscribe_id": subscribe_id,
+                        "component_ref": component_ref,
                         "event_type": event_type,
+                        "expire": "",
                         "results": [r.model_dump() for r in results],
                     },
                 }
