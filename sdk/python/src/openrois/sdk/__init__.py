@@ -9,10 +9,16 @@ Public API:
     subscribe: decorator to register a method as a subscribe (event) handler.
     results: helper functions for building common Result lists.
     load_config: load a robot-adapter YAML config file.
+    InvokeResponse: return type of @invoke handlers. Re-exported from
+        openrois.interfaces.bus so adapter authors import only from the SDK.
+    ReturnCode: enum used in InvokeResponse. Re-exported from
+        openrois.interfaces.hri so adapter authors import only from the SDK.
 """
 
 from __future__ import annotations
 
+from openrois.interfaces.bus import InvokeResponse
+from openrois.interfaces.hri import ReturnCode
 from openrois.sdk import results
 from openrois.sdk.adapter import RobotAdapter, component, invoke, query, subscribe
 from openrois.sdk.config import load_config
@@ -27,4 +33,6 @@ __all__ = [
     "subscribe",
     "results",
     "load_config",
+    "InvokeResponse",
+    "ReturnCode",
 ]

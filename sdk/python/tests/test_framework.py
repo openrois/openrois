@@ -7,10 +7,17 @@ import json
 
 import pytest
 import websockets
-from openrois.interfaces.bus import InvokeResponse
-from openrois.interfaces.hri import ReturnCode
 
-from openrois.sdk import RobotAdapter, component, invoke, query, results, subscribe
+from openrois.sdk import (
+    InvokeResponse,
+    ReturnCode,
+    RobotAdapter,
+    component,
+    invoke,
+    query,
+    results,
+    subscribe,
+)
 from openrois.sdk.framework import AdapterFramework
 
 

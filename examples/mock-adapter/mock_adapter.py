@@ -13,10 +13,10 @@ import argparse
 import asyncio
 import logging
 
-from openrois.interfaces.bus import InvokeResponse
-from openrois.interfaces.hri import ReturnCode
 from openrois.sdk import (
     AdapterFramework,
+    InvokeResponse,
+    ReturnCode,
     RobotAdapter,
     component,
     invoke,
