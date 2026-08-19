@@ -13,12 +13,14 @@ Public API:
         openrois.interfaces.bus so adapter authors import only from the SDK.
     ReturnCode: enum used in InvokeResponse. Re-exported from
         openrois.interfaces.hri so adapter authors import only from the SDK.
+    Result: element of query and event result lists. Re-exported from
+        openrois.interfaces.hri so adapter authors import only from the SDK.
 """
 
 from __future__ import annotations
 
 from openrois.interfaces.bus import InvokeResponse
-from openrois.interfaces.hri import ReturnCode
+from openrois.interfaces.hri import Result, ReturnCode
 from openrois.sdk import results
 from openrois.sdk.adapter import RobotAdapter, component, invoke, query, subscribe
 from openrois.sdk.config import load_config
@@ -35,4 +37,5 @@ __all__ = [
     "load_config",
     "InvokeResponse",
     "ReturnCode",
+    "Result",
 ]
