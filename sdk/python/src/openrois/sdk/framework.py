@@ -2,12 +2,14 @@
 
 The framework handles:
 - WebSocket connection to the avatar (ws://host:port).
-- Component registration on connect (rois.adapter.register).
+- Automatic reconnection with exponential backoff when the WebSocket
+  drops. The adapter keeps running and retries indefinitely.
+- Component registration on each connect (rois.adapter.register).
 - JSON-RPC request/response dispatch to @query/@invoke/@subscribe handlers.
 - Event emission via EventEmitter (thread-safe emit()).
 - subscribe_id generation and unsubscribe cleanup.
 - rclpy threading: spins the ROS 2 node in a background thread if rclpy
-  is installed.
+  is installed. The rclpy thread persists across reconnections.
 
 The roboticist does not interact with the framework directly. They write
 a RobotAdapter subclass and call AdapterFramework.run().
@@ -83,9 +85,15 @@ class AdapterFramework:
     def run(self) -> None:
         """Connect to the avatar, register, and dispatch until disconnected.
 
-        This is the main entry point. It blocks until the WS connection
-        closes. If rclpy is installed and the adapter has a .node attribute,
-        the ROS 2 node is spun in a background thread.
+        This is the main entry point. It blocks until the framework is
+        cancelled (KeyboardInterrupt or task cancellation). On WebSocket
+        disconnect, it reconnects and re-registers automatically with
+        exponential backoff, retrying indefinitely.
+
+        The adapter's ``connect()`` and rclpy background thread are started
+        once before the first connection attempt and remain alive across
+        reconnections. The adapter's ``disconnect()`` and rclpy shutdown run
+        only when the framework exits for good.
 
         If the adapter has an async ``connect`` method, it is called inside
         the framework's event loop before connecting to the avatar. This
@@ -95,50 +103,74 @@ class AdapterFramework:
         asyncio.run(self._run_async())
 
     async def _run_async(self) -> None:
-        """Async main: connect, register, dispatch."""
+        """Async main: connect, register, dispatch, reconnect on disconnect.
+
+        The outer loop retries the connect-register-dispatch cycle
+        indefinitely. When the WebSocket drops (avatar app closed,
+        network failure), the framework logs the disconnect, clears
+        the stale connection state, and reconnects with backoff. The
+        rclpy background thread and adapter ``connect()`` resources
+        persist across reconnections.
+        """
         self._loop = asyncio.get_running_loop()
 
         # Set up the EventEmitter and inject emit() into the adapter.
         self._emitter = EventEmitter(self._ws_send, self._loop)
         self.adapter.emit = self._emitter.emit  # type: ignore[attr-defined]
 
-        # Call the adapter's async connect() if it exists.
-        # This runs inside the framework's event loop so that gRPC
-        # channels and other async resources bind to the same loop.
+        # Call the adapter's async connect() once, before any WebSocket
+        # connection. This runs inside the framework's event loop so that
+        # gRPC channels and other async resources bind to the same loop.
+        # connect() resources persist across reconnections.
         connect_method = getattr(self.adapter, "connect", None)
         if connect_method is not None and asyncio.iscoroutinefunction(connect_method):
             logger.info("Calling adapter.connect()")
             await connect_method()
 
-        # Start rclpy in a background thread if available.
+        # Start rclpy in a background thread once. The thread persists
+        # across reconnections so ROS 2 subscriptions keep firing.
         self._maybe_start_rclpy()
 
         try:
-            # Connect to the avatar with retry.
-            # The avatar may not be running yet. Retry with backoff
-            # instead of crashing on first failure.
-            ws = await self._connect_with_retry()
-            if ws is None:
-                return
+            while True:
+                try:
+                    ws = await self._connect_with_retry()
+                    if ws is None:
+                        break
+                    self._ws = ws
+                    logger.info("Connected to avatar at %s", self.ws_url)
 
-            self._ws = ws
-            logger.info("Connected to avatar at %s", self.ws_url)
-
-            # Register components.
-            await self._register()
-
-            # Dispatch loop.
-            await self._dispatch_loop()
-        except websockets.ConnectionClosed:
-            logger.info("WebSocket connection closed")
-        except Exception as exc:
-            logger.error("Framework error: %s", exc)
-            raise
+                    await self._register()
+                    await self._dispatch_loop()
+                except websockets.ConnectionClosed:
+                    logger.info(
+                        "WebSocket connection closed, reconnecting..."
+                    )
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:
+                    logger.error("Framework error: %s", exc)
+                finally:
+                    # Clean up the stale connection state so the next
+                    # iteration starts fresh. Do NOT stop rclpy or call
+                    # adapter.disconnect() here: those run only on final
+                    # exit. Clearing _ws makes _ws_send a no-op during
+                    # the reconnection window, preventing sends to a
+                    # dead socket.
+                    if self._ws is not None:
+                        try:
+                            await self._ws.close()
+                        except Exception:
+                            pass
+                        self._ws = None
+                    if self._emitter:
+                        self._emitter.remove_all_subscriptions()
+        except asyncio.CancelledError:
+            logger.info("Adapter framework cancelled")
         finally:
             self._maybe_stop_rclpy()
             if self._emitter:
                 self._emitter.remove_all_subscriptions()
-            # Call the adapter's async disconnect() if it exists.
             disconnect_method = getattr(self.adapter, "disconnect", None)
             if disconnect_method is not None and asyncio.iscoroutinefunction(disconnect_method):
                 try:

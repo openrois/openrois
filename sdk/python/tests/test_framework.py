@@ -325,3 +325,81 @@ async def test_framework_emit_sends_notification(avatar_and_adapter):
     assert "event_id" in notification["params"]
     assert notification["params"]["component_ref"] == "Navigation"
     assert notification["params"]["expire"] == ""
+
+
+async def test_framework_reconnects_after_disconnect():
+    """The framework reconnects and re-registers after the avatar drops.
+
+    Start an avatar server, let the framework connect and register.
+    Close the avatar server (simulating avatar app shutdown). The
+    framework should keep running. Start a new avatar server on the
+    same port. The framework should reconnect and re-register.
+    """
+    import socket
+
+    # Pick a free port.
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.close()
+
+    config = {
+        "fleet_id": "test_robot",
+        "connection": {"ws": {"host": "127.0.0.1", "port": port}},
+    }
+    adapter = MockAdapter(config)
+    framework = AdapterFramework(adapter, config)
+
+    # Start the first avatar server before the framework task so the
+    # initial connection succeeds immediately without backoff.
+    avatar1 = AvatarServer()
+    server1 = await websockets.serve(avatar1.handler, "127.0.0.1", port)
+
+    task = asyncio.create_task(framework._run_async())
+
+    try:
+        # Wait for the first connection and registration.
+        await asyncio.sleep(0.3)
+        assert len(avatar1.received) >= 1
+        assert avatar1.received[0]["method"] == "rois.adapter.register"
+
+        # Close the avatar server (simulate avatar app closing).
+        server1.close()
+        await server1.wait_closed()
+        await asyncio.sleep(0.2)
+
+        # The framework should still be running (task not done).
+        assert not task.done()
+
+        # Start a second avatar server on the same port.
+        avatar2 = AvatarServer()
+        server2 = await websockets.serve(avatar2.handler, "127.0.0.1", port)
+
+        # Wait for reconnection and re-registration. The framework
+        # backs off after the disconnect, so allow up to 2 seconds.
+        await asyncio.sleep(2.0)
+        assert len(avatar2.received) >= 1
+        assert avatar2.received[0]["method"] == "rois.adapter.register"
+
+        # Verify the framework can still dispatch queries after reconnect.
+        await avatar2.send({
+            "jsonrpc": "2.0",
+            "id": "req-reconnect",
+            "method": "rois.query.query",
+            "params": {
+                "component_ref": "test_robot/SystemInformation",
+                "query_type": "robot_position",
+            },
+        })
+        response = await avatar2.recv_response()
+        assert response["id"] == "req-reconnect"
+        assert response["result"]["return_code"] == "OK"
+
+        server2.close()
+        await server2.wait_closed()
+    finally:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
