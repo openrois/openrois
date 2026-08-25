@@ -305,7 +305,7 @@ The host topology and paradigm are hidden, exactly as the specification requires
 
 | RoIS concept | OpenRoIS implementation | Layer |
 |-------------|------------------------|-------|
-| Main HRI Engine | Gateway (Python, asyncio) | 2 |
+| Main HRI Engine | Engine | 2 |
 | Sub HRI Engine | Per-host node (robot node, avatar process, service) | 4 |
 | HRI Component | In-process object, gRPC service, or ROS 2 node | 4 |
 | Service Application | Client SDK (C#, TypeScript, or Python) | 1 |
@@ -1248,95 +1248,109 @@ sequenceDiagram
 
 ## 9. Deployment Topologies
 
-The same four layers compose into different physical deployments. The client SDK and
-gateway are constant. Only the BusAdapter and host layout change.
+The engine-to-adapter boundary is always WebSocket + JSON-RPC. The adapter's
+internal transport (DDS, gRPC, animation API, or any future paradigm) is an
+implementation detail of the adapter, not a topology choice. Topologies differ by
+**where processes run**: on a single host, across a LAN, across the internet, or
+with components offloaded to the cloud.
 
-### 9.1 Topology A: Physical robot with web/Unity operator (primary)
+### 9.1 Topology A: Single host (local)
 
-The reference scenario: an operator application controls a ROS 2 robot over the
-internet. The robot runs a sub-engine and component nodes. The Python gateway
-bridges DDS to the remote client over WebSocket.
+Everything runs on one machine: the service application, the engine, the adapter,
+and the robot. The service application talks to the engine over localhost WebSocket.
+The adapter connects to the engine over localhost WebSocket. This is the simplest
+deployment, useful for development, testing, and single-robot scenarios where the
+robot's onboard computer runs everything.
 
 ```mermaid
-flowchart LR
-    subgraph Operator["Operator side"]
-        App["Operator App<br/>(Unity or Web)<br/>+ RoIS SDK"]
+flowchart TB
+    subgraph Host["Single Host"]
+        App["Service Application"]
+        GW["HRI Engine (main)"]
+        Adapter["Adapter<br/>(sub-engine)"]
+        Robot["Service Robot<br/>(components)"]
+        App -->|"WebSocket<br/>JSON-RPC 2.0"| GW
+        GW -->|"WebSocket<br/>JSON-RPC 2.0"| Adapter
+        Adapter --> Robot
+    end
+```
+
+### 9.2 Topology B: LAN, multiple service robots
+
+The engine runs on one host. Multiple service robots run on the same LAN, each with
+its own adapter. The service application connects to the engine, which routes calls
+to the correct robot's adapter. This is the fleet scenario: one engine serves
+multiple robots on a local network.
+
+```mermaid
+flowchart TB
+    subgraph EngineHost["Engine Host"]
+        App["Service Application"]
+        GW["HRI Engine (main)"]
+        App -->|"WebSocket<br/>JSON-RPC 2.0"| GW
     end
 
-    subgraph GatewaySide["Gateway side"]
-        GW["Gateway<br/>(Python, asyncio)"]
-    end
+    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| Adapter1["Adapter<br/>(sub-engine)"]
+    Adapter1 --> Robot1["Service Robot 1"]
 
-    subgraph RobotSide["Robot side"]
-        Robot["ROS 2 Robot<br/>Nav2, YOLO, perception<br/>system_information"]
-    end
+    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| Adapter2["Adapter<br/>(sub-engine)"]
+    Adapter2 --> Robot2["Service Robot 2"]
+```
 
+### 9.3 Topology C: Distributed hosts (internet)
+
+The service application runs on a remote host (operator's laptop, cloud service).
+The engine runs on a server or in the cloud. Each service robot runs on its own
+host, connecting to the engine over the internet. This is the full teleoperation
+scenario: the operator is in one location, the engine is in another, and the
+robots are in a third.
+
+```mermaid
+flowchart TB
+    App["Service Application<br/>(remote)"]
     App -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| GW
-    GW -->|"ROS 2 / DDS<br/>ROS2BusAdapter"| Robot
-    App -.->|"WebRTC (SRTP/DTLS)<br/>media plane"| Robot
-```
 
-This is the primary demonstrated path and the MVP target (M5). From a clean checkout,
-an operator can bring up the gateway and mock robot and control it from a browser or
-Unity application.
-
-### 9.2 Topology B: Mixed fleet (multiple adapters at once)
-
-One gateway can host several adapters simultaneously. For example, a physical robot
-(ROS 2) and a virtual concierge avatar (in-process) behind the same SDK endpoint.
-This is the strongest proof the interfaces are paradigm-neutral.
-
-```mermaid
-flowchart TB
-    App["Operator App<br/>+ RoIS SDK"]
-    GW["Gateway"]
-    App -->|"WebSocket / TLS"| GW
-
-    GW -->|"ROS2BusAdapter"| Robot["Physical Robot<br/>(ROS 2 / DDS)"]
-    GW -->|"InProcessBusAdapter"| Avatar["Virtual Avatar<br/>(in-process)"]
-```
-
-The mixed-paradigm test (M8) demonstrates that `search()` returns components from both
-adapters, and the SDK controls each identically through one endpoint.
-
-### 9.3 Topology C: Single-process avatar (secondary)
-
-The simplest deployment: engine, gateway, and components live in one process (for
-example, a Unity game, a Godot app, or a Node/browser runtime). No serialization, no
-network bus.
-
-```mermaid
-flowchart LR
-    subgraph AvatarProcess["Avatar Process (single process)"]
-        direction LR
-        Engine["Engine + Gateway"]
-        Bus["InProcessBusAdapter<br/>(direct method calls)"]
-        Components["Components<br/>FaceDetection, Reaction,<br/>SpeechSynthesis"]
-        Engine --> Bus --> Components
+    subgraph Cloud["Engine Host (cloud or edge)"]
+        GW["HRI Engine (main)"]
     end
 
-    Remote["Remote Client<br/>(optional)"]
-    Remote -.->|"WebSocket (optional)"| Engine
+    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| Adapter1["Adapter<br/>(sub-engine)"]
+    Adapter1 --> Robot1["Service Robot 1"]
+
+    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| Adapter2["Adapter<br/>(sub-engine)"]
+    Adapter2 --> Robot2["Service Robot 2"]
 ```
 
-This topology is ideal for development and testing. It requires no external
-dependencies and runs the full RoIS lifecycle in memory.
+### 9.4 Topology D: Cloud-hosted components
 
-### 9.4 Topology D: Multi-process services (secondary)
-
-A front-end plus separate AI services (perception, ASR/TTS) that may run on a GPU box
-or in containers.
+Some components run on the engine itself, not on the robot. The adapter on the
+robot registers components with `runtime: remote` in the profile. The engine loads
+and hosts those components directly. This suits components that need more compute
+than the robot has (perception models, speech recognition) or components that are
+shared across multiple robots. The robot's adapter still owns `runtime: local`
+components (actuation, navigation, system information).
 
 ```mermaid
 flowchart TB
-    App["Web / Unity Client<br/>(engine + gateway)"]
-    App -->|"gRPCBusAdapter"| Perception["Perception Service<br/>(gRPC)"]
-    App -->|"gRPCBusAdapter"| ASR["ASR Service<br/>(gRPC)"]
-    App -->|"gRPCBusAdapter"| TTS["TTS Service<br/>(gRPC)"]
+    App["Service Application"]
+    App -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| GW
+
+    subgraph Cloud["Engine Host (cloud)"]
+        GW["HRI Engine (main)"]
+        RemoteComponents["Remote Components<br/>(perception, ASR, TTS)<br/>runtime: remote"]
+        GW --> RemoteComponents
+    end
+
+    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| Adapter["Adapter<br/>(sub-engine)"]
+    Adapter --> Robot["Service Robot<br/>(actuation, navigation,<br/>system information)<br/>runtime: local"]
 ```
 
-This topology suits deployments where perception or speech models run on dedicated
-GPU hardware, accessed as gRPC services.
+In Topology C, the engine is a pure router: all components live on the robot behind
+the adapter. In Topology D, the engine is both a router and a component runtime.
+Some components run on the engine (cloud), some run on the robot (local). The
+`runtime` field in the profile declares where each component runs. The service
+application does not know or care where a component runs: `search()` returns
+components from both locations, and `bind()` / `execute()` work identically.
 
 ---
 

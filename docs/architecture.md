@@ -5,8 +5,8 @@
 > virtual avatars, and digital agents** over the internet.
 >
 > The **primary demonstrated path** is a **web operator application controlling a
-> ROS 2 robot** over the internet: a TypeScript web client talks to a Python
-> gateway, which bridges to ROS 2 components on the robot. Virtual avatars and
+ROS 2 robot** over the internet: a TypeScript web client talks to the
+engine, which bridges to ROS 2 components on the robot. Virtual avatars and
 > distributed services remain **fully supported secondary topologies** behind the
 > same interfaces.
 >
@@ -81,7 +81,7 @@ The output of this effort is **not a protocol and not a single SDK**. It is a
 | Artifact | Audience | Description |
 |----------|----------|-------------|
 | **RoIS Interfaces** | Implementers | **Transport-independent** type/interface definitions derived from the normative IDL. Authored as **Python (Pydantic)**, exported to **JSON Schema** (canonical wire format), and generated into **C#** and **TypeScript**. |
-| **RoIS Engine + Gateway** | Operators | The **bus-independent** runtime (Python) that manages components and exposes them remotely. |
+| **RoIS Engine + Gateway** | Operators | The **bus-independent** runtime that manages components and exposes them remotely. |
 | **RoIS BusAdapters** | Platform integrators | Pluggable bindings: `ROS 2` (robot, primary), `Universal` (avatars and services, WebSocket + JSON-RPC). All implement one common contract. |
 | **RoIS Components** | Integrators | The 17 basic components backed by real perception/actuation libraries, with per-paradigm backends. |
 | **RoIS Client SDK** | Application developers | The user-facing library (**TypeScript for web first**, C# and Python second). |
@@ -139,13 +139,15 @@ the **primary demonstrated path**. The rest are fully supported alternatives.
 ### A. Physical Robot + Web Operator (`ROS2BusAdapter`) - PRIMARY
 
 The reference scenario: a **web operator application** controls a **ROS 2 robot**
-over the internet. The robot runs a sub-engine and component nodes. The Python
-gateway bridges DDS to the remote web client over WebSocket.
+over the internet. The robot runs a sub-engine and component nodes. The engine
+routes RoIS calls to an adapter over WebSocket. The adapter bridges DDS to the
+robot.
 
 ```
-  Web Operator App ──WS/TLS──► Gateway ──ROS 2/DDS──► Robot (Nav2, YOLO)
-     (TS RoIS SDK)               (Python)              person_detection,
-                                                        navigation, sysinfo
+  Web Operator App ──WS/TLS──► Engine ──WS──► Adapter ──ROS 2/DDS──► Robot
+     (TS RoIS SDK)                                       (Nav2, YOLO,
+                                                          person_detection,
+                                                          navigation, sysinfo)
 ```
 
 ### B. Mixed Fleet (multiple adapters at once)
@@ -673,7 +675,7 @@ openrois/
 |---------|-------------|--------------|
 | Operator client | **Web (TypeScript)** | Unity (C#), Godot |
 | Robot middleware | **ROS 2 (Humble/Jazzy) over DDS** | CORBA, RTC |
-| Engine / gateway language | **Python (rclpy, asyncio)** | C++ (rclcpp), Node |
+| Engine / gateway language | **TypeScript (Node.js)** | Python (rclpy), C++ (rclcpp) |
 | Interface source of truth | **Pydantic to JSON Schema to C#/TS** | Protobuf, raw IDL |
 | Avatar host | Unity / Godot / Web (Three.js, Babylon.js) | Unreal, MMDAgent, Live2D |
 | Internal bus (robot) | ROS 2 / DDS | — |
