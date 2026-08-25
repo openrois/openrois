@@ -1,0 +1,13 @@
+# Reachy Mini adapter profile.
+#
+# Copy to openrois-profile.yaml and edit the robot address to match your robot.
+
+engine:
+  id: reachy_mini
+  platform: reachy-mini
+  server_url: "ws://127.0.0.1:8765"
+
+environment:
+  robot_host: "reachy-mini.local"
+
+components: {}
