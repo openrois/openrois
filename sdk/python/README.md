@@ -13,7 +13,7 @@ pip install openrois-adapter-sdk
 1. Write a config file (e.g., `openrois-profile.yaml`):
 
 ```yaml
-fleet_id: robot_1
+engine_id: robot_1
 connection:
   ws:
     host: "127.0.0.1"

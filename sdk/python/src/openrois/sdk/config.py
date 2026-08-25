@@ -1,6 +1,6 @@
 """Load and validate robot-adapter YAML config files.
 
-The config file declares the adapter's components, fleet_id, and connection
+The config file declares the adapter's components, engine_id, and connection
 info. The adapter reads it at startup and sends the component list to the
 avatar via the registration protocol.
 
@@ -23,7 +23,7 @@ def load_config(path: str | Path) -> dict[str, object]:
 
     Returns:
         A dict with keys:
-            fleet_id: str
+            engine_id: str
             connection: dict (with ws: {host, port})
             components: list[dict] (optional, for reference)
 

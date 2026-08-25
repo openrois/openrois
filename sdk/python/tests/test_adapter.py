@@ -122,6 +122,6 @@ def test_unknown_component_returns_none():
 
 def test_config_stored():
     """The config dict is stored on the adapter instance."""
-    config = {"fleet_id": "test", "connection": {"ws": {"host": "localhost", "port": 8765}}}
+    config = {"engine_id": "test", "connection": {"ws": {"host": "localhost", "port": 8765}}}
     adapter = SampleAdapter(config=config)
     assert adapter.config is config

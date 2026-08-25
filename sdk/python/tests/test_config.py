@@ -11,7 +11,7 @@ def test_load_valid_config(tmp_path):
     """load_config returns a dict from a valid YAML file."""
     config_file = tmp_path / "openrois-profile.yaml"
     config_file.write_text(
-        "fleet_id: robot_1\n"
+        "engine_id: robot_1\n"
         "connection:\n"
         "  ws:\n"
         "    host: 127.0.0.1\n"
@@ -23,7 +23,7 @@ def test_load_valid_config(tmp_path):
         "    queries: [robot_position]\n",
     )
     config = load_config(config_file)
-    assert config["fleet_id"] == "robot_1"
+    assert config["engine_id"] == "robot_1"
     assert config["connection"]["ws"]["port"] == 8765
     assert len(config["components"]) == 1
     assert config["components"][0]["ref"] == "SystemInformation"

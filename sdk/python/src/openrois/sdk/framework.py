@@ -52,7 +52,7 @@ class AdapterFramework:
     Attributes:
         adapter: The RobotAdapter instance.
         ws_url: The WebSocket URL to connect to.
-        fleet_id: The fleet ID from the config.
+        engine_id: The engine ID from the config.
     """
 
     def __init__(
@@ -74,7 +74,7 @@ class AdapterFramework:
         host = ws_config.get("host", "127.0.0.1")
         port = ws_config.get("port", 8765)
         self.ws_url = f"ws://{host}:{port}"
-        self.fleet_id = str(config.get("fleet_id", "robot_1"))
+        self.engine_id = str(config.get("engine_id", "robot_1"))
 
         self._ws: Any = None
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -237,14 +237,14 @@ class AdapterFramework:
             "id": "reg-1",
             "method": "rois.adapter.register",
             "params": {
-                "fleet_id": self.fleet_id,
+                "engine_id": self.engine_id,
                 "components": components,
             },
         }
         await self._ws.send(json.dumps(msg))
         logger.info(
-            "Registered fleet %s with %d components",
-            self.fleet_id,
+            "Registered engine %s with %d components",
+            self.engine_id,
             len(components),
         )
 
@@ -291,7 +291,7 @@ class AdapterFramework:
         Returns:
             The result dict for the JSON-RPC response.
         """
-        # Strip fleet_id prefix from component_ref if present.
+        # Strip engine_id prefix from component_ref if present.
         component_ref = str(params.get("component_ref", ""))
         bare_ref = component_ref.split("/", 1)[1] if "/" in component_ref else component_ref
 
@@ -345,7 +345,7 @@ class AdapterFramework:
         """Build a profile response from registered component metadata.
 
         Returns a profile wrapper with an identifier, component_ids
-        (with the fleet_id prefix), and component_profiles (with query,
+        (with the engine_id prefix), and component_profiles (with query,
         command, and event name lists). The caller (avatar) can match
         components by capability instead of by name. Matches the RoIS
         spec HRI_Engine_Profile shape: the component_ids and
@@ -356,7 +356,7 @@ class AdapterFramework:
         component_profiles: list[dict[str, Any]] = []
 
         for ref, meta in self.adapter._metadata.items():
-            full_ref = f"{self.fleet_id}/{ref}"
+            full_ref = f"{self.engine_id}/{ref}"
             component_ids.append(full_ref)
             component_profiles.append({
                 "identifier": {
@@ -381,7 +381,7 @@ class AdapterFramework:
             "profile": {
                 "identifier": {
                     "authority": "OpenRoIS",
-                    "code": self.fleet_id or "AdapterFramework",
+                    "code": self.engine_id or "AdapterFramework",
                     "codebook_ref": "",
                     "version": "",
                 },

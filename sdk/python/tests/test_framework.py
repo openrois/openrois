@@ -130,7 +130,7 @@ async def avatar_and_adapter():
     server = await websockets.serve(avatar.handler, "127.0.0.1", port)
 
     config = {
-        "fleet_id": "test_robot",
+        "engine_id": "test_robot",
         "connection": {"ws": {"host": "127.0.0.1", "port": port}},
     }
     adapter = MockAdapter(config)
@@ -160,7 +160,7 @@ async def test_framework_connects_and_registers(avatar_and_adapter):
     assert framework._ws is not None
     reg_msg = avatar.received[0]
     assert reg_msg["method"] == "rois.adapter.register"
-    assert reg_msg["params"]["fleet_id"] == "test_robot"
+    assert reg_msg["params"]["engine_id"] == "test_robot"
     refs = [c["ref"] for c in reg_msg["params"]["components"]]
     assert "SystemInformation" in refs
     assert "Navigation" in refs
@@ -265,7 +265,7 @@ async def test_framework_get_profile_returns_component_metadata(avatar_and_adapt
     profile = result["profile"]
     assert profile["identifier"]["code"] == "test_robot"
 
-    # component_ids have the fleet_id prefix.
+    # component_ids have the engine_id prefix.
     ids = profile["component_ids"]
     assert "test_robot/SystemInformation" in ids
     assert "test_robot/Navigation" in ids
@@ -344,7 +344,7 @@ async def test_framework_reconnects_after_disconnect():
     sock.close()
 
     config = {
-        "fleet_id": "test_robot",
+        "engine_id": "test_robot",
         "connection": {"ws": {"host": "127.0.0.1", "port": port}},
     }
     adapter = MockAdapter(config)

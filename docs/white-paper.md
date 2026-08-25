@@ -15,7 +15,7 @@
 > - [roadmap.md](roadmap.md) — milestone roadmap (what is built and in what order)
 >
 > **Status:** Alpha, pre-1.0, unstable API. Only the interfaces layer (M0) is
-> complete. The engine, gateway, bus adapters, components, and SDKs are planned or
+> complete. The engine, sub-engines, components, and SDKs are planned or
 > under construction. The OMG RoIS Framework is at version 2.0-beta2 and may change.
 
 ---
@@ -26,7 +26,7 @@
 2. [Background: The RoIS Framework](#2-background-the-rois-framework)
 3. [Architectural Decisions](#3-architectural-decisions)
 4. [Layered Architecture](#4-layered-architecture)
-5. [The BusAdapter Contract](#5-the-busadapter-contract)
+5. [The SubEngine Contract](#5-the-subengine-contract)
 6. [Interface Type Pipeline](#6-interface-type-pipeline)
 7. [Developer Experience: Three SDKs](#7-developer-experience-three-sdks)
 8. [The Wire Protocol: JSON-RPC 2.0](#8-the-wire-protocol-json-rpc-20)
@@ -56,12 +56,12 @@ structured messages: "a person was detected", "approach the person", "say this
 message". All hardware-specific concerns are hidden behind standardized interfaces.
 
 A specification alone does not drive adoption. Researchers and engineers need a
-usable implementation: a clean SDK, reference adapters for real robotics ecosystems,
+usable implementation: a clean SDK, reference sub-engines for real robotics ecosystems,
 a gateway that bridges the spec's interfaces to the network, and a component library
 that demonstrates the full stack working end to end.
 
 **OpenRoIS** is that implementation. It is an open-source, Apache-2.0 licensed
-middleware that implements the OMG RoIS Framework 2.0 and lets operator applications
+middleware that implements the OMG RoIS Framework 2.0 and lets service applications
 control **physical robots, virtual avatars, and digital agents** over the internet
 through a single, paradigm-neutral SDK.
 
@@ -69,9 +69,9 @@ through a single, paradigm-neutral SDK.
 
 This white paper describes the following contributions:
 
-1. A **paradigm-neutral architecture** for RoIS 2.0 that decouples the engine,
-   gateway, and client SDK from any specific middleware through a four-method
-   `BusAdapter` contract (section 5).
+1. A **paradigm-neutral architecture** for RoIS 2.0 that decouples the engine
+   and client SDK from any specific middleware through a four-method `SubEngine`
+   interface (section 5).
 2. A **single-source-of-truth type pipeline** that authors interfaces as Python
    Pydantic models and generates C# and TypeScript types from a canonical JSON
    Schema, keeping three language stacks consistent without manual synchronization
@@ -79,10 +79,10 @@ This white paper describes the following contributions:
 3. A **JSON-RPC 2.0 wire protocol** mapping of the five RoIS interfaces over
    WebSocket, with full message examples for every interface operation (section 8).
 4. Three **client SDKs** (C# for Unity, TypeScript for web, Python for scripting)
-   that expose identical behavior regardless of the host paradigm behind the gateway
+   that expose identical behavior regardless of the host paradigm behind the engine
    (section 7).
-5. Four **deployment topologies** that compose the same layers into physical robots,
-   mixed fleets, single-process avatars, and distributed services (section 9).
+5. Four **deployment topologies** that compose the same processes into single-host,
+   LAN fleet, distributed, and cloud-hosted component deployments (section 9).
 6. A **transport strategy** that selects the right transport at each boundary rather
    than forcing one everywhere (section 10).
 
@@ -189,15 +189,15 @@ extensible without rewrites.
 
 ### 3.1 Paradigm-neutral core
 
-The engine, gateway, and client SDK never assume hardware, a world model, or any
-specific middleware. A single `BusAdapter` abstraction decouples the core from ROS 2,
-in-process runtimes, gRPC services, or any future paradigm. Adding a new paradigm is
-an additive adapter, never a rewrite.
+The engine and client SDK never assume hardware, a world model, or any
+specific middleware. A single `SubEngine` interface decouples the core from ROS 2,
+virtual avatars, AI services, or any future paradigm. Adding a new paradigm is
+an additive sub-engine, never a rewrite.
 
 This decision is enforced structurally, not by convention. The engine has zero
 references to ROS, DDS, gRPC, or any game engine. A grep for transport-specific
 symbols in the engine source returns nothing. The same contract test suite runs
-against every adapter, catching paradigm leakage.
+against every sub-engine, catching paradigm leakage.
 
 ### 3.2 Spec-first, symbolic data only
 
@@ -222,164 +222,169 @@ Python Pydantic models are the source of truth. JSON Schema is the canonical wir
 format. C# and TypeScript types are **generated, never hand-written**, so all three
 language stacks stay consistent. A schema-drift test in CI verifies that committed
 schemas match Pydantic output. This eliminates an entire class of bugs: type
-mismatches between the SDK and the gateway.
+mismatches between the SDK and the engine.
 
 ### 3.4 Transport-appropriate, not transport-uniform
 
 OpenRoIS does not invent a new wire protocol and does not force one transport
-everywhere. Each boundary uses the transport that fits best: WebSocket for remote
-control, ROS 2/DDS for the robot bus, in-process calls for avatars, gRPC for
-distributed services, WebRTC for media. This respects the spec's separation of
-message from transport while choosing concrete, proven technologies for each
-boundary.
+everywhere. The engine-to-sub-engine boundary is always WebSocket + JSON-RPC. The
+sub-engine's internal transport (DDS, gRPC, animation API) is chosen by the sub-engine,
+not the engine. This respects the spec's separation of message from transport
+while choosing concrete, proven technologies for each boundary.
 
 ### 3.5 Vertical slices over horizontal layers
 
 Each milestone delivers a working end-to-end path, not an isolated layer. M0
-through M5 culminate in a usable robot demo (the MVP). The in-process adapter is
-built first because it is the simplest. This ordering is a guard against DDS
-assumptions leaking into the core: if the simplest adapter works, and the engine
-depends only on the `BusAdapter` contract, then adding DDS later cannot retroactively
-introduce coupling.
+through M5 culminate in a usable robot demo (the MVP). The simplest sub-engine is
+built first. This ordering is a guard against DDS assumptions leaking into the core:
+if the simplest sub-engine works, and the engine depends only on the `SubEngine`
+interface, then adding DDS later cannot retroactively introduce coupling.
 
 ### 3.6 The SDK is the product
 
 Adoption is driven by how easy it is to write a scenario. The SDK is identical
 whether the host is a physical robot, a virtual avatar, or a distributed service.
-The host paradigm is hidden behind the gateway. A researcher who writes a scenario
+The host paradigm is hidden behind the engine. A researcher who writes a scenario
 against the SDK does not need to know whether the target is a ROS 2 robot or a
-Unity avatar. Only the gateway configuration changes.
+Unity avatar. Only the sub-engine configuration changes.
 
 ---
 
 ## 4. Layered Architecture
 
-OpenRoIS is organized in four layers. The client SDK and gateway are constant across
-all deployments. Only the BusAdapter and host layout change.
+OpenRoIS is organized in three roles: the service application, the engine, and
+sub-engines. The engine is a control-plane router. Sub-engines are standalone processes
+that own their paradigm-specific transport. The engine-to-sub-engine boundary is always
+WebSocket + JSON-RPC.
+
+The Hub (`apps/hub/`) is a web application (Vite + React) that serves as a
+visualizer of the Engine. It connects to the Engine via WebSocket using
+`@openrois/sdk` with `WebSocketTransport`. It is a dashboard for monitoring and
+inspecting the Engine's state, registered components, and active sessions. It is
+not a service application. It can issue RoIS commands (search, query) to populate
+its views, but its primary role is visualization, not driving robot scenarios. A
+proper service application (teleop, patrol, follow-person) is a separate concern
+and lives in `apps/` alongside the Hub.
 
 ```mermaid
 flowchart TB
-    subgraph L1["Layer 1: Client"]
+    subgraph L1["Service Application"]
         direction LR
-        WebApp["Web Operator App<br/>+ RoIS TS SDK"]
-        UnityApp["Unity Operator App<br/>+ RoIS C# SDK"]
+        WebApp["Web App<br/>+ RoIS TS SDK"]
+        UnityApp["Unity App<br/>+ RoIS C# SDK"]
         PyScript["Python Script<br/>+ RoIS Py SDK"]
     end
 
-    subgraph L2["Layer 2: Gateway (Main HRI Engine)"]
+    subgraph L2["Engine (Main HRI Engine)"]
         direction LR
-        Auth["Auth Module<br/>JWT / RBAC"]
+        Auth["Auth<br/>JWT / RBAC"]
         Session["Session Manager"]
         WSServer["WebSocket Server<br/>JSON-RPC 2.0"]
-        RoISAdapter["RoIS Interface Adapter<br/>SystemIF, CommandIF, QueryIF, EventIF"]
-        WebRTCBridge["WebRTC Signaling<br/>+ Media Bridge"]
+        Router["RoIS Router<br/>SystemIF, CommandIF, QueryIF, EventIF"]
     end
 
-    subgraph L3["Layer 3: Internal Bus (Pluggable)"]
+    subgraph L3["Sub-engines"]
         direction LR
-        BusAdapter["BusAdapter Contract<br/>discover, invoke, query, subscribe"]
+        RobotSubEngine["Robot Sub-engine"]
+        AvatarSubEngine["Avatar Sub-engine"]
+        ServiceSubEngine["AI Service Sub-engine"]
     end
 
-    subgraph L4["Layer 4: Hosts (Sub-Engines and Components)"]
-        direction LR
-        Robot["ROS 2 / DDS<br/>Physical Robot<br/>(Nav2, YOLO, perception)"]
-        Avatar["InProcess<br/>Virtual Avatar<br/>(Unity, Godot, Web)"]
-        Services["gRPC<br/>Distributed AI Services<br/>(perception, ASR, TTS)"]
-    end
-
-    L1 -->|"WebSocket / TLS<br/>(RoIS control plane)"| L2
-    L1 -.->|"WebRTC (SRTP/DTLS)<br/>(media data plane)"| L2
-    L2 -->|"BusAdapter interface"| L3
-    L3 --> Robot
-    L3 --> Avatar
-    L3 --> Services
+    L1 -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| L2
+    L2 -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| RobotSubEngine
+    L2 -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| AvatarSubEngine
+    L2 -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| ServiceSubEngine
 ```
 
-The spec's "main HRI Engine" maps to the **Gateway** (Layer 2). Each "sub HRI Engine"
-maps to a **per-host node** (Layer 4): a robot node, an avatar process, or a service.
-"HRI Components" map to whatever the chosen BusAdapter addresses: in-process objects,
-gRPC services, or ROS 2 component nodes. The client only ever talks to the gateway.
-The host topology and paradigm are hidden, exactly as the specification requires.
+The spec's "main HRI Engine" maps to the **Engine**. Each "sub HRI Engine" maps to an
+**sub-engine** (a standalone process that connects to the engine via WebSocket).
+"HRI Components" map to the components registered by each sub-engine. The service
+application only ever talks to the engine. The host paradigm is hidden, exactly as
+the specification requires.
+
+The engine has zero media imports, zero WebRTC imports, and zero references to ROS,
+DDS, gRPC, or any game engine. Media flows directly between the publisher and the
+consumer, outside the engine. The engine is a pure control-plane router.
 
 ### 4.1 Mapping RoIS concepts to OpenRoIS layers
 
-| RoIS concept | OpenRoIS implementation | Layer |
+| RoIS concept | OpenRoIS implementation | Role |
 |-------------|------------------------|-------|
-| Main HRI Engine | Engine | 2 |
-| Sub HRI Engine | Per-host node (robot node, avatar process, service) | 4 |
-| HRI Component | In-process object, gRPC service, or ROS 2 node | 4 |
-| Service Application | Client SDK (C#, TypeScript, or Python) | 1 |
-| RoIS interfaces (SystemIF, CommandIF, QueryIF, EventIF, Streaming) | JSON-RPC 2.0 methods over WebSocket | 1 to 2 |
-| Transport (unspecified by RoIS) | BusAdapter contract + concrete adapters | 3 |
+| Main HRI Engine | Engine | Engine |
+| Sub HRI Engine | Sub-engine (standalone process, connects via WebSocket) | Sub-engine |
+| HRI Component | Component registered by a sub-engine | Sub-engine |
+| Service Application | Client SDK (C#, TypeScript, or Python) | Service Application |
+| RoIS interfaces (SystemIF, CommandIF, QueryIF, EventIF, Streaming) | JSON-RPC 2.0 methods over WebSocket | Service Application to Engine |
+| SubEngine contract | WebSocket + JSON-RPC 2.0 (engine-to-sub-engine boundary) | Engine to Sub-engine |
 
-### 4.2 Gateway responsibilities
+### 4.2 Engine responsibilities
 
-The gateway is the only internet-facing process and the single enforcement point for
+The engine is the only internet-facing process and the single enforcement point for
 security. It:
 
 - Terminates the remote transport (WebSocket/TLS) and authenticates every connection
   before any RoIS message is processed.
-- Translates JSON-RPC RoIS calls to bus adapter operations (service/action/topic for
-  ROS 2, method calls for in-process, gRPC for distributed services).
+- Routes JSON-RPC RoIS calls to the appropriate sub-engine based on
+  component ref.
 - Aggregates profiles from all authorized sub-engines into one `HRI_Engine_Profile`
   returned by `get_profile()`.
 - Filters `search()` and `query()` results and guards `bind()` and `execute()` per
   the caller's authorization scope.
-- Relays WebRTC signaling (SDP/ICE) over the same WebSocket connection and bridges
-  media through an SFU when needed.
+- Brokers media descriptor exchange via the RoIS streaming interface, never touches
+  media data.
 
 ---
 
-## 5. The BusAdapter Contract
+## 5. The SubEngine Contract
 
-The `BusAdapter` is the single abstraction that decouples the engine from any
-paradigm. The engine, gateway, and SDK depend only on this four-method contract. They
-never reference ROS, DDS, gRPC, or a game engine.
+The `SubEngine` interface is the contract between the engine and sub-engines. The engine
+and SDK depend only on this four-method contract. They never reference ROS, DDS,
+gRPC, or a game engine. Sub-engines are standalone processes that connect to the engine
+via WebSocket and implement this contract.
 
 ```mermaid
 classDiagram
-    class BusAdapter {
-        <<protocol>>
+    class SubEngine {
+        <<interface>>
         +discover(filter) ComponentRef[]
         +invoke(ref, command) CommandResult
         +query(ref, query) Result
         +subscribe(ref, sink) SubscribeId
     }
 
-    class InProcessBusAdapter {
-        registry: ComponentRegistry
+    class RemoteSubEngine {
+        WebSocket connection
+        JSON-RPC 2.0 forwarding
+        event routing
+    }
+
+    class LocalSubEngine {
+        in-process registry
         direct method calls
-        language events / callbacks
+        (future)
     }
 
-    class ROS2BusAdapter {
-        rclpy transport
-        service / action / topic
-        DDS discovery + QoS
-    }
-
-    class gRPCBusAdapter {
-        gRPC unary / server-stream
-        service registry
-    }
-
-    BusAdapter <|.. InProcessBusAdapter
-    BusAdapter <|.. ROS2BusAdapter
-    BusAdapter <|.. gRPCBusAdapter
+    SubEngine <|.. RemoteSubEngine
+    SubEngine <|.. LocalSubEngine
 ```
+
+`RemoteSubEngine` is the current implementation: each sub-engine is a standalone process
+that connects to the engine via WebSocket. The engine forwards JSON-RPC calls to the
+sub-engine and routes event notifications back. `LocalSubEngine` (in-process, zero
+serialization) is a future optimization for co-located sub-engines.
 
 ### 5.1 Method semantics
 
-| Method | Purpose | ROS 2 mapping | InProcess mapping | gRPC mapping |
-|--------|---------|---------------|-------------------|--------------|
-| `discover` | Find components by condition | DDS discovery | registry lookup | service registry |
-| `invoke` | Execute a command (start, stop, execute, set_parameter) | ROS 2 action or service | direct method call | gRPC unary |
-| `query` | Synchronous read (component_status, get_parameter) | ROS 2 service | direct method call | gRPC unary |
-| `subscribe` | Async event push (notify_event, notify_stream_status) | ROS 2 topic subscription | callback / language event | gRPC server-stream |
+| Method | Purpose | Example |
+|--------|---------|---------|
+| `discover` | Find components by condition | Sub-engine registers components at startup, engine filters by scope |
+| `invoke` | Execute a command (start, stop, execute, set_parameter) | Engine forwards JSON-RPC to sub-engine, sub-engine dispatches to component |
+| `query` | Synchronous read (component_status, get_parameter) | Engine forwards JSON-RPC to sub-engine, sub-engine returns result |
+| `subscribe` | Async event push (notify_event, notify_stream_status) | Engine subscribes, sub-engine pushes events via WebSocket |
 
-### 5.2 RoIS operation to BusAdapter method mapping
+### 5.2 RoIS operation to SubEngine method mapping
 
-The RoIS interface operations map to BusAdapter methods as follows:
+The RoIS interface operations map to SubEngine methods as follows:
 
 - Synchronous operations (`query`, `get_parameter`, `component_status`) map to
   `query`.
@@ -393,14 +398,25 @@ The RoIS interface operations map to BusAdapter methods as follows:
 The contract is deliberately kept to four methods. Adding transport-specific knobs
 (QoS policies, deadlines, reliability) to the contract would leak paradigm
 assumptions into the engine. Instead, QoS, deadlines, and reliability belong to
-whichever adapter needs them. Only the ROS 2 adapter needs DDS QoS. The in-process
-adapter does not. Keeping the contract minimal means the engine can drive a ROS 2
-robot fleet, an in-process avatar, or a distributed set of gRPC services with the
-same code path.
+whichever sub-engine needs them. A ROS 2 sub-engine needs DDS QoS. An avatar sub-engine does
+not. Keeping the contract minimal means the engine can drive a ROS 2 robot fleet, a
+virtual avatar, or a set of AI services with the same code path.
 
-Because the engine sees only `BusAdapter`, accidental coupling (for example, baking
+Because the engine sees only `SubEngine`, accidental coupling (for example, baking
 DDS QoS semantics into the engine) is structurally prevented. The same contract test
-suite runs against every adapter, catching paradigm leakage.
+suite runs against every sub-engine, catching paradigm leakage.
+
+### 5.4 Three contracts
+
+OpenRoIS defines three distinct contracts at three boundaries:
+
+1. **Service application to Engine**: JSON-RPC 2.0 over WebSocket. The service
+   application sends RoIS operations, the engine routes them.
+2. **Engine to Sub-engine**: the `SubEngine` interface (discover, invoke,
+   query, subscribe) over WebSocket + JSON-RPC. The engine forwards calls to the
+   sub-engine that owns the target component.
+3. **SubEngine to Component**: RoIS operations dispatched by the sub-engine framework
+   to component handlers (via decorators in Python, TypeScript, or C#).
 
 ---
 
@@ -478,7 +494,7 @@ specification's machine-readable artifacts, not just with each other.
 OpenRoIS ships three client SDKs, each targeting a different developer audience.
 All three expose the same five RoIS interfaces (System, Command, Query, Event,
 Streaming) and produce identical behavior regardless of the host paradigm behind the
-gateway.
+engine.
 
 ```mermaid
 flowchart TB
@@ -489,22 +505,22 @@ flowchart TB
         Py["Python SDK<br/>Scripting, E2E testing<br/>(secondary client)"]
     end
 
-    SDKs -->|"WebSocket + JSON-RPC 2.0"| Gateway["Gateway"]
-    Gateway --> BusAdapter["BusAdapter"]
-    BusAdapter --> Hosts["Robots, Avatars, Services"]
+    SDKs -->|"WebSocket + JSON-RPC 2.0"| Engine["Engine"]
+    Engine --> SubEngine["SubEngine"]
+    SubEngine --> SubEngines["Robot, Avatar, AI Service Sub-engines"]
 ```
 
 ### 7.1 C# SDK for Unity (primary client)
 
 The C# SDK (`OpenRoIS.Sdk` / `org.openrois.sdk`) is the primary client SDK, targeting
-Unity operator applications. It connects to the gateway over WebSocket using
+Unity operator applications. It connects to the engine over WebSocket using
 JSON-RPC 2.0, with async connect, auto-reconnect, token handling, heartbeat, and
 typed errors. Component proxies provide typed access to each RoIS component with
 event handlers.
 
 ```csharp
 var client = await RoISClient.ConnectAsync(
-    "wss://gateway.example.com",
+    "wss://engine.example.com",
     new ConnectOptions { Token = token });
 
 var pd = await client.BindAsync("PersonDetection");
@@ -529,12 +545,14 @@ Key characteristics:
 
 The TypeScript SDK (`@openrois/sdk`) serves non-Unity web applications: operator
 dashboards, monitoring tools, configuration UIs, and automated testing. It runs in
-both browsers and Node.js.
+both browsers and Node.js. The Hub (`apps/hub/`) is the primary consumer of this SDK:
+it uses `@openrois/sdk` with `WebSocketTransport` to connect to the Engine and
+visualize its state. The Hub is a visualizer, not a service application.
 
 ```ts
 import { RoISClient } from "@openrois/sdk";
 
-const client = await RoISClient.connect("wss://gateway.example.com", {
+const client = await RoISClient.connect("wss://engine.example.com", {
   token: await getAccessToken(),
 });
 
@@ -560,7 +578,7 @@ Key characteristics:
 ### 7.3 Python SDK for scripting (secondary client)
 
 The Python SDK (`openrois-sdk`) mirrors the core API for scripting, automated
-testing of the gateway and ROS 2 adapter, and E2E validation. It reuses the same
+testing of the engine and ROS 2 sub-engine, and E2E validation. It reuses the same
 protocol surface defined by the other SDKs.
 
 ```python
@@ -569,7 +587,7 @@ from openrois.sdk import RoISClient
 
 async def main():
     client = await RoISClient.connect(
-        "wss://gateway.example.com",
+        "wss://engine.example.com",
         token=get_access_token(),
     )
 
@@ -587,8 +605,8 @@ Key characteristics:
 
 - Built on the same Pydantic types that are the source of truth for the entire
   project, so there is no type bridge needed.
-- Used for E2E testing of the gateway and ROS 2 adapter.
-- Async-first (asyncio), mirroring the engine and gateway runtime.
+- Used for E2E testing of the engine and ROS 2 sub-engine.
+- Async-first (asyncio), mirroring the engine runtime.
 
 ### 7.4 SDK interface mapping
 
@@ -607,18 +625,20 @@ specification: `notify_error`, `completed`, and `notify_event`.
 
 ### 7.5 Paradigm transparency
 
-The same SDK calls drive a real ROS 2 robot and an in-process avatar. Only the host
-behind the gateway changes. This is the core value proposition for researchers: a
+The same SDK calls drive a real ROS 2 robot and a virtual avatar. Only the sub-engine
+behind the engine changes. This is the core value proposition for researchers: a
 scenario written once can be tested against a mock robot, deployed against a real
 ROS 2 robot, and reused against a virtual avatar without code changes.
 
 ---
 
+---
+
 ## 8. The Wire Protocol: JSON-RPC 2.0
 
-The remote client talks to the gateway over **WebSocket** using **JSON-RPC 2.0** as
+The remote client talks to the engine over **WebSocket** using **JSON-RPC 2.0** as
 the message envelope. Every RoIS interface operation maps to a JSON-RPC method in a
-namespaced hierarchy. The gateway processes requests and sends responses, and also
+namespaced hierarchy. The engine processes requests and sends responses, and also
 pushes asynchronous notifications (events, command completions, errors) to the client
 as JSON-RPC notifications (messages with no `id` field).
 
@@ -756,7 +776,7 @@ Client sends `rois.system.connect` (after WebSocket upgrade with JWT):
 }
 ```
 
-Gateway responds:
+Engine responds:
 
 ```json
 {
@@ -779,7 +799,7 @@ Gateway responds:
 }
 ```
 
-Gateway responds with matching component references:
+Engine responds with matching component references:
 
 ```json
 {
@@ -872,7 +892,7 @@ Gateway responds with matching component references:
 }
 ```
 
-#### Step 6: Gateway pushes a person_detected event (notification, no id)
+#### Step 6: Engine pushes a person_detected event (notification, no id)
 
 ```json
 {
@@ -975,7 +995,7 @@ Set the navigation parameters:
 }
 ```
 
-#### Step 9: Gateway pushes command completion (notification)
+#### Step 9: Engine pushes command completion (notification)
 
 ```json
 {
@@ -988,7 +1008,7 @@ Set the navigation parameters:
 }
 ```
 
-#### Step 10: Gateway pushes reached_target event (notification)
+#### Step 10: Engine pushes reached_target event (notification)
 
 ```json
 {
@@ -1076,7 +1096,7 @@ Set the navigation parameters:
 ### 8.5 Error handling
 
 Errors use standard JSON-RPC 2.0 error objects with RoIS-specific return codes. The
-gateway also pushes asynchronous error notifications via `rois.system.notify_error`.
+engine also pushes asynchronous error notifications via `rois.system.notify_error`.
 
 Example: binding a component outside the caller's scope:
 
@@ -1101,7 +1121,7 @@ Example: binding a component outside the caller's scope:
 }
 ```
 
-Example: asynchronous error notification pushed by the gateway:
+Example: asynchronous error notification pushed by the engine:
 
 ```json
 {
@@ -1196,8 +1216,8 @@ SpeechSynthesis execute concurrently.
 
 ```mermaid
 sequenceDiagram
-    participant Client as Operator App (SDK)
-    participant GW as Gateway
+    participant Client as Service Application (SDK)
+    participant GW as Engine
     participant Robot as ROS 2 Robot
 
     Client->>GW: WS upgrade + JWT
@@ -1218,7 +1238,7 @@ sequenceDiagram
     Client->>GW: rois.command.execute {command_type: "start"}
     GW-->>Client: {command_id: "cmd-start-pd"}
 
-    Robot-->>GW: person_detected (ROS 2 topic)
+    Robot-->>GW: person_detected (sub-engine event)
     GW-->>Client: rois.event.notify {event_type: "person_detected", number: 2}
 
     Client->>GW: rois.command.bind {component_ref: "robot-a1/Navigation"}
@@ -1230,7 +1250,7 @@ sequenceDiagram
     Client->>GW: rois.command.execute {command_type: "execute"}
     GW-->>Client: {command_id: "cmd-nav-001"}
 
-    Robot-->>GW: navigation action completes (ROS 2 action)
+    Robot-->>GW: navigation action completes (sub-engine event)
     GW-->>Client: rois.command.completed {command_id: "cmd-nav-001", status: "OK"}
     GW-->>Client: rois.event.notify {event_type: "reached_target"}
 
@@ -1248,17 +1268,17 @@ sequenceDiagram
 
 ## 9. Deployment Topologies
 
-The engine-to-adapter boundary is always WebSocket + JSON-RPC. The adapter's
+The engine-to-sub-engine boundary is always WebSocket + JSON-RPC. The sub-engine's
 internal transport (DDS, gRPC, animation API, or any future paradigm) is an
-implementation detail of the adapter, not a topology choice. Topologies differ by
+implementation detail of the sub-engine, not a topology choice. Topologies differ by
 **where processes run**: on a single host, across a LAN, across the internet, or
 with components offloaded to the cloud.
 
 ### 9.1 Topology A: Single host (local)
 
-Everything runs on one machine: the service application, the engine, the adapter,
+Everything runs on one machine: the service application, the engine, the sub-engine,
 and the robot. The service application talks to the engine over localhost WebSocket.
-The adapter connects to the engine over localhost WebSocket. This is the simplest
+The sub-engine connects to the engine over localhost WebSocket. This is the simplest
 deployment, useful for development, testing, and single-robot scenarios where the
 robot's onboard computer runs everything.
 
@@ -1267,19 +1287,19 @@ flowchart TB
     subgraph Host["Single Host"]
         App["Service Application"]
         GW["HRI Engine (main)"]
-        Adapter["Adapter<br/>(sub-engine)"]
+        SubEngine["Sub-engine"]
         Robot["Service Robot<br/>(components)"]
         App -->|"WebSocket<br/>JSON-RPC 2.0"| GW
-        GW -->|"WebSocket<br/>JSON-RPC 2.0"| Adapter
-        Adapter --> Robot
+        GW -->|"WebSocket<br/>JSON-RPC 2.0"| SubEngine
+        SubEngine --> Robot
     end
 ```
 
 ### 9.2 Topology B: LAN, multiple service robots
 
 The engine runs on one host. Multiple service robots run on the same LAN, each with
-its own adapter. The service application connects to the engine, which routes calls
-to the correct robot's adapter. This is the fleet scenario: one engine serves
+its own sub-engine. The service application connects to the engine, which routes calls
+to the correct robot's sub-engine. This is the fleet scenario: one engine serves
 multiple robots on a local network.
 
 ```mermaid
@@ -1290,11 +1310,11 @@ flowchart TB
         App -->|"WebSocket<br/>JSON-RPC 2.0"| GW
     end
 
-    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| Adapter1["Adapter<br/>(sub-engine)"]
-    Adapter1 --> Robot1["Service Robot 1"]
+    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| SubEngine1["Sub-engine"]
+    SubEngine1 --> Robot1["Service Robot 1"]
 
-    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| Adapter2["Adapter<br/>(sub-engine)"]
-    Adapter2 --> Robot2["Service Robot 2"]
+    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| SubEngine2["Sub-engine"]
+    SubEngine2 --> Robot2["Service Robot 2"]
 ```
 
 ### 9.3 Topology C: Distributed hosts (internet)
@@ -1314,20 +1334,20 @@ flowchart TB
         GW["HRI Engine (main)"]
     end
 
-    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| Adapter1["Adapter<br/>(sub-engine)"]
-    Adapter1 --> Robot1["Service Robot 1"]
+    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| SubEngine1["Sub-engine"]
+    SubEngine1 --> Robot1["Service Robot 1"]
 
-    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| Adapter2["Adapter<br/>(sub-engine)"]
-    Adapter2 --> Robot2["Service Robot 2"]
+    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| SubEngine2["Sub-engine"]
+    SubEngine2 --> Robot2["Service Robot 2"]
 ```
 
 ### 9.4 Topology D: Cloud-hosted components
 
-Some components run on the engine itself, not on the robot. The adapter on the
+Some components run on the engine itself, not on the robot. The sub-engine on the
 robot registers components with `runtime: remote` in the profile. The engine loads
 and hosts those components directly. This suits components that need more compute
 than the robot has (perception models, speech recognition) or components that are
-shared across multiple robots. The robot's adapter still owns `runtime: local`
+shared across multiple robots. The robot's sub-engine still owns `runtime: local`
 components (actuation, navigation, system information).
 
 ```mermaid
@@ -1341,12 +1361,12 @@ flowchart TB
         GW --> RemoteComponents
     end
 
-    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| Adapter["Adapter<br/>(sub-engine)"]
-    Adapter --> Robot["Service Robot<br/>(actuation, navigation,<br/>system information)<br/>runtime: local"]
+    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| SubEngine["Sub-engine"]
+    SubEngine --> Robot["Service Robot<br/>(actuation, navigation,<br/>system information)<br/>runtime: local"]
 ```
 
 In Topology C, the engine is a pure router: all components live on the robot behind
-the adapter. In Topology D, the engine is both a router and a component runtime.
+the sub-engine. In Topology D, the engine is both a router and a component runtime.
 Some components run on the engine (cloud), some run on the robot (local). The
 `runtime` field in the profile declares where each component runs. The service
 application does not know or care where a component runs: `search()` returns
@@ -1363,26 +1383,24 @@ used at each boundary rather than forcing one everywhere.
 flowchart LR
     subgraph Boundaries["Transport per boundary"]
         direction TB
-        B1["Remote client to Gateway<br/>WebSocket + TLS<br/>NAT/firewall friendly, browser-native"]
-        B2["Gateway to avatar (same process)<br/>In-process calls<br/>Zero serialization, zero latency"]
-        B3["Gateway to distributed services<br/>gRPC<br/>Typed, cross-language, efficient"]
-        B4["Gateway to robot fleet<br/>ROS 2 / DDS<br/>Reliable pub/sub, QoS, discovery"]
-        B5["Media (camera/mic or rendered)<br/>WebRTC (SRTP/DTLS)<br/>NAT traversal, adaptive bitrate"]
+        B1["Service Application to Engine<br/>WebSocket + TLS<br/>NAT/firewall friendly, browser-native"]
+        B2["Engine to Sub-engine<br/>WebSocket + TLS<br/>JSON-RPC 2.0, one per sub-engine"]
+        B3["Sub-engine internal transport<br/>DDS, gRPC, animation API<br/>Chosen by the sub-engine, not the engine"]
+        B4["Media (camera/mic or rendered)<br/>WebRTC (SRTP/DTLS)<br/>NAT traversal, adaptive bitrate"]
     end
 ```
 
 | Boundary | Transport | Rationale |
 |----------|-----------|-----------|
-| Remote client to Gateway | WebSocket + TLS | NAT/firewall friendly, browser-native, easy auth, async events. Matches the spec's Annex F.2.3 WebSocket example. |
-| Gateway to avatar (same process) | In-process calls | Zero serialization and latency. Ideal for Unity, Godot, or Web hosts. |
-| Gateway to distributed services | gRPC | Typed, cross-language, efficient. Good for GPU/AI services. |
-| Gateway to robot fleet | ROS 2 / DDS | Reliable pub/sub, QoS, discovery, ecosystem (Nav2, perception). |
+| Service Application to Engine | WebSocket + TLS | NAT/firewall friendly, browser-native, easy auth, async events. Matches the spec's Annex F.2.3 WebSocket example. |
+| Engine to Sub-engine | WebSocket + TLS | JSON-RPC 2.0, one connection per sub-engine. The engine-to-sub-engine boundary is always the same transport. |
+| Sub-engine internal transport | DDS, gRPC, animation API | Chosen by the sub-engine based on the host paradigm. The engine does not know or care. |
 | Media (camera/mic or rendered) | WebRTC (SRTP/DTLS) | Built-in NAT traversal (ICE/STUN/TURN), adaptive bitrate, encrypted, browser-native. |
 
-These are complementary, not competing. In-process, gRPC, and DDS each solve a
-different host boundary. WebSocket solves the remote control boundary. WebRTC
-solves real-time media. Each is selected by the active BusAdapter at Layer 3, except
-WebSocket (always the remote edge) and WebRTC (always the media plane).
+The engine-to-sub-engine boundary is always WebSocket + JSON-RPC. The sub-engine's
+internal transport (DDS, gRPC, animation API) is chosen by the sub-engine, not the
+engine. WebSocket solves the remote control boundary. WebRTC solves real-time
+media. The engine never touches media data.
 
 ---
 
@@ -1421,8 +1439,8 @@ flowchart LR
     C6 -.->|"corresponds to"| D6
 ```
 
-WebRTC signaling travels over the existing WebSocket RoIS connection (passed as
-`set_parameter` arguments), so no separate signaling server is required.
+WebRTC signaling is handled by the application layer. The engine brokers media
+descriptor exchange via the RoIS streaming interface but never touches media data.
 
 An important distinction the specification preserves: Speech Synthesis is a
 **command** component (text to robot speaker locally), not a stream. Audio and Video
@@ -1434,13 +1452,13 @@ WebRTC.
 - **Fleet of 1 to 3 robots**: peer-to-peer WebRTC is sufficient.
 - **Larger fleets**: route media through a Selective Forwarding Unit (mediasoup,
   LiveKit). The RoIS streaming control interface is identical either way. The SFU is
-  an implementation detail of the gateway.
+  an implementation detail of the application layer, not the engine.
 
 ---
 
 ## 12. Security Architecture
 
-Security is phased but never bolted on. Auth hooks exist from M2 (the gateway
+Security is phased but never bolted on. Auth hooks exist from M2 (the engine
 milestone). Full multi-tenant enforcement lands in M9.
 
 ### 12.1 Authentication flow
@@ -1452,16 +1470,16 @@ WebSocket upgrade.
 ```mermaid
 sequenceDiagram
     participant Client
-    participant Gateway
+    participant Engine
 
-    Client->>Gateway: POST /auth/token {client_id, ...}
-    Gateway-->>Client: {access_token (JWT), expires}
+    Client->>Engine: POST /auth/token {client_id, ...}
+    Engine-->>Client: {access_token (JWT), expires}
 
-    Client->>Gateway: WS upgrade, Authorization: Bearer <token>
-    Gateway-->>Client: 101 Switching Protocols (or 401 if invalid)
+    Client->>Engine: WS upgrade, Authorization: Bearer <token>
+    Engine-->>Client: 101 Switching Protocols (or 401 if invalid)
 
-    Client->>Gateway: rois.system.connect()
-    Gateway-->>Client: {return_code: "OK"}
+    Client->>Engine: rois.system.connect()
+    Engine-->>Client: {return_code: "OK"}
 ```
 
 Example JWT claims used downstream for authorization:
@@ -1479,7 +1497,7 @@ Example JWT claims used downstream for authorization:
 
 ### 12.2 Authorization model (RBAC)
 
-Authorization is enforced per RoIS operation inside the gateway. The spec's
+Authorization is enforced per RoIS operation inside the engine. The spec's
 `Condition_t` (an ISO 19143 filter expression) and `component_ref` are the natural
 enforcement points.
 
@@ -1502,7 +1520,7 @@ enforcement points.
 | `subscribe(event_type, condition)` | Deliver `notify_event` only for authorized sources. |
 | `connect_stream()` | Require streaming scope. SFU enforces per-stream ACL. |
 
-Because the gateway filters at `search()`, robots outside a caller's scope are
+Because the engine filters at `search()`, robots outside a caller's scope are
 invisible. The caller cannot discover or address them.
 
 ### 12.4 Defense in depth
@@ -1581,7 +1599,7 @@ flowchart TB
 | Video Streaming | camera to WebRTC | rendered frames to WebRTC | diff source |
 | System Information | battery, CPU, joints | FPS, memory, avatar state | diff state |
 
-The component's logic is the same across adapters. Only the binding differs. The
+The component's logic is the same across sub-engines. Only the binding differs. The
 spec also supports user-defined components beyond the basic 17, reusing `RoIS_Common`
 and the profile mechanism. An HRI Component Profile can include another profile via
 `sub_component`, so an extended component can reuse a base component's messages and
@@ -1597,8 +1615,8 @@ path, not an isolated layer.
 ```mermaid
 flowchart LR
     M0["M0<br/>Paradigm-Neutral<br/>Interfaces<br/>[done]"] --> M1["M1<br/>Engine +<br/>In-Process Bus"]
-    M1 --> M2["M2<br/>Remote<br/>Gateway"]
-    M2 --> M3["M3<br/>ROS 2 Bus<br/>Adapter"]
+    M1 --> M2["M2<br/>Remote<br/>Engine"]
+    M2 --> M3["M3<br/>ROS 2 Bus<br/>Sub-engine"]
     M3 --> M4["M4<br/>Mock ROS 2<br/>Components"]
     M4 --> M5["M5<br/>SDK + Robot<br/>MVP<br/>v0.1.0"]
     M5 --> M8["M8<br/>Real Component +<br/>Mixed Paradigm"]
@@ -1611,20 +1629,20 @@ flowchart LR
 
 | Milestone | Theme | Output | Status |
 |-----------|-------|--------|--------|
-| M0 | Paradigm-Neutral Interfaces | `interfaces` (Pydantic to JSON Schema to C#/TS), `BusAdapter` contract | DONE |
-| M1 | Engine and In-Process Bus | `engine`, `InProcessBusAdapter`, mock components | TODO |
-| M2 | Remote Gateway | `gateway` (WebSocket, JSON-RPC 2.0, auth hook) | TODO |
-| M3 | ROS 2 Bus Adapter | `ROS2BusAdapter` (rclpy), no core changes | TODO |
+| M0 | Paradigm-Neutral Interfaces | `interfaces` (Pydantic to JSON Schema to C#/TS), `SubEngine` contract | DONE |
+| M1 | Engine and SubEngine | `engine`, `RemoteSubEngine`, mock components | TODO |
+| M2 | Remote Engine | `engine` (WebSocket, JSON-RPC 2.0, auth hook) | TODO |
+| M3 | ROS 2 Sub-engine | `ROS 2 sub-engine` (rclpy), no core changes | TODO |
 | M4 | Mock ROS 2 Robot Components | `person_detection`, `navigation`, `system_information` nodes | TODO |
 | M5 | SDK and Robot MVP | `sdk/csharp` / `sdk/typescript`, operator app, **v0.1.0 release** | TODO |
-| M8 | Real Robot Component and Mixed Paradigm | YOLO `person_detection`, robot + avatar on one gateway | TODO |
+| M8 | Real Robot Component and Mixed Paradigm | YOLO `person_detection`, robot + avatar on one engine | TODO |
 | M9 | Auth and Bus Security | `auth`, `rbac`, per-fleet isolation | TODO |
 | M10 | WebRTC Media | Streaming components, telepresence | TODO |
 | M11 | Full Component Library | All 17 basic components, both paradigms, **v1.0** | TODO |
 
 The MVP is M5: the minimum that lets an operator clone, build, and control a ROS 2
 robot from an application over WebSocket. The paradigm-neutrality proof is M8 (mixed
-robot + avatar on one gateway). The 1.0 release is M11.
+robot + avatar on one engine). The 1.0 release is M11.
 
 ### 14.1 Versioning
 
@@ -1635,7 +1653,7 @@ robot + avatar on one gateway). The 1.0 release is M11.
 
 As of this writing, M0 is complete. The interface types are authored as Pydantic
 models, exported to JSON Schema, and generated into C# and TypeScript. The
-`BusAdapter` contract is defined and frozen for M1. Three of 17 basic components
+`SubEngine` contract is defined and frozen for M1. Three of 17 basic components
 (PersonDetection, Navigation, SystemInformation) have typed message models. The
 remaining milestones are planned or under construction.
 
@@ -1650,13 +1668,13 @@ unique in defining a **platform-independent model** at the symbolic level, separ
 from any transport. Other approaches tend to couple the interface to a specific
 middleware (for example, ROS actions, gRPC services, or CORBA operations). RoIS
 defines the messages and lets the implementation choose the transport, which is the
-property OpenRoIS exploits through the `BusAdapter` contract.
+property OpenRoIS exploits through the `SubEngine` interface.
 
 ### 15.2 OpenRoIS and ROS 2
 
 ROS 2 is the dominant research robotics middleware and one of the spec's approved
 transports. OpenRoIS does not compete with ROS 2. It uses ROS 2 as the primary robot
-bus adapter (`ROS2BusAdapter`). RoIS operations map to ROS 2 primitives: synchronous
+sub-engine. RoIS operations map to ROS 2 primitives: synchronous
 operations to services, long-running operations to actions, async push to topics.
 The value OpenRoIS adds is a **standardized symbolic interface** above ROS 2, so
 that the same operator application can also drive a virtual avatar or a distributed
@@ -1666,9 +1684,8 @@ service without rewriting the scenario logic.
 
 Unity is the primary client platform for operator applications. The C# SDK targets
 Unity via UPM and runs on both Mono (Unity 6.3+) and CoreCLR (Unity 6.8). The same
-SDK also works outside Unity (any .NET runtime). The in-process avatar topology
-means a Unity application can host the engine, gateway, and avatar components in a
-single process, with zero serialization overhead.
+SDK also works outside Unity (any .NET runtime). The engine can be embedded as a module into a Unity application, with sub-engines
+running as separate processes.
 
 ### 15.4 Conformance
 
@@ -1683,7 +1700,7 @@ An implementation claiming RoIS conformance shall:
 OpenRoIS targets full conformance. The interface types are cross-checked against the
 normative XML profiles and validated against `XML-Profiles.xsd` in CI. A conformance
 test suite asserts behavior against the spec's interfaces and profiles, run against
-every BusAdapter.
+every sub-engine.
 
 ---
 
@@ -1692,8 +1709,8 @@ every BusAdapter.
 OpenRoIS demonstrates that the OMG RoIS Framework 2.0 can be implemented as a
 practical, paradigm-neutral middleware with clean developer experience. The key
 insight is that the spec's separation of message from transport enables a single
-`BusAdapter` contract to decouple the engine from ROS 2, in-process runtimes, gRPC
-services, and any future paradigm. Adding a new paradigm is an additive adapter,
+`SubEngine` interface to decouple the engine from ROS 2, virtual avatars, AI
+services, and any future paradigm. Adding a new paradigm is an additive sub-engine,
 never a rewrite.
 
 The single-source-of-truth type pipeline (Python Pydantic to JSON Schema to C# and
@@ -1701,10 +1718,10 @@ TypeScript) keeps three language stacks consistent without manual synchronizatio
 The JSON-RPC 2.0 wire protocol over WebSocket provides a browser-native, NAT-friendly
 control plane with full async event support. The three SDKs (C# for Unity,
 TypeScript for web, Python for scripting) expose identical behavior regardless of the
-host paradigm behind the gateway.
+host paradigm behind the engine.
 
-The project is in alpha. The interfaces layer is complete. The engine, gateway, bus
-adapters, components, and SDKs are under construction. Researchers and engineers
+The project is in alpha. The interfaces layer is complete. The engine, sub-engines,
+components, and SDKs are under construction. Researchers and engineers
 evaluating RoIS 2.0 can use OpenRoIS as a reference implementation, contribute
 reference components, or build applications against the SDK today.
 

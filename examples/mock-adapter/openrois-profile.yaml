@@ -1,6 +1,6 @@
 # Mock adapter profile for testing without a real robot.
 
-fleet_id: mock_robot
+engine_id: mock_robot
 
 connection:
   ws:

@@ -61,7 +61,7 @@ class EventEmitter:
         Called by the framework when the avatar sends rois.event.subscribe.
 
         Args:
-            component_ref: The component ref (without fleet_id prefix).
+            component_ref: The component ref (without engine_id prefix).
             event_type: The event type name.
 
         Returns:
@@ -125,7 +125,7 @@ class EventEmitter:
         this is a no-op.
 
         Args:
-            component_ref: The component ref (without fleet_id prefix).
+            component_ref: The component ref (without engine_id prefix).
             event_type: The event type name.
             results: The event payload as a list of Result models.
         """
@@ -169,7 +169,7 @@ class EventEmitter:
         Use emit() from sync context (e.g., rclpy callbacks).
 
         Args:
-            component_ref: The component ref (without fleet_id prefix).
+            component_ref: The component ref (without engine_id prefix).
             event_type: The event type name.
             results: The event payload as a list of Result models.
         """
