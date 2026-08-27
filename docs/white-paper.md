@@ -307,11 +307,14 @@ flowchart TB
     end
 ```
 
-When acting as the **main engine** (gateway), the `ComponentRegistry` is empty and
-the sub-engine registry holds child engines connected over WebSocket. When acting
-as a **sub-engine** (adapter), the sub-engine registry is empty and the
-`ComponentRegistry` holds local components. The design supports nesting (child
-engines with their own child engines), but this is not used today.
+When acting as the **main engine** (gateway), the sub-engine registry typically
+holds child engines connected over WebSocket. The `ComponentRegistry` may also be
+populated with local components (e.g., cloud perception components running in the
+same process). When acting as a **sub-engine** (adapter), the `ComponentRegistry`
+typically holds local components. The sub-engine registry may also be populated
+with nested child engines (supported by design but not used in current
+deployments). The design supports nesting, but only the main engine and one level
+of sub-engines are used today.
 
 ### 4.2 Processes are compositions
 
@@ -319,7 +322,7 @@ engines with their own child engines), but this is not used today.
 flowchart TB
     subgraph Gateway["Gateway Process"]
         direction TB
-        EngineG["Engine (main)<br/>child engines, no local components"]
+        EngineG["Engine (main)<br/>child engines, optional local components"]
         WsServer["WsServer<br/>WebSocket + JSON-RPC"]
         Api["Api<br/>REST, health, management"]
         Auth["Auth<br/>JWT, RBAC (future)"]
@@ -380,8 +383,8 @@ The adapter process owns three concerns:
    `connect()` and torn down in `disconnect()`.
 
 The adapter is an engine. It dispatches RoIS calls to its local components. It
-does not route calls between sub-engines (its sub-engine registry is empty). It
-registers with the parent engine over WebSocket.
+typically does not route calls between sub-engines (its sub-engine registry is
+typically empty). It registers with the parent engine over WebSocket.
 
 ---
 
@@ -433,7 +436,7 @@ The engine has zero media imports, zero WebRTC imports, and zero references to
 ROS, DDS, gRPC, or any game engine. The control plane is WebSocket + JSON-RPC
 2.0, no alternatives. Media and other data-plane traffic flows directly between
 the publisher and the consumer, outside the gateway. The engine is a pure
-control-plane router when acting as the main engine.
+control-plane router when acting as the main engine without local components.
 
 ### 5.1 Mapping RoIS concepts to OpenRoIS layers
 
@@ -1483,14 +1486,20 @@ flowchart TB
     Adapter2 --> Robot2["Service Robot 2"]
 ```
 
-### 10.4 Topology D: Cloud perception (separate adapter)
+### 10.4 Topology D: Cloud perception (separate adapter or local components)
 
 Perception components (PersonDetection, SpeechRecognition) may need more compute
-than the robot has. These run as a **separate adapter process** with its own
-profile, connecting to the gateway over WebSocket like any other adapter. The
-components run on the adapter (the translation layer) and connect to cloud-based
-implementations (GPU inference services, TTS/STT APIs). The gateway is always a
-pure router. It never hosts components directly.
+than the robot has. These can run in two ways:
+
+1. **As a separate adapter process** with its own profile, connecting to the
+   gateway over WebSocket like any other adapter. The components run on the
+   adapter (the translation layer) and connect to cloud-based implementations
+   (GPU inference services, TTS/STT APIs).
+2. **As local components in the gateway process**. The main engine's
+   `ComponentRegistry` is populated with perception components. No separate
+   process is needed. This is simpler for small deployments.
+
+In both cases, the gateway routes RoIS calls to the right component.
 
 ```mermaid
 flowchart TB
@@ -1498,7 +1507,7 @@ flowchart TB
     App -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| GW
 
     subgraph Cloud["Gateway Host (cloud)"]
-        GW["Gateway<br/>(pure router)"]
+        GW["Gateway"]
     end
 
     GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| PerceptionAdapter["Perception Adapter<br/>(separate process, own profile)"]
@@ -1508,10 +1517,11 @@ flowchart TB
     RobotAdapter --> Robot["Service Robot<br/>(gRPC, ROS 2, etc.)<br/>Implementation Layer"]
 ```
 
-The gateway is a pure router in all topologies. Cloud perception is a separate
-adapter process, not a `runtime` field in a robot's profile. The service application
-does not know or care where a component's implementation lives: `search()` returns
-components from all adapters, and `bind()` / `execute()` work identically.
+The gateway routes RoIS calls in all topologies. Cloud perception can be a
+separate adapter process or local components in the gateway, not a `runtime`
+field in a robot's profile. The service application does not know or care where
+a component's implementation lives: `search()` returns components from all
+adapters and local components, and `bind()` / `execute()` work identically.
 
 ---
 

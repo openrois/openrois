@@ -138,20 +138,25 @@ Logical Layer (control plane)
 
 The **engine** is a recursive unit, not a process. It is a Python library that
 manages components and routes RoIS calls to child engines. The same engine class
-is used by both the gateway and the adapter. The difference is what is populated:
+is used by both the gateway and the adapter. The engine has two registries: a
+`ComponentRegistry` for local components and a sub-engine registry for child
+engines. Both can be populated. The difference between gateway and adapter is
+what is typically populated, not what is allowed:
 
-- **Gateway (main engine)**: the engine has child engines (sub-engines connected
+- **Gateway (main engine)**: typically has child engines (sub-engines connected
   over WebSocket). It routes RoIS calls to the child engine that owns the target
-  component. It aggregates profiles from all child engines. It has no local
-  components.
-- **Adapter (sub-engine)**: the engine has local components (registered via
+  component. It aggregates profiles from all child engines. It may also have
+  local components (e.g., cloud perception components running in the same
+  process).
+- **Adapter (sub-engine)**: typically has local components (registered via
   `ComponentRegistry`). It routes RoIS calls to local component handlers. It
-  registers with the parent engine (the gateway) over WebSocket. It has no child
-  engines.
+  registers with the parent engine (the gateway) over WebSocket. It may also
+  have child engines (nested sub-engines, supported by design but not used in
+  current deployments).
 
 The design supports nesting (child engines with their own child engines), but
 this is not used today. Only the main engine and one level of sub-engines are
-supported.
+used in current deployments.
 
 The **gateway** is the process that hosts the main engine and faces the network.
 It provides the WebSocket server that clients and sub-engines connect to.
@@ -218,7 +223,7 @@ The engine has zero media imports, zero WebRTC imports, and zero references
 to ROS, DDS, gRPC, or any game engine. The control plane is WebSocket + JSON-RPC
 2.0, no alternatives. Media and other data-plane traffic flows directly between
 the publisher and the consumer, outside the gateway. The engine is a pure
-control-plane router.
+control-plane router when acting as the main engine without local components.
 
 ---
 
@@ -233,7 +238,7 @@ layers align with the RoIS specification.
 | RoIS layer | What the MVP provides | What it proves |
 |-----------|----------------------|----------------|
 | Interfaces | Transport-independent types authored in Python, generated to TypeScript and C# | The single-source-of-truth type pipeline works across three languages |
-| Engine (main) | A WebSocket server that routes JSON-RPC 2.0 calls, aggregates sub-engine profiles, broadcasts profile changes | The engine is a pure router with zero paradigm-specific imports |
+| Engine (main) | A WebSocket server that routes JSON-RPC 2.0 calls, aggregates sub-engine profiles, broadcasts profile changes | The engine is a pure router with zero paradigm-specific imports when acting as the main engine without local components |
 | Client SDK | A TypeScript SDK exposing the five RoIS interfaces over WebSocket | The SDK is paradigm-neutral: it does not know what robot is behind the gateway |
 | Service application | A web application that connects to the gateway, fetches the profile, and renders a dynamic UI for every discovered component | Profile-driven discovery works: the same application works for any gateway without hardcoded component names |
 | Adapter SDK | A Python framework with decorators for component, query, invoke, and subscribe handlers | The adapter pattern works: a thin container that registers components and routes JSON-RPC |
@@ -345,20 +350,25 @@ the profile automatically. No polling needed.
 
 The engine is a **recursive unit**. It manages components and routes RoIS calls
 to child engines. The same engine class is used by both the gateway and the
-adapter:
+adapter. The engine has two registries: a `ComponentRegistry` for local
+components and a sub-engine registry for child engines. Both can be populated.
+The difference between gateway and adapter is what is typically populated,
+not what is allowed:
 
-- **Gateway**: the engine has child engines (sub-engines connected over
+- **Gateway**: typically has child engines (sub-engines connected over
   WebSocket). It routes RoIS calls to the child engine that owns the target
-  component. It aggregates profiles from all child engines. It has no local
-  components.
-- **Adapter**: the engine has local components (registered via
+  component. It aggregates profiles from all child engines. It may also have
+  local components (e.g., cloud perception components running in the same
+  process).
+- **Adapter**: typically has local components (registered via
   `ComponentRegistry`). It routes RoIS calls to local component handlers. It
-  registers with the parent engine (the gateway) over WebSocket. It has no
-  child engines.
+  registers with the parent engine (the gateway) over WebSocket. It may also
+  have child engines (nested sub-engines, supported by design but not used in
+  current deployments).
 
 The design supports nesting (child engines with their own child engines), but
 this is not used today. Only the main engine and one level of sub-engines are
-supported.
+used in current deployments.
 
 The engine handles: RoIS method dispatch, profile aggregation, bind/release
 tracking, event subscription routing. The gateway provides the WebSocket server.
@@ -736,14 +746,23 @@ flowchart TB
     SubEngine2 --> Robot2["Service Robot 2"]
 ```
 
-### D. Cloud perception (separate sub-engine)
+### D. Cloud perception (separate sub-engine or local components)
 
 Perception components (PersonDetection, SpeechRecognition) may need more compute
-than the robot has. These run as a **separate sub-engine process** with its own
-profile, connecting to the gateway over WebSocket like any other sub-engine. The
-components run on the sub-engine (the translation layer) and connect to
-cloud-based implementations (GPU inference services, TTS/STT APIs). The gateway
-is always a pure router. It never hosts components directly.
+than the robot has. These can run in two ways:
+
+1. **As a separate sub-engine process** with its own profile, connecting to the
+gateway over WebSocket like any other sub-engine. The gateway routes RoIS calls to
+this sub-engine. The components connect to cloud-based implementations (GPU
+inference services, TTS/STT APIs).
+2. **As local components in the gateway process**. The main engine's
+`ComponentRegistry` is populated with perception components. No separate process
+is needed. This is simpler for small deployments.
+
+In both cases, the gateway routes RoIS calls to the right component. The service
+application does not know or care where a component's implementation lives:
+`search()` returns components from all sub-engines and local components, and
+`bind()` / `execute()` work identically.
 
 ```mermaid
 flowchart TB
@@ -751,7 +770,7 @@ flowchart TB
     App -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| GW
 
     subgraph Cloud["Gateway Host (cloud)"]
-        GW["Gateway<br/>(pure router)"]
+        GW["Gateway"]
     end
 
     GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| PerceptionSubEngine["Perception Sub-engine<br/>(separate process, own profile)"]
@@ -761,11 +780,11 @@ flowchart TB
     RobotSubEngine --> Robot["Service Robot<br/>(gRPC, ROS 2, etc.)<br/>Implementation Layer"]
 ```
 
-The gateway is a pure router in all topologies. Cloud perception is a separate
-sub-engine process, not a `runtime` field in a robot's profile. The service
-application does not know or care where a component's implementation lives:
-`search()` returns components from all sub-engines, and `bind()` / `execute()`
-work identically.
+The gateway routes RoIS calls in all topologies. Cloud perception can be a
+separate sub-engine process or local components in the gateway, not a `runtime`
+field in a robot's profile. The service application does not know or care where
+a component's implementation lives: `search()` returns components from all
+sub-engines and local components, and `bind()` / `execute()` work identically.
 
 ---
 
