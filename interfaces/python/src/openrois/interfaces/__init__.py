@@ -14,9 +14,9 @@ Modules:
 """
 
 from openrois.interfaces.bus import (
-    BusAdapter,
     BusAdapterError,
     CommandRequest,
+    ComponentContract,
     ComponentNotFoundError,
     DiscoverRequest,
     DiscoverResponse,
@@ -116,11 +116,11 @@ __all__ = [
     "NotifyErrorEvent",
     "NotifyEventPayload",
     # Bus
-    "BusAdapter",
     "BusAdapterError",
     "CommandId",
     "CommandRequest",
     "CommandType",
+    "ComponentContract",
     "ComponentNotFoundError",
     "DiscoverRequest",
     "DiscoverResponse",

@@ -1,13 +1,14 @@
-"""Transport-neutral bus adapter contract for OpenRoIS.
+"""Transport-neutral component contract for OpenRoIS.
 
-This module defines the BusAdapter protocol — the only boundary the RoIS engine
-and gateway depend on. Every concrete bus (in-process, ROS 2, gRPC, WebSocket,
-etc.) implements this four-method contract:
+This module defines the ComponentContract protocol — the only boundary the RoIS
+engine and gateway depend on. Every concrete bus (in-process, ROS 2, gRPC,
+WebSocket, etc.) implements this five-method contract:
 
     discover  -> CommandIF.search
     invoke    -> CommandIF.bind/set_parameter/execute/start/stop/suspend/resume
     query     -> QueryIF.query / RoIS_Common.component_status
     subscribe -> EventIF.subscribe (async push via EventSink)
+    unsubscribe -> EventIF.unsubscribe
 
 The contract is intentionally transport-agnostic. No ROS, DDS, gRPC, WebSocket,
 or socket symbols appear here.
@@ -45,7 +46,7 @@ from openrois.interfaces.service import CompletedStatus, ErrorType
 # Type aliases
 # ---------------------------------------------------------------------------
 
-# Async callback that receives event envelopes from a BusAdapter.
+# Async callback that receives event envelopes from a ComponentContract.
 # The sink is invoked by the adapter whenever an event matching a subscription
 # occurs. The engine or gateway layer dispatches the generic envelope to typed
 # handlers (notify_event, notify_error, completed, notify_stream_status).
@@ -58,7 +59,7 @@ type EventSink = Callable[[EventEnvelope], Awaitable[None]]
 
 
 class BusAdapterError(Exception):
-    """Base exception raised by BusAdapter implementations."""
+    """Base exception raised by ComponentContract implementations."""
 
     def __init__(self, message: str, return_code: ReturnCode = ReturnCode.ERROR) -> None:
         super().__init__(message)
@@ -106,7 +107,7 @@ class DiscoverResponse(BaseModel):
 
 
 class CommandRequest(BaseModel):
-    """Generic command request sent via BusAdapter.invoke().
+    """Generic command request sent via ComponentContract.invoke().
 
     Carries the same information as a CommandUnit plus the target component_ref.
     Typed component models (e.g., NavigationSetParameter) serialize their fields
@@ -132,7 +133,7 @@ class CommandRequest(BaseModel):
 
 
 class InvokeResponse(BaseModel):
-    """Response from BusAdapter.invoke()."""
+    """Response from ComponentContract.invoke()."""
 
     model_config = {"frozen": True, "extra": "forbid"}
 
@@ -148,7 +149,7 @@ class InvokeResponse(BaseModel):
 
 
 class QueryRequest(BaseModel):
-    """Generic query request sent via BusAdapter.query().
+    """Generic query request sent via ComponentContract.query().
 
     Maps to QueryIF.query(query_type, condition, results) and
     RoIS_Common.component_status(status).
@@ -165,7 +166,7 @@ class QueryRequest(BaseModel):
 
 
 class QueryResponse(BaseModel):
-    """Response from BusAdapter.query()."""
+    """Response from ComponentContract.query()."""
 
     model_config = {"frozen": True, "extra": "forbid"}
 
@@ -193,7 +194,7 @@ class SubscribeRequest(BaseModel):
 
 
 class SubscribeResponse(BaseModel):
-    """Response from BusAdapter.subscribe()."""
+    """Response from ComponentContract.subscribe()."""
 
     model_config = {"frozen": True, "extra": "forbid"}
 
@@ -212,7 +213,7 @@ class SubscribeResponse(BaseModel):
 class EventEnvelope(BaseModel):
     """Generic event envelope delivered to an EventSink.
 
-    The BusAdapter emits this for every async notification: component events,
+    The ComponentContract emits this for every async notification: component events,
     command completion, errors, and stream status changes. The engine/gateway
     inspects event_type and dispatches to the appropriate ServiceApplicationBase
     callback.
@@ -261,20 +262,22 @@ class EventEnvelope(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# BusAdapter protocol
+# ComponentContract protocol
 # ---------------------------------------------------------------------------
 
 
 @runtime_checkable
-class BusAdapter(Protocol):
+class ComponentContract(Protocol):
     """Transport-neutral contract between the RoIS engine and a concrete bus.
 
     Implementations include:
+      - SubEngine (remote adapter via WebSocket JSON-RPC)
+      - ComponentRegistry (local components in-process)
       - UniversalBusAdapter  (M1, WS+JSON-RPC for non-ROS hosts)
       - ROS2BusAdapter        (M3)
       - RosBridgeBusAdapter   (future)
 
- * The contract is intentionally limited to five async methods. Adapters must
+    The contract is intentionally limited to five async methods. Adapters must
     not leak transport-specific types through these signatures.
     """
 

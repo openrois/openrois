@@ -7,8 +7,9 @@ Derived from:
 Component URN: urn:x-rois:def:component:OMG::SystemInformation
 
 SystemInformation is unique among basic components: it does NOT inherit
-from RoIS_Common (no start/stop/suspend/resume, no component_status).
-It only has Query operations: robot_position and engine_status.
+from RoIS_Common::Command (no start/stop/suspend/resume). It does inherit
+from RoIS_Common::Query, so it has component_status() plus its own
+robot_position and engine_status queries.
 """
 
 from __future__ import annotations

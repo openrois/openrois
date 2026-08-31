@@ -1,6 +1,6 @@
-"""Tests for the BusAdapter protocol contract.
+"""Tests for the ComponentContract protocol contract.
 
-These tests verify that the BusAdapter Protocol is well-formed, can be
+These tests verify that the ComponentContract Protocol is well-formed, can be
 implemented by dummy classes, and rejects incomplete implementations. They also
 verify that the contract module remains transport-neutral.
 """
@@ -8,8 +8,8 @@ verify that the contract module remains transport-neutral.
 from typing import Protocol
 
 from openrois.interfaces.bus import (
-    BusAdapter,
     CommandRequest,
+    ComponentContract,
     DiscoverRequest,
     DiscoverResponse,
     EventEnvelope,
@@ -28,8 +28,8 @@ from openrois.interfaces.hri import ReturnCode
 # ---------------------------------------------------------------------------
 
 
-class CompleteBusAdapter:
-    """A minimal valid BusAdapter implementation."""
+class CompleteComponentContract:
+    """A minimal valid ComponentContract implementation."""
 
     async def discover(self, request: DiscoverRequest) -> DiscoverResponse:
         return DiscoverResponse(component_ref_list=["dummy/pd"])
@@ -51,7 +51,7 @@ class CompleteBusAdapter:
         return ReturnCode.OK
 
 
-class IncompleteBusAdapter:
+class IncompleteComponentContract:
     """Missing invoke and subscribe — should fail protocol checks."""
 
     async def discover(self, request: DiscoverRequest) -> DiscoverResponse:
@@ -66,22 +66,22 @@ class IncompleteBusAdapter:
 # ---------------------------------------------------------------------------
 
 
-class TestBusAdapterProtocol:
+class TestComponentContractProtocol:
     def test_complete_adapter_is_instance(self) -> None:
-        adapter = CompleteBusAdapter()
-        assert isinstance(adapter, BusAdapter)
+        adapter = CompleteComponentContract()
+        assert isinstance(adapter, ComponentContract)
 
     def test_incomplete_adapter_is_not_instance(self) -> None:
-        adapter = IncompleteBusAdapter()
-        assert not isinstance(adapter, BusAdapter)
+        adapter = IncompleteComponentContract()
+        assert not isinstance(adapter, ComponentContract)
 
     def test_protocol_is_runtime_checkable(self) -> None:
-        # BusAdapter inherits from Protocol, which is runtime_checkable by default
+        # ComponentContract inherits from Protocol, which is runtime_checkable by default
         # for Protocol subclasses with only method signatures.
-        assert issubclass(BusAdapter, Protocol)
+        assert issubclass(ComponentContract, Protocol)
 
     def test_complete_adapter_methods_are_callable(self) -> None:
-        adapter = CompleteBusAdapter()
+        adapter = CompleteComponentContract()
         assert callable(adapter.discover)
         assert callable(adapter.invoke)
         assert callable(adapter.query)
@@ -117,12 +117,12 @@ class TestTransportNeutrality:
         found = forbidden & imported_names
         assert not found, f"Transport-specific imports found in bus.py: {found}"
 
-    def test_bus_adapter_signature_has_no_transport_types(self) -> None:
-        """BusAdapter methods only use types from openrois.interfaces.bus."""
+    def test_component_contract_signature_has_no_transport_types(self) -> None:
+        """ComponentContract methods only use types from openrois.interfaces.bus."""
         import inspect
 
         for name in ("discover", "invoke", "query", "subscribe"):
-            sig = inspect.signature(getattr(BusAdapter, name))
+            sig = inspect.signature(getattr(ComponentContract, name))
             for param in sig.parameters.values():
                 annotation = param.annotation
                 assert "rclpy" not in str(annotation).lower()
@@ -141,8 +141,8 @@ class TestEventSink:
         async def sink(envelope: EventEnvelope) -> None:
             pass
 
-        # The real check: a CompleteBusAdapter accepts it as subscribe(sink=...)
-        adapter = CompleteBusAdapter()
+        # The real check: a CompleteComponentContract accepts it as subscribe(sink=...)
+        adapter = CompleteComponentContract()
         import inspect
 
         sig = inspect.signature(adapter.subscribe)

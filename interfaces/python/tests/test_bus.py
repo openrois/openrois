@@ -1,4 +1,4 @@
-"""Tests for openrois.interfaces.bus — BusAdapter request/response/event models."""
+"""Tests for openrois.interfaces.bus — ComponentContract request/response/event models."""
 
 import pytest
 from pydantic import ValidationError
