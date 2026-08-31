@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openrois-components-core"
+version = "0.1.0a2"
+description = "OpenRoIS component framework: decorators, metadata, result builders"
+license = "Apache-2.0"
+requires-python = ">=3.12"
+dependencies = [
+    "openrois-interfaces>=0.1.0a2",
+]
+
+[tool.setuptools.packages.find]
+include = ["openrois_components_core*"]

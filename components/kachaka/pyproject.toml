@@ -5,7 +5,7 @@ description = "OpenRoIS components for the Kachaka robot"
 license = "Apache-2.0"
 requires-python = ">=3.12"
 dependencies = [
-    "openrois-sdk",
+    "openrois-components-core>=0.1.0a2",
 ]
 
 [project.optional-dependencies]
@@ -14,7 +14,7 @@ ros2 = ["rclpy"]
 
 [build-system]
 requires = ["setuptools>=64"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["openrois_components.*"]

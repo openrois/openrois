@@ -1,13 +1,14 @@
 """Navigation component for the Kachaka robot (gRPC API).
 
 Translates RoIS Navigation commands to Kachaka gRPC calls:
-- execute: move_to_location() with the target location name.
-- stop: cancel_command().
+- set_parameter: set target_positions, time_limit, routing_policy.
+- start: begin navigating to the set target (move_to_location).
+- stop: cancel the current navigation command.
 - component_status: poll get_command_state().
 - reached_target event: poll command state and fire when completed.
 
-The component owns its own state. It accesses the shared gRPC client
-via self.parent._client, which the adapter creates in connect().
+The component owns its own gRPC client, created in connect() and torn
+down in disconnect(). No dependency on the adapter for shared state.
 """
 
 from __future__ import annotations
@@ -18,14 +19,13 @@ import logging
 
 from openrois.interfaces.bus import InvokeResponse
 from openrois.interfaces.hri import ReturnCode, Result
-from openrois.sdk import component, invoke, query, results, subscribe
+from openrois_components_core import component, invoke, query, results, subscribe
 
 logger = logging.getLogger(__name__)
 
 
 @component(
     "Navigation",
-    bind_required=True,
     parameters=[
         {"name": "target_positions", "data_type_ref": "string[]",
          "description": "navigation target positions"},
@@ -41,12 +41,40 @@ class GrpcNavigation:
     """Canonical RoIS Navigation component backed by Kachaka gRPC motion."""
 
     def __init__(self, config: dict) -> None:
+        self._grpc_server = config.get(
+            "grpc_server", "192.168.1.100:26400",
+        )
+        self._auto_homing = config.get("auto_homing", False)
         self._poll_interval = config.get("poll_interval", 0.5)
         self._nav_busy = False
         self._nav_target = ""
         self._time_limit = 0
         self._routing_policy = "time"
         self._locations_cache: list | None = None
+        self._client = None
+        self._pb2 = None
+        self._connected = False
+
+    async def connect(self) -> None:
+        """Create the gRPC client and connect to the Kachaka robot."""
+        from kachaka_api.aio import KachakaApiClient
+        from kachaka_api.generated import kachaka_api_pb2 as pb2
+
+        self._client = KachakaApiClient(target=self._grpc_server)
+        self._pb2 = pb2
+        await self._client.update_resolver()
+        await self._client.set_auto_homing_enabled(self._auto_homing)
+        self._connected = True
+        logger.info(
+            "Navigation connected to Kachaka at %s",
+            self._grpc_server,
+        )
+
+    async def disconnect(self) -> None:
+        """Tear down the gRPC client."""
+        self._connected = False
+        self._client = None
+        self._pb2 = None
 
     @query("get_parameter")
     async def get_parameter(self):
@@ -56,7 +84,7 @@ class GrpcNavigation:
             Result(
                 name="target_positions",
                 data_type_ref="string[]",
-                value=json.dumps(target_positions),
+                value=json.dumps(target_positions, ensure_ascii=False),
             ),
             Result(
                 name="time_limit",
@@ -96,18 +124,20 @@ class GrpcNavigation:
 
     @query("component_status")
     async def status(self):
-        """Return READY when idle, BUSY when a command is running."""
-        state, _ = await self.parent._client.get_command_state()
-        if state == self.parent._pb2.CommandState.COMMAND_STATE_RUNNING:
+        """Return READY when idle, BUSY when a command is running, ERROR if disconnected."""
+        if not self._connected or self._client is None:
+            return results.status("ERROR")
+        state, _ = await self._client.get_command_state()
+        if state == self._pb2.CommandState.COMMAND_STATE_RUNNING:
             return results.status("BUSY")
         return results.status("READY")
 
-    @invoke("execute")
-    async def navigate(self, parameters):
-        """Send a move_to_location command to the Kachaka robot.
+    @invoke("start")
+    async def start(self, parameters):
+        """Begin navigating to the target set via set_parameter.
 
-        Uses the target set via set_parameter. If parameters are
-        passed directly, parses target_positions from them by name.
+        If target_positions are passed directly in parameters, parse
+        them by name. Otherwise use the target stored by set_parameter.
         """
         if self._nav_busy:
             return InvokeResponse(
@@ -137,7 +167,7 @@ class GrpcNavigation:
             )
         # Resolve location by name or ID.
         if not self._locations_cache:
-            locations = await self.parent._client.get_locations()
+            locations = await self._client.get_locations()
             self._locations_cache = list(locations)
         loc = next(
             (l for l in self._locations_cache if l.name == target or l.id == target),
@@ -147,7 +177,7 @@ class GrpcNavigation:
             return InvokeResponse(
                 return_code=ReturnCode.BAD_PARAMETER, command_id="",
             )
-        await self.parent._client.move_to_location(
+        await self._client.move_to_location(
             loc.id, wait_for_completion=False,
         )
         self._nav_busy = True
@@ -160,8 +190,8 @@ class GrpcNavigation:
 
     @invoke("stop")
     async def stop(self, parameters):
-        """Cancel the current motion command."""
-        await self.parent._client.cancel_command()
+        """Cancel the current navigation command."""
+        await self._client.cancel_command()
         self._nav_busy = False
         return InvokeResponse(return_code=ReturnCode.OK, command_id="")
 
@@ -180,16 +210,16 @@ class GrpcNavigation:
         was_running = False
         while True:
             await asyncio.sleep(self._poll_interval)
-            state, _ = await self.parent._client.get_command_state()
+            state, _ = await self._client.get_command_state()
             is_running = (
-                state == self.parent._pb2.CommandState.COMMAND_STATE_RUNNING
+                state == self._pb2.CommandState.COMMAND_STATE_RUNNING
             )
             if is_running:
                 was_running = True
             elif was_running:
                 self._nav_busy = False
                 result, _ = (
-                    await self.parent._client.get_last_command_result()
+                    await self._client.get_last_command_result()
                 )
                 target_name = self._nav_target
                 await self.parent.emit_async(

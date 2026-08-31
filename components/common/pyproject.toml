@@ -4,11 +4,11 @@ version = "0.1.0"
 description = "Common component helpers and reference components for OpenRoIS adapters"
 license = "Apache-2.0"
 requires-python = ">=3.12"
-dependencies = ["openrois-sdk"]
+dependencies = ["openrois-components-core>=0.1.0a2"]
 
 [build-system]
 requires = ["setuptools>=64"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["openrois_components.*"]

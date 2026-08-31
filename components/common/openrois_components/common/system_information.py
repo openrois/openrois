@@ -5,17 +5,19 @@ need a SystemInformation component during development but do not yet
 have a real robot connection. Also serves as a template for
 platform-specific SystemInformation implementations.
 
-SystemInformation does not inherit RoIS_Common (no start/stop/suspend/
-resume). It is a read-only status reporter per the RoIS specification.
+SystemInformation does not inherit RoIS_Common::Command (no start/stop/
+suspend/resume). It inherits RoIS_Common::Query (component_status) and
+adds robot_position and engine_status. It is a read-only status reporter
+per the RoIS specification.
 """
 
 from __future__ import annotations
 
 from openrois.interfaces.hri import Result
-from openrois.sdk import component, query, results
+from openrois_components_core import component, query, results
 
 
-@component("SystemInformation", bind_required=False)
+@component("SystemInformation")
 class MockSystemInformation:
     """Mock SystemInformation returning fixed position and status.
 
