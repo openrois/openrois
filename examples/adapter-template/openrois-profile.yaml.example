@@ -1,44 +1,12 @@
 # Adapter profile for the OpenRoIS adapter template.
 #
-# Copy to openrois-profile.yaml and edit. The adapter reads this file at startup
-# and sends the component list to the avatar via registration.
-#
-# The engine_id becomes the component_ref prefix. Operators see
-# "robot_1/Navigation", not bare "Navigation".
+# Copy to openrois-profile.yaml and edit.
 
-engine_id: robot_1
+engine:
+  id: robot_1
+  platform: generic
+  gateway_url: "ws://127.0.0.1:8765"
 
-# Connection to the avatar's WebSocket server.
-connection:
-  ws:
-    host: "127.0.0.1"
-    port: 8765
+environment: {}
 
-# Component declarations. The adapter registers these with the avatar.
-# bind_required controls whether the operator must bind before execute.
-components:
-  - ref: "SystemInformation"
-    type: standard
-    bind_required: false
-    queries: [robot_position, engine_status]
-
-  - ref: "Navigation"
-    type: standard
-    bind_required: true
-    commands: [start, stop, suspend, resume, set_parameter, execute]
-    queries: [component_status, get_parameter]
-    events: [reached_target]
-
-  - ref: "PersonDetection"
-    type: standard
-    bind_required: false
-    commands: [start, stop, suspend, resume]
-    queries: [component_status]
-    events: [person_detected]
-
-  - ref: "ObjectManipulation"
-    type: custom
-    bind_required: true
-    commands: [execute, stop]
-    queries: [component_status, gripper_state, current_grasped_object]
-    events: [manipulation_complete]
+components: {}

@@ -1,35 +1,8 @@
 # Mock adapter profile for testing without a real robot.
 
-engine_id: mock_robot
+engine:
+  id: mock_robot
+  platform: mock
+  gateway_url: "ws://127.0.0.1:8765"
 
-connection:
-  ws:
-    host: "127.0.0.1"
-    port: 8765
-
-components:
-  - ref: "SystemInformation"
-    type: standard
-    bind_required: false
-    queries: [robot_position, engine_status]
-
-  - ref: "Navigation"
-    type: standard
-    bind_required: true
-    commands: [start, stop, suspend, resume, set_parameter, execute]
-    queries: [component_status, get_parameter]
-    events: [reached_target]
-
-  - ref: "PersonDetection"
-    type: standard
-    bind_required: false
-    commands: [start, stop, suspend, resume]
-    queries: [component_status]
-    events: [person_detected]
-
-  - ref: "ObjectManipulation"
-    type: custom
-    bind_required: true
-    commands: [execute, stop]
-    queries: [component_status, gripper_state, current_grasped_object]
-    events: [manipulation_complete]
+components: {}

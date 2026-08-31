@@ -3,10 +3,9 @@ import type { RoISClient } from "@openrois/sdk";
 import type { HRIEngineProfileType } from "@openrois/interfaces";
 
 /**
- * Fetch the HRI Engine Profile on connect.
- *
- * Calls rois.system.get_profile and returns the parsed profile,
- * including component_profiles (if the engine supports them).
+ * Fetch the HRI Engine Profile on connect, and re-fetch when
+ * the engine broadcasts a profile_changed notification (e.g.
+ * when an adapter registers or disconnects).
  */
 export function useProfile(client: RoISClient | null): {
   profile: HRIEngineProfileType | null;
@@ -14,14 +13,25 @@ export function useProfile(client: RoISClient | null): {
 } {
   const [profile, setProfile] = useState<HRIEngineProfileType | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
+  // Listen for profile_changed notifications from the engine.
+  // The SDK emits method-name events for all JSON-RPC notifications.
+  useEffect(() => {
+    if (!client) return;
+    const handler = () => setRefreshKey((k) => k + 1);
+    client.on("rois.system.profile_changed", handler);
+    return () => {
+      client.off("rois.system.profile_changed", handler);
+    };
+  }, [client]);
+
+  // Fetch (or re-fetch) the profile.
   useEffect(() => {
     if (!client) return;
     client
       .getProfile()
       .then((result) => {
-        // RoISClient.getProfile() returns the raw response: { return_code, profile }.
-        // Extract the profile field from it.
         const raw = result as { return_code?: string; profile?: HRIEngineProfileType };
         if (raw.return_code && raw.return_code !== "OK") {
           setError(`get_profile returned ${raw.return_code}`);
@@ -36,7 +46,7 @@ export function useProfile(client: RoISClient | null): {
         setError(message);
         setProfile(null);
       });
-  }, [client]);
+  }, [client, refreshKey]);
 
   return { profile, error };
 }
