@@ -1,0 +1,6 @@
+pyproject.toml
+openrois_core.egg-info/PKG-INFO
+openrois_core.egg-info/SOURCES.txt
+openrois_core.egg-info/dependency_links.txt
+openrois_core.egg-info/requires.txt
+openrois_core.egg-info/top_level.txt

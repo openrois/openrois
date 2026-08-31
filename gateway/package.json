@@ -1,0 +1,35 @@
+{
+  "name": "@openrois/gateway",
+  "version": "0.1.0-alpha.1",
+  "description": "OpenRoIS Gateway: WebSocket server hosting the recursive Engine, JSON-RPC 2.0 router, adapter registry",
+  "license": "Apache-2.0",
+  "author": "OpenRoIS Community",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.7.0",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.9"
+  }
+}
