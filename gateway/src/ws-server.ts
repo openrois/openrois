@@ -1,4 +1,5 @@
 import { WebSocketServer, WebSocket } from 'ws';
+import type { IncomingMessage } from 'http';
 import { randomUUID } from 'crypto';
 import { Engine } from './engine.js';
 import { SubEngine } from './sub-engine.js';
@@ -8,11 +9,10 @@ import type { EventEnvelope, EventSink } from './types.js';
  * WsServer: one WebSocket server with role-based routing.
  *
  * Sub-engines and clients connect to the same port. The server distinguishes
- * them by the messages they send:
- * - rois.adapter.register (has id + method) -> adapter connection, creates
- *   a SubEngine and registers it with the Engine.
- * - rois.system.* / rois.command.* / rois.query.* / rois.event.* -> client
- *   connection, dispatched to the Engine.
+ * them by URL path:
+ * - /adapter -> adapter connection, discovers the sub-engine via
+ *   rois.command.search and registers it with the Engine.
+ * - / (or any other path) -> client connection, dispatched to the Engine.
  * - JSON-RPC response (has id, no method) -> from adapter, resolving a
  *   pending request in the SubEngine.
  * - JSON-RPC notification (has method, no id) -> from adapter, event push.
@@ -46,9 +46,9 @@ export class WsServer {
       }
     });
 
-    this.wss.on('connection', (ws: WebSocket) => {
-      console.log('[engine] new connection');
-      this.handleConnection(ws);
+    this.wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
+      console.log(`[engine] new connection: ${request.url}`);
+      this.handleConnection(ws, request);
     });
 
     console.log(`[engine] listening on ws://${host}:${port}`);
@@ -93,9 +93,41 @@ export class WsServer {
 
   // ─── Connection handling ─────────────────────────────────────
 
-  private handleConnection(ws: WebSocket): void {
-    let role: 'unknown' | 'adapter' | 'client' = 'unknown';
-    let subEngine: SubEngine | null = null;
+  private handleConnection(ws: WebSocket, request: IncomingMessage): void {
+    // Route by URL path: /adapter connections are sub-engines,
+    // all other paths are clients.
+    const url = request.url ?? '';
+    const isAdapter = url.includes('/adapter');
+
+    if (isAdapter) {
+      this.handleAdapterConnection(ws);
+    } else {
+      this.handleClientConnection(ws);
+    }
+  }
+
+  private async handleAdapterConnection(ws: WebSocket): Promise<void> {
+    const subEngine = new SubEngine(ws);
+
+    try {
+      // Pull the adapter's profile via discover.
+      await subEngine.discoverProfile();
+      this.subEngines.set(ws, subEngine);
+      this.engine.registerSubEngine(
+        subEngine.engineId,
+        subEngine.components,
+        subEngine,
+        subEngine.platform,
+      );
+      this.notifyProfileChanged();
+      console.log(
+        `[engine] adapter "${subEngine.engineId}" connected with ${subEngine.components.length} components`,
+      );
+    } catch (err) {
+      console.error('[engine] adapter discover failed:', err);
+      ws.close();
+      return;
+    }
 
     ws.on('message', (data: Buffer) => {
       try {
@@ -103,40 +135,42 @@ export class WsServer {
         const hasId = typeof msg.id !== 'undefined';
         const hasMethod = typeof msg.method === 'string';
 
-        // ── Adapter registration ──────────────────────────────
-        if (hasId && hasMethod && msg.method === 'rois.adapter.register') {
-          role = 'adapter';
-          subEngine = new SubEngine(ws);
-          subEngine.handleRegister(msg);
-          this.subEngines.set(ws, subEngine);
-          this.engine.registerSubEngine(
-            subEngine.engineId,
-            subEngine.components,
-            subEngine,
-            subEngine.platform,
-          );
-          this.notifyProfileChanged();
-          return;
+        // The SubEngine's own ws listeners handle responses
+        // (has id, no method) and notifications (has method, no id).
+        // We intercept event notifications here to relay to clients.
+        if (!hasId && hasMethod && msg.method === 'rois.event.notify') {
+          this.relayEventToClients(msg.params as Record<string, unknown>);
         }
+      } catch (err) {
+        console.error('[engine] parse error:', err);
+      }
+    });
 
-        // ── Adapter responses and notifications ───────────────
-        if (role === 'adapter' && subEngine) {
-          // The SubEngine's own ws listeners handle responses
-          // (has id, no method) and notifications (has method, no id).
-          // We intercept event notifications here to relay to clients.
-          if (!hasId && hasMethod && msg.method === 'rois.event.notify') {
-            this.relayEventToClients(msg.params as Record<string, unknown>);
-          }
-          return;
-        }
+    ws.on('close', () => {
+      console.log(`[engine] adapter "${subEngine.engineId}" disconnected`);
+      if (subEngine.engineId) {
+        this.engine.unregisterSubEngine(subEngine.engineId);
+      }
+      this.subEngines.delete(ws);
+      this.notifyProfileChanged();
+    });
 
-        // ── Client messages ────────────────────────────────────
-        if (role === 'unknown') {
-          role = 'client';
-          this.clientSockets.add(ws);
-        }
+    ws.on('error', (err) => {
+      console.error('[engine] ws error:', err);
+    });
+  }
 
-        if (role === 'client' && hasId && hasMethod) {
+  private handleClientConnection(ws: WebSocket): void {
+    this.clientSockets.add(ws);
+    const clientId = (ws as WebSocket & { __clientId?: string }).__clientId ??= randomUUID();
+
+    ws.on('message', (data: Buffer) => {
+      try {
+        const msg = JSON.parse(data.toString()) as Record<string, unknown>;
+        const hasId = typeof msg.id !== 'undefined';
+        const hasMethod = typeof msg.method === 'string';
+
+        if (hasId && hasMethod) {
           // Client JSON-RPC request. Dispatch to the engine.
           const requestId = msg.id as string | number | null;
           const method = msg.method as string;
@@ -167,11 +201,6 @@ export class WsServer {
             ws.send(JSON.stringify(notification));
           };
 
-          // Generate a unique client ID for this connection.
-          // In the future, this will be replaced by the JWT sub claim
-          // when authentication is implemented (Phase 9).
-          const clientId = (ws as WebSocket & { __clientId?: string }).__clientId ??= randomUUID();
-
           this.engine
             .dispatch(method, params, sink, clientId)
             .then((result) => {
@@ -200,7 +229,7 @@ export class WsServer {
         }
 
         // Client unsubscribe notification (has method, no id).
-        if (role === 'client' && !hasId && hasMethod) {
+        if (!hasId && hasMethod) {
           if (msg.method === 'rois.event.unsubscribe') {
             const subscribeId = String(
               (msg.params as Record<string, unknown>)?.subscribe_id ?? '',
@@ -215,26 +244,15 @@ export class WsServer {
     });
 
     ws.on('close', () => {
-      if (role === 'adapter' && subEngine) {
-        console.log(`[engine] adapter "${subEngine.engineId}" disconnected`);
-        if (subEngine.engineId) {
-          this.engine.unregisterSubEngine(subEngine.engineId);
-        }
-        this.subEngines.delete(ws);
-        this.notifyProfileChanged();
+      if (clientId) {
+        this.engine.releaseAll(clientId);
       }
-      if (role === 'client') {
-        const clientId = (ws as WebSocket & { __clientId?: string }).__clientId;
-        if (clientId) {
-          this.engine.releaseAll(clientId);
-        }
-        this.clientSockets.delete(ws);
-        // Clean up this client's subscriptions.
-        for (const [subId, subs] of this.clientSubscriptions) {
-          subs.delete(ws);
-          if (subs.size === 0) {
-            this.clientSubscriptions.delete(subId);
-          }
+      this.clientSockets.delete(ws);
+      // Clean up this client's subscriptions.
+      for (const [subId, subs] of this.clientSubscriptions) {
+        subs.delete(ws);
+        if (subs.size === 0) {
+          this.clientSubscriptions.delete(subId);
         }
       }
     });

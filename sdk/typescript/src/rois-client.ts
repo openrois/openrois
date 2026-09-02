@@ -681,9 +681,17 @@ export class RoISClient extends EventEmitter {
    *   client.transport.on("rois.event.notify", handler)
    */
   private forwardTransportEvents(): void {
-    // Forward all notifications.
+    // Forward all notifications, including method-specific events.
+    // The transport emits both "notification" (generic) and the
+    // notification's method name (e.g. "rois.event.notify") as
+    // separate events. Forward both so callers can listen for
+    // any method name, not just the hardcoded ones below.
     this.transport.on("notification", (notification) => {
       this.emit("notification", notification);
+      // Also emit the method name for targeted listeners.
+      if (notification.method) {
+        this.emit(notification.method, notification);
+      }
     });
 
     // Forward method-specific notification events.

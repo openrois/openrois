@@ -149,7 +149,6 @@ export class Engine {
     sink?: EventSink,
     clientId?: string | null,
   ): Promise<Record<string, unknown>> {
-    console.log(`[engine] ${method}`, JSON.stringify(params), `clientId=${clientId ?? 'null'}`);
     switch (method) {
       case 'rois.system.connect':
         return { return_code: ReturnCode.OK };

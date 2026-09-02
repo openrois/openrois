@@ -3,18 +3,18 @@
 # Usage: docker compose up
 #
 # Services:
-#   engine   - Standalone RoIS HRI Engine (WebSocket server on port 8765)
-#   hub      - Web dashboard (Vite dev server, connects to engine)
-#   adapter  - Mock adapter (registers canned components with engine)
+#   gateway  - OpenRoIS Gateway (WebSocket server on port 8765)
+#   hub      - Web dashboard (Vite dev server, connects to gateway)
+#   adapter  - Mock adapter (registers canned components with gateway)
 #
 # The hub is accessible at http://localhost:3000.
-# The engine WebSocket is at ws://localhost:8765.
+# The gateway WebSocket is at ws://localhost:8765.
 
 services:
-  engine:
+  gateway:
     build:
       context: .
-      dockerfile: engine/Dockerfile
+      dockerfile: gateway/Dockerfile
     ports:
       - "8765:8765"
     environment:
@@ -35,7 +35,7 @@ services:
   #     context: ./examples/mock-adapter
   #     dockerfile: Dockerfile
   #   environment:
-  #     - ENGINE_WS_URL=ws://engine:31166
+  #     - ENGINE_WS_URL=ws://gateway:8765
   #   depends_on:
-  #     - engine
+  #     - gateway
   #   restart: unless-stopped

@@ -3,9 +3,8 @@
 The WsClient connects an adapter (Engine with local components) to a
 gateway over WebSocket. It handles:
 
-- WebSocket connection to the gateway (ws://host:port).
+- WebSocket connection to the gateway (ws://host:port/adapter).
 - Automatic reconnection with exponential backoff.
-- Component registration on each connect (rois.adapter.register).
 - JSON-RPC request/response dispatch to local component handlers.
 - Event emission via EventEmitter (thread-safe emit).
 - rclpy threading: spins ROS 2 nodes in a background thread if rclpy
@@ -14,8 +13,12 @@ gateway over WebSocket. It handles:
 The lifecycle is:
 1. connect_all() on all local components.
 2. Start rclpy executor if any components have nodes.
-3. Enter the reconnect loop: connect -> register -> dispatch.
+3. Enter the reconnect loop: connect -> dispatch.
 4. On disconnect: stop rclpy -> disconnect_all -> connect_all -> restart rclpy.
+
+The gateway discovers the adapter's components via rois.command.search
+when the WebSocket connects. The adapter no longer sends a registration
+message.
 """
 
 from __future__ import annotations
@@ -27,7 +30,6 @@ import threading
 from typing import Any
 
 import websockets
-from openrois.interfaces.hri import ReturnCode
 
 from openrois_core.engine import Engine, EventEmitter
 
@@ -98,7 +100,6 @@ class WsClient:
                     self._ws = ws
                     logger.info("Connected to gateway at %s", self._gateway_url)
 
-                    await self._register()
                     await self._dispatch_loop()
                 except websockets.ConnectionClosed:
                     logger.info("WebSocket closed, reconnecting...")
@@ -144,8 +145,11 @@ class WsClient:
         attempt = 0
         while True:
             try:
-                logger.info("Connecting to %s", self._gateway_url)
-                ws = await websockets.connect(self._gateway_url)
+                url = self._gateway_url
+                if "/adapter" not in url:
+                    url = url.rstrip("/") + "/adapter"
+                logger.info("Connecting to %s", url)
+                ws = await websockets.connect(url)
                 return ws
             except (
                 ConnectionRefusedError,
@@ -167,35 +171,6 @@ class WsClient:
         """Send a raw JSON string over the WebSocket."""
         if self._ws:
             await self._ws.send(msg)
-
-    async def _register(self) -> None:
-        """Send rois.adapter.register with the component list."""
-        components = self._engine.component_registry.get_component_list()
-        msg = {
-            "jsonrpc": "2.0",
-            "id": "reg-1",
-            "method": "rois.adapter.register",
-            "params": {
-                "engine_id": self._engine._engine_id,
-                "platform": self._engine._platform,
-                "components": components,
-            },
-        }
-        await self._ws.send(json.dumps(msg))
-        logger.info(
-            "Registered engine %s (platform: %s) with %d components",
-            self._engine._engine_id,
-            self._engine._platform or "unknown",
-            len(components),
-        )
-
-        # Wait for the registration response.
-        raw = await self._ws.recv()
-        response = json.loads(raw)
-        if response.get("result", {}).get("return_code") != ReturnCode.OK.value:
-            logger.error("Registration failed: %s", response)
-            raise RuntimeError("Adapter registration rejected by gateway")
-        logger.info("Registration accepted")
 
     async def _dispatch_loop(self) -> None:
         """Receive JSON-RPC requests and dispatch to handler methods."""
