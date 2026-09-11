@@ -42,6 +42,16 @@
       "PersonDetectedEvent.schema.json",
       "PersonDetectionStatusResult.schema.json"
     ],
+    "components/person-identification": [
+      "PersonIdentificationStatusResult.schema.json",
+      "PersonIdentifiedEvent.schema.json",
+      "PersonIdentifier.schema.json"
+    ],
+    "components/person-localization": [
+      "PersonLocalizationStatusResult.schema.json",
+      "PersonLocalizedEvent.schema.json",
+      "PersonPosition.schema.json"
+    ],
     "components/navigation": [
       "NavigationGetParameterResult.schema.json",
       "NavigationReachedTargetEvent.schema.json",

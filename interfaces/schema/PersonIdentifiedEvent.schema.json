@@ -1,0 +1,60 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "DateTime": {
+      "type": "string"
+    },
+    "Integer": {
+      "type": "integer"
+    },
+    "PersonIdentifier": {
+      "additionalProperties": false,
+      "description": "Identifier assigned to a single identified person.\n\nAttributes:\n    id: Session-scoped tracking identifier. Not a persistent\n        personal identifier: it is reset when the perception\n        pipeline restarts and may switch under occlusion.\n    name: Optional human-readable name, empty when unknown.",
+      "properties": {
+        "id": {
+          "description": "Session-scoped tracking ID (not persistent)",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "description": "Human-readable name, empty if unknown",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "PersonIdentifier",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Event payload for Person_Identification::Event::person_identified.\n\nAttributes:\n    timestamp: ISO 8601 datetime when the identification was measured.\n    number: Number of identified persons in this observation.\n    identifiers: Identifier assigned to each identified person.\n        These are session-scoped tracking IDs, not persistent\n        personal identities.",
+  "properties": {
+    "timestamp": {
+      "$ref": "#/$defs/DateTime",
+      "description": "Time when measured"
+    },
+    "number": {
+      "$ref": "#/$defs/Integer",
+      "description": "Number of identified persons"
+    },
+    "identifiers": {
+      "description": "Session-scoped identifiers of identified persons",
+      "items": {
+        "$ref": "#/$defs/PersonIdentifier"
+      },
+      "title": "Identifiers",
+      "type": "array"
+    }
+  },
+  "required": [
+    "timestamp",
+    "number",
+    "identifiers"
+  ],
+  "title": "PersonIdentifiedEvent",
+  "type": "object"
+}

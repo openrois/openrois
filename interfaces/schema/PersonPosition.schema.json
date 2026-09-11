@@ -1,0 +1,35 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "additionalProperties": false,
+  "description": "3D position of a single localized person.\n\nAttributes:\n    id: Session-scoped tracking identifier of the person. Not a\n        persistent personal identifier: it is reset when the\n        perception pipeline restarts and may switch under\n        occlusion.\n    x: X coordinate [m] in the robot body frame (+x forward).\n    y: Y coordinate [m] in the robot body frame (+y left).\n    z: Z coordinate [m] in the robot body frame (+z up).",
+  "properties": {
+    "id": {
+      "description": "Session-scoped tracking ID of the person",
+      "title": "Id",
+      "type": "string"
+    },
+    "x": {
+      "description": "X coordinate [m], robot body frame (+x forward)",
+      "title": "X",
+      "type": "number"
+    },
+    "y": {
+      "description": "Y coordinate [m], robot body frame (+y left)",
+      "title": "Y",
+      "type": "number"
+    },
+    "z": {
+      "description": "Z coordinate [m], robot body frame (+z up)",
+      "title": "Z",
+      "type": "number"
+    }
+  },
+  "required": [
+    "id",
+    "x",
+    "y",
+    "z"
+  ],
+  "title": "PersonPosition",
+  "type": "object"
+}

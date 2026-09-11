@@ -1,0 +1,23 @@
+# Adapter profile for the RealSense OpenRoIS adapter.
+#
+# Copy to openrois-profile.yaml and edit.
+
+engine:
+  id: realsense-1
+  platform: realsense
+  gateway_url: "ws://127.0.0.1:8765"
+
+environment: {}
+
+components:
+  PersonDetection:
+    ros2_node_name: openrois_realsense
+    person_count_topic: /person_detection/count
+  PersonLocalization:
+    ros2_node_name: openrois_realsense
+    person_tracks_topic: /person_tracks
+    person_tracks_frame: camera_color_optical_frame
+    person_position_frame: camera_link
+  PersonIdentification:
+    ros2_node_name: openrois_realsense
+    person_tracks_topic: /person_tracks
