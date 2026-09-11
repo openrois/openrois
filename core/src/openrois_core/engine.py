@@ -343,7 +343,7 @@ class ComponentRegistry:
         """Collect all rclpy.Node instances from registered components."""
         nodes = []
         for handler in self._handlers.values():
-            node = getattr(handler, "node", None)
+            node = getattr(handler, "_node", None)
             if node is not None:
                 nodes.append(node)
         return nodes
@@ -426,26 +426,33 @@ class ComponentRegistry:
     ) -> dict[str, Any]:
         """Register a subscription and call the component's subscribe handler."""
         if not self._emitter:
+            logger.warning("[registry.sub] no emitter set")
             return {"return_code": ReturnCode.ERROR.value, "subscribe_id": ""}
 
         handler = self._handlers.get(bare_ref)
         if not handler:
+            logger.warning("[registry.sub] no handler for %s (available: %s)",
+                           bare_ref, list(self._handlers.keys()))
             return {"return_code": ReturnCode.UNSUPPORTED.value, "subscribe_id": ""}
 
         meta = self._metadata.get(bare_ref)
         if not meta:
+            logger.warning("[registry.sub] no metadata for %s", bare_ref)
             return {"return_code": ReturnCode.UNSUPPORTED.value, "subscribe_id": ""}
 
         method_name = meta.subscribes.get(event_type)
         if not method_name:
+            logger.warning("[registry.sub] no @subscribe for %s/%s (available: %s)",
+                           bare_ref, event_type, list(meta.subscribes.keys()))
             return {"return_code": ReturnCode.UNSUPPORTED.value, "subscribe_id": ""}
 
         subscribe_id = self._emitter.add_subscription(bare_ref, event_type)
+        logger.info("[registry.sub] created %s for %s/%s", subscribe_id, bare_ref, event_type)
         method = getattr(handler, method_name)
         try:
             await method()
         except Exception as exc:
-            logger.error("Subscribe error for %s/%s: %s", bare_ref, event_type, exc)
+            logger.error("[registry.sub] handler error for %s/%s: %s", bare_ref, event_type, exc)
             self._emitter.remove_subscription(subscribe_id)
             return {"return_code": ReturnCode.ERROR.value, "subscribe_id": ""}
 
@@ -515,12 +522,21 @@ class SubEngine:
         self._pending.clear()
         self._event_sinks.clear()
 
-    def handle_register(self, msg: dict) -> None:
-        """Process rois.adapter.register and cache engine_id + components."""
-        params = msg.get("params", {})
-        self.engine_id = str(params.get("engine_id", ""))
-        self.platform = str(params.get("platform", ""))
-        raw_components = params.get("components", [])
+    async def discover(self, condition: str = "") -> dict[str, Any]:
+        """Pull the sub-engine profile via rois.command.search.
+
+        Sends a search request over the WebSocket, parses the response
+        to cache engine_id, platform, and full component metadata.
+        """
+        result = await self.send_request("rois.command.search", {
+            "condition": condition,
+        })
+        profile = result.get("profile", {})
+        identifier = profile.get("identifier", {})
+        self.engine_id = str(identifier.get("code", ""))
+        self.platform = str(profile.get("platform", ""))
+
+        raw_components = result.get("components", [])
         self.components = [
             {
                 "ref": str(c.get("ref", "")),
@@ -533,11 +549,12 @@ class SubEngine:
             for c in raw_components
         ]
         logger.info(
-            "Registered sub-engine %s (platform: %s) with %d components",
+            "Discovered sub-engine %s (platform: %s) with %d components",
             self.engine_id,
             self.platform or "unknown",
             len(self.components),
         )
+        return result
 
     def handle_response(self, msg: dict) -> None:
         """Called by WsServer when a response arrives from the child engine."""
@@ -848,16 +865,37 @@ class Engine:
 
     async def _handle_search(self) -> dict[str, Any]:
         refs: list[str] = []
+        components: list[dict[str, Any]] = []
         # Local components (no prefix)
-        for ref in self._component_registry._metadata:
+        for ref, meta in self._component_registry._metadata.items():
             refs.append(ref)
+            components.append({
+                "ref": ref,
+                "function": meta.function.value if meta.function else None,
+                "queries": list(meta.queries.keys()),
+                "commands": list(meta.invokes.keys()),
+                "events": list(meta.subscribes.keys()),
+                "parameters": meta.parameters,
+            })
         # Sub-engine components (with engine_id prefix)
         for entry in self._sub_engines.values():
             for c in entry["components"]:
-                refs.append(f"{entry['engine_id']}/{c['ref']}")
+                full_ref = f"{entry['engine_id']}/{c['ref']}"
+                refs.append(full_ref)
+                components.append(c)
         return {
             "return_code": ReturnCode.OK.value,
             "component_ref_list": refs,
+            "components": components,
+            "profile": {
+                "identifier": {
+                    "authority": "OpenRoIS",
+                    "code": self._engine_id,
+                    "codebook_ref": "",
+                    "version": "",
+                },
+                "platform": self._platform,
+            },
         }
 
     async def _handle_get_profile(self) -> dict[str, Any]:
@@ -1034,15 +1072,22 @@ class Engine:
         condition = str(params.get("condition", ""))
         bare_ref = component_ref.split("/", 1)[1] if "/" in component_ref else component_ref
 
+        logger.info("[subscribe] ref=%s bare=%s event=%s sink=%s",
+                     component_ref, bare_ref, event_type, sink is not None)
+
         # Try local first. The ComponentRegistry handles subscriptions
         # via the EventEmitter, which pushes events back through the
         # WebSocket. The sink is not needed for local components: it
         # is only used when forwarding to a remote sub-engine.
         if bare_ref in self._component_registry._handlers:
-            return await self._component_registry.subscribe(
+            logger.info("[subscribe] found local handler for %s", bare_ref)
+            result = await self._component_registry.subscribe(
                 bare_ref, event_type, condition,
             )
+            logger.info("[subscribe] local result: %s", result)
+            return result
 
+        logger.info("[subscribe] no local handler for %s", bare_ref)
         # Forward to sub-engine. The sink is required for forwarding
         # because the sub-engine proxy needs a callback to deliver
         # events back to the caller.
