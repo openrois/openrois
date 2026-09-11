@@ -557,6 +557,10 @@ class SubEngine:
             except Exception as exc:
                 logger.error("Event sink error: %s", exc)
 
+    def remove_event_sink(self, subscribe_id: str) -> None:
+        """Drop the event sink for a subscribe_id (client disconnected)."""
+        self._event_sinks.pop(subscribe_id, None)
+
     async def send_request(
         self,
         method: str,
@@ -594,6 +598,47 @@ class SubEngine:
             self._pending.pop(request_id, None)
 
     # -- ComponentContract implementation (for remote dispatch) --
+
+    async def discover(self, condition: str = "") -> dict[str, Any]:
+        """Discover the child engine's identity and components.
+
+        Sends rois.system.get_profile to the child engine and caches
+        engine_id, platform, and the component list. Called by WsServer
+        when an adapter connects, before registering the sub-engine.
+
+        Returns:
+            The discover response: return_code and component_ref_list.
+        """
+        result = await self.send_request("rois.system.get_profile", {
+            "condition": condition,
+        })
+        profile = result.get("profile", {}) or {}
+        identifier = profile.get("identifier", {}) or {}
+        self.engine_id = str(identifier.get("code", ""))
+        self.platform = str(identifier.get("authority", ""))
+        self.components = [
+            {
+                "ref": str(c.get("name", c.get("identifier", {}).get("code", ""))),
+                "function": c.get("function"),
+                "queries": [
+                    q.get("name", "") for q in c.get("query_profiles", [])
+                ],
+                "commands": [
+                    cmd.get("name", "") for cmd in c.get("command_profiles", [])
+                ],
+                "events": [
+                    e.get("name", "") for e in c.get("event_profiles", [])
+                ],
+                "parameters": c.get("parameter_profiles", []),
+            }
+            for c in profile.get("component_profiles", [])
+        ]
+        return {
+            "return_code": result.get("return_code", ReturnCode.ERROR.value),
+            "component_ref_list": [
+                str(cid) for cid in profile.get("component_ids", [])
+            ],
+        }
 
     async def invoke(
         self,
