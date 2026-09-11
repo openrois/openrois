@@ -183,7 +183,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Generic command request sent via BusAdapter.invoke().\n\nCarries the same information as a CommandUnit plus the target component_ref.\nTyped component models (e.g., NavigationSetParameter) serialize their fields\ninto arguments/parameters and are wrapped in this generic container.",
+  "description": "Generic command request sent via ComponentContract.invoke().\n\nCarries the same information as a CommandUnit plus the target component_ref.\nTyped component models (e.g., NavigationSetParameter) serialize their fields\ninto arguments/parameters and are wrapped in this generic container.",
   "properties": {
     "component_ref": {
       "$ref": "#/$defs/RoISIdentifier",
