@@ -171,3 +171,40 @@ async def test_client_disconnect_releases_bindings_and_subscriptions(stack) -> N
     await nav.arrive("kitchen")
     await app.call("rois.query.query", component_ref=NAV, query_type="component_status")
     assert not [n for n in app.notifications if n.get("method") == "rois.event.notify"]
+
+
+async def test_completion_travels_from_adapter_to_application(stack) -> None:
+    app, nav, _ = stack
+    assert await app.code("rois.command.bind", component_ref=NAV) == "OK"
+    executed = await app.call("rois.command.execute", component_ref=NAV, command_type="execute")
+    assert executed["return_code"] == "OK"
+    command_id = executed["command_id"]
+
+    await nav.parent.complete_async(command_id, "OK", [])
+    completed = await app.next_notification("rois.command.completed")
+    assert completed["params"]["command_id"] == command_id
+    assert completed["params"]["status"] == "OK"
+
+    result = await app.call("rois.command.get_command_result", command_id=command_id)
+    assert result["return_code"] == "OK"
+
+
+async def test_component_failure_travels_as_notify_error(stack) -> None:
+    app, _, _ = stack
+    assert await app.code("rois.command.bind", component_ref=NAV) == "OK"
+    failed = await app.call("rois.command.execute", component_ref=NAV, command_type="stop")
+    assert failed["return_code"] == "ERROR"
+    error = await app.next_notification("rois.system.notify_error")
+    assert error["params"]["error_type"] == "COMPONENT_INTERNAL_ERROR"
+    detail = await app.call("rois.system.get_error_detail", error_id=error["params"]["error_id"])
+    assert detail["return_code"] == "OK"
+
+
+async def test_bind_any_and_get_parameter_through_the_gateway(stack) -> None:
+    app, nav, _ = stack
+    bound = await app.call("rois.command.bind_any", condition="navigation")
+    assert bound == {"return_code": "OK", "component_ref": NAV}
+    code = await app.code("rois.command.set_parameter", component_ref=NAV, parameters=PARAMS)
+    assert code == "OK"
+    fetched = await app.call("rois.command.get_parameter", component_ref=NAV)
+    assert fetched == {"return_code": "OK", "results": PARAMS}

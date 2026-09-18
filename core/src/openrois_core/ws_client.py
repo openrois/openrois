@@ -32,7 +32,7 @@ from typing import Any
 import websockets
 from openrois.interfaces.bus import EventEnvelope
 
-from openrois_core.engine import Engine, EventEmitter, envelope_to_params
+from openrois_core.engine import Engine, EventEmitter, envelope_to_notification
 
 logger = logging.getLogger(__name__)
 
@@ -208,12 +208,8 @@ class WsClient:
         return await self._engine.dispatch(method, params, sink=self._send_event)
 
     async def _send_event(self, envelope: EventEnvelope) -> None:
-        """Push one event to the gateway as a rois.event.notify notification."""
-        await self._ws_send(json.dumps({
-            "jsonrpc": "2.0",
-            "method": "rois.event.notify",
-            "params": envelope_to_params(envelope),
-        }))
+        """Push an event, a completion, or an error to the gateway as a notification."""
+        await self._ws_send(json.dumps(envelope_to_notification(envelope)))
 
     # -- rclpy threading --
 

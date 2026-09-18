@@ -29,5 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `rois.command.bind_any`, `rois.command.get_parameter`, `rois.command.get_command_result`,
+  `rois.system.get_error_detail`, and `rois.event.get_event_detail`.
+- `rois.command.completed` and `rois.system.notify_error` notifications. Components report
+  completion with `self.parent.complete(command_id, status)` (thread-safe) or
+  `complete_async`; a handler that raises produces a `notify_error` for the caller.
 - Regression test suite (`tests/`): engine dispatch, bindings, events, and a gateway plus
   adapter round trip over a real WebSocket.

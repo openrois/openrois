@@ -17,7 +17,7 @@ from typing import Any
 import websockets
 from openrois.interfaces.bus import EventEnvelope
 
-from openrois_core.engine import Engine, SubEngine, envelope_to_params
+from openrois_core.engine import Engine, SubEngine, envelope_to_notification
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +166,7 @@ class WsServer:
             self._notify_profile_changed()
 
     async def _adapter_receive_loop(self, ws: Any, sub_engine: SubEngine) -> None:
-        """Route responses to pending requests and events to their subscription sinks."""
+        """Route responses to pending requests and notifications to their sinks."""
         async for raw in ws:
             try:
                 msg = json.loads(raw)
@@ -177,7 +177,8 @@ class WsServer:
             has_method = "method" in msg
             if has_id and not has_method:
                 sub_engine.handle_response(msg)
-            elif has_method and not has_id and msg["method"] == "rois.event.notify":
+            elif has_method and not has_id:
+                # Events, completions, and errors from the child engine.
                 await sub_engine.handle_notification(msg)
 
     async def _handle_client_connection(self, ws: Any) -> None:
@@ -190,11 +191,7 @@ class WsServer:
             """Push one event to this client as a rois.event.notify notification."""
             if not _ws_is_open(ws):
                 return
-            await ws.send(json.dumps({
-                "jsonrpc": "2.0",
-                "method": "rois.event.notify",
-                "params": envelope_to_params(envelope),
-            }))
+            await ws.send(json.dumps(envelope_to_notification(envelope)))
 
         try:
             async for raw in ws:

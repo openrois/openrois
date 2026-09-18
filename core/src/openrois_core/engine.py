@@ -20,6 +20,7 @@ import asyncio
 import json
 import logging
 import uuid
+from collections import OrderedDict
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any
 
@@ -37,6 +38,7 @@ from openrois.interfaces.bus import (
     SubscribeResponse,
 )
 from openrois.interfaces.hri import CommandType, Parameter, Result, ReturnCode
+from openrois.interfaces.service import CompletedStatus, ErrorType
 
 if TYPE_CHECKING:
     from openrois_components_core.meta import ComponentMeta
@@ -69,6 +71,18 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
+COMPLETED = "completed"
+NOTIFY_ERROR = "notify_error"
+DETAIL_LIMIT = 256
+
+
+def _result_value(results: list[Result], name: str) -> str:
+    for r in results:
+        if r.name == name:
+            return r.value
+    return ""
+
+
 def envelope_to_params(envelope: EventEnvelope) -> dict[str, Any]:
     """Map an EventEnvelope to the params of a rois.event.notify notification."""
     return {
@@ -81,6 +95,38 @@ def envelope_to_params(envelope: EventEnvelope) -> dict[str, Any]:
     }
 
 
+def envelope_to_notification(envelope: EventEnvelope) -> dict[str, Any]:
+    """Map an EventEnvelope to the JSON-RPC notification that carries it.
+
+    Component events travel as rois.event.notify. Command completions and
+    engine errors are envelopes too (RoIS_Service completed and notify_error),
+    and go out as rois.command.completed and rois.system.notify_error.
+    """
+    if envelope.event_type == COMPLETED:
+        payload = [r.model_dump() for r in envelope.payload if r.name != "command_id"]
+        return {
+            "jsonrpc": "2.0",
+            "method": "rois.command.completed",
+            "params": {
+                "command_id": _result_value(envelope.payload, "command_id"),
+                "status": (envelope.completed_status or CompletedStatus.OK).value,
+                "results": payload,
+            },
+        }
+    if envelope.event_type == NOTIFY_ERROR:
+        return {
+            "jsonrpc": "2.0",
+            "method": "rois.system.notify_error",
+            "params": {
+                "error_id": envelope.event_id,
+                "error_type": (envelope.error_type or ErrorType.ENGINE_INTERNAL_ERROR).value,
+                "command_id": _result_value(envelope.payload, "command_id"),
+                "message": _result_value(envelope.payload, "message"),
+            },
+        }
+    return {"jsonrpc": "2.0", "method": "rois.event.notify", "params": envelope_to_params(envelope)}
+
+
 def params_to_envelope(params: dict[str, Any]) -> EventEnvelope:
     """Build an EventEnvelope from the params of a rois.event.notify notification."""
     return EventEnvelope(
@@ -91,6 +137,71 @@ def params_to_envelope(params: dict[str, Any]) -> EventEnvelope:
         expire=str(params.get("expire", "")),
         payload=[Result.model_validate(r) for r in params.get("results", [])],
     )
+
+
+def completion_envelope(
+    command_id: str,
+    status: CompletedStatus,
+    results: list[Result] | None = None,
+) -> EventEnvelope:
+    """The envelope of a RoIS_Service completed notification."""
+    return EventEnvelope(
+        event_id=str(uuid.uuid4()),
+        event_type=COMPLETED,
+        completed_status=status,
+        payload=[
+            Result(name="command_id", data_type_ref="string", value=command_id),
+            *(results or []),
+        ],
+    )
+
+
+def error_envelope(error_type: ErrorType, message: str, command_id: str = "") -> EventEnvelope:
+    """The envelope of a RoIS_Service notify_error notification."""
+    payload = [Result(name="message", data_type_ref="string", value=message)]
+    if command_id:
+        payload.append(Result(name="command_id", data_type_ref="string", value=command_id))
+    return EventEnvelope(
+        event_id=str(uuid.uuid4()),
+        event_type=NOTIFY_ERROR,
+        error_type=error_type,
+        payload=payload,
+    )
+
+
+def notification_to_envelope(msg: dict[str, Any]) -> EventEnvelope | None:
+    """Inverse of envelope_to_notification for the three notification methods."""
+    method = msg.get("method")
+    params = msg.get("params", {}) or {}
+    if method == "rois.event.notify":
+        return params_to_envelope(params)
+    if method == "rois.command.completed":
+        try:
+            status = CompletedStatus(str(params.get("status", "OK")))
+        except ValueError:
+            status = CompletedStatus.ERROR
+        return completion_envelope(
+            str(params.get("command_id", "")), status,
+            [Result.model_validate(r) for r in params.get("results", [])],
+        )
+    if method == "rois.system.notify_error":
+        try:
+            error_type = ErrorType(str(params.get("error_type", "")))
+        except ValueError:
+            error_type = ErrorType.ENGINE_INTERNAL_ERROR
+        envelope = error_envelope(
+            error_type, str(params.get("message", "")), str(params.get("command_id", "")),
+        )
+        error_id = str(params.get("error_id", ""))
+        return envelope.model_copy(update={"event_id": error_id}) if error_id else envelope
+    return None
+
+
+def _remember(store: OrderedDict[str, Any], key: str, value: Any) -> None:
+    """Keep the last DETAIL_LIMIT entries so detail lookups stay bounded."""
+    store[key] = value
+    while len(store) > DETAIL_LIMIT:
+        store.popitem(last=False)
 
 
 def _bare_ref(component_ref: str) -> str:
@@ -138,6 +249,8 @@ class EventEmitter:
         self._loop = loop
         # subscribe_id -> (component_ref, event_type, sink)
         self._subscriptions: dict[str, tuple[str, str, EventSink]] = {}
+        # command_id -> sink of the caller waiting for its completion
+        self._commands: dict[str, EventSink] = {}
 
     def add_subscription(self, component_ref: str, event_type: str, sink: EventSink) -> str:
         """Register a subscription and return its subscribe_id."""
@@ -208,6 +321,38 @@ class EventEmitter:
             except Exception as exc:
                 logger.error("Event sink error for %s/%s: %s", component_ref, event_type, exc)
 
+    # -- Command completion --
+
+    def track_command(self, command_id: str, sink: EventSink) -> None:
+        """Remember who to tell when a command completes."""
+        if command_id:
+            self._commands[command_id] = sink
+
+    def complete(
+        self,
+        command_id: str,
+        status: CompletedStatus | str = CompletedStatus.OK,
+        results: list[Result] | None = None,
+    ) -> None:
+        """Report a command's completion from any thread. No-op if nobody waits."""
+        sink = self._commands.pop(command_id, None)
+        if sink is None:
+            return
+        envelope = completion_envelope(command_id, CompletedStatus(status), results)
+        asyncio.run_coroutine_threadsafe(_deliver(sink, envelope), self._loop)
+
+    async def complete_async(
+        self,
+        command_id: str,
+        status: CompletedStatus | str = CompletedStatus.OK,
+        results: list[Result] | None = None,
+    ) -> None:
+        """Report a command's completion from the asyncio loop."""
+        sink = self._commands.pop(command_id, None)
+        if sink is None:
+            return
+        await _deliver(sink, completion_envelope(command_id, CompletedStatus(status), results))
+
 
 # ---------------------------------------------------------------------------
 # ComponentRegistry
@@ -244,6 +389,25 @@ class ComponentRegistry:
         if self._emitter:
             return self._emitter.emit_async
         raise RuntimeError("No emitter set")
+
+    @property
+    def complete(self) -> Callable[..., None]:
+        """Thread-safe command completion, delegates to EventEmitter."""
+        if self._emitter:
+            return self._emitter.complete
+        raise RuntimeError("No emitter set")
+
+    @property
+    def complete_async(self) -> Callable[..., Awaitable[None]]:
+        """Async command completion, delegates to EventEmitter."""
+        if self._emitter:
+            return self._emitter.complete_async
+        raise RuntimeError("No emitter set")
+
+    def track_command(self, command_id: str, sink: EventSink) -> None:
+        """Route the completion of a command to the caller's sink."""
+        if self._emitter:
+            self._emitter.track_command(command_id, sink)
 
     def set_emitter(self, emitter: EventEmitter) -> None:
         """Set or replace the emitter. Re-injects onto all registered components."""
@@ -483,6 +647,7 @@ class SubEngine:
         self._loop = loop
         self._pending: dict[str, asyncio.Future[dict[str, Any]]] = {}
         self._event_sinks: dict[str, EventSink] = {}
+        self._command_sinks: dict[str, EventSink] = {}
         self._next_id = 0
 
         self.engine_id = ""
@@ -515,6 +680,11 @@ class SubEngine:
         """Drop the event sink of a subscription, for example when its client left."""
         self._event_sinks.pop(subscribe_id, None)
 
+    def track_command(self, command_id: str, sink: EventSink) -> None:
+        """Route the completion or error of a command to the caller's sink."""
+        if command_id:
+            self._command_sinks[command_id] = sink
+
     # -- Transport plumbing, driven by WsServer --
 
     def handle_response(self, msg: dict[str, Any]) -> None:
@@ -525,15 +695,24 @@ class SubEngine:
             future.set_result(msg.get("result", {}) or {})
 
     async def handle_notification(self, msg: dict[str, Any]) -> None:
-        """Deliver a rois.event.notify notification to its subscription's sink."""
+        """Deliver a notification from the child engine to the sink that waits for it.
+
+        Events go to their subscription's sink, completions and errors to the
+        sink of the command they refer to.
+        """
+        envelope = notification_to_envelope(msg)
+        if envelope is None:
+            return
         params = msg.get("params", {}) or {}
-        sink = self._event_sinks.get(str(params.get("subscribe_id", "")))
+        if envelope.event_type == COMPLETED:
+            sink = self._command_sinks.pop(str(params.get("command_id", "")), None)
+        elif envelope.event_type == NOTIFY_ERROR:
+            sink = self._command_sinks.get(str(params.get("command_id", "")))
+        else:
+            sink = self._event_sinks.get(envelope.subscribe_id)
         if sink is None:
             return
-        try:
-            await sink(params_to_envelope(params))
-        except Exception as exc:
-            logger.error("Event sink error: %s", exc)
+        await _deliver(sink, envelope)
 
     async def send_request(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
         """Forward a JSON-RPC request to the child engine and await its result."""
@@ -711,6 +890,12 @@ class Engine:
         self._component_index: dict[str, str] = {}
         # Full component ref (engineId/ref) -> client id
         self._bindings: dict[str, str] = {}
+        # Bounded detail stores behind get_command_result, get_event_detail,
+        # get_error_detail, and get_parameter.
+        self._command_results: OrderedDict[str, list[Result]] = OrderedDict()
+        self._events: OrderedDict[str, EventEnvelope] = OrderedDict()
+        self._errors: OrderedDict[str, EventEnvelope] = OrderedDict()
+        self._parameters: dict[str, list[Parameter]] = {}
 
         # Local component registry
         self._component_registry = ComponentRegistry()
@@ -804,6 +989,8 @@ class Engine:
         Returns a result dict for the JSON-RPC response.
         """
         logger.debug("[engine] %s %s", method, json.dumps(params))
+        if sink is not None:
+            sink = self._recording(sink)
 
         if method == "rois.system.connect":
             return {"return_code": ReturnCode.OK.value}
@@ -815,17 +1002,29 @@ class Engine:
         if method == "rois.system.get_profile":
             return await self._handle_get_profile()
 
+        if method == "rois.system.get_error_detail":
+            return self._handle_get_error_detail(params)
+
         if method == "rois.command.search":
             return await self._handle_search()
 
         if method == "rois.command.bind":
             return self._handle_bind(params, client_id)
 
+        if method == "rois.command.bind_any":
+            return self._handle_bind_any(params, client_id)
+
         if method == "rois.command.release":
             return self._handle_release(params, client_id)
 
+        if method == "rois.command.get_parameter":
+            return await self._handle_get_parameter(params)
+
+        if method == "rois.command.get_command_result":
+            return self._handle_get_command_result(params)
+
         if method == "rois.command.execute":
-            return await self._handle_execute(params, client_id)
+            return await self._handle_execute(params, client_id, sink)
 
         if method == "rois.command.set_parameter":
             return await self._handle_set_parameter(params, client_id)
@@ -839,7 +1038,26 @@ class Engine:
         if method == "rois.event.unsubscribe":
             return await self._handle_unsubscribe(params)
 
+        if method == "rois.event.get_event_detail":
+            return self._handle_get_event_detail(params)
+
         return {"return_code": ReturnCode.UNSUPPORTED.value}
+
+    def _recording(self, sink: EventSink) -> EventSink:
+        """Wrap a sink so every delivered envelope stays available for the detail queries."""
+
+        async def record_and_forward(envelope: EventEnvelope) -> None:
+            if envelope.event_type == COMPLETED:
+                command_id = _result_value(envelope.payload, "command_id")
+                results = [r for r in envelope.payload if r.name != "command_id"]
+                _remember(self._command_results, command_id, results)
+            elif envelope.event_type == NOTIFY_ERROR:
+                _remember(self._errors, envelope.event_id, envelope)
+            else:
+                _remember(self._events, envelope.event_id, envelope)
+            await sink(envelope)
+
+        return record_and_forward
 
     # -- Handlers --
 
@@ -927,6 +1145,35 @@ class Engine:
         self._bindings[component_ref] = client_id or ""
         return {"return_code": ReturnCode.OK.value}
 
+    def _handle_bind_any(
+        self,
+        params: dict[str, Any],
+        client_id: str | None,
+    ) -> dict[str, Any]:
+        """Bind the first free component whose ref matches the condition.
+
+        RoIS leaves the condition language to the implementation. OpenRoIS
+        matches it against the component refs, case-insensitively, so
+        "Navigation" finds "robot_1/Navigation".
+        """
+        condition = str(params.get("condition", "")).lower()
+        candidates = [
+            ref for ref in self._all_refs() if condition in ref.lower()
+        ]
+        if not candidates:
+            return {"return_code": ReturnCode.UNSUPPORTED.value, "component_ref": ""}
+        for ref in candidates:
+            result = self._handle_bind({"component_ref": ref}, client_id)
+            if result["return_code"] == ReturnCode.OK.value:
+                return {"return_code": ReturnCode.OK.value, "component_ref": ref}
+        return {"return_code": ReturnCode.OUT_OF_RESOURCES.value, "component_ref": ""}
+
+    def _all_refs(self) -> list[str]:
+        refs = list(self._component_registry.get_profile()["component_ids"])
+        for entry in self._sub_engines.values():
+            refs.extend(f"{entry['engine_id']}/{c['ref']}" for c in entry["components"])
+        return refs
+
     def _handle_release(
         self,
         params: dict[str, Any],
@@ -947,6 +1194,7 @@ class Engine:
         self,
         params: dict[str, Any],
         client_id: str | None,
+        sink: EventSink | None = None,
     ) -> dict[str, Any]:
         component_ref = str(params.get("component_ref", ""))
         component = self._find_component(component_ref)
@@ -984,12 +1232,24 @@ class Engine:
         contract = self._contract_for(component_ref)
         if contract is None:
             return {"return_code": ReturnCode.UNSUPPORTED.value}
-        response = await contract.invoke(CommandRequest(
+        request = CommandRequest(
             component_ref=component_ref,
             command_type=operation,
             command_id=command_id or str(uuid.uuid4()),
             parameters=_to_parameters(raw),
-        ))
+        )
+        response = await contract.invoke(request)
+        if response.return_code == ReturnCode.OK:
+            if response.command_id:
+                _remember(self._command_results, response.command_id, list(response.results))
+                if sink is not None:
+                    contract.track_command(response.command_id, sink)  # type: ignore[attr-defined]
+        elif response.return_code == ReturnCode.ERROR and sink is not None:
+            await sink(error_envelope(
+                ErrorType.COMPONENT_INTERNAL_ERROR,
+                f"{component_ref} failed to execute {command_type}",
+                request.command_id,
+            ))
         return response.model_dump(mode="json")
 
     async def _handle_set_parameter(
@@ -1001,13 +1261,66 @@ class Engine:
         contract = self._contract_for(component_ref)
         if contract is None:
             return {"return_code": ReturnCode.UNSUPPORTED.value}
+        parameters = _to_parameters(params.get("parameters", []))
         response = await contract.invoke(CommandRequest(
             component_ref=component_ref,
             command_type=CommandType.SET_PARAMETER,
             command_id=str(params.get("command_id", "")) or str(uuid.uuid4()),
-            parameters=_to_parameters(params.get("parameters", [])),
+            parameters=parameters,
         ))
+        if response.return_code == ReturnCode.OK:
+            self._parameters[component_ref] = parameters
         return response.model_dump(mode="json")
+
+    async def _handle_get_parameter(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Return a component's parameters.
+
+        A component that declares a get_parameter query answers itself.
+        Otherwise the engine returns what set_parameter last stored for it.
+        """
+        component_ref = str(params.get("component_ref", ""))
+        names = [str(n) for n in params.get("names", [])]
+        meta = self._component_registry.get_metadata(_bare_ref(component_ref))
+        if meta is not None and "get_parameter" in meta.queries:
+            response = await self._component_registry.query(QueryRequest(
+                component_ref=component_ref, query_type="get_parameter",
+            ))
+            results = [r for r in response.results if not names or r.name in names]
+            return {
+                "return_code": response.return_code.value,
+                "results": [r.model_dump() for r in results],
+            }
+        if self._find_component(component_ref) is None:
+            return {"return_code": ReturnCode.UNSUPPORTED.value, "results": []}
+        stored = self._parameters.get(component_ref, [])
+        return {
+            "return_code": ReturnCode.OK.value,
+            "results": [p.model_dump() for p in stored if not names or p.name in names],
+        }
+
+    def _handle_get_command_result(self, params: dict[str, Any]) -> dict[str, Any]:
+        command_id = str(params.get("command_id", ""))
+        results = self._command_results.get(command_id)
+        if results is None:
+            return {"return_code": ReturnCode.UNSUPPORTED.value, "results": []}
+        return {"return_code": ReturnCode.OK.value, "results": [r.model_dump() for r in results]}
+
+    def _handle_get_error_detail(self, params: dict[str, Any]) -> dict[str, Any]:
+        envelope = self._errors.get(str(params.get("error_id", "")))
+        if envelope is None:
+            return {"return_code": ReturnCode.UNSUPPORTED.value, "results": []}
+        return {
+            "return_code": ReturnCode.OK.value,
+            "error_id": envelope.event_id,
+            "error_type": (envelope.error_type or ErrorType.ENGINE_INTERNAL_ERROR).value,
+            "results": [r.model_dump() for r in envelope.payload],
+        }
+
+    def _handle_get_event_detail(self, params: dict[str, Any]) -> dict[str, Any]:
+        envelope = self._events.get(str(params.get("event_id", "")))
+        if envelope is None:
+            return {"return_code": ReturnCode.UNSUPPORTED.value, "results": []}
+        return {"return_code": ReturnCode.OK.value, **envelope_to_params(envelope)}
 
     async def _handle_query(self, params: dict[str, Any]) -> dict[str, Any]:
         component_ref = str(params.get("component_ref", ""))
