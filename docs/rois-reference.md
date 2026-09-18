@@ -1,14 +1,14 @@
 # Robotic Interaction Service (RoIS) Framework - Reference
 
-> An in-depth reference for the OMG **Robotic Interaction Service (RoIS) Framework**, Version 2.0-beta2.
+> An in-depth reference for the OMG **Robotic Interaction Service (RoIS) Framework**, Version 2.0.
 >
-> - **OMG Document Number:** dtc/2025-09-22 (August 2025)
-> - **Normative reference:** <https://www.omg.org/spec/RoIS/2.0/Beta2>
-> - **Machine-readable files:** <https://www.omg.org/spec/RoIS/2.0/Beta2#docs-normative-machine>
-> - **Copyright:** © 2012-2025 JARA, ETRI, KAR, and Object Management Group, Inc.
+> - **OMG Document Number:** formal/26-06-03 (June 2026)
+> - **Normative reference:** <https://www.omg.org/spec/RoIS/2.0>
+> - **Machine-readable files:** <https://www.omg.org/spec/RoIS/2.0#docs-normative-machine>
+> - **Copyright:** JARA, ETRI, KAR, and Object Management Group, Inc.
 
 This document summarizes and explains the specification that the machine-readable
-artifacts at <https://www.omg.org/spec/RoIS/2.0/Beta2#docs-normative-machine>
+artifacts at <https://www.omg.org/spec/RoIS/2.0#docs-normative-machine>
 implement (IDL/HPP headers, component XML profiles, the `XML-Profiles.xsd`
 schema, and the `OWL.ttl` ontology).
 
@@ -109,7 +109,7 @@ The framework is organized in three conceptual layers:
 ```
 Total System   →  [HRI Engine (main)]            ← the single entry point for apps
 Logical Layer  →  [HRI Engine (sub)] × N         ← physical units (Robot1, Room1, Robot2…)
-                  [HRI Component]    × N          ← abstract functions per sub-engine
+                  [HRI Component]    × N          ← abstract functions per sub HRI Engine
 Implementation →  Sensors / Actuators            ← cameras, mics, LRF, wheels, legs…
 ```
 
@@ -118,7 +118,7 @@ Key rules:
 - A system may consist of **multiple physical units**. Each is a **sub HRI Engine**.
   The whole system is the **main HRI Engine** that contains them.
 - The application talks to **only the main HRI Engine**. Selection and switching
-  between sub-engines and components happens **engine-side** and is invisible to the
+  between sub HRI Engines and components happens **engine-side** and is invisible to the
   application.
 - One physical unit can host more than one function, so physical units and
   functional units are defined separately (no one-to-one mapping).
@@ -382,7 +382,7 @@ Normative references include: Commons 1.1, CORBA 3.4, DDS 1.4, ISO 639/8601/1488
 ## 14. Map to the Machine-Readable Files
 
 The spec's PSMs correspond to the OMG machine-readable files at
-<https://www.omg.org/spec/RoIS/2.0/Beta2#docs-normative-machine>:
+<https://www.omg.org/spec/RoIS/2.0#docs-normative-machine>:
 
 | Artifact | Files |
 |----------|-------|
@@ -435,5 +435,5 @@ component-profile PSM). Known divergences:
 
 *This reference is a non-normative summary. For the milestone roadmap, see
 [roadmap.md](roadmap.md). For authoritative requirements, consult the
-official OMG specification at <https://www.omg.org/spec/RoIS/2.0/Beta2> and the
-machine-readable files at <https://www.omg.org/spec/RoIS/2.0/Beta2#docs-normative-machine>.*
+official OMG specification at <https://www.omg.org/spec/RoIS/2.0> and the
+machine-readable files at <https://www.omg.org/spec/RoIS/2.0#docs-normative-machine>.*

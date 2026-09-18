@@ -1,13 +1,29 @@
 # AGENTS.md
 
 > Guide for AI coding agents working in this repository. Read this first.
+> Human contributors should read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## What This Is
 
-OpenRoIS is an open-source middleware implementing the OMG RoIS Framework
-**Version 2.0-beta2**. The spec is beta and may change. Only the **interfaces**
-layer (M0) exists. The engine, gateway, bus adapters, components, and SDKs are
-planned but not built. See `docs/roadmap.md` for the milestone roadmap.
+OpenRoIS is an open-source middleware implementing the
+[OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0) (OMG document
+formal/26-06-03, June 2026). It is **alpha, pre-1.0, with an unstable API**.
+
+What exists today:
+
+| Area | Directory | State |
+|------|-----------|-------|
+| RoIS interface types (Python, JSON Schema, TypeScript, C#) | `interfaces/` | Available |
+| Recursive engine, WebSocket server and client | `core/` | Available, hardening |
+| Adapter SDK (component framework) and reference components | `components/` | Available |
+| TypeScript client SDK | `sdk/typescript/` | Available |
+| C# client SDK for Unity | `sdk/csharp/` | JSON-RPC layer only, client in progress |
+| TypeScript gateway proof of concept | `gateway/` | Superseded by `core/`, retired at the end of Phase 4 |
+| Examples: mock engine, mock adapter, web client, adapter template | `examples/` | Available |
+| Hub management application | `apps/hub/` | Not started, scaffold only |
+
+See [docs/roadmap.md](docs/roadmap.md) for what comes next, and
+[openrois.org](https://openrois.org/) for the living documentation.
 
 ## The One Critical Rule
 
@@ -18,45 +34,84 @@ Python (Pydantic) → JSON Schema → C# + TypeScript
 ```
 
 - **Edit:** `interfaces/python/src/openrois/interfaces/*.py`
-- **Don't edit:** `interfaces/schema/`, `interfaces/csharp/src/OpenRoIS.Interfaces/Generated/`, `interfaces/typescript/src/`
+- **Never edit:** `interfaces/schema/`,
+  `interfaces/csharp/src/OpenRoIS.Interfaces/Generated/`,
+  `interfaces/typescript/src/` (except `bus.ts` and the `index.ts` barrels, which are
+  hand-written)
 
-After editing Python models, run the full pipeline and all tests:
+After editing the Python models, run the full pipeline and the tests:
 
 ```bash
 cd interfaces/python && python scripts/export_schema.py
 cd ../typescript && npx tsx scripts/generate.ts && npm run typecheck && npm test
-cd ../csharp && dotnet run --project scripts/Generator/Generator.csproj -- ../../schema && dotnet test
+cd ../csharp && dotnet run --project scripts/Generator/Generator.csproj && dotnet test
 ```
+
+Every interface type must stay traceable to the normative RoIS files: the IDL, the XML
+component profiles, and `XML-Profiles.xsd`. Do not invent field names. When the IDL and
+the XML profile disagree, follow the XML profile and document the divergence in
+[docs/rois-reference.md](docs/rois-reference.md).
 
 ## Build and Test
 
-| Stack | Dir | Commands |
-|-------|-----|----------|
-| Python (source) | `interfaces/python` | `pip install -e ".[dev]"`, `ruff check src/`, `mypy src/`, `pytest -q` |
-| TypeScript (generated) | `interfaces/typescript` | `npm install`, `npm run generate`, `npm run typecheck`, `npm test` |
-| C# (generated) | `interfaces/csharp` | `dotnet build`, `dotnet test` |
+| Stack | Directory | Commands |
+|-------|-----------|----------|
+| Python types | `interfaces/python` | `pip install -e ".[dev]"`, `pytest`, `mypy src/`, `ruff check src/` |
+| TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test` |
+| C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
+| Engine core | `core` | `pip install -e .`, `ruff check src/` |
+| Component framework | `components/core` | `pip install -e .` |
+| TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` |
+| Mock engine | `examples/mock-engine` | `npm install`, `npm test` |
 
-CI (`.github/workflows/ci.yml`) runs all three on changes to `interfaces/**`.
+Some tests in `interfaces/python` cross-check the models against the normative RoIS
+machine-readable files, which are not redistributed in this repository. Those tests are
+skipped or fail without them.
 
 ## Key Conventions
 
-- Python 3.12+, Pydantic v2, `from __future__ import annotations`, PEP 695 `type` statements, mypy strict, ruff line-length 100
-- TypeScript ESM, strict typecheck, vitest
-- C# `netstandard2.1` (Unity 6.3+), `sealed class`, `Nullable` enabled
-- `interfaces/python/src/` must stay transport-neutral. No ROS, DDS, or WebSocket imports.
-- Don't change the `BusAdapter` protocol without reading
-  `docs/architecture.md` section 7.5.
+- Python 3.12+, Pydantic v2, `from __future__ import annotations`, PEP 695 `type`
+  statements, mypy strict, ruff line length 100.
+- TypeScript ESM, strict typecheck, vitest.
+- C# `netstandard2.1` (Unity 6.3+), `sealed class`, `Nullable` enabled.
+- `interfaces/python/src/` and `core/src/` stay transport-neutral and paradigm-neutral.
+  No ROS, DDS, gRPC, or game engine imports. Those belong in components.
+- Do not change the `Component Contract` (`discover`, `invoke`, `query`, `subscribe`,
+  `unsubscribe`) without reading section 8 of [docs/architecture.md](docs/architecture.md).
+  It is the contract that keeps the engine paradigm-neutral.
+- Components own their backend connections, created in `connect()` and closed in
+  `disconnect()`. Adapters never hold shared backend state.
 
 ## Writing Style
 
-Applies to all documentation, code comments, commit messages, and PR descriptions.
+Applies to documentation, code comments, commit messages, and pull request
+descriptions.
 
-- **No em-dashes** (`—`), **no en-dashes** (`–`), **no double dashes** (`--`) as punctuation, **no semicolons** in prose. Use colons, commas, parentheses, or separate sentences.
-- **OpenRoIS**: project and org name (always this capitalization). **openrois**: URL slug and package scope (always lowercase). **OpenRoIS Community**: author field. **OMG RoIS Framework 2.0-beta2**: full spec name. **Apache-2.0**: license identifier.
-- Technical, precise, confident. No marketing language. State what the thing does, not what it "empowers."
-- Say "robots, avatars, and digital agents" (not "robots" alone). Say "Alpha, pre-1.0, unstable API" (not "production-ready" until v1.0).
-- Code comments: complete sentences, explain *why* not *what*, no em-dashes or semicolons.
+- **No em dashes** (`—`), **no en dashes** (`–`), **no double dashes** (`--`) as
+  punctuation, and **no semicolons** in prose. Use colons, commas, parentheses, or
+  separate sentences.
+- **OpenRoIS** is the project and organization name, always with this capitalization.
+  **openrois** is the URL slug and package scope, always lowercase. **OpenRoIS
+  Community** is the author field in package metadata. **Coarobo GK** is the copyright
+  holder in legal files. **OMG RoIS Framework 2.0** is the full specification name.
+  **Apache-2.0** is the license identifier.
+- **Title Case** for headings, buttons, navigation labels, badges, and card titles
+  ("Get Started", "Project Status"). Sentence case for body text and table cells.
+- Technical, precise, confident. No marketing language. State what the software does,
+  not what it "empowers".
+- Say "physical robots, virtual avatars, and AI services" (the paper says "physical
+  robots and virtual agents"), not "robots" alone. Never "digital agents".
+- Say "Alpha, pre-1.0, unstable API". Never claim production readiness before v1.0.
+- Mark anything not implemented as "in progress" or "planned", in documentation and in
+  code comments alike. Do not describe a target design as if it already works.
+- Code comments are complete sentences that explain *why*, not *what*.
 
-Architecture: `docs/architecture.md`. Spec reference: `docs/rois-reference.md`.
-Roadmap: `docs/roadmap.md`. Style guide in the `openrois-internal` repo:
-`branding.md`.
+## Where to Look
+
+| Topic | Document |
+|-------|----------|
+| Architecture and design rationale | [docs/architecture.md](docs/architecture.md) |
+| Motivation, wire protocol, topologies | [docs/white-paper.md](docs/white-paper.md) |
+| The RoIS specification, summarized | [docs/rois-reference.md](docs/rois-reference.md) |
+| Phases, status, exit criteria | [docs/roadmap.md](docs/roadmap.md) |
+| Contribution process | [CONTRIBUTING.md](CONTRIBUTING.md) |

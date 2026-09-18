@@ -18,7 +18,8 @@
 8. [Conventional Comments](#8-conventional-comments)
 9. [Additional Conventions](#9-additional-conventions)
 10. [Git Workflow](#10-git-workflow)
-11. [CI](#11-ci)
+11. [Checks](#11-checks)
+12. [Base Branch](#12-base-branch)
 
 ---
 
@@ -61,7 +62,9 @@ apply to all documentation, code comments, commit messages, and PR descriptions.
 
 ## 4. Changelog
 
-Every package has a `CHANGELOG.md` file. Update it when you make changes.
+The `interfaces/*`, `sdk/*`, and `gateway` packages have a `CHANGELOG.md` file. Update
+it when you change one of them. The Python packages under `core/` and `components/` will
+get one with their first tagged release.
 
 - Format: [Keep a Changelog](https://keepachangelog.com/en/2.0.0/)
 - Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
@@ -190,7 +193,7 @@ feedback (both giving and receiving). Prefix each comment with a label:
 
 These are conventions the team follows that are not yet formalized elsewhere.
 
-### Error messages
+### Error Messages
 
 - Write error messages as complete sentences: "WebSocket connection failed" not
   "ws error" or "failed"
@@ -200,7 +203,7 @@ These are conventions the team follows that are not yet formalized elsewhere.
 - Error classes should carry structured data (e.g., `ReturnCodeError.returnCode`,
   `ReturnCodeError.method`), not just a string
 
-### Import ordering (TypeScript)
+### Import Ordering (TypeScript)
 
 Group imports in this order, separated by blank lines:
 
@@ -224,14 +227,14 @@ import { JsonRpcRequest } from "./jsonrpc";
 Use `import type` for type-only imports. This helps bundlers tree-shake and makes
 the intent clear.
 
-### File naming
+### File Naming
 
 - Source files: `kebab-case.ts` (e.g., `system-client.ts`, `component-proxy.ts`)
 - Test files: `kebab-case.test.ts` (e.g., `transport.test.ts`)
 - Types and interfaces: defined in the module that owns them, not in a shared
   `types.ts` unless they are truly cross-cutting
 
-### Export style
+### Export Style
 
 - Use named exports, not default exports. Named exports are refactor-safe and
   explicit.
@@ -239,7 +242,7 @@ the intent clear.
   imported directly by consumers.
 - Group exports logically: core classes first, then errors, then types.
 
-### Dependency management
+### Dependency Management
 
 - Pin major versions in `package.json` (e.g., `"ws": "^8.0"`, not `"ws": "*"`)
 - Use `devDependencies` for test, build, and lint tools
@@ -248,7 +251,7 @@ the intent clear.
   Apache-2.0 compatible
 - Run `npm audit` before tagging a release
 
-### Code review etiquette
+### Code Review Etiquette
 
 - Review within 24 hours of PR submission
 - Be specific: reference line numbers or code snippets
@@ -257,7 +260,7 @@ the intent clear.
 - Approve only when you would be comfortable maintaining the code yourself
 - Do not approve your own PRs
 
-### PR descriptions
+### PR Descriptions
 
 Use this template for every PR:
 
@@ -278,7 +281,7 @@ Use this template for every PR:
 
 - [ ] All tests pass (`npm test`)
 - [ ] Type checking passes (`npm run typecheck`)
-- [ ] Linting passes (`npm run lint`)
+- [ ] Linting passes (`npm run lint`, where the package defines it)
 - [ ] New tests added for new functionality
 - [ ] CHANGELOG.md updated
 ```
@@ -298,16 +301,35 @@ Use this template for every PR:
 - Keep commits focused: one logical change per commit
 - If a commit needs a long explanation, the code might need simplifying
 
-### Pull requests
+### Pull Requests
 
 - Open a PR when a feature is ready for review (not when it is perfect, but when it
   is testable)
 - Address review feedback in new commits (do not force-push during review)
 - Squash-merge when approved
 
-## 11. CI
+## 11. Checks
 
-- The CI pipeline (`.github/workflows/ci.yml`) runs on every push
-- CI must be green before merge
-- New packages should add their own workflow file (e.g.,
-  `.github/workflows/sdk-typescript.yml`)
+Continuous integration is not set up yet, so run the checks for every stack you touched
+before opening a pull request, and say in the pull request which ones you ran.
+
+| Stack | Directory | Commands |
+|-------|-----------|----------|
+| Python types | `interfaces/python` | `pytest`, `mypy src/`, `ruff check src/` |
+| TypeScript types | `interfaces/typescript` | `npm run build`, `npm test` |
+| C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
+| TypeScript SDK | `sdk/typescript` | `npm run build`, `npm test` |
+| Mock engine | `examples/mock-engine` | `npm test` |
+| Python packages | `core`, `components/*` | `ruff check .` |
+
+Some tests in `interfaces/python` cross-check the models against the normative RoIS
+machine-readable files, which this repository does not redistribute. They fail without
+those files, which is expected.
+
+Adding GitHub Actions workflows for these checks is an open task on the
+[roadmap](docs/roadmap.md), and a welcome contribution.
+
+## 12. Base Branch
+
+Development happens on `dev`. Base your branch on `dev` and open pull requests against
+it. The `main` branch holds released snapshots.
