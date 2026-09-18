@@ -2,7 +2,7 @@
 
 > **White paper for the R&D community.** This document presents the architecture,
 > design decisions, developer experience, wire protocol, and deployment topologies
-> of OpenRoIS, an open-source middleware implementing the OMG Robotic Interaction
+> of OpenRoIS, a community-driven open-source middleware implementing the OMG Robotic Interaction
 > Service (RoIS) Framework 2.0. It is written for robotics researchers, HRI
 > engineers, and platform integrators evaluating or adopting the RoIS standard.
 >
@@ -69,7 +69,7 @@ component library that demonstrates the full stack working end to end.
 
 **OpenRoIS** is that implementation. It is an open-source, Apache-2.0 licensed
 middleware that implements the OMG RoIS Framework 2.0 and lets service applications
-control **physical robots, virtual avatars, and virtual agents** over the internet
+control **physical robots, virtual avatars, and AI services** over the internet
 through a single, paradigm-neutral SDK.
 
 ### 1.1 Contributions
@@ -1975,6 +1975,6 @@ items. Reference components are the natural entry point for new contributors.
 
 ---
 
-*OpenRoIS is an open-source middleware for the OMG RoIS Framework 2.0. Control
-robots, avatars, and virtual agents from one paradigm-neutral SDK. Apache-2.0.
+*OpenRoIS is a community-driven open-source middleware for the OMG RoIS Framework 2.0. Control
+robots, avatars, and AI services from one paradigm-neutral SDK. Apache-2.0.
 Alpha, pre-1.0, unstable API.*

@@ -1,8 +1,8 @@
 # OpenRoIS - Implementation Architecture
 
-> A practical architecture for implementing the OMG **RoIS Framework 2.0** as an
-> open-source middleware that lets service applications control **physical robots,
-> virtual avatars, and virtual agents** over the internet.
+> A practical architecture for implementing the OMG **RoIS Framework 2.0** as a
+> community-driven open-source middleware that lets service applications control **physical robots,
+> virtual avatars, and AI services** over the internet.
 >
 > The architecture is deliberately **paradigm-neutral**: the engine and
 > client SDK never assume hardware, a world model, or any specific middleware. A
@@ -52,7 +52,7 @@
 ### Goals
 
 - Provide a **conformant RoIS 2.0 implementation** usable across **physical robots,
-  virtual avatars, and virtual agents**.
+  virtual avatars, and AI services**.
 - **Demonstrate the full stack end to end**: a web service application controls a
   real robot through the gateway, sub HRI Engine, and component layers, using only
   RoIS interfaces. This is the MVP, not the end goal.

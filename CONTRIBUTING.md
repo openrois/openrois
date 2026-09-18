@@ -1,6 +1,7 @@
 # Contributing to OpenRoIS
 
-> How to contribute code to OpenRoIS. Read this before your first PR. For AI
+> OpenRoIS is a community-driven open-source project. This is how to contribute code to
+> it. Read this before your first PR. For AI
 > coding agent guidance, see `AGENTS.md`. For the milestone roadmap, see
 > `docs/roadmap.md`.
 

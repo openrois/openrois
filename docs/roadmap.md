@@ -1,6 +1,6 @@
 # OpenRoIS Roadmap
 
-> The public phase roadmap for OpenRoIS, an open-source middleware implementing the
+> The public phase roadmap for OpenRoIS, a community-driven open-source middleware implementing the
 > [OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0). Each phase delivers a
 > coherent capability with explicit exit criteria.
 >
