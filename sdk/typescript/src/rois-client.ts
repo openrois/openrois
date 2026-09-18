@@ -60,11 +60,8 @@ import {
 } from "@openrois/interfaces";
 
 import type {
-  DiscoverResponse,
   Parameter,
   InvokeResponse,
-  QueryResponse,
-  SubscribeResponse,
   ReturnCode,
   Result,
 } from "@openrois/interfaces";
@@ -73,8 +70,6 @@ import type {
 import {
   WebSocketTransport,
   TransportError,
-  ConnectionError,
-  RpcError,
   type TransportOptions,
 } from "./transport";
 

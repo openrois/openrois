@@ -519,7 +519,7 @@ describe("WebSocketTransport", () => {
 
     it("rejects all pending requests with ConnectionError", async () => {
       const { transport, connectAndOpen } = createTestTransport();
-      const mock = await connectAndOpen();
+      await connectAndOpen();
 
       const pendingPromise = transport.send("rois.command.search", { condition: "" });
 
