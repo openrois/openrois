@@ -1,0 +1,65 @@
+name: Bug report
+description: Something does not behave as documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. OpenRoIS is alpha software, so please check the
+        [wire protocol reference](https://openrois.org/docs/reference/wire-protocol)
+        first: some RoIS operations are documented as planned and are not implemented yet.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start the gateway with ...
+        2. Connect the adapter ...
+        3. Call rois.command.bind with ...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Engine or gateway (core)
+        - Component framework or a reference component
+        - TypeScript SDK
+        - C# SDK
+        - Interface types or the type pipeline
+        - Examples
+        - Documentation
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: "dev at 15fc659, or openrois-core 0.1.0a2"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: |
+        OS: Ubuntu 24.04
+        Python: 3.12.3
+        Node.js: 22.14.0
+        ROS 2: Jazzy (if relevant)
+        Robot or platform: (if relevant)
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Gateway and adapter logs, or the JSON-RPC messages exchanged.
+      render: text

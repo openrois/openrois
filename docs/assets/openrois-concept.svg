@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" width="960" height="420" role="img" aria-labelledby="title desc">
+  <title id="t">What OpenRoIS changes</title>
+  <desc id="d">Left: without a standard interface, N applications are each integrated against M platforms, N times M integrations. Right: with OpenRoIS, applications speak the RoIS interfaces over JSON-RPC 2.0 to a gateway (main HRI Engine), and each platform is integrated once by an adapter (sub HRI Engine) through the Component Contract, N plus M integrations.</desc>
+  <title id="title">What OpenRoIS changes</title>
+  <desc id="desc">Without a standard interface, every application is integrated against every platform, which is N times M integrations. With OpenRoIS, applications use the RoIS interfaces through one gateway and each platform is integrated once by an adapter, which is N plus M integrations.</desc>
+  <defs>
+    <style>
+      .card { fill: #ffffff; stroke: #d0d7de; }
+      .title { font: 600 17px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
+      .sub { font: 400 12.5px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #59636e; }
+      .lbl { font: 600 13.5px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f3864; }
+      .small { font: 400 11px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #3d4b5c; }
+      .wire { font: 400 11px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #3d4b5c; }
+      .pill { font: 600 11.5px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f3864; }
+      .app { fill: #deebf7; stroke: #2e5c8a; stroke-width: 1.2; }
+      .core { fill: #e2f0d9; stroke: #4e7a38; stroke-width: 1.4; }
+      .adpt { fill: #fff2cc; stroke: #a6821a; stroke-width: 1.2; }
+      .host { fill: #ededed; stroke: #707070; stroke-width: 1.2; }
+      .tangle { stroke: #aab3bd; stroke-width: 1.2; fill: none; }
+      .clean { stroke: #1f3864; stroke-width: 1.6; fill: none; }
+      .mask { fill: #ffffff; }
+      .bad { fill: #c0392b; }
+      .good { fill: #2f7d32; }
+    </style>
+  </defs>
+
+  <rect class="card" x="0.5" y="0.5" width="959" height="419" rx="14"/>
+
+  <!-- Panel A: vendor-specific integration -->
+  <text class="title" x="240" y="42" text-anchor="middle">Without a standard interface</text>
+  <text class="sub" x="240" y="62" text-anchor="middle">Each application is written against each platform</text>
+
+  <g>
+    <line class="tangle" x1="110" y1="124" x2="110" y2="286"/>
+    <line class="tangle" x1="110" y1="124" x2="240" y2="286"/>
+    <line class="tangle" x1="110" y1="124" x2="370" y2="286"/>
+    <line class="tangle" x1="240" y1="124" x2="110" y2="286"/>
+    <line class="tangle" x1="240" y1="124" x2="240" y2="286"/>
+    <line class="tangle" x1="240" y1="124" x2="370" y2="286"/>
+    <line class="tangle" x1="370" y1="124" x2="110" y2="286"/>
+    <line class="tangle" x1="370" y1="124" x2="240" y2="286"/>
+    <line class="tangle" x1="370" y1="124" x2="370" y2="286"/>
+  </g>
+
+  <rect class="app" x="55" y="84" width="110" height="40" rx="6"/>
+  <text class="lbl" x="110" y="109" text-anchor="middle">App A</text>
+  <rect class="app" x="185" y="84" width="110" height="40" rx="6"/>
+  <text class="lbl" x="240" y="109" text-anchor="middle">App B</text>
+  <rect class="app" x="315" y="84" width="110" height="40" rx="6"/>
+  <text class="lbl" x="370" y="109" text-anchor="middle">App C</text>
+
+  <rect class="mask" x="172" y="193" width="136" height="24" rx="12"/>
+  <rect x="172" y="193" width="136" height="24" rx="12" fill="none" stroke="#c0392b" stroke-width="1.2"/>
+  <text class="pill" x="240" y="209" text-anchor="middle" style="fill:#a93226">N × M integrations</text>
+
+  <rect class="host" x="50" y="286" width="120" height="40" rx="6"/>
+  <text class="lbl" x="110" y="311" text-anchor="middle">Robot</text>
+  <rect class="host" x="180" y="286" width="120" height="40" rx="6"/>
+  <text class="lbl" x="240" y="311" text-anchor="middle">Avatar</text>
+  <rect class="host" x="310" y="286" width="120" height="40" rx="6"/>
+  <text class="lbl" x="370" y="311" text-anchor="middle">AI service</text>
+
+  <text class="sub" x="240" y="388" text-anchor="middle">A change of platform forces a rewrite of every application</text>
+
+  <!-- Divider -->
+  <line x1="480" y1="36" x2="480" y2="392" stroke="#d0d7de" stroke-width="1" stroke-dasharray="4 5"/>
+
+  <!-- Panel B: mediated by OpenRoIS -->
+  <text class="title" x="720" y="42" text-anchor="middle">With OpenRoIS</text>
+  <text class="sub" x="720" y="62" text-anchor="middle">Applications speak RoIS, platforms plug in once</text>
+
+  <g>
+    <line class="clean" x1="590" y1="124" x2="590" y2="152"/>
+    <line class="clean" x1="850" y1="124" x2="850" y2="152"/>
+    <line class="clean" x1="590" y1="200" x2="590" y2="228"/>
+    <line class="clean" x1="850" y1="200" x2="850" y2="228"/>
+    <line class="clean" x1="590" y1="272" x2="590" y2="286"/>
+    <line class="clean" x1="720" y1="272" x2="720" y2="286"/>
+    <line class="clean" x1="850" y1="272" x2="850" y2="286"/>
+  </g>
+
+  <rect class="app" x="535" y="84" width="110" height="40" rx="6"/>
+  <text class="lbl" x="590" y="109" text-anchor="middle">App A</text>
+  <rect class="app" x="665" y="84" width="110" height="40" rx="6"/>
+  <text class="lbl" x="720" y="109" text-anchor="middle">App B</text>
+  <rect class="app" x="795" y="84" width="110" height="40" rx="6"/>
+  <text class="lbl" x="850" y="109" text-anchor="middle">App C</text>
+
+  <text class="wire" x="720" y="142" text-anchor="middle">RoIS interfaces, JSON-RPC 2.0</text>
+
+  <rect class="core" x="530" y="152" width="380" height="48" rx="7"/>
+  <text class="lbl" x="720" y="173" text-anchor="middle">OpenRoIS gateway</text>
+  <text class="small" x="720" y="190" text-anchor="middle">main HRI Engine</text>
+
+  <text class="wire" x="720" y="218" text-anchor="middle">Component Contract</text>
+
+  <rect class="adpt" x="530" y="228" width="120" height="44" rx="6"/>
+  <text class="lbl" x="590" y="247" text-anchor="middle">Adapter</text>
+  <text class="small" x="590" y="263" text-anchor="middle">sub HRI Engine</text>
+  <rect class="adpt" x="660" y="228" width="120" height="44" rx="6"/>
+  <text class="lbl" x="720" y="247" text-anchor="middle">Adapter</text>
+  <text class="small" x="720" y="263" text-anchor="middle">sub HRI Engine</text>
+  <rect class="adpt" x="790" y="228" width="120" height="44" rx="6"/>
+  <text class="lbl" x="850" y="247" text-anchor="middle">Adapter</text>
+  <text class="small" x="850" y="263" text-anchor="middle">sub HRI Engine</text>
+
+  <rect class="host" x="530" y="286" width="120" height="40" rx="6"/>
+  <text class="lbl" x="590" y="311" text-anchor="middle">Robot</text>
+  <rect class="host" x="660" y="286" width="120" height="40" rx="6"/>
+  <text class="lbl" x="720" y="311" text-anchor="middle">Avatar</text>
+  <rect class="host" x="790" y="286" width="120" height="40" rx="6"/>
+  <text class="lbl" x="850" y="311" text-anchor="middle">AI service</text>
+
+  <rect class="mask" x="652" y="340" width="136" height="24" rx="12"/>
+  <rect x="652" y="340" width="136" height="24" rx="12" fill="none" stroke="#2f7d32" stroke-width="1.2"/>
+  <text class="pill" x="720" y="356" text-anchor="middle" style="fill:#256628">N + M integrations</text>
+  <text class="sub" x="720" y="388" text-anchor="middle">Write the application once, integrate each platform once</text>
+</svg>

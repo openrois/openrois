@@ -1,0 +1,64 @@
+cff-version: 1.2.0
+message: >-
+  If you use OpenRoIS in your research, please cite it using the metadata
+  from this file.
+type: software
+title: >-
+  OpenRoIS: Open-Source Middleware Implementing the OMG Robotic Interaction
+  Service (RoIS) Framework 2.0
+abstract: >-
+  OpenRoIS is a community-driven open-source middleware that implements the
+  OMG Robotic Interaction Service (RoIS) Framework 2.0. It provides a recursive
+  engine that realizes the main and sub HRI Engine roles, a five-method
+  component contract, a JSON-RPC 2.0 mapping of the five RoIS interfaces over
+  WebSocket, a single-source-of-truth type pipeline in which Python models are
+  exported to JSON Schema and generated into TypeScript and C# types, client
+  SDKs for web and Unity, and a Python adapter SDK with ROS 2 support, so that
+  one service application can address physical robots and virtual agents.
+authors:
+  - name: OpenRoIS Community
+repository-code: "https://github.com/openrois/openrois"
+url: "https://openrois.org/"
+license: Apache-2.0
+version: 0.1.0-alpha.2
+date-released: "2026-09-18"
+preferred-citation:
+  type: conference-paper
+  status: submitted
+  title: >-
+    OpenRoIS: A Community-Driven Open-Source Middleware Implementing the Robotic
+    Interaction Service (RoIS) Framework for Physical Robots and Virtual Agents
+  authors:
+    - family-names: Carrera Villalobos
+      given-names: Sebastian
+    - family-names: Arellano
+      given-names: Christopher Nolan
+    - family-names: Hitzmann
+      given-names: Arne
+    - family-names: Morais Brito
+      given-names: Edilson
+    - family-names: Utsumi
+      given-names: Akira
+    - family-names: Horikawa
+      given-names: Yukiko
+    - family-names: Miyashita
+      given-names: Takahiro
+    - family-names: El Hafi
+      given-names: Lotfi
+  conference:
+    name: 2027 IEEE/SICE International Symposium on System Integration (SII 2027)
+    city: Kobe
+    country: JP
+  year: 2026
+  notes: Submitted to SII 2027. Preprint on arXiv, forthcoming.
+keywords:
+  - RoIS
+  - Robotic Interaction Service
+  - Object Management Group
+  - human-robot interaction
+  - middleware
+  - robotics
+  - ROS 2
+  - Unity
+  - JSON-RPC
+  - WebSocket

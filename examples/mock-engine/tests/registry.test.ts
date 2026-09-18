@@ -90,7 +90,7 @@ describe("ComponentRegistry", () => {
   it("bind returns ERROR for an already-bound component", () => {
     const reg = freshRegistry();
     expect(reg.bind("Navigation_0")).toBe("OK");
-    expect(reg.bind("Navigation_0")).toBe("ERROR");
+    expect(reg.bind("Navigation_0")).toBe("OUT_OF_RESOURCES");
   });
 
   it("bind returns UNSUPPORTED for an unknown component", () => {

@@ -109,6 +109,16 @@ export interface ClientOptions {
 // ---------------------------------------------------------------------------
 
 /**
+ * Notification methods that forwardTransportEvents() re-emits explicitly, so
+ * the generic forwarder must not emit them a second time.
+ */
+const FORWARDED_METHODS: ReadonlySet<string> = new Set([
+  "rois.event.notify",
+  "rois.command.completed",
+  "rois.system.notify_error",
+]);
+
+/**
  * Raised when a RoIS operation returns a non-OK ReturnCode.
  *
  * Carries the structured ReturnCode so callers can inspect and handle
@@ -688,8 +698,10 @@ export class RoISClient extends EventEmitter {
     // any method name, not just the hardcoded ones below.
     this.transport.on("notification", (notification) => {
       this.emit("notification", notification);
-      // Also emit the method name for targeted listeners.
-      if (notification.method) {
+      // Also emit the method name for targeted listeners, except for the
+      // methods forwarded explicitly below, which would otherwise reach
+      // their listeners twice.
+      if (notification.method && !FORWARDED_METHODS.has(notification.method)) {
         this.emit(notification.method, notification);
       }
     });

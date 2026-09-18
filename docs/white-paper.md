@@ -14,12 +14,14 @@
 >   and reference (what the specification says).
 > - [roadmap.md](roadmap.md) is the phase roadmap (what is built and in what
 >   order).
+> - [openrois.org](https://openrois.org/) hosts the living documentation, including
+>   guides and a wire protocol reference with the implementation status of every method.
 >
-> **Status:** Alpha, pre-1.0, unstable API. The type pipeline, engine, adapter
-> framework, reference components, and client SDKs are built and working against
-> a real robot. The recursive core refactor (migration to Python `openrois_core`)
-> is the next phase. The OMG RoIS
-> Framework is at version 2.0-beta2 and may change.
+> **Status:** Alpha, pre-1.0, unstable API. The type pipeline, the recursive engine
+> (Python `openrois_core`), the component framework, reference components, and the
+> TypeScript SDK are built and demonstrated with a physical robot. The C# SDK,
+> authentication, and media streaming are in progress or planned. This document
+> describes the target architecture and marks features that are not implemented yet.
 
 ---
 
@@ -67,7 +69,7 @@ component library that demonstrates the full stack working end to end.
 
 **OpenRoIS** is that implementation. It is an open-source, Apache-2.0 licensed
 middleware that implements the OMG RoIS Framework 2.0 and lets service applications
-control **physical robots, virtual avatars, and digital agents** over the internet
+control **physical robots, virtual avatars, and virtual agents** over the internet
 through a single, paradigm-neutral SDK.
 
 ### 1.1 Contributions
@@ -87,14 +89,14 @@ This white paper describes the following contributions:
 4. A **JSON-RPC 2.0 wire protocol** mapping of the five RoIS interfaces over
    WebSocket, with full message examples for every interface operation
    (section 9).
-5. Three **client SDKs** (TypeScript for web, C# for Unity, Python for scripting)
-   that expose identical behavior regardless of the host paradigm behind the
-   gateway (section 8).
+5. **SDKs for both sides of the system**: client SDKs for web (TypeScript) and
+   Unity (C#, in progress) that behave identically regardless of the host paradigm
+   behind the gateway, and a Python component framework for adapters (section 8).
 6. A **package management boundary** that keeps the engine pure while
    allowing adapters to load component packages from local or remote sources
    (section 14).
 
-### 1.2 Target audience
+### 1.2 Target Audience
 
 This document is written for:
 
@@ -102,14 +104,14 @@ This document is written for:
 - **HRI engineers** building service applications for robots or avatars.
 - **Platform integrators** connecting existing robotics stacks (ROS 2, Unity,
   gRPC services) to a standard interface.
-- **Standards participants** interested in how a beta specification translates to a
+- **Standards participants** interested in how a specification translates to a
   working implementation.
 
 ---
 
 ## 2. Background: The RoIS Framework
 
-### 2.1 What RoIS is
+### 2.1 What RoIS Is
 
 RoIS defines a **platform-independent model (PIM)** of a framework that handles the
 messages and data exchanged between HRI service components and service
@@ -119,12 +121,13 @@ data. Raw sensor data (image buffers, audio streams) is never carried in RoIS
 messages. Symbolic results can be fed directly into conditional logic in a robot
 scenario.
 
-RoIS is developed by JARA, ETRI, KAR, and the Object Management Group (OMG). The
-current version is **2.0-beta2** (OMG document dtc/2025-09-22). The normative
+RoIS is developed by JARA, ETRI, KAR, and the Object Management Group (OMG).
+**Version 2.0** was published in June 2026 as OMG document
+[formal/26-06-03](https://www.omg.org/spec/RoIS/2.0). The normative
 machine-readable files include IDL/HPP headers, component XML profiles, an
 XML-Profiles schema, and an OWL ontology.
 
-### 2.2 Framework structure
+### 2.2 Framework Structure
 
 The framework is organized in three conceptual layers:
 
@@ -132,7 +135,7 @@ The framework is organized in three conceptual layers:
 flowchart TB
     Total["Total System<br/>Main HRI Engine<br/>(single entry point for applications)"]
     Logical["Logical Layer<br/>Sub HRI Engines x N<br/>(physical units: Robot1, Room1, Robot2)"]
-    Components["HRI Components x N<br/>(abstract functions per sub-engine)"]
+    Components["HRI Components x N<br/>(abstract functions per sub HRI Engine)"]
     Impl["Implementation Layer<br/>Sensors / Actuators<br/>(cameras, mics, LRF, wheels, legs)"]
 
     Total --> Logical --> Components --> Impl
@@ -143,12 +146,12 @@ Key rules from the specification:
 - A system may consist of **multiple physical units**. Each is a sub HRI Engine. The
   whole system is the main HRI Engine that contains them.
 - The application talks to **only the main HRI Engine**. Selection and switching
-  between sub-engines and components happens engine-side and is invisible to the
+  between sub HRI Engines and components happens engine-side and is invisible to the
   application.
 - One physical unit can host more than one function, so physical units and
   functional units are defined separately (no one-to-one mapping).
 
-### 2.3 The five interfaces
+### 2.3 the Five Interfaces
 
 RoIS exposes one System interface plus three information-exchange interfaces, plus a
 Streaming interface layered on the others.
@@ -161,7 +164,7 @@ Streaming interface layered on the others.
 | Event | Engine to App, async notifications | `subscribe`, `unsubscribe`, `get_event_detail`, `notify_event` |
 | Streaming | Two-way stream control | `connect_stream`, `disconnect_stream`, `suspend_stream`, `resume_stream`, `query_stream_status`, `notify_stream_status` |
 
-### 2.4 Command execution model
+### 2.4 Command Execution Model
 
 Because a component may be shared by multiple applications, command usage follows a
 three-step reservation pattern:
@@ -178,7 +181,7 @@ The `command_unit_list` can express **sequential and parallel** command operatio
 through `CommandUnitSequence` containing `CommandMessage` and `ConcurrentCommands`
 entries.
 
-### 2.5 What RoIS does not define
+### 2.5 What RoIS Does Not Define
 
 RoIS defines messages, not transport. The C++ and CORBA platform-specific models
 (PSMs) define method signatures only. RoIS messages can run over CORBA, RTC,
@@ -195,26 +198,26 @@ OpenRoIS is shaped by a set of deliberate architectural decisions. Each one is
 designed to keep the core paradigm-neutral, the SDK simple, and the system
 extensible without rewrites.
 
-### 3.1 Paradigm-neutral core
+### 3.1 Paradigm-Neutral Core
 
 The engine and client SDK never assume hardware, a world model, or any
 specific middleware. A single `Component Contract` decouples the engine from ROS 2,
 virtual avatars, AI services, or any future paradigm. Adding a new paradigm is
-an additive sub-engine, never a rewrite.
+an additive sub HRI Engine, never a rewrite.
 
 This decision is enforced structurally, not by convention. The engine has zero
 references to ROS, DDS, gRPC, or any game engine. The same contract test suite runs
-against every sub-engine, catching paradigm leakage.
+against every sub HRI Engine, catching paradigm leakage.
 
-### 3.2 Spec-first, symbolic data only
+### 3.2 Spec-First, Symbolic Data Only
 
 Every interface traces back to the normative IDL in the OMG machine-readable files
-at <https://www.omg.org/spec/RoIS/2.0/Beta2#docs-normative-machine>.
+at <https://www.omg.org/spec/RoIS/2.0#docs-normative-machine>.
 Messages carry only symbolic data ("person detected, count: 2"), never raw sensor
 buffers. This keeps the control plane lightweight and lets scenario logic use simple
 conditional branching on structured results.
 
-### 3.3 Single source of truth for types
+### 3.3 Single Source of Truth for Types
 
 Types flow in one direction:
 
@@ -227,46 +230,47 @@ flowchart LR
 
 Python Pydantic models are the source of truth. JSON Schema is the canonical wire
 format. C# and TypeScript types are **generated, never hand-written**, so all three
-language stacks stay consistent. A schema-drift test in CI verifies that committed
+language stacks stay consistent. A schema-drift test verifies that committed
 schemas match Pydantic output. This eliminates an entire class of bugs: type
 mismatches between the SDK and the engine.
 
-### 3.4 Transport-appropriate, not transport-uniform
+### 3.4 Transport-Appropriate, Not Transport-Uniform
 
 OpenRoIS does not invent a new wire protocol. All middleware boundaries (service
-application to gateway, gateway to sub-engine) use WebSocket + JSON-RPC 2.0. Each
-sub-engine's internal transport (DDS, gRPC, WebRTC, WHEP/WHIP, RTSP, IPC, or any
-other) is chosen by the sub-engine based on what its backend requires. The gateway
-never knows or cares which transport a sub-engine uses internally. This respects
+application to gateway, gateway to sub HRI Engine) use WebSocket + JSON-RPC 2.0. Each
+sub HRI Engine's internal transport (DDS, gRPC, WebRTC, WHEP/WHIP, RTSP, IPC, or any
+other) is chosen by the sub HRI Engine based on what its backend requires. The gateway
+never knows or cares which transport a sub HRI Engine uses internally. This respects
 the spec's separation of message from transport while choosing a concrete, proven
 technology for the middleware boundaries.
 
-### 3.5 Recursive engine, not a monolithic gateway
+### 3.5 Recursive Engine, Not a Monolithic Gateway
 
 The engine is a recursive unit, not a single process. It is a Python library
 (`openrois_core`) that manages components and routes RoIS calls to child engines.
 The same `Engine` class is used by both the gateway and the adapter. The difference
-is what is populated: the gateway has child engines (sub-engines connected over
+is what is populated: the gateway has child engines (sub HRI Engines connected over
 WebSocket), the adapter has local components (registered via `ComponentRegistry`).
 The gateway composes `Engine` + `WsServer`. The adapter composes `Engine` +
 `WsClient` + a backend bridge.
 
 This decision eliminates the duplicate dispatch implementation problem. The
-adapter IS an engine (a sub-engine), not a separate kind of process. There is one
+adapter IS an engine (a sub HRI Engine), not a separate kind of process. There is one
 `Engine` class, one dispatch implementation. See section 4 for the full model.
 
-**Current state:** a TypeScript engine POC exists and works. Phase 4 of the roadmap
-replaces it with the Python `openrois_core` package.
+**Current state:** the Python `openrois_core` package implements the recursive
+`Engine`, and existing adapters run on it. The earlier TypeScript proof of concept
+remains in `gateway/` until Phase 4 of the roadmap retires it.
 
-### 3.6 Package management is a process feature, not engine logic
+### 3.6 Package Management Is a Process Feature, Not Engine Logic
 
 The engine stays pure. It routes, aggregates profiles, tracks binds. It never
 installs packages, resolves dependencies, or manages component lifecycle setup.
-Package management lives in the `Api` (gateway process) and the
-`ComponentRegistry` loader (adapter process). This keeps the engine reusable and
+Package management will live in a management API of the gateway process and a
+loader of the adapter process, both planned (roadmap Phase 5). This keeps the engine reusable and
 testable in isolation. See section 14 for the package management boundary.
 
-### 3.7 The SDK is the product
+### 3.7 the SDK Is the Product
 
 Adoption is driven by how easy it is to write a scenario. The SDK is identical
 whether the host is a physical robot, a virtual avatar, or a distributed service.
@@ -283,12 +287,12 @@ engine is a recursive unit: it manages local components and routes RoIS calls to
 child engines. The same `Engine` class is used by both the gateway and the adapter.
 The difference is what is populated, not whether it is an engine.
 
-### 4.1 The engine class
+### 4.1 the Engine Class
 
 The `Engine` class is a Python library in `openrois_core`. It has:
 
-- A `ComponentRegistry` for local components (populated when acting as a sub-engine).
-- A sub-engine registry for child engines (populated when acting as the main engine).
+- A `ComponentRegistry` for local components (populated when acting as a sub HRI Engine).
+- A child engine registry for child engines (populated when acting as the main engine).
 - A bindings map for bind/release tracking (always present).
 - A profile aggregator that combines local component profiles and child engine
   profiles.
@@ -298,7 +302,7 @@ flowchart TB
     subgraph Engine["Engine class (openrois_core)"]
         direction TB
         CR["ComponentRegistry<br/>local components (adapter)"]
-        SR["Sub-engine registry<br/>child engines (gateway)"]
+        SR["Child engine registry<br/>child engines (gateway)"]
         Bind["Bindings map<br/>bind/release tracking"]
         Profile["Profile aggregator<br/>local + child profiles"]
         CR --> Profile
@@ -307,16 +311,16 @@ flowchart TB
     end
 ```
 
-When acting as the **main engine** (gateway), the sub-engine registry typically
+When acting as the **main engine** (gateway), the child engine registry typically
 holds child engines connected over WebSocket. The `ComponentRegistry` may also be
 populated with local components (e.g., cloud perception components running in the
-same process). When acting as a **sub-engine** (adapter), the `ComponentRegistry`
-typically holds local components. The sub-engine registry may also be populated
+same process). When acting as a **sub HRI Engine** (adapter), the `ComponentRegistry`
+typically holds local components. The child engine registry may also be populated
 with nested child engines (supported by design but not used in current
 deployments). The design supports nesting, but only the main engine and one level
-of sub-engines are used today.
+of sub HRI Engines are used today.
 
-### 4.2 Processes are compositions
+### 4.2 Processes Are Compositions
 
 ```mermaid
 flowchart TB
@@ -342,13 +346,13 @@ flowchart TB
     WsServer -->|"WebSocket + JSON-RPC 2.0<br/>Component Contract"| WsClient
 ```
 
-The gateway process composes `Engine` + `WsServer` + `Api` (and future `Auth`,
-`Signaling`). The adapter process composes `Engine` + `WsClient` + a backend
+The gateway process composes `Engine` + `WsServer` (a management `Api`, `Auth`, and
+`Signaling` are planned). The adapter process composes `Engine` + `WsClient` + a backend
 bridge (rclpy, gRPC, IPC). Both use the same `Engine` class.
 
-### 4.3 Why this eliminates the duplicate dispatch problem
+### 4.3 Why This Eliminates the Duplicate Dispatch Problem
 
-Before the recursive engine model, the TypeScript `@openrois/engine` and the Python
+Before the recursive engine model, the TypeScript `@openrois/gateway` and the Python
 `AdapterFramework` both implemented RoIS JSON-RPC dispatch logic, in two languages,
 with no shared core. The recursive model dissolves this problem:
 
@@ -359,31 +363,31 @@ with no shared core. The recursive model dissolves this problem:
   engine). The `ComponentRegistry` implements it locally (dispatching to component
   handlers via decorators). The engine calls the contract. It does not know which
   implementation it is calling.
-- The adapter IS an engine (a sub-engine), not a separate kind of process. It
+- The adapter IS an engine (a sub HRI Engine), not a separate kind of process. It
   hosts local components and registers with a parent engine. This matches the RoIS
   spec: the Sub HRI Engine is an engine, not a passive backend.
 
-**Current state:** a TypeScript engine POC exists and works. Phase 4 of the roadmap
-replaces it with the Python `openrois_core` package using the recursive `Engine`
-class.
+**Current state:** the Python `openrois_core` package implements this model with a
+single recursive `Engine` class. The TypeScript proof of concept in `gateway/` is
+retired at the end of Phase 4.
 
-### 4.4 The adapter as a sub-engine
+### 4.4 the Adapter as a Sub HRI Engine
 
 The adapter process owns three concerns:
 
-1. **Component hosting**: the `ComponentRegistry` imports component packages,
-   instantiates components, manages their lifecycle (`connect`/`disconnect`), and
+1. **Component hosting**: the adapter script imports component packages and
+   registers them in the `ComponentRegistry`, which manages their lifecycle (`connect`/`disconnect`), and
    dispatches RoIS calls to component handlers via decorators (`@component`,
    `@query`, `@invoke`, `@subscribe`).
 2. **Gateway connection**: the `WsClient` connects to the gateway over WebSocket,
-   registers components via `rois.adapter.register`, and forwards RoIS calls to
+   answers the gateway's discovery request (`rois.command.search`), and forwards RoIS calls to
    the local `Engine`.
 3. **Backend bridge**: the adapter loads a backend (rclpy, gRPC, IPC) based on its
    profile YAML. Each component owns its own connection to its backend, created in
    `connect()` and torn down in `disconnect()`.
 
 The adapter is an engine. It dispatches RoIS calls to its local components. It
-typically does not route calls between sub-engines (its sub-engine registry is
+typically does not route calls between sub HRI Engines (its child engine registry is
 typically empty). It registers with the parent engine over WebSocket.
 
 ---
@@ -401,7 +405,6 @@ flowchart TB
         direction LR
         WebApp["Web App<br/>+ RoIS TS SDK"]
         UnityApp["Unity App<br/>+ RoIS C# SDK"]
-        PyScript["Python Script<br/>+ RoIS Py SDK"]
     end
 
     subgraph L2["Gateway (hosts Engine, main)"]
@@ -412,7 +415,7 @@ flowchart TB
         Router["RoIS Router<br/>SystemIF, CommandIF, QueryIF, EventIF, StreamingIF"]
     end
 
-    subgraph L3["Adapters (Sub-engines)"]
+    subgraph L3["Adapters (Sub HRI Engines)"]
         direction LR
         RobotAdapter["Robot Adapter<br/>(gRPC, ROS 2, etc.)"]
         AvatarAdapter["Avatar Adapter"]
@@ -438,31 +441,32 @@ ROS, DDS, gRPC, or any game engine. The control plane is WebSocket + JSON-RPC
 the publisher and the consumer, outside the gateway. The engine is a pure
 control-plane router when acting as the main engine without local components.
 
-### 5.1 Mapping RoIS concepts to OpenRoIS layers
+### 5.1 Mapping RoIS Concepts to OpenRoIS Layers
 
 | RoIS concept | OpenRoIS implementation | Role |
 |-------------|------------------------|-------|
 | Main HRI Engine | Engine (hosted by the gateway) | Routes to child engines, aggregates profiles |
 | Sub HRI Engine | Engine (hosted by an adapter) | Hosts local components, owns data-plane transport |
 | HRI Component | Component registered by an adapter | Translation layer: RoIS calls to backend calls |
-| Service Application | Client SDK (TypeScript, C#, or Python) | Drives robot scenarios via RoIS interfaces |
+| Service Application | Client SDK (TypeScript or C#) | Drives robot scenarios via RoIS interfaces |
 | RoIS interfaces (SystemIF, CommandIF, QueryIF, EventIF, StreamingIF) | JSON-RPC 2.0 methods over WebSocket | Service application to gateway boundary (control plane) |
 | Component Contract | WebSocket + JSON-RPC 2.0 (gateway-to-adapter boundary) | Gateway to adapter boundary |
 
-### 5.2 Gateway responsibilities
+### 5.2 Gateway Responsibilities
 
-The gateway is the only internet-facing process and the single enforcement point
-for security. It:
+The gateway is the only internet-facing process and, once Phase 9 lands, the single
+enforcement point for security. It:
 
-- Terminates the control-plane transport (WebSocket/TLS) and authenticates every
-  connection before any RoIS message is processed.
+- Terminates the control-plane transport (WebSocket, TLS) and, when authentication
+  lands (planned), authenticates every connection before any RoIS message is
+  processed.
 - Routes JSON-RPC RoIS calls to the appropriate adapter based on component ref.
 - Aggregates profiles from all authorized adapters into one `HRI_Engine_Profile`
   returned by `get_profile()`.
 - Filters `search()` and `query()` results and guards `bind()` and `execute()`
-  per the caller's authorization scope.
-- Brokers media descriptor exchange via the RoIS streaming interface, never
-  touches media data.
+  per the caller's authorization scope (planned).
+- Brokers media descriptor exchange via the RoIS Streaming Interface, never
+  touching media data (planned).
 
 ---
 
@@ -506,7 +510,7 @@ classDiagram
 engine's direct dispatch to component handlers via decorators. The engine calls
 the contract. It does not know which implementation it is calling.
 
-### 6.1 Method semantics
+### 6.1 Method Semantics
 
 | Method | Purpose | Example |
 |--------|---------|---------|
@@ -516,7 +520,7 @@ the contract. It does not know which implementation it is calling.
 | `subscribe` | Async event push (notify_event, notify_stream_status) | Gateway subscribes, adapter pushes events via WebSocket |
 | `unsubscribe` | Cancel an event subscription | Gateway forwards unsubscribe, adapter stops pushing |
 
-### 6.2 RoIS operation to Component Contract method mapping
+### 6.2 RoIS Operation to Component Contract Method Mapping
 
 The RoIS interface operations map to Component Contract methods as follows:
 
@@ -527,7 +531,7 @@ The RoIS interface operations map to Component Contract methods as follows:
 - Async push operations (`notify_event`, `notify_stream_status`) map to `subscribe`
   plus an event sink.
 
-### 6.3 Why five methods
+### 6.3 Why Five Methods
 
 The contract is deliberately kept to five methods. Adding data-plane-specific knobs
 (QoS policies, deadlines, reliability) to the contract would leak paradigm
@@ -541,7 +545,7 @@ Because the engine sees only `Component Contract`, accidental coupling (for exam
 baking DDS QoS semantics into the engine) is structurally prevented. The same
 contract test suite runs against every adapter, catching paradigm leakage.
 
-### 6.4 Four contracts
+### 6.4 Four Contracts
 
 OpenRoIS defines four distinct contracts at four boundaries:
 
@@ -577,7 +581,7 @@ flowchart LR
     end
 
     subgraph Generated["Generated language stacks"]
-        CS["interfaces/csharp/<br/>OpenRoIS.Interfaces<br/>(netstandard2.1 / net10.0)"]
+        CS["interfaces/csharp/<br/>OpenRoIS.Interfaces<br/>(netstandard2.1)"]
         TS["interfaces/typescript/<br/>@openrois/interfaces<br/>(ESM + zod schemas)"]
     end
 
@@ -586,26 +590,29 @@ flowchart LR
     Schema -->|"npx tsx scripts/generate.ts"| TS
 ```
 
-### 7.1 Pipeline steps
+### 7.1 Pipeline Steps
 
 1. **Author** Pydantic models in `interfaces/python/src/openrois/interfaces/`.
 2. **Export** to JSON Schema: `cd python && python scripts/export_schema.py`.
 3. **Generate** C#: `cd csharp/scripts/Generator && dotnet run -- ../../schema`.
 4. **Generate** TypeScript: `cd typescript && npx tsx scripts/generate.ts`.
 
-The pipeline runs in CI on every change to `interfaces/**`. A schema-drift test
-verifies that committed JSON Schema files match the current Pydantic output. C# and
-TypeScript types are never hand-written.
+A schema-drift test verifies that committed JSON Schema files match the current
+Pydantic output. C# and TypeScript types are never hand-written. Running the pipeline
+in continuous integration on every change to `interfaces/**` is planned.
 
 ### 7.2 Packages
 
-| Package | Language | Registry | Status |
-|---------|----------|----------|--------|
+| Package | Language | Target registry | Status |
+|---------|----------|-----------------|--------|
 | `openrois-interfaces` | Python 3.12+ | PyPI | Source of truth (done) |
 | `OpenRoIS.Interfaces` | C# (netstandard2.1) | NuGet / UPM | Generated (done) |
 | `@openrois/interfaces` | TypeScript (ESM) | npm | Generated (done) |
 
-### 7.3 Typed message pattern
+The packages are built from source during the alpha. Publication to the registries
+is planned.
+
+### 7.3 Typed Message Pattern
 
 Instead of using the generic `Result(value=str)` for all event payloads, OpenRoIS
 defines typed Pydantic models per component. For example, the PersonDetection
@@ -621,7 +628,7 @@ This provides compile-time safety in all three language stacks. The generic `Res
 type remains available as a JSON fallback for genuinely dynamic payloads, but the
 preferred path is typed messages per component.
 
-### 7.4 Cross-validation
+### 7.4 Cross-Validation
 
 Types are cross-checked against the normative XML profiles
 (`PersonDetection.xml`, `Navigation.xml`, `SystemInformation.xml`) and validated
@@ -632,10 +639,9 @@ specification's machine-readable artifacts, not just with each other.
 
 ## 8. Developer Experience: Three SDKs
 
-OpenRoIS ships three client SDKs, each targeting a different developer audience.
-All three expose the same five RoIS interfaces (System, Command, Query, Event,
-Streaming) and produce identical behavior regardless of the host paradigm behind the
-gateway.
+OpenRoIS provides SDKs for three developer audiences. The client SDKs expose the
+same RoIS interfaces and produce identical behavior regardless of the host paradigm
+behind the gateway. The Python SDK serves adapter authors.
 
 ```mermaid
 flowchart TB
@@ -643,23 +649,24 @@ flowchart TB
         direction LR
         TS["TypeScript SDK<br/>Web service applications<br/>(primary client)"]
         CSharp["C# SDK<br/>Unity service applications<br/>(primary client)"]
-        Py["Python SDK<br/>Scripting, E2E testing<br/>(secondary client)"]
+        Py["Python SDK<br/>Components and adapters"]
     end
 
     SDKs -->|"WebSocket + JSON-RPC 2.0"| Gateway["Gateway"]
     Gateway --> Adapters["Robot, Avatar, AI Service Adapters"]
 ```
 
-### 8.1 TypeScript SDK for web (primary client)
+### 8.1 TypeScript SDK for Web (Primary Client)
 
 The TypeScript SDK (`@openrois/sdk`) is the primary client SDK for web service
 applications. It connects to the gateway over WebSocket using JSON-RPC 2.0, with
-auto-reconnect, profile-driven discovery, and typed errors.
+profile-driven discovery, and typed errors. Reconnection is planned.
 
 ```ts
 import { RoISClient } from "@openrois/sdk";
 
 const client = await RoISClient.connect("wss://gateway.example.com", {
+  // Passed to a custom WebSocket factory. The gateway does not check it yet.
   token: await getAccessToken(),
 });
 
@@ -690,14 +697,14 @@ Key characteristics:
 - TypeScript strict mode, no `any`, no implicit returns.
 - Runtime validation via zod schemas imported from `@openrois/interfaces`.
 - Dual ESM/CJS output (tsup), browser and Node.js compatible.
-- Auto-reconnect with exponential backoff, typed error hierarchy.
+- Typed error hierarchy for RoIS return codes and transport failures.
 - Ships with a mock engine (`examples/mock-engine/`) for testing.
 
-### 8.2 C# SDK for Unity (primary client)
+### 8.2 C# SDK for Unity (Primary Client, in Progress)
 
 The C# SDK (`OpenRoIS.Sdk` / `org.openrois.sdk`) targets Unity service
-applications. It connects to the gateway over WebSocket using JSON-RPC 2.0, with
-async connect, auto-reconnect, token handling, and typed errors.
+applications. Its JSON-RPC 2.0 layer is available. The high-level client shown
+below is the target API and is in progress.
 
 ```csharp
 var client = await RoISClient.ConnectAsync(
@@ -713,49 +720,49 @@ await pd.StartAsync();
 await nav.ExecuteAsync(new TargetPosition(x: 3.0f, y: 1.5f, theta: 0f));
 ```
 
-Key characteristics:
+Target characteristics (the JSON-RPC 2.0 layer exists today, the rest is in progress):
 
-- Packaged for Unity via UPM (`org.openrois.sdk`) and NuGet (`OpenRoIS.Sdk`).
-- Targets `netstandard2.1` for Unity 6.3+ (Mono) through Unity 6.8 (CoreCLR).
-- SDK callbacks are marshaled to the Unity main thread (documented pattern, tested
-  in Play Mode).
-- Typed component proxies: `client.BindAsync("PersonDetection")` returns a typed
-  proxy with `.On(event)` handlers.
+- Packaged for Unity as `org.openrois.sdk` through the Unity Package Manager
+  (publication planned).
+- Targets `netstandard2.1`, Unity 6.5 and later.
+- SDK callbacks marshaled to the Unity main thread (in progress).
+- Typed component proxies: `client.BindAsync("PersonDetection")` returning a typed
+  proxy with `.On(event)` handlers (planned).
 
-### 8.3 Python SDK for scripting (secondary client)
+### 8.3 Python SDK for Components and Adapters
 
-The Python SDK (`openrois-sdk`) mirrors the core API for scripting, automated
-testing, and E2E validation. It also includes the `ComponentRegistry` and
-`WsClient` for adapter authors.
+The Python packages (`openrois-core` and `openrois-components-core`) serve adapter
+authors. A component declares its RoIS operations with decorators, and the adapter
+hosts it in a sub HRI Engine connected to the gateway.
 
 ```python
-import asyncio
-from openrois.sdk import RoISClient
+from openrois.interfaces.bus import InvokeResponse
+from openrois.interfaces.hri import ReturnCode
+from openrois_components_core import component, invoke, query, results
 
-async def main():
-    client = await RoISClient.connect(
-        "wss://gateway.example.com",
-        token=get_access_token(),
-    )
 
-    pd = await client.bind("PersonDetection")
-    pd.on("person_detected", lambda e: print(f"{e.number} people"))
-    await pd.start()
+@component("Navigation", function="actuation")
+class Navigation:
+    def __init__(self, config: dict) -> None:
+        self._robot_url = config["robot_url"]
 
-    nav = await client.bind("Navigation")
-    await nav.execute(target_positions=["3.0,1.5,0.0"], time_limit=30)
+    @query("component_status")
+    async def status(self):
+        return results.status("READY")
 
-asyncio.run(main())
+    @invoke("start")
+    async def start(self, parameters):
+        return InvokeResponse(return_code=ReturnCode.OK, command_id="nav-1")
 ```
 
 Key characteristics:
 
 - Built on the same Pydantic types that are the source of truth for the entire
   project, so there is no type bridge needed.
-- Used for E2E testing of the gateway and adapters.
-- Async-first (asyncio), mirroring the gateway runtime.
+- Async-first (asyncio), with ROS 2 nodes spun in a background thread.
+- A Python client for scripting and end-to-end testing is planned.
 
-### 8.4 SDK interface mapping
+### 8.4 SDK Interface Mapping
 
 All three SDKs mirror the five RoIS interfaces defined in the normative IDL:
 
@@ -765,12 +772,12 @@ All three SDKs mirror the five RoIS interfaces defined in the normative IDL:
 | CommandIF | `CommandClient` | `search()`, `bind()`, `bindAny()`, `release()`, `getParameter()`, `setParameter()`, `execute()`, `getCommandResult()` |
 | QueryIF | `QueryClient` | `query()` |
 | EventIF | `EventClient` | `subscribe()`, `unsubscribe()`, `getEventDetail()`, callback: `onNotifyEvent` |
-| StreamingIF | `StreamClient` | `connectStream()`, `disconnectStream()`, `suspendStream()`, `resumeStream()`, `queryStreamStatus()` |
+| StreamingIF | `StreamClient` (planned) | `connectStream()`, `disconnectStream()`, `suspendStream()`, `resumeStream()`, `queryStreamStatus()` |
 
 The callback surface comes directly from `ServiceApplicationBase` in the
 specification: `notify_error`, `completed`, and `notify_event`.
 
-### 8.5 Paradigm transparency
+### 8.5 Paradigm Transparency
 
 The same SDK calls drive a real ROS 2 robot and a virtual avatar. Only the adapter
 behind the gateway changes. This is the core value proposition for researchers: a
@@ -787,7 +794,7 @@ namespaced hierarchy. The gateway processes requests and sends responses, and al
 pushes asynchronous notifications (events, command completions, errors) to the client
 as JSON-RPC notifications (messages with no `id` field).
 
-### 9.1 Method namespaces
+### 9.1 Method Namespaces
 
 ```
 rois.system.*     SystemIF:    connect, disconnect, get_profile, get_error_detail
@@ -806,9 +813,9 @@ rois.command.completed     completed(command_id, status)
 rois.stream.notify_status  notify_stream_status(stream_id, status)
 ```
 
-### 9.2 Full method catalog
+### 9.2 Full Method Catalog
 
-#### System interface (`rois.system.*`)
+#### System Interface (`rois.system.*`)
 
 | Method | Params | Response |
 |--------|--------|----------|
@@ -817,25 +824,25 @@ rois.stream.notify_status  notify_stream_status(stream_id, status)
 | `rois.system.get_profile` | `{condition: string}` | `{return_code, profile: string}` |
 | `rois.system.get_error_detail` | `{error_id: string}` | `{return_code, results: Result[]}` |
 
-#### Command interface (`rois.command.*`)
+#### Command Interface (`rois.command.*`)
 
 | Method | Params | Response |
 |--------|--------|----------|
 | `rois.command.search` | `{condition: string}` | `{return_code, component_ref_list: string[]}` |
 | `rois.command.bind` | `{component_ref: string}` | `{return_code}` |
 | `rois.command.release` | `{component_ref: string}` | `{return_code}` |
-| `rois.command.get_parameter` | `{component_ref, parameter_names: string[]}` | `{return_code, parameters: Parameter[]}` |
+| `rois.command.get_parameter` | `{component_ref, names: string[]}` | `{return_code, parameters: Parameter[]}` |
 | `rois.command.set_parameter` | `{component_ref, parameters: Parameter[]}` | `{return_code}` |
 | `rois.command.execute` | `{component_ref, command_unit_list: CommandUnitSequence}` | `{return_code, command_id: string}` |
 | `rois.command.get_command_result` | `{command_id: string}` | `{return_code, results: Result[]}` |
 
-#### Query interface (`rois.query.*`)
+#### Query Interface (`rois.query.*`)
 
 | Method | Params | Response |
 |--------|--------|----------|
 | `rois.query.query` | `{component_ref, query_type: string, condition: string}` | `{return_code, results: Result[]}` |
 
-#### Event interface (`rois.event.*`)
+#### Event Interface (`rois.event.*`)
 
 | Method | Params | Response |
 |--------|--------|----------|
@@ -843,7 +850,7 @@ rois.stream.notify_status  notify_stream_status(stream_id, status)
 | `rois.event.unsubscribe` | `{subscribe_id: string}` | `{return_code}` |
 | `rois.event.get_event_detail` | `{event_id: string}` | `{return_code, results: Result[]}` |
 
-#### Streaming interface (`rois.stream.*`)
+#### Streaming Interface (`rois.stream.*`)
 
 | Method | Params | Response |
 |--------|--------|----------|
@@ -853,7 +860,7 @@ rois.stream.notify_status  notify_stream_status(stream_id, status)
 | `rois.stream.resume_stream` | `{stream_id: string}` | `{return_code}` |
 | `rois.stream.query_stream_status` | `{stream_id: string}` | `{return_code, status: StreamStatus}` |
 
-### 9.3 Core data types on the wire
+### 9.3 Core Data Types on the Wire
 
 All payloads use the types generated from the canonical JSON Schema. The key
 structures:
@@ -902,7 +909,7 @@ structures:
 **StreamStatus** values: `STREAMING_NOT_CONNECTED`, `STREAMING_NOT_RUNNING`,
 `STREAMING_RUNNING`, `STREAMING_SUSPENDED`, `STREAMING_RESUMED`.
 
-### 9.4 End-to-end message flow examples
+### 9.4 End-to-End Message Flow Examples
 
 The following examples show the actual JSON-RPC messages exchanged during a
 complete service application session: connect, search, bind, subscribe, execute,
@@ -931,7 +938,7 @@ Gateway responds:
 }
 ```
 
-#### Step 2: Search for PersonDetection components
+#### Step 2: Search for PersonDetection Components
 
 ```json
 {
@@ -957,7 +964,7 @@ Gateway responds with matching component references:
 }
 ```
 
-#### Step 3: Bind the PersonDetection component
+#### Step 3: Bind the PersonDetection Component
 
 ```json
 {
@@ -978,7 +985,7 @@ Gateway responds with matching component references:
 }
 ```
 
-#### Step 4: Subscribe to person_detected events
+#### Step 4: Subscribe to person_detected Events
 
 ```json
 {
@@ -1004,7 +1011,7 @@ Gateway responds with matching component references:
 }
 ```
 
-#### Step 5: Start the PersonDetection component
+#### Step 5: Start the PersonDetection Component
 
 ```json
 {
@@ -1013,15 +1020,13 @@ Gateway responds with matching component references:
   "method": "rois.command.execute",
   "params": {
     "component_ref": "robot-a1/PersonDetection",
-    "command_unit_list": {
-      "command_unit_list": [
-        {
-          "component_ref": "robot-a1/PersonDetection",
-          "command_type": "start",
-          "command_id": "cmd-start-pd"
-        }
-      ]
-    }
+    "command_unit_list": [
+      {
+        "component_ref": "robot-a1/PersonDetection",
+        "command_type": "start",
+        "command_id": "cmd-start-pd"
+      }
+    ]
   }
 }
 ```
@@ -1037,7 +1042,7 @@ Gateway responds with matching component references:
 }
 ```
 
-#### Step 6: Gateway pushes a person_detected event (notification, no id)
+#### Step 6: Gateway Pushes a person_detected Event (Notification, No Id)
 
 ```json
 {
@@ -1056,7 +1061,7 @@ Gateway responds with matching component references:
 }
 ```
 
-#### Step 7: Bind Navigation and set target position
+#### Step 7: Bind Navigation and Set Target Position
 
 ```json
 {
@@ -1103,7 +1108,7 @@ Set the navigation parameters:
 }
 ```
 
-#### Step 8: Execute the navigation command
+#### Step 8: Execute the Navigation Command
 
 ```json
 {
@@ -1112,19 +1117,17 @@ Set the navigation parameters:
   "method": "rois.command.execute",
   "params": {
     "component_ref": "robot-a1/Navigation",
-    "command_unit_list": {
-      "command_unit_list": [
-        {
-          "component_ref": "robot-a1/Navigation",
-          "command_type": "execute",
-          "command_id": "cmd-nav-001",
-          "arguments": [
-            {"name": "target_positions", "data_type_ref": "string[]", "value": "[\"3.0,1.5,0.0\"]"},
-            {"name": "time_limit", "data_type_ref": "int", "value": "30"}
-          ]
-        }
-      ]
-    }
+    "command_unit_list": [
+      {
+        "component_ref": "robot-a1/Navigation",
+        "command_type": "execute",
+        "command_id": "cmd-nav-001",
+        "arguments": [
+          {"name": "target_positions", "data_type_ref": "string[]", "value": "[\"3.0,1.5,0.0\"]"},
+          {"name": "time_limit", "data_type_ref": "int", "value": "30"}
+        ]
+      }
+    ]
   }
 }
 ```
@@ -1140,7 +1143,7 @@ Set the navigation parameters:
 }
 ```
 
-#### Step 9: Gateway pushes command completion (notification)
+#### Step 9: Gateway Pushes Command Completion (Notification)
 
 ```json
 {
@@ -1153,7 +1156,7 @@ Set the navigation parameters:
 }
 ```
 
-#### Step 10: Gateway pushes reached_target event (notification)
+#### Step 10: Gateway Pushes reached_target Event (Notification)
 
 ```json
 {
@@ -1172,7 +1175,7 @@ Set the navigation parameters:
 }
 ```
 
-#### Step 11: Query robot position (synchronous)
+#### Step 11: Query Robot Position (Synchronous)
 
 ```json
 {
@@ -1202,7 +1205,7 @@ Set the navigation parameters:
 }
 ```
 
-#### Step 12: Release components and disconnect
+#### Step 12: Release Components and Disconnect
 
 ```json
 {
@@ -1238,7 +1241,12 @@ Set the navigation parameters:
 }
 ```
 
-### 9.5 Error handling
+### 9.5 Error Handling
+
+> **Implementation note:** the current engine reports RoIS failures as a normal
+> result with a `return_code` other than `OK`, and reserves JSON-RPC error objects
+> for internal errors. The error objects with RoIS return codes and the
+> `rois.system.notify_error` notifications shown below are the target design.
 
 Errors use standard JSON-RPC 2.0 error objects with RoIS-specific return codes. The
 gateway also pushes asynchronous error notifications via `rois.system.notify_error`.
@@ -1304,7 +1312,7 @@ The client can then fetch details with `rois.system.get_error_detail`:
 }
 ```
 
-### 9.6 Concurrent commands
+### 9.6 Concurrent Commands
 
 The `CommandUnitSequence` supports both sequential and concurrent execution. A
 `ConcurrentCommands` group wraps multiple `CommandMessage` entries that execute in
@@ -1317,39 +1325,37 @@ parallel:
   "method": "rois.command.execute",
   "params": {
     "component_ref": "robot-a1/Navigation",
-    "command_unit_list": {
-      "command_unit_list": [
-        {
-          "command_message": {
-            "component_ref": "robot-a1/PersonDetection",
-            "command_type": "start",
-            "command_id": "cmd-pd-start"
-          }
-        },
-        {
-          "concurrent_commands": {
-            "command_list": [
-              {
-                "component_ref": "robot-a1/Navigation",
-                "command_type": "execute",
-                "command_id": "cmd-nav-002",
-                "arguments": [
-                  {"name": "target_positions", "data_type_ref": "string[]", "value": "[\"3.0,1.5,0.0\"]"}
-                ]
-              },
-              {
-                "component_ref": "robot-a1/SpeechSynthesis",
-                "command_type": "set_parameter",
-                "command_id": "cmd-speech-001",
-                "arguments": [
-                  {"name": "speech_text", "data_type_ref": "string", "value": "Moving to target"}
-                ]
-              }
-            ]
-          }
+    "command_unit_list": [
+      {
+        "command_message": {
+          "component_ref": "robot-a1/PersonDetection",
+          "command_type": "start",
+          "command_id": "cmd-pd-start"
         }
-      ]
-    }
+      },
+      {
+        "concurrent_commands": {
+          "command_list": [
+            {
+              "component_ref": "robot-a1/Navigation",
+              "command_type": "execute",
+              "command_id": "cmd-nav-002",
+              "arguments": [
+                {"name": "target_positions", "data_type_ref": "string[]", "value": "[\"3.0,1.5,0.0\"]"}
+              ]
+            },
+            {
+              "component_ref": "robot-a1/SpeechSynthesis",
+              "command_type": "set_parameter",
+              "command_id": "cmd-speech-001",
+              "arguments": [
+                {"name": "speech_text", "data_type_ref": "string", "value": "Moving to target"}
+              ]
+            }
+          ]
+        }
+      }
+    ]
   }
 }
 ```
@@ -1357,7 +1363,7 @@ parallel:
 In this example, PersonDetection starts first (sequential), then Navigation and
 SpeechSynthesis execute concurrently.
 
-### 9.7 Complete session as a sequence diagram
+### 9.7 Complete Session as a Sequence Diagram
 
 ```mermaid
 sequenceDiagram
@@ -1419,7 +1425,7 @@ other) is an implementation detail of the adapter, not a topology choice. Topolo
 differ by **where processes run**: on a single host, across a LAN, across the
 internet, or with components offloaded to the cloud.
 
-### 10.1 Topology A: Single host (local)
+### 10.1 Topology A: Single Host (Local)
 
 Everything runs on one machine: the service application, the gateway, the adapter,
 and the robot. The service application talks to the gateway over localhost WebSocket.
@@ -1440,7 +1446,7 @@ flowchart TB
     end
 ```
 
-### 10.2 Topology B: LAN, multiple service robots
+### 10.2 Topology B: LAN, Multiple Service Robots
 
 The gateway runs on one host. Multiple service robots run on the same LAN, each
 with its own adapter. The service application connects to the gateway, which routes
@@ -1462,7 +1468,7 @@ flowchart TB
     Adapter2 --> Robot2["Service Robot 2"]
 ```
 
-### 10.3 Topology C: Distributed hosts (internet)
+### 10.3 Topology C: Distributed Hosts (Internet)
 
 The service application runs on a remote host (operator's laptop, cloud service).
 The gateway runs on a server or in the cloud. Each service robot runs on its own
@@ -1486,7 +1492,7 @@ flowchart TB
     Adapter2 --> Robot2["Service Robot 2"]
 ```
 
-### 10.4 Topology D: Cloud perception (separate adapter or local components)
+### 10.4 Topology D: Cloud Perception (Separate Adapter or Local Components)
 
 Perception components (PersonDetection, SpeechRecognition) may need more compute
 than the robot has. These can run in two ways:
@@ -1609,10 +1615,11 @@ WebRTC.
 
 ## 13. Security Architecture
 
-Security is phased. Auth hooks exist in the engine. Full multi-tenant
-enforcement is a roadmap phase.
+> **Status:** planned. The alpha releases do not authenticate or authorize
+> connections. Run the gateway only on trusted networks until Phase 9 of the
+> roadmap delivers the mechanisms below.
 
-### 13.1 Authentication flow
+### 13.1 Authentication Flow
 
 The specification's `connect()` takes no parameters (it assumes a trusted LAN). For
 remote access, OpenRoIS authenticates before any RoIS message is processed, at the
@@ -1646,7 +1653,7 @@ Example JWT claims used downstream for authorization:
 }
 ```
 
-### 13.2 Authorization model (RBAC)
+### 13.2 Authorization Model (RBAC)
 
 Authorization is enforced per RoIS operation inside the gateway. The spec's
 `Condition_t` (an ISO 19143 filter expression) and `component_ref` are the natural
@@ -1659,7 +1666,7 @@ enforcement points.
 | viewer | assigned | detection + streaming only |
 | maintenance | assigned | system_information |
 
-### 13.3 Enforcement points
+### 13.3 Enforcement Points
 
 | Interface / operation | Enforcement |
 |-----------------------|-------------|
@@ -1674,7 +1681,7 @@ enforcement points.
 Because the gateway filters at `search()`, robots outside a caller's scope are
 invisible. The caller cannot discover or address them.
 
-### 13.4 Defense in depth
+### 13.4 Defense in Depth
 
 ```mermaid
 flowchart LR
@@ -1693,13 +1700,14 @@ flowchart LR
 
 ## 14. Component Library and Package Management
 
-### 14.1 The 17 basic components
+### 14.1 the 17 Basic Components
 
 RoIS defines 17 basic HRI components. Every component (except System Information)
 shares the `RoIS_Common` interface: `start`, `stop`, `suspend`, `resume`, and
-`component_status`. About 70% of components are identical across paradigms. The
-perception and speech components run the same ML models whether the input is a robot
-camera or a webcam. Only actuation, world model, and stream source differ.
+`component_status`. Of the 17 components, 13 keep the same interface and the same
+underlying models across paradigms, and 7 of those are identical. The perception and
+speech components run the same ML models whether the input is a robot camera or a
+webcam. Only actuation, world model, and stream source differ.
 
 ```mermaid
 flowchart TB
@@ -1754,7 +1762,7 @@ flowchart TB
 
 The component's logic is the same across adapters. Only the binding differs.
 
-### 14.2 User-defined and non-canonical components
+### 14.2 User-Defined and Non-Canonical Components
 
 The spec supports user-defined components beyond the basic 17, reusing
 `RoIS_Common` and the profile mechanism (spec section 12). An HRI Component Profile
@@ -1766,7 +1774,7 @@ basic components. For example, a `NavigationInformation` component provides
 destination lists and map data for a specific robot. It is user-defined,
 non-canonical, and valid per the spec.
 
-### 14.3 Component packages and multiple backends
+### 14.3 Component Packages and Multiple Backends
 
 Components are distributed as packages (e.g., `openrois_components.kachaka`). When a
 component supports multiple backends (e.g., gRPC and ROS 2), the package ships one
@@ -1774,7 +1782,7 @@ class per backend: `GrpcNavigation` and `Ros2Navigation`. Both are decorated
 `@component("Navigation")`. The adapter imports the one it needs. Selection happens
 at import time, not at runtime. No factory, no Protocol, no runtime selection.
 
-### 14.4 Package management boundary
+### 14.4 Package Management Boundary
 
 The engine stays pure. It routes, aggregates profiles, tracks binds. It never
 installs packages, resolves dependencies, or manages component lifecycle setup.
@@ -1801,23 +1809,24 @@ OpenRoIS is built in phases. Each phase delivers a coherent architectural shift 
 a working end-to-end capability. See [roadmap.md](roadmap.md) for the full phase
 details, dependency graph, and open decisions.
 
-| Phase | Theme | Exit tag | Status |
-|-------|-------|----------|--------|
+| Phase | Theme | Exit criteria | Status |
+|-------|-------|---------------|--------|
 | 0 | Paradigm-Neutral Interfaces | type pipeline, `Component Contract` | done |
-| 1 | Engine and Sub-engine | TypeScript engine POC, `SubEngine` proxy, mock components | done |
-| 2 | Adapter Framework and Components | Python `AdapterFramework`, reference components, real robot adapter | done |
-| 3 | Client SDKs and MVP | `v0.1.0` | done |
-| 4 | Recursive Core Refactor | one `Engine` class in Python `openrois_core`, eliminate duplicate dispatch | todo |
-| 5 | Solidify the Core | harden engine, component framework, package management v0 | todo |
-| 6 | Gateway Process | compose `Engine` + `WsServer` from `openrois_core` | todo |
-| 7 | Adapter Process | compose `Engine` + `WsClient` from `openrois_core` + backend bridge | todo |
-| 8 | Real Component and Mixed Paradigm | paradigm-neutrality proof | todo |
-| 9 | Auth, Security, Media | parallelizable after Phase 7 | todo |
-| 10 | Full Component Library | `v1.0` | todo |
-| 11 | Hub and Component Marketplace | post-1.0, adoption-gated | parked |
+| 1 | Engine and Sub HRI Engine | TypeScript proof of concept, `SubEngine` proxy, mock components | done |
+| 2 | Adapter Framework and Components | component framework, reference components, real robot adapter | done |
+| 3 | Client SDKs and First Demonstration | TypeScript SDK and web client done, C# SDK in progress, exit tag `v0.1.0` | in progress |
+| 4 | Recursive Core in Python | one `Engine` class in `openrois_core`, TypeScript proof of concept retired | in progress |
+| 5 | Solidify the Core | harden engine, component framework, package management v0 | planned |
+| 6 | Gateway Process | compose `Engine` + `WsServer` from `openrois_core` | planned |
+| 7 | Adapter Process | compose `Engine` + `WsClient` from `openrois_core` + backend bridge | planned |
+| 8 | Open Reference Platform and Mixed Paradigm | reference platform on open hardware, paradigm-neutrality proof | planned |
+| 9 | Auth, Security, Media | parallelizable after Phase 7 | planned |
+| 10 | Full Component Library | all 17 basic components, packages published, `v1.0` | planned |
+| 11 | Component Registry and Hub | post-1.0, adoption-gated | planned |
 
-The **MVP is Phase 3**: the minimum that lets a service application clone, build,
-and control a real robot from a web application over WebSocket. The
+The **first end-to-end demonstration is Phase 3**: the minimum that lets a service
+application clone, build, and control a real robot from a web application over
+WebSocket. The
 **paradigm-neutrality proof is Phase 8** (mixed robot and avatar on one gateway).
 The **foundation migration trigger fires after Phase 8, before Phase 10**: the
 paradigm-neutrality proof is the governance milestone that initiates migration to a
@@ -1835,14 +1844,14 @@ neutral foundation home. The **1.0 release is Phase 10**.
 
 Pre-1.0 releases are Alpha, unstable API. Do not use in production until v1.0.
 
-### 15.2 Current state
+### 15.2 Current State
 
-The type pipeline, TypeScript engine POC, Python adapter framework, reference
-components, and all three client SDKs are built and working. The MVP demonstration
-runs against a real robot via gRPC. The recursive core refactor (Phase 4) is the
-next step. It migrates the TypeScript engine POC to a Python `openrois_core`
-package with a single recursive `Engine` class, eliminating the duplicate dispatch
-implementation.
+The type pipeline, the recursive Python engine (`openrois_core`), the component
+framework, reference components, and the TypeScript SDK are built and working, and
+the first end-to-end demonstration runs against a real robot via gRPC. Phase 4
+finishes the migration by hardening the Python core and retiring the TypeScript
+proof of concept, which removes the duplicate dispatch implementation. The C#
+client SDK is in progress.
 
 ---
 
@@ -1857,17 +1866,17 @@ parked until the core is solid and has real adoption.
 The Hub is a management web app that connects to the gateway `Api` over WebSocket
 and REST. It visualizes adapters, components, status, and fleet health. It is a
 consumer of the gateway's management surface, not part of the engine. A
-richer commercial Hub (audit trail, OTA, compliance) can be built on top of the open
+richer Hub (audit trail, OTA, compliance) can be built on top of the open
 gateway `Api` later.
 
-### 16.2 Component marketplace
+### 16.2 Component Marketplace
 
 The component marketplace is a registry of certified components. Component vendors
 publish to the registry. Adapters deploy packages through the gateway `Api` or
 directly. The marketplace is a different source for the adapter's package loader and
 a different backend for the gateway `Api`, not new engine logic.
 
-### 16.3 Gating principle
+### 16.3 Gating Principle
 
 The core must be solid and have real adoption before the Hub and marketplace are
 built. They are features on top of the management `Api`, not prerequisites.
@@ -1876,7 +1885,7 @@ built. They are features on top of the management `Api`, not prerequisites.
 
 ## 17. Related Work and Positioning
 
-### 17.1 RoIS and other HRI standards
+### 17.1 RoIS and Other HRI Standards
 
 RoIS is not the only standard addressing human-robot interaction. However, it is
 unique in defining a **platform-independent model** at the symbolic level, separate
@@ -1914,9 +1923,9 @@ An implementation claiming RoIS conformance shall:
 - Handle component profiles described as XML files and the messages defined therein.
 
 OpenRoIS targets full conformance. The interface types are cross-checked against the
-normative XML profiles and validated against `XML-Profiles.xsd` in CI. A conformance
-test suite asserts behavior against the spec's interfaces and profiles, run against
-every adapter.
+normative XML profiles and validated against `XML-Profiles.xsd` by the test suite. A
+conformance test suite that asserts behavior against the specification's interfaces
+and profiles, run against every adapter, is planned.
 
 ---
 
@@ -1935,21 +1944,23 @@ single-source-of-truth type pipeline (Python Pydantic to JSON Schema to C# and
 TypeScript) keeps three language stacks consistent without manual
 synchronization. The JSON-RPC 2.0 wire protocol over WebSocket provides a
 browser-native, NAT-friendly control plane with full async event support. The
-three SDKs (TypeScript for web, C# for Unity, Python for scripting) expose
+client SDKs (TypeScript for web, C# for Unity) expose
 identical behavior regardless of the host paradigm behind the
 gateway.
 
-The project is in alpha. The type pipeline, engine, adapter framework, reference
-components, and client SDKs are built and working. The recursive core refactor
-(migration to Python `openrois_core`) is the next phase. Researchers and engineers
+The project is in alpha. The type pipeline, the recursive engine, the component
+framework, reference components, and the TypeScript SDK are built and demonstrated
+with a physical robot. The C# SDK, authentication, media streaming, and the full
+component library follow the roadmap. Researchers and engineers
 evaluating RoIS 2.0 can use OpenRoIS as a reference implementation, contribute
 reference components, or build applications against the SDK today.
 
-### 18.1 Getting involved
+### 18.1 Getting Involved
 
+- **Website**: [openrois.org](https://openrois.org/)
 - **Repository**: [github.com/openrois/openrois](https://github.com/openrois/openrois)
 - **License**: Apache-2.0
-- **Specification**: [OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0/Beta2)
+- **Specification**: [OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0)
 - **Roadmap**: [roadmap.md](roadmap.md)
 - **Architecture**: [architecture.md](architecture.md)
 - **Specification reference**: [rois-reference.md](rois-reference.md)
@@ -1960,5 +1971,5 @@ items. Reference components are the natural entry point for new contributors.
 ---
 
 *OpenRoIS is an open-source middleware for the OMG RoIS Framework 2.0. Control
-robots, avatars, and digital agents from one paradigm-neutral SDK. Apache-2.0.
+robots, avatars, and virtual agents from one paradigm-neutral SDK. Apache-2.0.
 Alpha, pre-1.0, unstable API.*

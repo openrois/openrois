@@ -1,62 +1,50 @@
-# hri-client
+# HRI Client
 
-Generic RoIS HRI Client: a browser-based component inspector for any RoIS engine.
+A browser-based component inspector for any RoIS engine, and the reference RoIS HRI Client
+in this repository.
 
-## What This Is
+It connects over WebSocket, reads the engine profile with `rois.system.get_profile`, and
+builds a panel for every component it finds, with its queries, commands, and events. It
+knows nothing about any specific robot: everything on screen comes from the profile.
 
-A web application that connects to any RoIS HRI Engine over WebSocket, fetches
-the engine profile via `rois.system.get_profile`, and renders a dynamic UI panel
-for each discovered component. The user can run queries, execute commands, and
-subscribe to events without knowing anything about the specific robot or engine.
+![The HRI client connected to an engine](../../docs/assets/hri-client.png)
 
-## Install
+## Run It Against the Mock Engine
 
 ```bash
+# Once, from the repository root: build the types and the SDK.
+(cd interfaces/typescript && npm install && npm run build)
+(cd sdk/typescript && npm install && npm run build)
+
+# Terminal 1: the mock engine, on ws://127.0.0.1:8765.
+(cd examples/mock-engine && npm install && npm start)
+
+# Terminal 2: the client.
 cd examples/hri-client
 npm install
-```
-
-## Run
-
-```bash
 npm run dev
 ```
 
-Open the browser, enter the engine WebSocket URL (default `ws://localhost:8765`),
-and click Connect.
+Open the address Vite prints, enter `ws://localhost:8765`, and click Connect.
 
-## Use with the mock engine
+## Run It Against a Real Engine
 
-```bash
-# Terminal 1: start the mock engine
-cd examples/mock-engine
-npm start
+Enter that engine's WebSocket URL instead. The engine must answer
+`rois.system.get_profile` with `component_profiles` for the client to render panels.
+Anything conformant works, including a Python gateway with adapters connected to it.
 
-# Terminal 2: start the hri-client
-cd examples/hri-client
-npm run dev
-```
-
-Open the browser and connect to `ws://localhost:8765`.
-
-## Use with a real engine
-
-Point the hri-client at the engine's WebSocket URL. The engine must implement
-`rois.system.get_profile` and return `component_profiles` in the response for
-the client to render component panels.
-
-## Architecture
-
-The hri-client is the client-side reference implementation in the OpenRoIS
-examples:
+## Where It Fits
 
 | Example | RoIS role |
-|---|---|
-| `mock-adapter` | BusAdapter (robot-side) |
-| `adapter-template` | BusAdapter (robot-side) |
-| `mock-engine` | HRI Engine (server-side) |
-| `hri-client` | HRI Client (client-side) |
+|---------|-----------|
+| `hri-client` | HRI Client, the application side |
+| `mock-engine` | HRI Engine, a test double |
+| `mock-adapter` | Sub HRI Engine, a working adapter with no robot |
+| `adapter-template` | Sub HRI Engine, a blank starting point |
 
-The app uses `@openrois/sdk` (`RoISClient`) for the WebSocket transport and
-JSON-RPC protocol. It is robot-agnostic: no hardcoded component refs, query
-types, or map data.
+The client uses `RoISClient` from [`@openrois/sdk`](../../sdk/typescript/README.md) for the
+transport and the JSON-RPC protocol.
+
+## License
+
+Apache-2.0.
