@@ -1,4 +1,4 @@
-# openrois-Interfaces
+# openrois-interfaces
 
 ![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)
 
