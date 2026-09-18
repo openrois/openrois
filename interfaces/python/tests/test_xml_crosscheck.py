@@ -7,6 +7,7 @@ the XML definitions — field names, data types, and default values must match.
 This is step 9 of the M0 Task 0.1 plan.
 """
 
+import os
 from pathlib import Path
 
 import pytest
@@ -27,7 +28,16 @@ from openrois.interfaces.profiles import (
 
 # tests/test_xml_crosscheck.py  →  tests/  →  python/  →  interfaces/  →  repo root
 REPO_ROOT = Path(__file__).resolve().parents[3]
-NORMATIVE_DIR = REPO_ROOT / "normative" / "machine-readable"
+# The OMG machine-readable files are not redistributed in this repository. Point
+# OPENROIS_NORMATIVE_DIR at a directory containing them to run these tests.
+NORMATIVE_DIR = Path(
+    os.environ.get("OPENROIS_NORMATIVE_DIR", REPO_ROOT / "normative" / "machine-readable")
+)
+
+pytestmark = pytest.mark.skipif(
+    not NORMATIVE_DIR.is_dir(),
+    reason="normative RoIS files not available (set OPENROIS_NORMATIVE_DIR)",
+)
 
 ROIS_NS = "http://www.omg.org/spec/RoIS/20240801"
 GML_NS = "http://www.opengis.net/gml/3.2"

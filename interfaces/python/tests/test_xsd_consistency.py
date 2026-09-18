@@ -13,6 +13,7 @@ matches the structural expectations defined in the XSD schema. We check:
 This is step 10 of the M0 Task 0.1 plan.
 """
 
+import os
 from pathlib import Path
 
 import pytest
@@ -36,7 +37,16 @@ from openrois.interfaces.hri import Argument, CommandUnit, CommandUnitSequence, 
 
 # tests/test_xsd_consistency.py  →  tests/  →  python/  →  interfaces/  →  repo root
 REPO_ROOT = Path(__file__).resolve().parents[3]
-NORMATIVE_DIR = REPO_ROOT / "normative" / "machine-readable"
+# The OMG machine-readable files are not redistributed in this repository. Point
+# OPENROIS_NORMATIVE_DIR at a directory containing them to run these tests.
+NORMATIVE_DIR = Path(
+    os.environ.get("OPENROIS_NORMATIVE_DIR", REPO_ROOT / "normative" / "machine-readable")
+)
+
+pytestmark = pytest.mark.skipif(
+    not NORMATIVE_DIR.is_dir(),
+    reason="normative RoIS files not available (set OPENROIS_NORMATIVE_DIR)",
+)
 
 XSD_PATH = NORMATIVE_DIR / "XML-Profiles.xsd"
 
