@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://openrois.org/
+    about: Guides, concepts, and the wire protocol reference with per-method status.
+  - name: Roadmap
+    url: https://openrois.org/docs/project/roadmap
+    about: Check whether what you need is already planned, and which phase it belongs to.
+  - name: Report a security issue
+    url: https://github.com/openrois/openrois/security/advisories/new
+    about: Report vulnerabilities privately instead of opening a public issue.
