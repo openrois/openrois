@@ -1,0 +1,5 @@
+# The plain .NET test project lives in a Unity-hidden folder (trailing ~). Its
+# project file is source; its build outputs are not.
+bin/
+obj/
+!OpenRoIS.Sdk.Tests.csproj
