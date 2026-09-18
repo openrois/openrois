@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 612" width="960" height="612" role="img" aria-labelledby="t d">
   <title id="t">OpenRoIS architecture</title>
-  <desc id="d">Four rows. Service Application: a web application with the TypeScript SDK and a Unity application with the C# SDK. Main HRI Engine: the gateway process with the main engine and its child engine registry, a profile aggregator, a component allocator for bind and release, and authentication with JWT and RBAC, which is planned. Sub HRI Engines: a robot adapter, an avatar adapter, and a service adapter, each with a sub engine and a component registry. Implementation Layer: a ROS 2 robot, a virtual avatar in a Unity runtime, and cloud services. Service applications reach the gateway over WebSocket with JSON-RPC 2.0 and the five RoIS interfaces. The gateway reaches adapters over the same transport with the five-method Component Contract. Adapters reach their hosts over ROS 2, IPC, or gRPC. Media flows over WebRTC on a separate data plane, outside RoIS scope. At build time, Python Pydantic models are exported to JSON Schema and generated into C# and TypeScript types, drift-checked against the normative RoIS files.</desc>
+  <desc id="d">Four rows. Service Application: a web application with the TypeScript SDK and a Unity application with the C# SDK. Main HRI Engine: the gateway process with the main engine and its child engine registry, a profile aggregator, a component allocator for bind and release, and authentication with JWT and RBAC, available and off by default. Sub HRI Engines: a robot adapter, an avatar adapter, and a service adapter, each with a sub engine and a component registry. Implementation Layer: a ROS 2 robot, a virtual avatar in a Unity runtime, and cloud services. Service applications reach the gateway over WebSocket with JSON-RPC 2.0 and the five RoIS interfaces. The gateway reaches adapters over the same transport with the five-method Component Contract. Adapters reach their hosts over ROS 2, IPC, or gRPC. Media flows over WebRTC on a separate data plane, outside RoIS scope. At build time, Python Pydantic models are exported to JSON Schema and generated into C# and TypeScript types, drift-checked against the normative RoIS files.</desc>
 <style>
   .bt { font: 600 13px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f3864; }
   .bs { font: 400 11.5px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #3d4b5c; }
@@ -45,7 +45,7 @@
 <text x="624.0" y="179.0" text-anchor="middle" class="bt" style="font-size:13px">Component allocator</text>
 <text x="624.0" y="195.0" text-anchor="middle" class="bs">bind, release</text>
 <rect x="720" y="156" width="164" height="52" rx="6" fill="#e2f0d9" stroke="#4e7a38" stroke-width="1.2"/>
-<text x="802.0" y="179.0" text-anchor="middle" class="bt" style="font-size:13px">Auth (planned)</text>
+<text x="802.0" y="179.0" text-anchor="middle" class="bt" style="font-size:13px">Auth (optional)</text>
 <text x="802.0" y="195.0" text-anchor="middle" class="bs">JWT, RBAC</text>
 <line x1="300" y1="224" x2="300" y2="263" stroke="#1f3864" stroke-width="1.6"/>
 <path d="M295,262 L300,270 L305,262 Z" fill="#1f3864"/>
