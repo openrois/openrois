@@ -69,7 +69,8 @@ robots and virtual agents alike.
 - **JSON-RPC 2.0 over WebSocket.** Every operation of the five RoIS interfaces maps to
   a namespaced method (`rois.system.*`, `rois.command.*`, `rois.query.*`,
   `rois.event.*`, `rois.stream.*`). The control plane works from browsers and across
-  the internet. The Streaming Interface is planned.
+  the internet. The Streaming Interface controls streams; the media stays on its own
+  data plane.
 - **Single source of truth for types.** RoIS types are authored once as Python
   Pydantic models, exported to JSON Schema, and generated into TypeScript and C#.
   Tests check the models against the normative RoIS XML profiles and schema.
@@ -230,7 +231,8 @@ open.
 | C# client SDK for Unity | Available |
 | Open reference platform based on the Pollen Robotics Reachy Mini | Planned |
 | Authentication (JWT), authorization (RBAC), and TLS at the gateway | Available, off by default |
-| Streaming Interface with WebRTC media | Planned |
+| Streaming Interface control plane (`rois.stream.*`) | Available |
+| WebRTC media on the data plane (signaling through streaming components) | Planned |
 | Packages on PyPI, npm, NuGet, and the Unity Package Manager | Planned |
 | All 17 basic RoIS HRI Components (v1.0) | Planned |
 

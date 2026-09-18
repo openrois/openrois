@@ -17,7 +17,7 @@ What exists today:
 | Recursive engine, gateway process, WebSocket server and client | `core/` | Available |
 | Adapter SDK (component framework) and reference components | `components/` | Available |
 | TypeScript client SDK | `sdk/typescript/` | Available |
-| C# client SDK for Unity | `sdk/csharp/` | Available (Streaming planned) |
+| C# client SDK for Unity | `sdk/csharp/` | Available |
 | Examples: mock engine, mock adapter, avatar adapter, mixed-paradigm demo, web client, adapter template | `examples/` | Available |
 | Hub management application | `apps/hub/` | Not started, scaffold only |
 

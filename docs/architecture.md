@@ -434,8 +434,8 @@ distinguishes them by the URL path.
 
 - No media streaming. Media is handled by streaming components and WebRTC,
   outside the gateway's control plane.
-- No WebRTC signaling (SDP, ICE) in the current implementation. The RoIS
-  streaming interface will broker descriptor exchange in the future.
+- No WebRTC signaling logic (SDP, ICE). The Streaming Interface carries the transport
+  descriptor opaquely, in the results of `connect_stream`, and never interprets it.
 - No paradigm-specific knowledge. The engine never imports DDS, gRPC, ROS,
   or any game engine library. It sees only the `Component Contract` interface.
 - No network I/O of its own. The engine is a library. The gateway provides the
@@ -472,8 +472,9 @@ disconnects, the gateway removes its components and broadcasts a
 
 ### What the Sub HRI Engine Does NOT Do
 
-- Media streaming (in the current architecture). No camera capture, no audio
-  capture, no GStreamer. Media is a future concern for the streaming interface.
+- Media streaming in the engine itself. No camera capture, no audio capture, no
+  GStreamer. A streaming component owns its media pipeline; the sub HRI Engine only
+  relays the stream control messages.
 - WebRTC. No `RTCPeerConnection`, no SDP, no ICE.
 - Gateway protocol knowledge. The sub HRI Engine speaks RoIS JSON-RPC to the gateway
   over the control plane. It does not know about other sub HRI Engines, clients, or

@@ -118,8 +118,12 @@ foundation.
 **Done:** JWT authentication at the WebSocket upgrade, role-based authorization per RoIS
 operation with scopes, and TLS at the gateway.
 
-**Planned:** the RoIS Streaming Interface with WebRTC media, and DDS Security for ROS 2
-based adapters.
+**Done:** the Streaming Interface control plane: `rois.stream.*` operations routed to
+streaming components, stream status events routed back to the application that connected
+the stream, and stream methods in the TypeScript and C# SDKs.
+
+**Planned:** WebRTC media on the data plane, with the transport descriptor exchanged
+through `connect_stream` results, and DDS Security for ROS 2 based adapters.
 
 ### Phase 10: Full Component Library (Planned)
 
