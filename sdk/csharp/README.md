@@ -19,7 +19,7 @@ later as declared in its package manifest, and usable from any .NET runtime that
 | `ClientOptions` | `OpenRoIS.Sdk` | Token, request timeout, callback context |
 | `JsonRpcBuilder`, `JsonRpcParser` | `OpenRoIS.Sdk.JsonRpc` | The JSON-RPC 2.0 layer underneath |
 
-The Streaming Interface is planned. The generated RoIS message types live in
+The generated RoIS message types live in
 [`OpenRoIS.Interfaces`](../../interfaces/csharp/README.md) for applications that want
 typed models on top of `RoISValue`.
 
@@ -73,7 +73,7 @@ an `Authorization: Bearer` header at the WebSocket upgrade.
 | Command | `SearchAsync()`, `BindAsync()`, `BindAnyAsync()`, `ReleaseAsync()`, `GetParameterAsync()`, `SetParameterAsync()`, `ExecuteAsync()`, `GetCommandResultAsync()` |
 | Query | `QueryAsync()` |
 | Event | `SubscribeAsync()`, `UnsubscribeAsync()`, `GetEventDetailAsync()` |
-| Streaming | Planned |
+| Streaming | `ConnectStreamAsync()`, `DisconnectStreamAsync()`, `SuspendStreamAsync()`, `ResumeStreamAsync()`, `QueryStreamStatusAsync()` |
 
 | Event | Raised for |
 |-------|-----------|

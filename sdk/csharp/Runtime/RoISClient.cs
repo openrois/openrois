@@ -8,7 +8,8 @@
 //            SetParameterAsync, ExecuteAsync, GetCommandResultAsync
 //   Query    QueryAsync
 //   Event    SubscribeAsync, UnsubscribeAsync, GetEventDetailAsync
-//   Streaming: planned
+//   Streaming  ConnectStreamAsync, DisconnectStreamAsync, SuspendStreamAsync,
+//              ResumeStreamAsync, QueryStreamStatusAsync (control plane; media out of band)
 //
 // Callbacks are marshaled to the SynchronizationContext captured at connect time,
 // which on Unity's main thread means they run on the main thread and may touch
@@ -52,6 +53,9 @@ namespace OpenRoIS.Sdk
 
         /// <summary>The engine profile changed: an adapter connected or left.</summary>
         public event Action? ProfileChanged;
+
+        /// <summary>The status of a stream this client connected changed.</summary>
+        public event Action<StreamStatusNotification>? StreamStatusChanged;
 
         /// <summary>The connection closed, with the close status when known.</summary>
         public event Action<WebSocketCloseStatus?, string?>? Closed;
@@ -247,6 +251,50 @@ namespace OpenRoIS.Sdk
             return result.Clone();
         }
 
+        // ─── Streaming ───────────────────────────────────────────────────────
+
+        /// <summary>Open a stream on a streaming component; the results carry the transport descriptor.</summary>
+        public async Task<StreamHandle> ConnectStreamAsync(string componentRef, IEnumerable<RoISValue>? parameters = null)
+        {
+            var wire = new List<Dictionary<string, string>>();
+            if (parameters != null)
+            {
+                foreach (var p in parameters)
+                {
+                    wire.Add(p.ToWire());
+                }
+            }
+            var result = await SendAsync(
+                "rois.stream.connect_stream",
+                new { component_ref = componentRef, parameters = wire }).ConfigureAwait(false);
+            Check(result, "rois.stream.connect_stream");
+            return new StreamHandle
+            {
+                StreamId = Json.String(result, "stream_id"),
+                Results = Json.Values(result, "results"),
+            };
+        }
+
+        public Task DisconnectStreamAsync(string streamId) => StreamOperationAsync("rois.stream.disconnect_stream", streamId);
+
+        public Task SuspendStreamAsync(string streamId) => StreamOperationAsync("rois.stream.suspend_stream", streamId);
+
+        public Task ResumeStreamAsync(string streamId) => StreamOperationAsync("rois.stream.resume_stream", streamId);
+
+        /// <summary>The current RoIS stream status, for example STREAMING_RUNNING.</summary>
+        public async Task<string> QueryStreamStatusAsync(string streamId)
+        {
+            var result = await SendAsync("rois.stream.query_stream_status", new { stream_id = streamId })
+                .ConfigureAwait(false);
+            Check(result, "rois.stream.query_stream_status");
+            return Json.String(result, "status");
+        }
+
+        private async Task StreamOperationAsync(string method, string streamId)
+        {
+            Check(await SendAsync(method, new { stream_id = streamId }).ConfigureAwait(false), method);
+        }
+
         // ─── Plumbing ────────────────────────────────────────────────────────
 
         private void Check(JsonElement result, string method)
@@ -412,6 +460,16 @@ namespace OpenRoIS.Sdk
                     break;
                 case "rois.system.profile_changed":
                     Marshal(() => ProfileChanged?.Invoke());
+                    break;
+                case "rois.stream.notify_status":
+                    var stream = new StreamStatusNotification
+                    {
+                        StreamId = Json.String(p, "stream_id"),
+                        Status = Json.String(p, "status"),
+                        ComponentRef = Json.String(p, "component_ref"),
+                        Timestamp = Json.String(p, "timestamp"),
+                    };
+                    Marshal(() => StreamStatusChanged?.Invoke(stream));
                     break;
             }
         }

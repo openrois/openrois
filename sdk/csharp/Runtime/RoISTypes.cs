@@ -83,6 +83,22 @@ namespace OpenRoIS.Sdk
         public List<RoISValue> Results { get; set; } = new List<RoISValue>();
     }
 
+    /// <summary>What connect_stream answers: the stream id and the transport descriptor results.</summary>
+    public sealed class StreamHandle
+    {
+        public string StreamId { get; set; } = string.Empty;
+        public List<RoISValue> Results { get; set; } = new List<RoISValue>();
+    }
+
+    /// <summary>A stream status change delivered as rois.stream.notify_status.</summary>
+    public sealed class StreamStatusNotification
+    {
+        public string StreamId { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string ComponentRef { get; set; } = string.Empty;
+        public string Timestamp { get; set; } = string.Empty;
+    }
+
     /// <summary>An engine error delivered as rois.system.notify_error.</summary>
     public sealed class ErrorNotification
     {

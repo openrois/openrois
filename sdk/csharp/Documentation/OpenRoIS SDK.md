@@ -6,9 +6,9 @@ drive robots, avatars, and AI services through the standard interfaces of the
 physical robot and for a virtual character, which lets one Unity application serve as
 the front end of either.
 
-This version of the package is an alpha. It contains `RoISClient`, the System, Command,
-Query, and Event interfaces as async methods with notifications as C# events, and the
-JSON-RPC 2.0 layer underneath. The Streaming Interface is planned. See the
+This version of the package is an alpha. It contains `RoISClient`, the five RoIS
+interfaces (System, Command, Query, Event, and Streaming) as async methods with
+notifications as C# events, and the JSON-RPC 2.0 layer underneath. See the
 [roadmap](https://openrois.org/docs/project/roadmap).
 
 # Installing OpenRoIS SDK
@@ -61,7 +61,7 @@ The package depends on `com.unity.test-framework` for its tests only.
 
 OpenRoIS SDK version 0.1.0-alpha.3 includes the following known limitations:
 
-- The Streaming Interface is not implemented yet.
+- The Streaming Interface covers stream control only; media travels outside the SDK.
 - WebGL builds cannot use `ClientWebSocket`; a browser transport is planned.
 - Authentication is off by default on the gateway. Pass `ClientOptions.Token` when it is on.
 

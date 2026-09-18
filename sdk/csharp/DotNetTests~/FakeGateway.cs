@@ -122,6 +122,10 @@ namespace OpenRoIS.Sdk.Tests
                     };
                 case "rois.event.subscribe":
                     return new { return_code = "OK", subscribe_id = "sub-1" };
+                case "rois.stream.connect_stream":
+                    return new { return_code = "OK", stream_id = "v1", results = new[] { new { name = "media_url", data_type_ref = "string", value = "http://cam/whep/v1" } } };
+                case "rois.stream.query_stream_status":
+                    return new { return_code = "OK", status = "STREAMING_RUNNING" };
                 case "rois.command.bind":
                     return new { return_code = p.GetProperty("component_ref").GetString() == "robot_1/Navigation" ? "OK" : "OUT_OF_RESOURCES" };
                 default:

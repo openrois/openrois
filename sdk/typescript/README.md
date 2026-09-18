@@ -62,7 +62,7 @@ Run it against `examples/mock-engine` for a gateway with simulated components.
 | Command | `search()`, `bind()`, `bindAny()`, `release()`, `getParameter()`, `setParameter()`, `execute()`, `getCommandResult()` |
 | Query | `query()` |
 | Event | `subscribe()`, `unsubscribe()`, `getEventDetail()` |
-| Streaming | Planned |
+| Streaming | `connectStream()`, `disconnectStream()`, `suspendStream()`, `resumeStream()`, `queryStreamStatus()` |
 
 | Event | Emitted for |
 |-------|-------------|

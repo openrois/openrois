@@ -115,6 +115,27 @@ namespace OpenRoIS.Sdk.Tests
         }
 
         [Fact]
+        public async Task StreamControlPlane()
+        {
+            using var gateway = new FakeGateway();
+            using var client = await RoISClient.ConnectAsync(gateway.Url, OnSocketThread());
+            var stream = await client.ConnectStreamAsync("robot_1/VideoStreaming");
+            Assert.Equal("v1", stream.StreamId);
+            Assert.Equal("http://cam/whep/v1", stream.Results[0].Value);
+            Assert.Equal("STREAMING_RUNNING", await client.QueryStreamStatusAsync("v1"));
+            await client.SuspendStreamAsync("v1");
+            await client.ResumeStreamAsync("v1");
+
+            var got = new TaskCompletionSource<StreamStatusNotification>();
+            client.StreamStatusChanged += s => got.TrySetResult(s);
+            await gateway.PushAsync(new { jsonrpc = "2.0", method = "rois.stream.notify_status", @params = new { stream_id = "v1", status = "STREAMING_SUSPENDED", component_ref = "robot_1/VideoStreaming", timestamp = "" } });
+            Assert.Equal("STREAMING_SUSPENDED", (await got.Task.WaitAsync(TimeSpan.FromSeconds(5))).Status);
+
+            await client.DisconnectStreamAsync("v1");
+            Assert.Contains("rois.stream.disconnect_stream", gateway.Methods);
+        }
+
+        [Fact]
         public async Task DisconnectClosesAndReportsIt()
         {
             using var gateway = new FakeGateway();
