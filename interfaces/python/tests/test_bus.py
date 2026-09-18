@@ -5,6 +5,7 @@ from pydantic import ValidationError
 
 from openrois.interfaces.bus import (
     BusAdapterError,
+    ComponentContractError,
     CommandRequest,
     ComponentNotFoundError,
     DiscoverRequest,
@@ -361,14 +362,14 @@ class TestTypedPayloadMapping:
 # ---------------------------------------------------------------------------
 
 
-class TestBusAdapterError:
+class TestComponentContractError:
     def test_default_return_code(self) -> None:
-        err = BusAdapterError("something went wrong")
+        err = ComponentContractError("something went wrong")
         assert err.message == "something went wrong"
         assert err.return_code == ReturnCode.ERROR
 
     def test_custom_return_code(self) -> None:
-        err = BusAdapterError("not supported", return_code=ReturnCode.UNSUPPORTED)
+        err = ComponentContractError("not supported", return_code=ReturnCode.UNSUPPORTED)
         assert err.return_code == ReturnCode.UNSUPPORTED
 
 
@@ -378,3 +379,8 @@ class TestComponentNotFoundError:
         assert err.component_ref == "robot-a1/unknown"
         assert err.return_code == ReturnCode.UNSUPPORTED
         assert "robot-a1/unknown" in str(err)
+
+
+class TestDeprecatedAlias:
+    def test_bus_adapter_error_is_component_contract_error(self) -> None:
+        assert BusAdapterError is ComponentContractError

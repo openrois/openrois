@@ -12,7 +12,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Generic query request sent via BusAdapter.query().\n\nMaps to QueryIF.query(query_type, condition, results) and\nRoIS_Common.component_status(status).",
+  "description": "Generic query request sent via ComponentContract.query().\n\nMaps to QueryIF.query(query_type, condition, results) and\nRoIS_Common.component_status(status).",
   "properties": {
     "component_ref": {
       "$ref": "#/$defs/RoISIdentifier",

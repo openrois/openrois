@@ -36,7 +36,7 @@ Then reference from your project:
 ## Usage
 
 ```ts
-import { ResultSchema, ReturnCode, BusAdapter } from "@openrois/interfaces";
+import { ResultSchema, ReturnCode, ComponentContract } from "@openrois/interfaces";
 
 // Validate a RoIS Result
 const result = ResultSchema.parse({
@@ -48,8 +48,8 @@ const result = ResultSchema.parse({
 // Type-safe enum
 const code: ReturnCode = "OK";
 
-// Implement the BusAdapter contract
-class MyAdapter implements BusAdapter {
+// Implement the Component Contract
+class MyAdapter implements ComponentContract {
   async discover(request) { /* ... */ }
   async invoke(request) { /* ... */ }
   async query(request) { /* ... */ }
@@ -67,7 +67,7 @@ class MyAdapter implements BusAdapter {
 | `@openrois/interfaces/common` | `ComponentStatus`, `StreamStatus` |
 | `@openrois/interfaces/service` | `CompletedStatus`, `ErrorType`, `CompletedEvent`, `NotifyErrorEvent`, `NotifyEventPayload` |
 | `@openrois/interfaces/profiles` | Component profile schema models |
-| `@openrois/interfaces/bus` | `BusAdapter` interface, request/response models, `EventEnvelope`, error classes |
+| `@openrois/interfaces/bus` | `ComponentContract` interface, request/response models, `EventEnvelope`, error classes |
 | `@openrois/interfaces/components` | Per-component typed message models |
 
 ## Generation
@@ -79,11 +79,11 @@ npm run generate   # reads ../schema/*.json → writes src/*.ts
 npm run build      # generate + tsc → dist/
 ```
 
-The `BusAdapter` interface and error classes in `bus.ts` are hand-written, because JSON Schema cannot represent behavioral interfaces.
+The `ComponentContract` interface and error classes in `bus.ts` are hand-written, because JSON Schema cannot represent behavioral interfaces.
 
 ## Naming
 
-This interface is called `ComponentContract` in the Python source of truth. The TypeScript and C# stacks still use the older name `BusAdapter`. They will be renamed to match before `v1.0`.
+The interface was called `BusAdapter` before 0.1.0-alpha.3. `BusAdapter` and `BusAdapterError` remain as deprecated aliases for one alpha release.
 
 ## License
 

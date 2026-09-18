@@ -52,7 +52,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Response from BusAdapter.invoke().",
+  "description": "Response from ComponentContract.invoke().",
   "properties": {
     "return_code": {
       "$ref": "#/$defs/ReturnCode",

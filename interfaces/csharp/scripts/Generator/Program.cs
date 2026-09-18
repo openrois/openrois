@@ -69,7 +69,7 @@ internal static class Program
             Console.WriteLine($"  {relativePath} ({schemaFiles.Count} schemas)");
         }
 
-        Console.WriteLine("\nDone. IBusAdapter interface is hand-written in Bus.cs.");
+        Console.WriteLine("\nDone. IComponentContract interface is hand-written in Bus.cs.");
         return 0;
     }
 

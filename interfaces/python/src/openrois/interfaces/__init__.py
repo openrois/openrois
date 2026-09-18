@@ -17,6 +17,7 @@ from openrois.interfaces.bus import (
     BusAdapterError,
     CommandRequest,
     ComponentContract,
+    ComponentContractError,
     ComponentNotFoundError,
     DiscoverRequest,
     DiscoverResponse,
@@ -116,7 +117,8 @@ __all__ = [
     "NotifyErrorEvent",
     "NotifyEventPayload",
     # Bus
-    "BusAdapterError",
+    "BusAdapterError",  # deprecated alias of ComponentContractError
+    "ComponentContractError",
     "CommandId",
     "CommandRequest",
     "CommandType",

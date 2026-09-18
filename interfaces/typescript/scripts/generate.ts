@@ -8,7 +8,7 @@
  *   - A zod schema (e.g. `ResultSchema`)
  *   - An inferred type (e.g. `type Result = z.infer<typeof ResultSchema>`)
  *
- * The `BusAdapter` interface and error classes are NOT generated here —
+ * The `ComponentContract` interface and error classes are NOT generated here —
  * they are hand-written in `src/bus.ts` because JSON Schema cannot represent
  * behavioral interfaces.
  *
@@ -540,7 +540,7 @@ function main(): void {
   // Generate each module
   for (const [moduleName, schemaFiles] of Object.entries(manifest.modules)) {
     // Skip bus module — it's hand-written (but we generate the data models part)
-    // Actually, bus data models ARE generated; the BusAdapter interface is hand-written
+    // Actually, bus data models ARE generated; the ComponentContract interface is hand-written
     // and merged in src/bus.ts. So we generate bus data models to a separate file.
 
     if (moduleName === "bus") {
@@ -560,7 +560,7 @@ function main(): void {
     console.log(`  ${moduleName}.ts (${schemaFiles.length} schemas)`);
   }
 
-  console.log("\nDone. BusAdapter interface is hand-written in src/bus.ts.");
+  console.log("\nDone. ComponentContract interface is hand-written in src/bus.ts.");
 }
 
 main();

@@ -12,32 +12,32 @@ namespace OpenRoIS.Interfaces.Tests
     public class BusTests
     {
     [Fact]
-    public void BusAdapterError_DefaultReturnCode()
+    public void ComponentContractError_DefaultReturnCode()
     {
-        var err = new BusAdapterError("something went wrong");
+        var err = new ComponentContractError("something went wrong");
         Assert.Equal("something went wrong", err.Message);
         Assert.Equal(ReturnCode.ERROR, err.ReturnCode);
     }
 
     [Fact]
-    public void BusAdapterError_CustomReturnCode()
+    public void ComponentContractError_CustomReturnCode()
     {
-        var err = new BusAdapterError("bad param", ReturnCode.BAD_PARAMETER);
+        var err = new ComponentContractError("bad param", ReturnCode.BAD_PARAMETER);
         Assert.Equal(ReturnCode.BAD_PARAMETER, err.ReturnCode);
     }
 
     [Fact]
-    public void ComponentNotFoundError_InheritsBusAdapterError()
+    public void ComponentNotFoundError_InheritsComponentContractError()
     {
         var err = new ComponentNotFoundError("robot/missing");
         Assert.Equal("Component not found: robot/missing", err.Message);
         Assert.Equal(ReturnCode.UNSUPPORTED, err.ReturnCode);
         Assert.Equal("robot/missing", err.ComponentRef);
-        Assert.IsAssignableFrom<BusAdapterError>(err);
+        Assert.IsAssignableFrom<ComponentContractError>(err);
     }
 
     [Fact]
-    public async Task BusAdapter_CanBeImplemented()
+    public async Task ComponentContract_CanBeImplemented()
     {
         var adapter = new DummyAdapter();
         var discoverResult = await adapter.Discover(new DiscoverRequest(""));
@@ -51,7 +51,7 @@ namespace OpenRoIS.Interfaces.Tests
         Assert.NotNull(sink);
     }
 
-    private class DummyAdapter : IBusAdapter
+    private class DummyAdapter : IComponentContract
     {
         public Task<DiscoverResponse> Discover(DiscoverRequest request)
         {
