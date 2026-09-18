@@ -1,8 +1,9 @@
 # @openrois/gateway
 
-OpenRoIS Gateway process. Hosts the recursive Engine and exposes it over
-WebSocket. This is the TypeScript proof of concept. The target is a Python
-`openrois_core` package (see roadmap Phase 4).
+The TypeScript proof of concept of the OpenRoIS gateway: it hosts the recursive
+engine and exposes it over WebSocket. It is superseded by the Python `openrois-core`
+package in `core/` and is retired at the end of roadmap Phase 4. Keep it only for
+reference.
 
 ## What This Is
 

@@ -1,57 +1,80 @@
-# openrois-interfaces
+# openrois-Interfaces
 
 ![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)
 
-Transport-independent [RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0/Beta2)
-interface types for Python.
+Transport-independent [RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0) interface
+types for Python.
 
-This package is the **single source of truth** for all OpenRoIS types.
-Pydantic models authored here are exported to JSON Schema
-(`interfaces/schema/`) and generated into
-[C#](../csharp/) and [TypeScript](../typescript/).
+This package is the **single source of truth** for all OpenRoIS types. The Pydantic models
+authored here are exported to JSON Schema (`interfaces/schema/`) and generated into
+[C#](../csharp/README.md) and [TypeScript](../typescript/README.md). Never edit the
+generated stacks by hand.
 
-## Installation
+## Install
+
+Not published to PyPI yet. From a clone of the repository:
 
 ```bash
-pip install openrois-interfaces
+pip install -e ./interfaces/python
 ```
 
 ## Usage
 
 ```python
-from openrois.interfaces import ReturnCode, Result, BusAdapter
+from openrois.interfaces.hri import Result, ReturnCode
 
-# Construct a RoIS Result
 result = Result(name="number", data_type_ref="int", value="3")
-
-# Type-safe enum
 code = ReturnCode.OK
+```
 
-# Implement the BusAdapter contract
-class MyAdapter(BusAdapter):
+The `ComponentContract` protocol is the only boundary between the engine and a concrete
+transport. Implement its five methods and the engine can drive your platform without
+knowing anything about it:
+
+```python
+from openrois.interfaces.bus import ComponentContract
+
+
+class MyContract(ComponentContract):
     async def discover(self, request): ...
     async def invoke(self, request): ...
     async def query(self, request): ...
     async def subscribe(self, request, sink): ...
+    async def unsubscribe(self, subscribe_id): ...
 ```
 
-## Module structure
+Most adapter authors do not implement it directly: `ComponentRegistry` and `SubEngine` in
+[`openrois-core`](../../core/README.md) play this role (aligning their signatures with the
+protocol exactly is part of Phase 4), and components are written with the
+decorators in [`openrois-components-core`](../../components/core/README.md).
+
+## Module Structure
 
 | Module | Contents |
 |--------|----------|
 | `openrois.interfaces.hri` | Core HRI types: `ReturnCode`, `Result`, `Parameter`, `Argument`, `CommandUnit`, `CommandUnitSequence` |
 | `openrois.interfaces.common` | `ComponentStatus`, `StreamStatus` |
 | `openrois.interfaces.service` | `CompletedStatus`, `ErrorType`, `CompletedEvent`, `NotifyErrorEvent`, `NotifyEventPayload` |
-| `openrois.interfaces.profiles` | Component profile schema models |
-| `openrois.interfaces.bus` | `BusAdapter` protocol, request/response models, `EventEnvelope`, error classes |
+| `openrois.interfaces.profiles` | Component and engine profile models |
+| `openrois.interfaces.bus` | `ComponentContract` protocol, request and response models, `EventEnvelope`, error classes |
 | `openrois.interfaces.components` | Per-component typed message models |
 
 ## Development
 
 ```bash
 pip install -e ".[dev]"
-pytest                    # run tests
-mypy src/                 # type-check
-ruff check src/           # lint
-python scripts/export_schema.py  # regenerate JSON Schema
+pytest                           # tests, including the schema drift check
+mypy src/                        # type check
+ruff check src/                  # lint
+python scripts/export_schema.py  # regenerate the JSON Schema
 ```
+
+Some tests cross-check the models against the normative RoIS machine-readable files, which
+are not redistributed here. Those tests fail without them.
+
+After regenerating the schema, regenerate the other two stacks as described in
+[AGENTS.md](../../AGENTS.md).
+
+## License
+
+Apache-2.0.

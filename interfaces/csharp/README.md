@@ -2,9 +2,9 @@
 
 ![.NET Standard](https://img.shields.io/badge/.NET%20Standard-2.1-512BD4?logo=dotnet&logoColor=white)
 
-Transport-independent [RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0/Beta2) interface types for C#.
+Transport-independent [RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0) interface types for C#.
 
-This package is **generated from JSON Schema** — the canonical wire contract authored as Pydantic models in `interfaces/python/` and exported to `interfaces/schema/`. The C# types are never hand-written, so all three language stacks (Python, C#, TypeScript) stay consistent.
+This package is **generated from JSON Schema**, the canonical wire contract authored as Pydantic models in `interfaces/python/` and exported to `interfaces/schema/`. The C# types are never hand-written, so all three language stacks (Python, C#, TypeScript) stay consistent.
 
 Targets `netstandard2.1` for Unity 6.3+ (Mono) through Unity 6.8 (CoreCLR) compatibility.
 
@@ -13,7 +13,7 @@ Targets `netstandard2.1` for Unity 6.3+ (Mono) through Unity 6.8 (CoreCLR) compa
 > **Note:** The package is not yet on NuGet or UPM. For the alpha, reference
 > the source project directly or build from source.
 
-### Reference the source project
+### Reference the Source Project
 
 Add a project reference in your `.csproj`:
 
@@ -23,7 +23,7 @@ Add a project reference in your `.csproj`:
 </ItemGroup>
 ```
 
-### Build from source
+### Build from Source
 
 ```bash
 cd interfaces/csharp
@@ -33,14 +33,14 @@ dotnet build src/OpenRoIS.Interfaces/OpenRoIS.Interfaces.csproj
 The output assembly targets `netstandard2.1`, compatible with Unity 6.3+ (Mono)
 through Unity 6.8 (CoreCLR).
 
-### Unity (future)
+### Unity (Future)
 
 Once published to a UPM registry, add via `manifest.json`:
 
 ```json
 {
   "dependencies": {
-    "org.openrois.interfaces": "0.1.0-alpha.1"
+    "org.openrois.interfaces": "0.1.0-alpha.2"
   }
 }
 ```
@@ -66,6 +66,7 @@ class MyAdapter : IBusAdapter
     public Task<InvokeResponse> Invoke(CommandRequest request) { /* ... */ }
     public Task<QueryResponse> Query(QueryRequest request) { /* ... */ }
     public Task<SubscribeResponse> Subscribe(SubscribeRequest request, EventSink sink) { /* ... */ }
+    public Task<ReturnCode> Unsubscribe(string subscribeId) { /* ... */ }
 }
 ```
 
@@ -85,11 +86,15 @@ class MyAdapter : IBusAdapter
 The source files (except `Bus.cs`) are generated from `interfaces/schema/*.schema.json`:
 
 ```bash
-cd scripts/Generator
-dotnet run -- ../../schema
+# Reads ../schema by default (or the directory in OPENROIS_SCHEMA_DIR).
+dotnet run --project scripts/Generator/Generator.csproj
 ```
 
-The `IBusAdapter` interface and error classes in `Bus.cs` are hand-written — JSON Schema cannot represent behavioral interfaces.
+The `IBusAdapter` interface and error classes in `Bus.cs` are hand-written, because JSON Schema cannot represent behavioral interfaces.
+
+## Naming
+
+This interface is called `ComponentContract` in the Python source of truth. The C# stack still uses the older name `IBusAdapter`, and the TypeScript stack `BusAdapter`. They will be renamed to match before `v1.0`.
 
 ## License
 

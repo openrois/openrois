@@ -1,59 +1,89 @@
-# OpenRoIS Adapter Template
+# Adapter Template
 
-A starting point for writing your own OpenRoIS adapter.
+A starting point for connecting your own robot, avatar, or service to OpenRoIS.
 
-## Quick start
+An adapter is a sub HRI Engine: it hosts an `Engine`, registers the components it
+implements, and connects out to a gateway with `WsClient`. The gateway then presents your
+platform to every RoIS client through the same standard interfaces as any other.
 
-1. Install the adapter SDK:
+## Install
+
+The Python packages are not published yet, so install them from a clone of the
+repository:
 
 ```bash
-pip install openrois-adapter-sdk
+pip install -e ./interfaces/python
+pip install -e ./components/core
+pip install -e ./core
 ```
 
-2. Copy this directory to your robot's machine.
+## Use the Template
 
-3. Copy `openrois-profile.yaml.example` to `openrois-profile.yaml` and edit it to declare
-   your robot's components.
+1. Copy this directory onto the machine that can reach your robot's API.
 
-4. Edit `my_adapter.py` and fill in the `# IMPLEMENT YOUR CODE HERE #`
-   blocks with your robot's API calls.
+2. Copy the profile and declare your engine and components:
 
-5. Run the adapter:
+```bash
+cp openrois-profile.yaml.example openrois-profile.yaml
+```
+
+```yaml title="openrois-profile.yaml"
+engine:
+  id: my_robot
+  platform: my_platform
+  gateway_url: "ws://127.0.0.1:8765"
+
+components: {}
+```
+
+The `components` mapping passes per-component configuration (an API host, a topic name, a
+device path) to each component constructor. Leave it empty if there is nothing to
+configure.
+
+3. Edit `my_adapter.py`. Each `@component` class has `@query`, `@invoke`, and `@subscribe`
+   methods marked `# IMPLEMENT YOUR CODE HERE #`. Replace the `NotImplementedError` with
+   calls to your platform's native API (ROS 2 topics and services, HTTP, gRPC, serial) and
+   return `Result` lists built with the `results` helpers.
+
+```python
+@query("robot_position")
+async def robot_position(self):
+    pose = await self._api.get_position()
+    return results.position(x=pose.x, y=pose.y, theta=pose.theta)
+```
+
+4. Start a gateway, then run the adapter:
 
 ```bash
 python my_adapter.py --config openrois-profile.yaml
 ```
 
-The adapter connects to the avatar's WebSocket server, registers its
-components, and starts responding to RoIS JSON-RPC requests from
-operators.
+The adapter connects to the gateway, registers its components, and answers RoIS calls.
+Verify it with [`examples/hri-client`](../hri-client/README.md), which lists every
+registered component and lets you run its queries, commands, and events.
 
-## What to fill in
-
-Each `@component` class has `@query`, `@invoke`, and `@subscribe` methods
-marked with `# IMPLEMENT YOUR CODE HERE #`. Replace the
-`NotImplementedError` with calls to your robot's native API (ROS 2
-topics/services, HTTP endpoints, gRPC, serial, etc.) and return `Result`
-lists using the `results` helpers.
-
-For example, to implement `robot_position`:
+## How Registration Works
 
 ```python
-@query("robot_position")
-async def robot_position(self):
-    # IMPLEMENT YOUR CODE HERE
-    # Call your robot's API to get the position.
-    pose = await self.parent.robot_api.get_position()
-    return results.position(x=pose.x, y=pose.y, theta=pose.theta)
+for cls in COMPONENT_CLASSES:
+    meta = meta_from_decorators(cls)
+    engine.register_component(meta.ref, cls(component_config(profile, meta.ref)), meta)
 ```
 
-## Config file
+`meta_from_decorators` reads the decorators and builds the component profile the gateway
+publishes, so the declaration in your code is the single source of truth. Components own
+their backend connections: open them in `connect()`, close them in `disconnect()`.
 
-The `openrois-profile.yaml` file declares your robot's components, their access
-policies, and the connection info for the avatar. See
-`openrois-profile.yaml.example` for the format.
+## Keep It Conformant
 
-## Learn more
+Use the normative RoIS component names, and the message and parameter names from the RoIS
+component profiles. An adapter that invents its own names still runs, but applications
+written against the standard will not find what they expect. See
+[components and adapters](https://openrois.org/docs/guides/components-and-adapters) and
+the [component reference](https://openrois.org/docs/reference/components).
 
-- [openrois-adapter-sdk README](../../sdk/python/README.md)
-- [Adapter implementation plan](../../openrois-internal/latest/adapter-implementation-plan.md)
+## Learn More
+
+- [Component framework](../../components/core/README.md)
+- [Engine core](../../core/README.md)
+- [Working example](../mock-adapter/README.md)

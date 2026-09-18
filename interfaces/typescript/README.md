@@ -2,19 +2,19 @@
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4+-3178C6?logo=typescript&logoColor=white)
 
-Transport-independent [RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0/Beta2) interface types for TypeScript.
+Transport-independent [RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0) interface types for TypeScript.
 
-This package is **generated from JSON Schema** — the canonical wire contract authored as Pydantic models in `interfaces/python/` and exported to `interfaces/schema/`. The TypeScript types are never hand-written, so all three language stacks (Python, C#, TypeScript) stay consistent.
+This package is **generated from JSON Schema**, the canonical wire contract authored as Pydantic models in `interfaces/python/` and exported to `interfaces/schema/`. The TypeScript types are never hand-written, so all three language stacks (Python, C#, TypeScript) stay consistent.
 
 ## Installation
 
-### npm (when published)
+### npm (When Published)
 
 ```bash
 npm install @openrois/interfaces
 ```
 
-### From source (alpha, pre-publish)
+### From Source (Alpha, Pre-Publish)
 
 ```bash
 git clone https://github.com/openrois/openrois.git
@@ -54,10 +54,11 @@ class MyAdapter implements BusAdapter {
   async invoke(request) { /* ... */ }
   async query(request) { /* ... */ }
   async subscribe(request, sink) { /* ... */ }
+  async unsubscribe(subscribeId) { /* ... */ }
 }
 ```
 
-## Subpath exports
+## Subpath Exports
 
 | Import path | Contents |
 |---|---|
@@ -71,14 +72,18 @@ class MyAdapter implements BusAdapter {
 
 ## Generation
 
-The source files in `src/` (except `bus.ts`) are generated from `interfaces/schema/*.schema.json`:
+The source files in `src/` (except `bus.ts` and the `index.ts` barrels) are generated from `interfaces/schema/*.schema.json`:
 
 ```bash
 npm run generate   # reads ../schema/*.json → writes src/*.ts
 npm run build      # generate + tsc → dist/
 ```
 
-The `BusAdapter` interface and error classes in `bus.ts` are hand-written — JSON Schema cannot represent behavioral interfaces.
+The `BusAdapter` interface and error classes in `bus.ts` are hand-written, because JSON Schema cannot represent behavioral interfaces.
+
+## Naming
+
+This interface is called `ComponentContract` in the Python source of truth. The TypeScript and C# stacks still use the older name `BusAdapter`. They will be renamed to match before `v1.0`.
 
 ## License
 
