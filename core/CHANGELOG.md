@@ -45,3 +45,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `complete_async`; a handler that raises produces a `notify_error` for the caller.
 - Regression test suite (`tests/`): engine dispatch, bindings, events, and a gateway plus
   adapter round trip over a real WebSocket.
+- Streaming Interface control plane: `rois.stream.connect_stream`, `disconnect_stream`,
+  `suspend_stream`, `resume_stream`, and `query_stream_status` are routed to the
+  streaming component that owns the stream, and its `notify_stream_status` events reach
+  the application that connected the stream as `rois.stream.notify_status`. The
+  transport descriptor (a media URL or an SDP answer) travels opaquely in the
+  `connect_stream` results; media stays on its own data plane.
+- Query handlers that declare an argument receive the request's `condition`, which is
+  how `get_stream_status` learns its `stream_id`.
+

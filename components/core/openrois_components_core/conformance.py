@@ -37,6 +37,14 @@ BASIC_MESSAGES: dict[str, dict[str, set[str]]] = {
                    "commands": {"set_parameter"}},
     "Reaction": {"queries": {"get_parameter"}, "commands": {"set_parameter"}},
     "SystemInformation": {"queries": {"robot_position", "engine_status"}},
+    "AudioStreaming": {"commands": {"connect_stream", "disconnect_stream", "suspend_stream",
+                                    "resume_stream", "set_parameter"},
+                       "queries": {"get_stream_status", "get_parameter"},
+                       "events": {"notify_stream_status"}},
+    "VideoStreaming": {"commands": {"connect_stream", "disconnect_stream", "suspend_stream",
+                                    "resume_stream", "set_parameter"},
+                       "queries": {"get_stream_status", "get_parameter"},
+                       "events": {"notify_stream_status"}},
 }
 BASIC_COMPONENTS = {
     "PersonDetection", "PersonLocalization", "PersonIdentification", "FaceDetection",
@@ -169,8 +177,9 @@ async def _check_component(
                 findings.append(Finding(ref, "normative_names",
                                         f"{group[:-1]} {name!r} is not a RoIS message of {kind}"))
 
-    # Every declared query answers with well-formed results.
-    for name in sorted(queries):
+    # Every declared query answers with well-formed results (get_stream_status needs
+    # a stream and is exercised through connect_stream below).
+    for name in sorted(queries - {"get_stream_status"}):
         answer = await engine.dispatch(
             "rois.query.query", {"component_ref": ref, "query_type": name}, sink, client,
         )

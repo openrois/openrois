@@ -1,6 +1,6 @@
 """Mock adapter for testing the OpenRoIS middleware without a real robot.
 
-Connects to the gateway, registers 5 components, and responds with
+Connects to the gateway, registers 6 components, and responds with
 hardcoded data. Fires events on a timer to simulate robot activity.
 
 Usage:
@@ -12,9 +12,10 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+from datetime import UTC, datetime
 
 from openrois.interfaces.bus import InvokeResponse
-from openrois.interfaces.hri import ReturnCode
+from openrois.interfaces.hri import Result, ReturnCode
 from openrois_components_core import (
     component,
     invoke,
@@ -305,6 +306,103 @@ class SpeechSynthesis:
         return InvokeResponse(return_code=ReturnCode.OK, command_id="")
 
 
+# ─── VideoStreaming ──────────────────────────────────────────
+
+@component(
+    "VideoStreaming",
+    function="function",
+    parameters=[
+        {"name": "encoding_parameters", "data_type_ref": "string", "default_value": ""},
+        {"name": "transport_parameters", "data_type_ref": "string", "default_value": "whep"},
+    ],
+)
+class VideoStreaming:
+    """A simulated camera stream.
+
+    connect_stream hands back a stream_id and a media_url, which is where a real
+    component would put the transport descriptor (a WHEP URL, an SDP answer).
+    The media itself never crosses the gateway. Status changes are reported as
+    notify_stream_status events.
+    """
+
+    def __init__(self, config: dict) -> None:
+        self._streams: dict[str, str] = {}
+        self._counter = 0
+
+    @query("component_status")
+    async def status(self):
+        return results.status("READY")
+
+    @invoke("set_parameter")
+    async def set_parameter(self, parameters):
+        return InvokeResponse(return_code=ReturnCode.OK, command_id="")
+
+    @invoke("connect_stream")
+    async def connect_stream(self, parameters):
+        self._counter += 1
+        stream_id = f"video-{self._counter}"
+        self._streams[stream_id] = "STREAMING_RUNNING"
+        logger.info("Stream %s connected", stream_id)
+        asyncio.get_running_loop().create_task(self._notify(stream_id))
+        return InvokeResponse(
+            return_code=ReturnCode.OK,
+            command_id=stream_id,
+            results=[
+                Result(name="stream_id", data_type_ref="string", value=stream_id),
+                Result(name="media_url", data_type_ref="string",
+                       value=f"http://127.0.0.1:8080/whep/{stream_id}"),
+            ],
+        )
+
+    async def _notify(self, stream_id: str) -> None:
+        await asyncio.sleep(0.1)
+        await self._emit_status(stream_id)
+
+    async def _emit_status(self, stream_id: str) -> None:
+        status = self._streams.get(stream_id, "STREAMING_NOT_CONNECTED")
+        await self.parent.emit_async(  # type: ignore[attr-defined]
+            "VideoStreaming", "notify_stream_status",
+            [
+                Result(name="stream_id", data_type_ref="string", value=stream_id),
+                Result(name="timestamp", data_type_ref="DateTime",
+                       value=datetime.now(UTC).isoformat()),
+                Result(name="status", data_type_ref="Stream_Status", value=status),
+            ],
+        )
+
+    async def _transition(self, parameters, status: str):
+        stream_id = _param(parameters, "stream_id")
+        if stream_id not in self._streams:
+            return InvokeResponse(return_code=ReturnCode.BAD_PARAMETER, command_id="")
+        if status == "STREAMING_NOT_CONNECTED":
+            self._streams.pop(stream_id)
+        else:
+            self._streams[stream_id] = status
+        await self._emit_status(stream_id)
+        return InvokeResponse(return_code=ReturnCode.OK, command_id="")
+
+    @invoke("disconnect_stream")
+    async def disconnect_stream(self, parameters):
+        return await self._transition(parameters, "STREAMING_NOT_CONNECTED")
+
+    @invoke("suspend_stream")
+    async def suspend_stream(self, parameters):
+        return await self._transition(parameters, "STREAMING_SUSPENDED")
+
+    @invoke("resume_stream")
+    async def resume_stream(self, parameters):
+        return await self._transition(parameters, "STREAMING_RESUMED")
+
+    @query("get_stream_status")
+    async def get_stream_status(self, stream_id: str):
+        status = self._streams.get(stream_id, "STREAMING_NOT_CONNECTED")
+        return [Result(name="status", data_type_ref="Stream_Status", value=status)]
+
+    @subscribe("notify_stream_status")
+    async def on_status(self):
+        pass
+
+
 # ─── Registration ────────────────────────────────────────────
 
 COMPONENT_CLASSES = [
@@ -313,6 +411,7 @@ COMPONENT_CLASSES = [
     ObjectDetection,
     ObjectManipulation,
     SpeechSynthesis,
+    VideoStreaming,
 ]
 
 

@@ -37,6 +37,7 @@ from openrois.interfaces.bus import (
     SubscribeRequest,
     SubscribeResponse,
 )
+from openrois.interfaces.common import StreamStatus
 from openrois.interfaces.hri import CommandType, Parameter, Result, ReturnCode
 from openrois.interfaces.service import CompletedStatus, ErrorType
 
@@ -73,6 +74,7 @@ logger = logging.getLogger(__name__)
 
 COMPLETED = "completed"
 NOTIFY_ERROR = "notify_error"
+STREAM_STATUS = "notify_stream_status"
 DETAIL_LIMIT = 256
 
 
@@ -111,6 +113,17 @@ def envelope_to_notification(envelope: EventEnvelope) -> dict[str, Any]:
                 "command_id": _result_value(envelope.payload, "command_id"),
                 "status": (envelope.completed_status or CompletedStatus.OK).value,
                 "results": payload,
+            },
+        }
+    if envelope.event_type == STREAM_STATUS:
+        return {
+            "jsonrpc": "2.0",
+            "method": "rois.stream.notify_status",
+            "params": {
+                "stream_id": _result_value(envelope.payload, "stream_id"),
+                "status": (envelope.stream_status or StreamStatus.NOT_CONNECTED).value,
+                "timestamp": _result_value(envelope.payload, "timestamp"),
+                "component_ref": envelope.component_ref,
             },
         }
     if envelope.event_type == NOTIFY_ERROR:
@@ -184,6 +197,24 @@ def notification_to_envelope(msg: dict[str, Any]) -> EventEnvelope | None:
             str(params.get("command_id", "")), status,
             [Result.model_validate(r) for r in params.get("results", [])],
         )
+    if method == "rois.stream.notify_status":
+        try:
+            stream_status = StreamStatus(str(params.get("status", "")))
+        except ValueError:
+            stream_status = StreamStatus.NOT_CONNECTED
+        stream_id = str(params.get("stream_id", ""))
+        timestamp = str(params.get("timestamp", ""))
+        return EventEnvelope(
+            event_id=str(uuid.uuid4()),
+            event_type=STREAM_STATUS,
+            component_ref=str(params.get("component_ref", "")),
+            stream_status=stream_status,
+            payload=[
+                Result(name="stream_id", data_type_ref="string", value=stream_id),
+                Result(name="timestamp", data_type_ref="DateTime", value=timestamp),
+                Result(name="status", data_type_ref="Stream_Status", value=stream_status.value),
+            ],
+        )
     if method == "rois.system.notify_error":
         try:
             error_type = ErrorType(str(params.get("error_type", "")))
@@ -197,11 +228,35 @@ def notification_to_envelope(msg: dict[str, Any]) -> EventEnvelope | None:
     return None
 
 
+def _stream_status_of(event_type: str, results: list[Result]) -> StreamStatus | None:
+    """The typed stream status of a notify_stream_status event, read from its results."""
+    if event_type != STREAM_STATUS:
+        return None
+    try:
+        return StreamStatus(_result_value(results, "status"))
+    except ValueError:
+        return StreamStatus.NOT_CONNECTED
+
+
 def _remember(store: OrderedDict[str, Any], key: str, value: Any) -> None:
     """Keep the last DETAIL_LIMIT entries so detail lookups stay bounded."""
     store[key] = value
     while len(store) > DETAIL_LIMIT:
         store.popitem(last=False)
+
+
+def _accepts_argument(method: Any) -> bool:
+    """Whether a bound handler takes one positional argument besides self."""
+    import inspect
+
+    try:
+        parameters = [
+            p for p in inspect.signature(method).parameters.values()
+            if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)
+        ]
+    except (TypeError, ValueError):
+        return False
+    return len(parameters) >= 1
 
 
 def _bare_ref(component_ref: str) -> str:
@@ -308,6 +363,7 @@ class EventEmitter:
                     event_type=event_type,
                     subscribe_id=subscribe_id,
                     component_ref=component_ref,
+                    stream_status=_stream_status_of(event_type, results),
                     payload=list(results),
                 ),
             )
@@ -425,6 +481,9 @@ class ComponentRegistry:
         """Route the completion of a command to the caller's sink."""
         if self._emitter:
             self._emitter.track_command(command_id, sink)
+
+    def track_stream(self, stream_id: str, sink: EventSink | None) -> None:
+        """Local stream status events reach the caller through its subscription."""
 
     def set_emitter(self, emitter: EventEmitter) -> None:
         """Set or replace the emitter. Re-injects onto all registered components."""
@@ -591,7 +650,12 @@ class ComponentRegistry:
 
         method = getattr(handler, method_name)
         try:
-            results = await method()
+            # Query handlers take no argument, except those declared with one
+            # (get_stream_status), which receive the condition.
+            if _accepts_argument(method):
+                results = await method(request.condition)
+            else:
+                results = await method()
         except Exception as exc:
             logger.error("Query error for %s/%s: %s", bare_ref, request.query_type, exc)
             return QueryResponse(return_code=ReturnCode.ERROR)
@@ -668,6 +732,7 @@ class SubEngine:
         self._pending: dict[str, asyncio.Future[dict[str, Any]]] = {}
         self._event_sinks: dict[str, EventSink] = {}
         self._command_sinks: dict[str, EventSink] = {}
+        self._stream_sinks: dict[str, EventSink] = {}
         self._next_id = 0
 
         self.engine_id = ""
@@ -705,6 +770,13 @@ class SubEngine:
         if command_id:
             self._command_sinks[command_id] = sink
 
+    def track_stream(self, stream_id: str, sink: EventSink | None) -> None:
+        """Route the status notifications of a stream to the sink that connected it."""
+        if sink is None:
+            self._stream_sinks.pop(stream_id, None)
+        elif stream_id:
+            self._stream_sinks[stream_id] = sink
+
     # -- Transport plumbing, driven by WsServer --
 
     def handle_response(self, msg: dict[str, Any]) -> None:
@@ -726,6 +798,8 @@ class SubEngine:
         params = msg.get("params", {}) or {}
         if envelope.event_type == COMPLETED:
             sink = self._command_sinks.pop(str(params.get("command_id", "")), None)
+        elif envelope.event_type == STREAM_STATUS:
+            sink = self._stream_sinks.get(str(params.get("stream_id", "")))
         elif envelope.event_type == NOTIFY_ERROR:
             sink = self._command_sinks.get(str(params.get("command_id", "")))
         else:
@@ -916,6 +990,8 @@ class Engine:
         self._events: OrderedDict[str, EventEnvelope] = OrderedDict()
         self._errors: OrderedDict[str, EventEnvelope] = OrderedDict()
         self._parameters: dict[str, list[Parameter]] = {}
+        # stream_id -> (component_ref, subscribe_id of its status events)
+        self._streams: dict[str, tuple[str, str]] = {}
 
         # Local component registry
         self._component_registry = ComponentRegistry()
@@ -1061,7 +1137,103 @@ class Engine:
         if method == "rois.event.get_event_detail":
             return self._handle_get_event_detail(params)
 
+        if method == "rois.stream.connect_stream":
+            return await self._handle_connect_stream(params, sink, client_id)
+
+        if method in ("rois.stream.disconnect_stream", "rois.stream.suspend_stream",
+                      "rois.stream.resume_stream"):
+            return await self._handle_stream_command(method.rsplit(".", 1)[1], params, client_id)
+
+        if method == "rois.stream.query_stream_status":
+            return await self._handle_query_stream_status(params)
+
         return {"return_code": ReturnCode.UNSUPPORTED.value}
+
+    # -- Streaming Interface: rois.stream.* onto the streaming component's messages --
+
+    async def _handle_connect_stream(
+        self,
+        params: dict[str, Any],
+        sink: EventSink | None,
+        client_id: str | None,
+    ) -> dict[str, Any]:
+        """Ask a streaming component to open a stream, and route its status events back.
+
+        The component answers with a stream_id and, in its results, whatever the
+        transport needs to attach to the media (a URL, an SDP answer). Media never
+        crosses the gateway.
+        """
+        component_ref = str(params.get("component_ref", ""))
+        contract = self._contract_for(component_ref)
+        if contract is None:
+            return {"return_code": ReturnCode.UNSUPPORTED.value, "stream_id": ""}
+        response = await contract.invoke(CommandRequest(
+            component_ref=component_ref,
+            command_type=CommandType.CONNECT_STREAM,
+            command_id=str(uuid.uuid4()),
+            parameters=_to_parameters(params.get("parameters", [])),
+        ))
+        if response.return_code != ReturnCode.OK:
+            return {"return_code": response.return_code.value, "stream_id": ""}
+        stream_id = _result_value(response.results, "stream_id") or response.command_id
+        subscribe_id = ""
+        if sink is not None:
+            subscribed = await contract.subscribe(SubscribeRequest(
+                component_ref=component_ref, event_type=STREAM_STATUS,
+            ), sink)
+            subscribe_id = subscribed.subscribe_id
+            contract.track_stream(stream_id, sink)  # type: ignore[attr-defined]
+        self._streams[stream_id] = (component_ref, subscribe_id)
+        return {
+            "return_code": ReturnCode.OK.value,
+            "stream_id": stream_id,
+            "results": [r.model_dump() for r in response.results if r.name != "stream_id"],
+        }
+
+    async def _handle_stream_command(
+        self,
+        operation: str,
+        params: dict[str, Any],
+        client_id: str | None,
+    ) -> dict[str, Any]:
+        stream_id = str(params.get("stream_id", ""))
+        entry = self._streams.get(stream_id)
+        if entry is None:
+            return {"return_code": ReturnCode.UNSUPPORTED.value}
+        component_ref, subscribe_id = entry
+        contract = self._contract_for(component_ref)
+        if contract is None:
+            return {"return_code": ReturnCode.UNSUPPORTED.value}
+        response = await contract.invoke(CommandRequest(
+            component_ref=component_ref,
+            command_type=CommandType(operation),
+            command_id=str(uuid.uuid4()),
+            parameters=[Parameter(name="stream_id", data_type_ref="string", value=stream_id)],
+        ))
+        if operation == "disconnect_stream" and response.return_code == ReturnCode.OK:
+            self._streams.pop(stream_id, None)
+            if subscribe_id:
+                await contract.unsubscribe(subscribe_id)
+            contract.track_stream(stream_id, None)  # type: ignore[attr-defined]
+        return {"return_code": response.return_code.value}
+
+    async def _handle_query_stream_status(self, params: dict[str, Any]) -> dict[str, Any]:
+        stream_id = str(params.get("stream_id", ""))
+        entry = self._streams.get(stream_id)
+        if entry is None:
+            return {"return_code": ReturnCode.UNSUPPORTED.value, "status": ""}
+        contract = self._contract_for(entry[0])
+        if contract is None:
+            return {"return_code": ReturnCode.UNSUPPORTED.value, "status": ""}
+        # The profile's get_stream_status takes the stream_id as its argument; the
+        # query condition carries it.
+        response = await contract.query(QueryRequest(
+            component_ref=entry[0], query_type="get_stream_status", condition=stream_id,
+        ))
+        return {
+            "return_code": response.return_code.value,
+            "status": _result_value(response.results, "status"),
+        }
 
     def _recording(self, sink: EventSink) -> EventSink:
         """Wrap a sink so every delivered envelope stays available for the detail queries."""

@@ -1,8 +1,8 @@
 # Mock Adapter
 
-A working adapter that needs no robot. It connects to a gateway, registers five
-components (`SystemInformation`, `Navigation`, `ObjectDetection`, `ObjectManipulation`, and
-`SpeechSynthesis`), answers with hardcoded data, and fires events on a timer to
+A working adapter that needs no robot. It connects to a gateway, registers six
+components (`SystemInformation`, `Navigation`, `ObjectDetection`, `ObjectManipulation`,
+`SpeechSynthesis`, and `VideoStreaming`), answers with hardcoded data, and fires events on a timer to
 simulate activity.
 
 Use it to develop clients and to exercise a gateway end to end.
@@ -24,7 +24,7 @@ pip install -e ./core
 python mock_adapter.py --config openrois-profile.yaml
 ```
 
-Point [`examples/hri-client`](../hri-client/README.md) at the gateway to see the five
+Point [`examples/hri-client`](../hri-client/README.md) at the gateway to see the six
 components appear, run their queries, and subscribe to their events.
 
 ## What It Simulates
@@ -36,6 +36,7 @@ components appear, run their queries, and subscribe to their events.
 | `ObjectDetection` | Lists two detected objects, fires `object_detected` 3 seconds after a subscription |
 | `ObjectManipulation` | Reports gripper state, fires `manipulation_complete` and completes the command 4 seconds after `execute` |
 | `SpeechSynthesis` | Speaks by logging `speech_text` and completes the command after 50 ms per character |
+| `VideoStreaming` | `connect_stream` returns a stream id and a fake media URL, the stream can be suspended, resumed, disconnected, and reports `notify_stream_status` |
 
 ## Read It as a Template
 
