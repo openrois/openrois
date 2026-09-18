@@ -77,8 +77,9 @@ rationale.
 
 ## Status
 
-Alpha, pre-1.0, unstable API. Hardening, graceful shutdown, reconnection, and a regression
-test suite are [Phases 4 and 5](https://openrois.org/docs/project/roadmap).
+Alpha, pre-1.0, unstable API. A regression test suite covers dispatch, bindings, events,
+and a gateway plus adapter round trip (`pytest` in this directory). Hardening, graceful
+shutdown, and reconnection are [Phase 5](https://openrois.org/docs/project/roadmap).
 
 ## License
 

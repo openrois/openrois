@@ -14,6 +14,41 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "openrois-components-core",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "mypy>=1.8",
+    "ruff>=0.4",
+    "types-PyYAML",
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["openrois_core*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+files = ["src"]
+
+[[tool.mypy.overrides]]
+# The component framework is a runtime-optional peer package; its metadata
+# class is only used in annotations here.
+module = ["openrois_components_core.*"]
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]

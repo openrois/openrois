@@ -464,8 +464,7 @@ sub HRI Engine is the boundary where paradigm-specific code lives.
 ### Sub HRI Engine Registration
 
 When a sub HRI Engine connects to the gateway on the `/adapter` path, the gateway
-discovers it: it sends `rois.command.search` and `rois.system.get_profile` to the
-sub HRI Engine and receives its `engine_id`, `platform`, and the list of components with
+discovers it: it sends `rois.system.get_profile` to the sub HRI Engine and receives its `engine_id`, `platform`, and the list of components with
 their queries, commands, events, and parameters. The gateway caches this discovery
 result and uses it for `search()`, `get_profile()`, and routing. If the sub HRI Engine
 disconnects, the gateway removes its components and broadcasts a

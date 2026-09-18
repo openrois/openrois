@@ -380,7 +380,7 @@ The adapter process owns three concerns:
    dispatches RoIS calls to component handlers via decorators (`@component`,
    `@query`, `@invoke`, `@subscribe`).
 2. **Gateway connection**: the `WsClient` connects to the gateway over WebSocket,
-   answers the gateway's discovery request (`rois.command.search`), and forwards RoIS calls to
+   answers the gateway's discovery request (`rois.system.get_profile`), and forwards RoIS calls to
    the local `Engine`.
 3. **Backend bridge**: the adapter loads a backend (rclpy, gRPC, IPC) based on its
    profile YAML. Each component owns its own connection to its backend, created in
