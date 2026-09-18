@@ -259,8 +259,8 @@ adapter IS an engine (a sub HRI Engine), not a separate kind of process. There i
 `Engine` class, one dispatch implementation. See section 4 for the full model.
 
 **Current state:** the Python `openrois_core` package implements the recursive
-`Engine`, and existing adapters run on it. The earlier TypeScript proof of concept
-remains in `gateway/` until Phase 4 of the roadmap retires it.
+`Engine`, and existing adapters run on it. The earlier TypeScript proof of concept is
+retired: `openrois-core` is the only dispatch implementation.
 
 ### 3.6 Package Management Is a Process Feature, Not Engine Logic
 
@@ -368,8 +368,8 @@ with no shared core. The recursive model dissolves this problem:
   spec: the Sub HRI Engine is an engine, not a passive backend.
 
 **Current state:** the Python `openrois_core` package implements this model with a
-single recursive `Engine` class. The TypeScript proof of concept in `gateway/` is
-retired at the end of Phase 4.
+single recursive `Engine` class, and the gateway process (`openrois-gateway`) is
+composed from it. The TypeScript proof of concept is retired.
 
 ### 4.4 the Adapter as a Sub HRI Engine
 
@@ -1815,7 +1815,7 @@ details, dependency graph, and open decisions.
 | 1 | Engine and Sub HRI Engine | TypeScript proof of concept, `SubEngine` proxy, mock components | done |
 | 2 | Adapter Framework and Components | component framework, reference components, real robot adapter | done |
 | 3 | Client SDKs and First Demonstration | TypeScript SDK and web client done, C# SDK in progress, exit tag `v0.1.0` | in progress |
-| 4 | Recursive Core in Python | one `Engine` class in `openrois_core`, TypeScript proof of concept retired | in progress |
+| 4 | Recursive Core in Python | one `Engine` class in `openrois_core`, TypeScript proof of concept retired | done |
 | 5 | Solidify the Core | harden engine, component framework, package management v0 | planned |
 | 6 | Gateway Process | compose `Engine` + `WsServer` from `openrois_core` | planned |
 | 7 | Adapter Process | compose `Engine` + `WsClient` from `openrois_core` + backend bridge | planned |
@@ -1849,9 +1849,10 @@ Pre-1.0 releases are Alpha, unstable API. Do not use in production until v1.0.
 The type pipeline, the recursive Python engine (`openrois_core`), the component
 framework, reference components, and the TypeScript SDK are built and working, and
 the first end-to-end demonstration runs against a real robot via gRPC. Phase 4
-finishes the migration by hardening the Python core and retiring the TypeScript
-proof of concept, which removes the duplicate dispatch implementation. The C#
-client SDK is in progress.
+finished the migration: the Python core dispatches through the typed Component
+Contract, has a regression test suite, and the TypeScript proof of concept is
+retired, which removed the duplicate dispatch implementation. The C# client SDK is
+in progress.
 
 ---
 

@@ -24,16 +24,16 @@ Until version 1.0, all releases are **alpha, with an unstable API**.
 | **1** | Engine and sub HRI Engine proof of concept | done |
 | **2** | Adapter framework and reference components | done |
 | **3** | Client SDKs and first end-to-end demonstration | in progress |
-| **4** | Recursive core in Python | in progress |
+| **4** | Recursive core in Python | done |
 | **5** | Hardening the core | planned |
-| **6** | Gateway process | planned |
+| **6** | Gateway process | in progress |
 | **7** | Adapter process | planned |
 | **8** | Open reference platform and mixed paradigms | planned |
 | **9** | Authentication, security, and media | planned |
 | **10** | Full component library (`v1.0`) | planned |
 | **11** | Component registry and Hub | after 1.0 |
 
-Phase 3 continues alongside Phase 4. Phases 8 and 9 can proceed in parallel once the
+Phase 3 continues alongside Phases 5 and 6. Phases 8 and 9 can proceed in parallel once the
 gateway and adapter processes exist. Phase 11 is gated on adoption.
 
 ---
@@ -49,8 +49,8 @@ five-method `Component Contract` that decouples the engine from any middleware.
 ### Phase 1: Engine and Sub HRI Engine Proof of Concept (Done)
 
 A TypeScript engine that routes RoIS calls to sub HRI Engines over WebSocket, aggregates
-their profiles, tracks reservations, and broadcasts profile changes. This proof of
-concept lives in `gateway/` and is retired at the end of Phase 4.
+their profiles, tracks reservations, and broadcasts profile changes. Superseded by the
+Python core in Phase 4 and removed from the repository.
 
 ### Phase 2: Adapter Framework and Reference Components (Done)
 
@@ -71,27 +71,26 @@ high-level client does not yet.
 
 **Exit criteria:** tagged release `v0.1.0`.
 
-### Phase 4: Recursive Core in Python (In Progress)
+### Phase 4: Recursive Core in Python (Done)
 
-**Done:** the `openrois-core` package with the recursive `Engine`, the
-`ComponentRegistry`, the `SubEngine` proxy, and the `WsServer` and `WsClient` that
-existing adapters run on.
-
-**In progress:** reliability fixes for adapter discovery and event delivery in the
-gateway, and a regression test suite for the core.
-
-**Exit criteria:** one dispatch implementation, with the TypeScript proof of concept
-retired.
+The `openrois-core` package: the recursive `Engine`, `ComponentRegistry` and `SubEngine`
+implementing the typed Component Contract, the `WsServer` and `WsClient` that adapters run
+on, every Command, Query, and Event operation except streaming, command completion and
+error notifications, and a regression test suite with a gateway plus adapter round trip.
+The TypeScript proof of concept is retired.
 
 ### Phase 5: Hardening the Core (Planned)
 
 Graceful shutdown, reconnection behavior, loading component packages from a local path
 or a Git URL, and minimal health and status endpoints.
 
-### Phase 6: Gateway Process (Planned)
+### Phase 6: Gateway Process (In Progress)
 
-A standalone gateway process and container image composed from `Engine` and `WsServer`,
-with configuration loading, logging, signal handling, and one-command bring-up.
+**Done:** the `openrois-gateway` process and its container image (`core/Dockerfile`),
+composed from `Engine` and `WsServer`, with command-line configuration, logging, signal
+handling, and `docker compose up`.
+
+**In progress:** configuration files and health endpoints.
 
 ### Phase 7: Adapter Process (Planned)
 

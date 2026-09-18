@@ -14,11 +14,10 @@ What exists today:
 | Area | Directory | State |
 |------|-----------|-------|
 | RoIS interface types (Python, JSON Schema, TypeScript, C#) | `interfaces/` | Available |
-| Recursive engine, WebSocket server and client | `core/` | Available, hardening |
+| Recursive engine, gateway process, WebSocket server and client | `core/` | Available |
 | Adapter SDK (component framework) and reference components | `components/` | Available |
 | TypeScript client SDK | `sdk/typescript/` | Available |
 | C# client SDK for Unity | `sdk/csharp/` | JSON-RPC layer only, client in progress |
-| TypeScript gateway proof of concept | `gateway/` | Superseded by `core/`, retired at the end of Phase 4 |
 | Examples: mock engine, mock adapter, web client, adapter template | `examples/` | Available |
 | Hub management application | `apps/hub/` | Not started, scaffold only |
 
@@ -59,7 +58,7 @@ the XML profile disagree, follow the XML profile and document the divergence in
 | Python types | `interfaces/python` | `pip install -e ".[dev]"`, `pytest`, `mypy src/`, `ruff check src/` |
 | TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test` |
 | C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
-| Engine core | `core` | `pip install -e .`, `ruff check src/` |
+| Engine core | `core` | `pip install -e ".[dev]"`, `pytest`, `mypy src/`, `ruff check src/ tests/` |
 | Component framework | `components/core` | `pip install -e .` |
 | TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` |
 | Mock engine | `examples/mock-engine` | `npm install`, `npm test` |

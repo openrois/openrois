@@ -224,7 +224,7 @@ open.
 | Area | Status |
 |------|--------|
 | RoIS interface types (Python, JSON Schema, TypeScript, C#) | Available |
-| Recursive engine, WebSocket server and client, and adapter SDK (Python) | Available, hardening |
+| Recursive engine, gateway process, WebSocket server and client, and adapter SDK (Python) | Available |
 | TypeScript client SDK and web inspector | Available |
 | Reference components for the Preferred Robotics Kachaka (gRPC and ROS 2) | Available |
 | C# client SDK for Unity | In progress |
@@ -241,7 +241,7 @@ The [roadmap](docs/roadmap.md) describes each phase and its exit criteria.
 ```
 openrois/
 ├── interfaces/          RoIS types: Python models, JSON Schema, generated TypeScript and C#
-├── core/                Recursive Engine, WebSocket server and client (openrois-core)
+├── core/                Recursive Engine, WebSocket server and client, gateway process (openrois-core)
 ├── components/
 │   ├── core/            Component decorators and result helpers (openrois-components-core)
 │   ├── common/          Platform-independent components
@@ -249,7 +249,6 @@ openrois/
 ├── sdk/
 │   ├── typescript/      Client SDK for web and Node.js (@openrois/sdk)
 │   └── csharp/          Client SDK for Unity (OpenRoIS.Sdk, in progress)
-├── gateway/             TypeScript gateway prototype, superseded by core/
 ├── examples/
 │   ├── mock-engine/     RoIS engine test double with simulated components
 │   ├── hri-client/      Profile-driven web inspector for any RoIS engine
