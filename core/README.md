@@ -39,6 +39,28 @@ As a gateway, from the command line (also `python -m openrois_core.gateway`, and
 openrois-gateway --host 0.0.0.0 --port 8765
 ```
 
+Every option can also come from `OPENROIS_*` environment variables or from a YAML file
+(`--config gateway.yaml`, or `OPENROIS_GATEWAY_CONFIG`). The command line wins over the
+environment, which wins over the file:
+
+```yaml
+host: 0.0.0.0
+port: 8765
+engine_id: gateway
+platform: kachaka
+auth:
+  key: /run/secrets/jwt-public.pem
+  algorithm: RS256
+  issuer: my-issuer
+tls:
+  cert: /etc/openrois/cert.pem
+  key: /etc/openrois/key.pem
+```
+
+A running gateway answers `GET /health` on its port with a JSON liveness summary (engine
+id, connected adapters and clients, whether auth and TLS are on), which the container
+image uses as its `HEALTHCHECK`.
+
 The same composition in code:
 
 ```python

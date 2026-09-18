@@ -1047,6 +1047,11 @@ class Engine:
         for ref in to_remove:
             del self._bindings[ref]
 
+    @property
+    def engine_id(self) -> str:
+        """The identifier this engine reports in its profile."""
+        return self._engine_id
+
     def get_sub_engines(self) -> list[dict[str, Any]]:
         """Get all registered sub-engine entries."""
         return list(self._sub_engines.values())

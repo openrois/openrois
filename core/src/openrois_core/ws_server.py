@@ -25,6 +25,9 @@ from openrois_core.engine import Engine, SubEngine, envelope_to_notification, er
 
 logger = logging.getLogger(__name__)
 
+# A plain HTTP GET on this path answers a JSON liveness summary instead of upgrading.
+HEALTH_PATH = "/health"
+
 
 def _ws_path(ws: Any) -> str:
     """Return the URL path of a connection.
@@ -103,11 +106,29 @@ class WsServer:
             "wss" if self._ssl else "ws", host, port, "on" if self._auth else "off",
         )
 
+    def health(self) -> dict[str, Any]:
+        """A liveness summary: engine id, connected adapters and clients, auth and TLS."""
+        return {
+            "status": "ok",
+            "engine_id": self._engine.engine_id,
+            "adapters": len(self._sub_engines),
+            "clients": len(self._client_sockets),
+            "auth": self._auth is not None,
+            "tls": self._ssl is not None,
+        }
+
     async def _process_request(self, connection: Any, request: Any) -> Any:
-        """Authenticate at the upgrade: 401 without a valid token, 403 for the wrong role."""
+        """Answer GET /health, then authenticate the upgrade: 401 without a valid token,
+        403 for the wrong role."""
+        path = str(getattr(request, "path", "/"))
+        if path.split("?", 1)[0] == HEALTH_PATH:
+            response = connection.respond(HTTPStatus.OK, json.dumps(self.health()) + "\n")
+            # websockets Headers are multi-valued: drop the text/plain entry first.
+            del response.headers["Content-Type"]
+            response.headers["Content-Type"] = "application/json"
+            return response
         if self._auth is None:
             return None
-        path = str(getattr(request, "path", "/"))
         token = token_from(getattr(request, "headers", {}), path)
         if not token:
             return connection.respond(HTTPStatus.UNAUTHORIZED, "A bearer token is required\n")

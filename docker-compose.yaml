@@ -21,6 +21,9 @@ services:
     environment:
       - OPENROIS_HOST=0.0.0.0
       - OPENROIS_PORT=8765
+    # Uncomment to configure the gateway from a file (auth, TLS, engine id, ...):
+    # volumes:
+    #   - ./gateway.yaml:/etc/openrois/gateway.yaml:ro
     restart: unless-stopped
 
   hub:

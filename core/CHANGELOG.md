@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `openrois-gateway --config gateway.yaml` (or `OPENROIS_GATEWAY_CONFIG`): every option
+  from a YAML file, below the command line and the `OPENROIS_*` environment in precedence.
+  Unknown keys are rejected. The container image reads `/etc/openrois/gateway.yaml`.
+- `GET /health` on the gateway port answers a JSON liveness summary, and the container
+  image declares it as its `HEALTHCHECK`. `Engine.engine_id` is a public property.
 - `benchmarks/latency.py`: control-plane latency through the gateway and direct to an
   adapter (query, execute, event delivery), p50/p95/p99 over loopback.
 - Authentication and authorization at the gateway: `WsServer(engine, auth=AuthConfig(...))`

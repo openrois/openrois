@@ -84,16 +84,20 @@ The TypeScript proof of concept is retired.
 **Done:** control-plane latency benchmarks (`core/benchmarks/latency.py`, results at
 [openrois.org](https://openrois.org/docs/reference/benchmarks)).
 
-**Planned:** graceful shutdown, reconnection behavior, loading component packages from a
-local path or a Git URL, and minimal health and status endpoints.
+**Done:** a `GET /health` liveness endpoint on the gateway port.
 
-### Phase 6: Gateway Process (In Progress)
+**Planned:** graceful shutdown, reconnection behavior, and loading component packages from
+a local path or a Git URL.
+
+### Phase 6: Gateway Process (Done)
 
 **Done:** the `openrois-gateway` process and its container image (`core/Dockerfile`),
 composed from `Engine` and `WsServer`, with command-line configuration, logging, signal
 handling, and `docker compose up`.
 
-**In progress:** configuration files and health endpoints.
+**Done:** a YAML configuration file (`--config`, `OPENROIS_GATEWAY_CONFIG`) below the
+command line and the environment in precedence, and `GET /health` as the container's
+health check.
 
 ### Phase 7: Adapter Process (Planned)
 
