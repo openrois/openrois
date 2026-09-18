@@ -1,0 +1,43 @@
+name: TypeScript
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # The packages depend on each other through file: links, so they are
+      # built in dependency order.
+      - name: Interface types
+        working-directory: interfaces/typescript
+        run: |
+          npm ci
+          npm run build
+          npm run typecheck
+          npm test
+      - name: Client SDK
+        working-directory: sdk/typescript
+        run: |
+          npm ci
+          npm run build
+          npm run typecheck
+          npm run lint
+          npm test
+      - name: Mock engine
+        working-directory: examples/mock-engine
+        run: |
+          npm ci
+          npm test
+      - name: HRI client
+        working-directory: examples/hri-client
+        run: |
+          npm ci
+          npx tsc --noEmit -p tsconfig.json
+          npm run build

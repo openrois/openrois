@@ -8,6 +8,7 @@
  * Run with: npx vitest run
  */
 
+import { withToken } from "../src/rois-client";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   RoISClient,
@@ -189,6 +190,29 @@ describe("RoISClient", () => {
       expect(connectMsg.method).toBe("rois.system.connect");
       // The token is NOT in the params. Auth is at the transport layer.
       expect(connectMsg.params).toBeUndefined();
+    });
+
+    it("leaves the token out of the URL when a custom factory owns the upgrade", async () => {
+      const seen: string[] = [];
+      const options: ClientOptions = {
+        token: "secret",
+        transport: {
+          webSocketFactory: (url: string) => {
+            seen.push(url);
+            currentMock = new MockWebSocket();
+            return currentMock as any;
+          },
+        },
+      };
+      const connectPromise = RoISClient.connect("ws://test-gateway:8765", options);
+      currentMock.simulateOpen();
+      for (let i = 0; i < 5; i++) {
+        await Promise.resolve();
+      }
+      respondWithResult(currentMock, { return_code: "OK" });
+      await connectPromise;
+      // The factory sends the token as a header itself; a URL would leak it to logs.
+      expect(seen).toEqual(["ws://test-gateway:8765"]);
     });
 
     it("rejects if the gateway returns a non-OK return code", async () => {
@@ -798,5 +822,60 @@ describe("RoISClient", () => {
       // 6. Disconnect.
       await client.disconnect();
     });
+  });
+});
+
+describe("withToken()", () => {
+  it("leaves the URL alone without a token", () => {
+    expect(withToken("ws://gateway:8765")).toBe("ws://gateway:8765");
+  });
+
+  it("appends the token as a query parameter, encoded", () => {
+    expect(withToken("ws://gateway:8765", "a.b c")).toBe("ws://gateway:8765?token=a.b%20c");
+    expect(withToken("ws://gateway:8765/?x=1", "t")).toBe("ws://gateway:8765/?x=1&token=t");
+  });
+});
+
+describe("streaming", () => {
+  it("connectStream sends the component_ref and returns the stream id and results", async () => {
+    const { client, mock } = await createConnectedClient();
+    const promise = client.connectStream("robot_1/VideoStreaming");
+    respondWithResult(mock, {
+      return_code: "OK",
+      stream_id: "v1",
+      results: [{ name: "media_url", data_type_ref: "string", value: "http://cam/whep/v1" }],
+    });
+    const stream = await promise;
+    expect(stream.streamId).toBe("v1");
+    expect(stream.results[0].value).toBe("http://cam/whep/v1");
+    const sent = mock.sent[1] as Record<string, unknown>;
+    expect(sent.method).toBe("rois.stream.connect_stream");
+    expect(sent.params).toEqual({ component_ref: "robot_1/VideoStreaming", parameters: [] });
+  });
+
+  it("suspend, resume, status, and disconnect address the stream id", async () => {
+    const { client, mock } = await createConnectedClient();
+    const suspend = client.suspendStream("v1");
+    respondWithResult(mock, { return_code: "OK" });
+    expect(await suspend).toBe("OK");
+    const status = client.queryStreamStatus("v1");
+    respondWithResult(mock, { return_code: "OK", status: "STREAMING_SUSPENDED" });
+    expect(await status).toBe("STREAMING_SUSPENDED");
+    const resume = client.resumeStream("v1");
+    respondWithResult(mock, { return_code: "OK" });
+    expect(await resume).toBe("OK");
+    const disconnect = client.disconnectStream("v1");
+    respondWithResult(mock, { return_code: "UNSUPPORTED" });
+    await expect(disconnect).rejects.toThrow(RoISError);
+    const sent = mock.sent[2] as Record<string, unknown>;
+    expect(sent.params).toEqual({ stream_id: "v1" });
+  });
+
+  it("emits rois.stream.notify_status once per notification", async () => {
+    const { client, mock } = await createConnectedClient();
+    const handler = vi.fn();
+    client.on("rois.stream.notify_status", handler);
+    sendNotification(mock, "rois.stream.notify_status", { stream_id: "v1", status: "STREAMING_RUNNING" });
+    expect(handler).toHaveBeenCalledTimes(1);
   });
 });

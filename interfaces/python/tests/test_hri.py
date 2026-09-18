@@ -2,15 +2,11 @@
 
 import json
 
-import pytest
-from pydantic import ValidationError
-
 from openrois.interfaces.hri import (
     Argument,
     ArgumentList,
     CommandUnit,
     CommandUnitSequence,
-    CommandUnitSequenceItem,
     ConcurrentCommands,
     ConditionT,
     DateTime,
@@ -25,7 +21,6 @@ from openrois.interfaces.hri import (
     RoISIdentifierList,
     RoLoData,
 )
-
 
 # ---------------------------------------------------------------------------
 # ReturnCode enum

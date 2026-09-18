@@ -1,0 +1,15 @@
+# Virtual agent adapter profile.
+
+engine:
+  id: avatar_1
+  platform: avatar
+  gateway_url: "ws://127.0.0.1:8765"
+  # token: "<JWT with the adapter role>"   # when the gateway authenticates
+
+components:
+  SpeechSynthesis:
+    name: Mia
+  Reaction:
+    name: Mia
+  SystemInformation:
+    name: Mia

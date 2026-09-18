@@ -57,8 +57,8 @@ namespace OpenRoIS.Interfaces.Tests
     [Fact]
     public void Bus_TypesExist()
     {
-        Assert.NotNull(typeof(IBusAdapter));
-        Assert.NotNull(typeof(BusAdapterError));
+        Assert.NotNull(typeof(IComponentContract));
+        Assert.NotNull(typeof(ComponentContractError));
         Assert.NotNull(typeof(ComponentNotFoundError));
         Assert.NotNull(typeof(DiscoverRequest));
         Assert.NotNull(typeof(DiscoverResponse));

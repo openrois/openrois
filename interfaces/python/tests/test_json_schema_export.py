@@ -3,6 +3,19 @@
 import json
 
 from pydantic import TypeAdapter
+
+from openrois.interfaces.common import ComponentStatus, StreamStatus
+from openrois.interfaces.components.navigation import (
+    NavigationGetParameterResult,
+    NavigationReachedTargetEvent,
+    NavigationSetParameter,
+    NavigationSetParameterResult,
+    NavigationStatusResult,
+)
+from openrois.interfaces.components.person_detection import (
+    PersonDetectedEvent,
+    PersonDetectionStatusResult,
+)
 from openrois.interfaces.hri import (
     Argument,
     CommandUnit,
@@ -11,14 +24,6 @@ from openrois.interfaces.hri import (
     Parameter,
     Result,
     ReturnCode,
-)
-from openrois.interfaces.common import ComponentStatus, StreamStatus
-from openrois.interfaces.service import (
-    CompletedEvent,
-    CompletedStatus,
-    ErrorType,
-    NotifyErrorEvent,
-    NotifyEventPayload,
 )
 from openrois.interfaces.profiles import (
     CommandMessageProfile,
@@ -30,16 +35,12 @@ from openrois.interfaces.profiles import (
     QueryMessageProfile,
     RoISIdentifierType,
 )
-from openrois.interfaces.components.person_detection import (
-    PersonDetectedEvent,
-    PersonDetectionStatusResult,
-)
-from openrois.interfaces.components.navigation import (
-    NavigationGetParameterResult,
-    NavigationReachedTargetEvent,
-    NavigationSetParameter,
-    NavigationSetParameterResult,
-    NavigationStatusResult,
+from openrois.interfaces.service import (
+    CompletedEvent,
+    CompletedStatus,
+    ErrorType,
+    NotifyErrorEvent,
+    NotifyEventPayload,
 )
 
 # Models (BaseModel subclasses) that support model_json_schema()

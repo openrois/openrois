@@ -15,9 +15,10 @@ namespace OpenRoIS.Interfaces.Bus.Models
     /// <summary>
     /// Command operation type for RoIS commands.
     /// 
-    /// Not an IDL enum — the IDL uses plain `string` for command_type. OpenRoIS
+    /// Not an IDL enum: the IDL uses plain `string` for command_type. OpenRoIS
     /// defines this enum for compile-time safety. The wire values match the
-    /// RoIS_Common::Command method names plus `set_parameter` and `execute`.
+    /// RoIS_Common::Command method names plus `set_parameter` and `execute`, and
+    /// the stream control commands of the Audio and Video Streaming profiles.
     /// </summary>
     public enum CommandType
     {
@@ -26,7 +27,11 @@ namespace OpenRoIS.Interfaces.Bus.Models
         suspend,
         resume,
         set_parameter,
-        execute
+        execute,
+        connect_stream,
+        disconnect_stream,
+        suspend_stream,
+        resume_stream
     }
 
 
@@ -41,7 +46,7 @@ namespace OpenRoIS.Interfaces.Bus.Models
 
 
     /// <summary>
-    /// Generic command request sent via BusAdapter.invoke().
+    /// Generic command request sent via ComponentContract.invoke().
     /// 
     /// Carries the same information as a CommandUnit plus the target component_ref.
     /// Typed component models (e.g., NavigationSetParameter) serialize their fields
@@ -173,7 +178,7 @@ namespace OpenRoIS.Interfaces.Bus.Models
     /// <summary>
     /// Generic event envelope delivered to an EventSink.
     /// 
-    /// The BusAdapter emits this for every async notification: component events,
+    /// The ComponentContract emits this for every async notification: component events,
     /// command completion, errors, and stream status changes. The engine/gateway
     /// inspects event_type and dispatches to the appropriate ServiceApplicationBase
     /// callback.
@@ -238,7 +243,7 @@ namespace OpenRoIS.Interfaces.Bus.Models
             => !(left == right);
     }
 
-    /// <summary>Response from BusAdapter.invoke().</summary>
+    /// <summary>Response from ComponentContract.invoke().</summary>
     public sealed class InvokeResponse : IEquatable<InvokeResponse>
     {
         [JsonPropertyName("return_code")]
@@ -279,7 +284,7 @@ namespace OpenRoIS.Interfaces.Bus.Models
     }
 
     /// <summary>
-    /// Generic query request sent via BusAdapter.query().
+    /// Generic query request sent via ComponentContract.query().
     /// 
     /// Maps to QueryIF.query(query_type, condition, results) and
     /// RoIS_Common.component_status(status).
@@ -323,7 +328,7 @@ namespace OpenRoIS.Interfaces.Bus.Models
             => !(left == right);
     }
 
-    /// <summary>Response from BusAdapter.query().</summary>
+    /// <summary>Response from ComponentContract.query().</summary>
     public sealed class QueryResponse : IEquatable<QueryResponse>
     {
         [JsonPropertyName("return_code")]
@@ -404,7 +409,7 @@ namespace OpenRoIS.Interfaces.Bus.Models
             => !(left == right);
     }
 
-    /// <summary>Response from BusAdapter.subscribe().</summary>
+    /// <summary>Response from ComponentContract.subscribe().</summary>
     public sealed class SubscribeResponse : IEquatable<SubscribeResponse>
     {
         [JsonPropertyName("return_code")]

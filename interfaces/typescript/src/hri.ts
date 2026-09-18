@@ -58,12 +58,13 @@ export type ArgumentList = z.infer<typeof ArgumentListSchema>;
 /**
  * Command operation type for RoIS commands.
  * 
- * Not an IDL enum — the IDL uses plain `string` for command_type. OpenRoIS
+ * Not an IDL enum: the IDL uses plain `string` for command_type. OpenRoIS
  * defines this enum for compile-time safety. The wire values match the
- * RoIS_Common::Command method names plus `set_parameter` and `execute`.
+ * RoIS_Common::Command method names plus `set_parameter` and `execute`, and
+ * the stream control commands of the Audio and Video Streaming profiles.
  */
 
-export const CommandTypeSchema = z.enum(["start", "stop", "suspend", "resume", "set_parameter", "execute"]);
+export const CommandTypeSchema = z.enum(["start", "stop", "suspend", "resume", "set_parameter", "execute", "connect_stream", "disconnect_stream", "suspend_stream", "resume_stream"]);
 export type CommandType = z.infer<typeof CommandTypeSchema>;
 
 /**

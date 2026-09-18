@@ -30,12 +30,13 @@ export type ArgumentList = z.infer<typeof ArgumentListSchema>;
 /**
  * Command operation type for RoIS commands.
  * 
- * Not an IDL enum — the IDL uses plain `string` for command_type. OpenRoIS
+ * Not an IDL enum: the IDL uses plain `string` for command_type. OpenRoIS
  * defines this enum for compile-time safety. The wire values match the
- * RoIS_Common::Command method names plus `set_parameter` and `execute`.
+ * RoIS_Common::Command method names plus `set_parameter` and `execute`, and
+ * the stream control commands of the Audio and Video Streaming profiles.
  */
 
-export const CommandTypeSchema = z.enum(["start", "stop", "suspend", "resume", "set_parameter", "execute"]);
+export const CommandTypeSchema = z.enum(["start", "stop", "suspend", "resume", "set_parameter", "execute", "connect_stream", "disconnect_stream", "suspend_stream", "resume_stream"]);
 export type CommandType = z.infer<typeof CommandTypeSchema>;
 
 /**
@@ -213,7 +214,7 @@ export type StreamStatus = z.infer<typeof StreamStatusSchema>;
 
 
 /**
- * Generic command request sent via BusAdapter.invoke().
+ * Generic command request sent via ComponentContract.invoke().
  * 
  * Carries the same information as a CommandUnit plus the target component_ref.
  * Typed component models (e.g., NavigationSetParameter) serialize their fields
@@ -252,7 +253,7 @@ export type DiscoverResponse = z.infer<typeof DiscoverResponseSchema>;
 /**
  * Generic event envelope delivered to an EventSink.
  * 
- * The BusAdapter emits this for every async notification: component events,
+ * The ComponentContract emits this for every async notification: component events,
  * command completion, errors, and stream status changes. The engine/gateway
  * inspects event_type and dispatches to the appropriate ServiceApplicationBase
  * callback.
@@ -272,7 +273,7 @@ export const EventEnvelopeSchema = z.object({
 }).strict();
 export type EventEnvelope = z.infer<typeof EventEnvelopeSchema>;
 
-/** Response from BusAdapter.invoke(). */
+/** Response from ComponentContract.invoke(). */
 
 export const InvokeResponseSchema = z.object({
   return_code: ReturnCodeSchema.default("OK"),
@@ -282,7 +283,7 @@ export const InvokeResponseSchema = z.object({
 export type InvokeResponse = z.infer<typeof InvokeResponseSchema>;
 
 /**
- * Generic query request sent via BusAdapter.query().
+ * Generic query request sent via ComponentContract.query().
  * 
  * Maps to QueryIF.query(query_type, condition, results) and
  * RoIS_Common.component_status(status).
@@ -295,7 +296,7 @@ export const QueryRequestSchema = z.object({
 }).strict();
 export type QueryRequest = z.infer<typeof QueryRequestSchema>;
 
-/** Response from BusAdapter.query(). */
+/** Response from ComponentContract.query(). */
 
 export const QueryResponseSchema = z.object({
   return_code: ReturnCodeSchema.default("OK"),
@@ -316,7 +317,7 @@ export const SubscribeRequestSchema = z.object({
 }).strict();
 export type SubscribeRequest = z.infer<typeof SubscribeRequestSchema>;
 
-/** Response from BusAdapter.subscribe(). */
+/** Response from ComponentContract.subscribe(). */
 
 export const SubscribeResponseSchema = z.object({
   return_code: ReturnCodeSchema.default("OK"),

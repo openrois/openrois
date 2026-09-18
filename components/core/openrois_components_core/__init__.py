@@ -33,4 +33,5 @@ __all__ = [
     "ComponentMeta",
     "meta_from_decorators",
     "results",
+    "conformance",
 ]

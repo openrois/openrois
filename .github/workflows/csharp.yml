@@ -1,0 +1,23 @@
+name: C#
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Build and test the interface types
+        working-directory: interfaces/csharp
+        run: |
+          dotnet build src/OpenRoIS.Interfaces/OpenRoIS.Interfaces.csproj --configuration Release
+          dotnet test tests/OpenRoIS.Interfaces.Tests/OpenRoIS.Interfaces.Tests.csproj --configuration Release
+      - name: Test the Unity SDK runtime outside Unity
+        working-directory: sdk/csharp/DotNetTests~
+        run: dotnet test --configuration Release

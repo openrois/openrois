@@ -40,9 +40,9 @@ behavioral interface.
 
 | Package | Language | Version | Role |
 |---------|----------|---------|------|
-| `openrois-interfaces` | Python 3.12+ | 0.1.0a2 | Source of truth |
-| `@openrois/interfaces` | TypeScript (ESM) | 0.1.0-alpha.2 | Generated |
-| `OpenRoIS.Interfaces` | C# (netstandard2.1) | 0.1.0-alpha.2 | Generated |
+| `openrois-interfaces` | Python 3.12+ | 0.1.0a3 | Source of truth |
+| `@openrois/interfaces` | TypeScript (ESM) | 0.1.0-alpha.3 | Generated |
+| `OpenRoIS.Interfaces` | C# (netstandard2.1) | 0.1.0-alpha.3 | Generated |
 
 None are published yet. Install them from a clone, as each package README describes.
 

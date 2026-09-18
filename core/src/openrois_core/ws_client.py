@@ -30,8 +30,9 @@ import threading
 from typing import Any
 
 import websockets
+from openrois.interfaces.bus import EventEnvelope
 
-from openrois_core.engine import Engine, EventEmitter
+from openrois_core.engine import Engine, EventEmitter, envelope_to_notification
 
 logger = logging.getLogger(__name__)
 
@@ -48,15 +49,19 @@ class WsClient:
         self,
         engine: Engine,
         gateway_url: str,
+        token: str | None = None,
     ) -> None:
         """Initialize the WsClient.
 
         Args:
             engine: The Engine instance with local components registered.
             gateway_url: The WebSocket URL of the gateway.
+            token: Bearer token presented at the WebSocket upgrade when the
+                gateway requires authentication (a JWT with the adapter role).
         """
         self._engine = engine
         self._gateway_url = gateway_url
+        self._token = token
 
         self._ws: Any = None
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -78,8 +83,9 @@ class WsClient:
         """Async main: connect, register, dispatch, reconnect on disconnect."""
         self._loop = asyncio.get_running_loop()
 
-        # Set up the EventEmitter with the initial send function.
-        self._emitter = EventEmitter(self._ws_send, self._loop)
+        # Events reach the gateway through the sink passed at subscribe time
+        # (see _send_event), so the emitter only needs the loop.
+        self._emitter = EventEmitter(self._loop)
 
         # Inject emitter onto the component registry.
         self._engine.component_registry.set_emitter(self._emitter)
@@ -149,7 +155,8 @@ class WsClient:
                 if "/adapter" not in url:
                     url = url.rstrip("/") + "/adapter"
                 logger.info("Connecting to %s", url)
-                ws = await websockets.connect(url)
+                headers = {"Authorization": f"Bearer {self._token}"} if self._token else {}
+                ws = await websockets.connect(url, additional_headers=headers)
                 return ws
             except (
                 ConnectionRefusedError,
@@ -198,8 +205,16 @@ class WsClient:
             await self._ws.send(json.dumps(response))
 
     async def _dispatch(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
-        """Route a JSON-RPC method to the engine's dispatch."""
-        return await self._engine.dispatch(method, params)
+        """Route a JSON-RPC method to the engine's dispatch.
+
+        Subscriptions made by the gateway deliver their events through
+        _send_event, which pushes rois.event.notify back over this WebSocket.
+        """
+        return await self._engine.dispatch(method, params, sink=self._send_event)
+
+    async def _send_event(self, envelope: EventEnvelope) -> None:
+        """Push an event, a completion, or an error to the gateway as a notification."""
+        await self._ws_send(json.dumps(envelope_to_notification(envelope)))
 
     # -- rclpy threading --
 
@@ -210,8 +225,10 @@ class WsClient:
             return
 
         try:
-            import rclpy  # noqa: F401
-            from rclpy.executors import MultiThreadedExecutor
+            import rclpy  # type: ignore[import-not-found]  # noqa: F401
+            from rclpy.executors import (  # type: ignore[import-not-found]
+                MultiThreadedExecutor,
+            )
         except ImportError:
             logger.debug("rclpy not installed, skipping ROS 2 spin")
             return

@@ -7,7 +7,7 @@
 <h1 align="center">OpenRoIS</h1>
 
 <p align="center">
-  <strong>Open-source middleware implementing the OMG Robotic Interaction Service (RoIS) Framework 2.0</strong><br>
+  <strong>A community-driven open-source middleware implementing the OMG Robotic Interaction Service (RoIS) Framework 2.0</strong><br>
   Write a service application once. Run it on physical robots, virtual avatars, and AI services.
 </p>
 
@@ -47,8 +47,8 @@ HRI Engines through five standard interfaces and exchange symbolic messages such
 commands.
 
 A specification alone does not provide the maintained implementation, SDKs, and
-adapters that adoption requires. **OpenRoIS is an openly developed implementation of
-RoIS 2.0** that carries the standard from specification to practice, for physical
+adapters that adoption requires. **OpenRoIS is a community-driven open-source implementation
+of RoIS 2.0** that carries the standard from specification to practice, for physical
 robots and virtual agents alike.
 
 <p align="center">
@@ -69,7 +69,8 @@ robots and virtual agents alike.
 - **JSON-RPC 2.0 over WebSocket.** Every operation of the five RoIS interfaces maps to
   a namespaced method (`rois.system.*`, `rois.command.*`, `rois.query.*`,
   `rois.event.*`, `rois.stream.*`). The control plane works from browsers and across
-  the internet. The Streaming Interface is planned.
+  the internet. The Streaming Interface controls streams; the media stays on its own
+  data plane.
 - **Single source of truth for types.** RoIS types are authored once as Python
   Pydantic models, exported to JSON Schema, and generated into TypeScript and C#.
   Tests check the models against the normative RoIS XML profiles and schema.
@@ -224,13 +225,14 @@ open.
 | Area | Status |
 |------|--------|
 | RoIS interface types (Python, JSON Schema, TypeScript, C#) | Available |
-| Recursive engine, WebSocket server and client, and adapter SDK (Python) | Available, hardening |
+| Recursive engine, gateway process, WebSocket server and client, and adapter SDK (Python) | Available |
 | TypeScript client SDK and web inspector | Available |
 | Reference components for the Preferred Robotics Kachaka (gRPC and ROS 2) | Available |
-| C# client SDK for Unity | In progress |
-| Open reference platform based on the Pollen Robotics Reachy Mini | Planned |
-| Authentication (JWT) and authorization (RBAC) | Planned |
-| Streaming Interface with WebRTC media | Planned |
+| C# client SDK for Unity | Available |
+| Open reference platform based on the Pollen Robotics Reachy Mini | In progress, simulated first |
+| Authentication (JWT), authorization (RBAC), and TLS at the gateway | Available, off by default |
+| Streaming Interface control plane (`rois.stream.*`) | Available |
+| WebRTC media on the data plane (signaling through streaming components) | Planned |
 | Packages on PyPI, npm, NuGet, and the Unity Package Manager | Planned |
 | All 17 basic RoIS HRI Components (v1.0) | Planned |
 
@@ -241,19 +243,20 @@ The [roadmap](docs/roadmap.md) describes each phase and its exit criteria.
 ```
 openrois/
 ├── interfaces/          RoIS types: Python models, JSON Schema, generated TypeScript and C#
-├── core/                Recursive Engine, WebSocket server and client (openrois-core)
+├── core/                Recursive Engine, WebSocket server and client, gateway process (openrois-core)
 ├── components/
 │   ├── core/            Component decorators and result helpers (openrois-components-core)
 │   ├── common/          Platform-independent components
 │   └── kachaka/         Preferred Robotics Kachaka components (gRPC and ROS 2)
 ├── sdk/
 │   ├── typescript/      Client SDK for web and Node.js (@openrois/sdk)
-│   └── csharp/          Client SDK for Unity (OpenRoIS.Sdk, in progress)
-├── gateway/             TypeScript gateway prototype, superseded by core/
+│   └── csharp/          Client SDK for Unity and .NET (org.openrois.sdk)
 ├── examples/
 │   ├── mock-engine/     RoIS engine test double with simulated components
 │   ├── hri-client/      Profile-driven web inspector for any RoIS engine
 │   ├── mock-adapter/    Adapter with simulated components
+│   ├── avatar-adapter/  Virtual agent behind the same interfaces
+│   ├── mixed-paradigm/  One application driving a robot and an avatar through one gateway
 │   └── adapter-template/  Starting point for a new robot adapter
 ├── apps/hub/            Management dashboard (planned)
 └── docs/                White paper, architecture, roadmap, RoIS reference

@@ -11,7 +11,7 @@ current pose from the robot via gRPC. No background polling.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from openrois_components_core import component, query, results
 
@@ -29,7 +29,7 @@ class GrpcSystemInformation:
         )
         self._client = None
         self._connected = False
-        self._init_time = datetime.now(timezone.utc).isoformat()
+        self._init_time = datetime.now(UTC).isoformat()
 
     async def connect(self) -> None:
         """Create the gRPC client and connect to the Kachaka robot."""
@@ -53,11 +53,11 @@ class GrpcSystemInformation:
         if not self._connected or self._client is None:
             return results.robot_position(
                 x=0.0, y=0.0, theta=0.0,
-                timestamp=datetime.now(timezone.utc).isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
                 robot_ref=[self._engine_id],
             )
         pose = await self._client.get_robot_pose()
-        timestamp = datetime.now(timezone.utc).isoformat()
+        timestamp = datetime.now(UTC).isoformat()
         return results.robot_position(
             x=round(pose.x, 4), y=round(pose.y, 4), theta=round(pose.theta, 4),
             timestamp=timestamp, robot_ref=[self._engine_id],

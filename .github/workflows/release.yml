@@ -1,0 +1,121 @@
+name: Release
+
+# Publishes the packages when a version tag is pushed (v0.1.0a3, v0.1.0).
+# The tag must match the version that scripts/check_versions.py reports.
+#
+# PyPI uses trusted publishing: register each project on PyPI with this
+# repository, workflow file, and the "pypi" environment, and no token is needed.
+# npm needs an NPM_TOKEN secret with publish rights on the @openrois scope.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  verify:
+    name: Tag matches the monorepo version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/check_versions.py
+      - name: Compare the tag with CITATION.cff
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(sed -n 's/^version: //p' CITATION.cff)"
+          echo "tag=$tag version=$version"
+          test "$tag" = "$version" || { echo "tag does not match the version"; exit 1; }
+
+  python:
+    name: Build and publish the Python packages
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build
+      - name: Build sdists and wheels
+        run: |
+          for pkg in interfaces/python core components/core components/common components/kachaka; do
+            python -m build --outdir dist "$pkg"
+          done
+          ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-packages
+          path: dist/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+
+  npm:
+    name: Build and publish the npm packages
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - name: Build in dependency order
+        run: |
+          (cd interfaces/typescript && npm ci && npm run build)
+          (cd sdk/typescript && npm ci && npm run build)
+      - name: Publish @openrois/interfaces
+        working-directory: interfaces/typescript
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Point the SDK at the published interfaces package
+        # In the repository the SDK links the interfaces package by path, which
+        # a consumer cannot resolve. The published package depends on the version.
+        working-directory: sdk/typescript
+        run: |
+          version="$(node -p "require('../../interfaces/typescript/package.json').version")"
+          npm pkg set "dependencies.@openrois/interfaces=$version"
+      - name: Publish @openrois/sdk
+        working-directory: sdk/typescript
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  github-release:
+    name: GitHub release
+    needs: [python, npm]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-packages
+          path: dist/
+      - name: Release notes from the changelogs
+        run: |
+          {
+            echo "## Packages"
+            echo
+            echo "PyPI: openrois-interfaces, openrois-core, openrois-components-core, openrois-components-common, openrois-components-kachaka"
+            echo "npm: @openrois/interfaces, @openrois/sdk"
+            echo
+            for f in interfaces/python/CHANGELOG.md core/CHANGELOG.md components/core/CHANGELOG.md interfaces/typescript/CHANGELOG.md sdk/typescript/CHANGELOG.md; do
+              echo "### $(dirname "$f")"
+              awk '/^## \[/{n++} n==1' "$f" | tail -n +2
+              echo
+            done
+          } > notes.md
+      - uses: softprops/action-gh-release@v2
+        with:
+          body_path: notes.md
+          prerelease: ${{ contains(github.ref_name, 'a') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'b') || contains(github.ref_name, 'rc') }}
+          files: dist/*

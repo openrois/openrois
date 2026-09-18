@@ -1,0 +1,7 @@
+# One lint configuration for every Python package in the monorepo. The packages
+# that carry their own [tool.ruff] section use the same values.
+target-version = "py312"
+line-length = 100
+
+[lint]
+select = ["E", "F", "I", "N", "W", "UP"]

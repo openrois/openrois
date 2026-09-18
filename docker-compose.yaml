@@ -3,7 +3,7 @@
 # Usage: docker compose up
 #
 # Services:
-#   gateway  - OpenRoIS Gateway (WebSocket server on port 8765)
+#   gateway  - OpenRoIS gateway, the Python openrois-core process (WebSocket on 8765)
 #   hub      - Management application (not started yet, scaffold only)
 #   adapter  - Mock adapter (registers canned components with gateway)
 #
@@ -15,12 +15,15 @@ services:
   gateway:
     build:
       context: .
-      dockerfile: gateway/Dockerfile
+      dockerfile: core/Dockerfile
     ports:
       - "8765:8765"
     environment:
-      - ENGINE_HOST=0.0.0.0
-      - ENGINE_PORT=8765
+      - OPENROIS_HOST=0.0.0.0
+      - OPENROIS_PORT=8765
+    # Uncomment to configure the gateway from a file (auth, TLS, engine id, ...):
+    # volumes:
+    #   - ./gateway.yaml:/etc/openrois/gateway.yaml:ro
     restart: unless-stopped
 
   hub:

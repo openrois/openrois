@@ -20,8 +20,6 @@
 
 // 3. Internal packages (@openrois/*)
 import {
-  ReturnCodeSchema,
-  ResultSchema,
   QueryResponseSchema,
 } from "@openrois/interfaces";
 

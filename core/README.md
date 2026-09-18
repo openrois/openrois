@@ -27,11 +27,41 @@ pip install -e ./core
 | `EventEmitter` | Delivers events to subscribers |
 | `WsServer` | WebSocket server, for a gateway |
 | `WsClient` | WebSocket client, for an adapter connecting out to a gateway |
+| `openrois_core.gateway` | The gateway process: `serve()` and the `openrois-gateway` command |
 | `read_profile`, `component_config` | Load a profile YAML file and slice per-component configuration out of it |
 
 ## Usage
 
-As a gateway:
+As a gateway, from the command line (also `python -m openrois_core.gateway`, and
+`docker compose up` at the repository root):
+
+```bash
+openrois-gateway --host 0.0.0.0 --port 8765
+```
+
+Every option can also come from `OPENROIS_*` environment variables or from a YAML file
+(`--config gateway.yaml`, or `OPENROIS_GATEWAY_CONFIG`). The command line wins over the
+environment, which wins over the file:
+
+```yaml
+host: 0.0.0.0
+port: 8765
+engine_id: gateway
+platform: kachaka
+auth:
+  key: /run/secrets/jwt-public.pem
+  algorithm: RS256
+  issuer: my-issuer
+tls:
+  cert: /etc/openrois/cert.pem
+  key: /etc/openrois/key.pem
+```
+
+A running gateway answers `GET /health` on its port with a JSON liveness summary (engine
+id, connected adapters and clients, whether auth and TLS are on), which the container
+image uses as its `HEALTHCHECK`.
+
+The same composition in code:
 
 ```python
 import asyncio
@@ -64,6 +94,22 @@ engine.register_component(meta.ref, Navigation(component_config(profile, meta.re
 WsClient(engine, profile["engine"]["gateway_url"]).run()
 ```
 
+## Authentication
+
+Off by default in the alpha. To require tokens:
+
+```bash
+openrois-gateway --auth-key "$SECRET" --auth-issuer my-issuer --tls-cert cert.pem --tls-key key.pem
+```
+
+Clients present a JWT at the WebSocket upgrade (`Authorization: Bearer`, or the `token`
+query parameter from a browser). The `roles` claim grants operations (`viewer`,
+`maintenance`, `operator`, `administrator`, `adapter`) and the optional `scope` claim lists
+the component ref patterns the token may see, for example `["robot_1/*"]`. Adapters connect
+with a token that carries the `adapter` role: `WsClient(engine, url, token=...)`, or the
+`engine.token` key of the profile YAML. See the
+[security page](https://openrois.org/docs/concepts/security).
+
 ## Design Constraints
 
 - The engine is transport-neutral and paradigm-neutral. It reaches everything through the
@@ -75,10 +121,17 @@ See [architecture](https://openrois.org/docs/concepts/architecture) and
 [the recursive engine](https://openrois.org/docs/concepts/recursive-engine) for the
 rationale.
 
+## Benchmarks
+
+`python benchmarks/latency.py` measures the control-plane round trip through a gateway and
+directly against an adapter, over loopback. Results and the method are on the
+[benchmarks page](https://openrois.org/docs/reference/benchmarks).
+
 ## Status
 
-Alpha, pre-1.0, unstable API. Hardening, graceful shutdown, reconnection, and a regression
-test suite are [Phases 4 and 5](https://openrois.org/docs/project/roadmap).
+Alpha, pre-1.0, unstable API. A regression test suite covers dispatch, bindings, events,
+and a gateway plus adapter round trip (`pytest` in this directory). Hardening, graceful
+shutdown, and reconnection are [Phase 5](https://openrois.org/docs/project/roadmap).
 
 ## License
 

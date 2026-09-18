@@ -1,0 +1,43 @@
+name: Consistency
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+
+jobs:
+  schema-drift:
+    name: Schema and generated code are up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Regenerate from the Python models
+        run: |
+          pip install -e "interfaces/python[dev]"
+          (cd interfaces/python && python scripts/export_schema.py)
+          (cd interfaces/typescript && npm ci && npx tsx scripts/generate.ts)
+          (cd interfaces/csharp && dotnet run --project scripts/Generator/Generator.csproj)
+      - name: Fail if anything changed
+        run: |
+          git status --porcelain
+          git diff --stat
+          test -z "$(git status --porcelain)"
+
+  versions:
+    name: One version across the monorepo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/check_versions.py

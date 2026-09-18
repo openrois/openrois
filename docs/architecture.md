@@ -1,8 +1,8 @@
 # OpenRoIS - Implementation Architecture
 
-> A practical architecture for implementing the OMG **RoIS Framework 2.0** as an
-> open-source middleware that lets service applications control **physical robots,
-> virtual avatars, and virtual agents** over the internet.
+> A practical architecture for implementing the OMG **RoIS Framework 2.0** as a
+> community-driven open-source middleware that lets service applications control **physical robots,
+> virtual avatars, and AI services** over the internet.
 >
 > The architecture is deliberately **paradigm-neutral**: the engine and
 > client SDK never assume hardware, a world model, or any specific middleware. A
@@ -52,7 +52,7 @@
 ### Goals
 
 - Provide a **conformant RoIS 2.0 implementation** usable across **physical robots,
-  virtual avatars, and virtual agents**.
+  virtual avatars, and AI services**.
 - **Demonstrate the full stack end to end**: a web service application controls a
   real robot through the gateway, sub HRI Engine, and component layers, using only
   RoIS interfaces. This is the MVP, not the end goal.
@@ -424,7 +424,7 @@ The RoIS logic lives in the engine, which is fully open source.
   `rois.system.profile_changed` when a sub HRI Engine registers or disconnects.
   Clients re-fetch the profile automatically. No polling needed.
 - **Filter** `search()`/`query()` results and **guard** `bind()`/`execute()` per
-  the caller's authorization scope (planned, Phase 9).
+  the caller's authorization scope (available, off by default).
 
 The gateway accepts both adapter connections (on the `/adapter` path) and client
 connections (which send `rois.system.*` etc.) on the same WebSocket port. It
@@ -434,8 +434,8 @@ distinguishes them by the URL path.
 
 - No media streaming. Media is handled by streaming components and WebRTC,
   outside the gateway's control plane.
-- No WebRTC signaling (SDP, ICE) in the current implementation. The RoIS
-  streaming interface will broker descriptor exchange in the future.
+- No WebRTC signaling logic (SDP, ICE). The Streaming Interface carries the transport
+  descriptor opaquely, in the results of `connect_stream`, and never interprets it.
 - No paradigm-specific knowledge. The engine never imports DDS, gRPC, ROS,
   or any game engine library. It sees only the `Component Contract` interface.
 - No network I/O of its own. The engine is a library. The gateway provides the
@@ -464,8 +464,7 @@ sub HRI Engine is the boundary where paradigm-specific code lives.
 ### Sub HRI Engine Registration
 
 When a sub HRI Engine connects to the gateway on the `/adapter` path, the gateway
-discovers it: it sends `rois.command.search` and `rois.system.get_profile` to the
-sub HRI Engine and receives its `engine_id`, `platform`, and the list of components with
+discovers it: it sends `rois.system.get_profile` to the sub HRI Engine and receives its `engine_id`, `platform`, and the list of components with
 their queries, commands, events, and parameters. The gateway caches this discovery
 result and uses it for `search()`, `get_profile()`, and routing. If the sub HRI Engine
 disconnects, the gateway removes its components and broadcasts a
@@ -473,8 +472,9 @@ disconnects, the gateway removes its components and broadcasts a
 
 ### What the Sub HRI Engine Does NOT Do
 
-- Media streaming (in the current architecture). No camera capture, no audio
-  capture, no GStreamer. Media is a future concern for the streaming interface.
+- Media streaming in the engine itself. No camera capture, no audio capture, no
+  GStreamer. A streaming component owns its media pipeline; the sub HRI Engine only
+  relays the stream control messages.
 - WebRTC. No `RTCPeerConnection`, no SDP, no ICE.
 - Gateway protocol knowledge. The sub HRI Engine speaks RoIS JSON-RPC to the gateway
   over the control plane. It does not know about other sub HRI Engines, clients, or
@@ -1036,7 +1036,6 @@ openrois/
 ├── core/          # Engine library: recursive Engine, ComponentRegistry, WsServer, WsClient (openrois-core)
 ├── components/    # Component framework and reference components (per robot platform)
 ├── sdk/           # Client SDKs (TypeScript, C#)
-├── gateway/       # TypeScript gateway proof of concept, retired at the end of Phase 4
 ├── examples/      # Mock engine, mock adapter, web client, adapter template
 ├── apps/          # Product applications (Hub visualizer, planned)
 └── docs/          # Architecture, white paper, roadmap, spec reference
@@ -1045,9 +1044,8 @@ openrois/
 | Directory | Role |
 |-----------|------|
 | `interfaces/` | Type pipeline. Pydantic models are the source of truth. JSON Schema is the canonical wire contract. C# and TypeScript types are generated. |
-| `core/` | Engine library (`openrois-core`). Recursive RoIS dispatch logic: one `Engine` class used by both the gateway and adapters, plus `WsServer` and `WsClient`. Zero media and zero paradigm-specific imports. |
+| `core/` | Engine library (`openrois-core`). Recursive RoIS dispatch logic: one `Engine` class used by both the gateway and adapters, plus `WsServer`, `WsClient`, and the `openrois-gateway` process. Zero media and zero paradigm-specific imports. |
 | `components/` | The component framework (`openrois-components-core`) and reference components per robot platform. |
-| `gateway/` | The TypeScript proof of concept that preceded `core/`. Retired at the end of Phase 4. |
 | `sdk/` | Client SDKs: TypeScript for web and Node.js, C# for Unity (in progress). |
 | `examples/` | Reference implementations and templates for testing and onboarding. |
 | `apps/` | Product applications: the Hub (a gateway visualizer, planned). |

@@ -66,6 +66,25 @@ Use the normative RoIS component and message names. A component that invents its
 still runs, but applications written against the standard will not find it. See the
 [component reference](https://openrois.org/docs/reference/components).
 
+## Check Conformance
+
+`openrois_components_core.conformance` drives an engine through `dispatch()` the way an
+application would and reports every rule a component breaks: the profile must validate
+against the normative RoIS models, every declared query must answer with well-formed
+results, `component_status` must exist on every basic component, actuation components
+must accept the RoIS_Common lifecycle commands, `set_parameter` must round-trip through
+`get_parameter`, every event must accept a subscription, and a basic component must not
+invent message names.
+
+```python
+from openrois_components_core.conformance import assert_conformant
+
+async def test_my_adapter():
+    await assert_conformant(engine)  # raises with every finding listed
+```
+
+The reference components and the mock adapter pass it in CI.
+
 ## License
 
 Apache-2.0.

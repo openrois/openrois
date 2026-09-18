@@ -9,7 +9,8 @@
  *                setParameter, execute, getCommandResult
  *   QueryIF   -> query
  *   EventIF   -> subscribe, unsubscribe, getEventDetail
- *   Streaming -> (deferred, not in scope for Week 1-2)
+ *   Streaming -> connectStream, disconnectStream, suspendStream, resumeStream,
+ *                queryStreamStatus (control plane; media travels out of band)
  *
  * Usage:
  *   import { RoISClient } from "@openrois/sdk";
@@ -54,14 +55,13 @@ import {
   InvokeResponseSchema,
   QueryResponseSchema,
   SubscribeResponseSchema,
+  ResultSchema,
   ReturnCodeSchema,
 } from "@openrois/interfaces";
 
 import type {
-  DiscoverResponse,
+  Parameter,
   InvokeResponse,
-  QueryResponse,
-  SubscribeResponse,
   ReturnCode,
   Result,
 } from "@openrois/interfaces";
@@ -70,8 +70,6 @@ import type {
 import {
   WebSocketTransport,
   TransportError,
-  ConnectionError,
-  RpcError,
   type TransportOptions,
 } from "./transport";
 
@@ -84,16 +82,14 @@ import {
  */
 export interface ClientOptions {
   /**
-   * Authentication token for the gateway (e.g. a JWT or bearer token).
+   * Authentication token for the gateway (a JWT issued for a RoIS role).
    *
-   * The token is NOT sent in the `rois.system.connect` message params.
-   * Auth is a transport-layer concern. A custom `webSocketFactory` in
-   * `transport.webSocketFactory` can read this token from the
-   * `ClientOptions` and attach it to the WebSocket upgrade request
-   * (e.g. as an `Authorization` header or query parameter).
-   *
-   * The client itself does not use this field. It is here so callers
-   * can pass it through to a custom factory in a type-safe way.
+   * The token is never part of a RoIS message. It is presented at the
+   * WebSocket upgrade as the `token` query parameter, which is what a
+   * browser can send (the WebSocket API cannot set headers). When a custom
+   * `transport.webSocketFactory` is given, the token is not put in the URL:
+   * the factory attaches it as an `Authorization: Bearer` header itself, and
+   * the gateway accepts both.
    */
   token?: string;
 
@@ -116,6 +112,7 @@ const FORWARDED_METHODS: ReadonlySet<string> = new Set([
   "rois.event.notify",
   "rois.command.completed",
   "rois.system.notify_error",
+  "rois.stream.notify_status",
 ]);
 
 /**
@@ -149,6 +146,13 @@ export class RoISError extends Error {
 // RoISClient
 // ---------------------------------------------------------------------------
 
+/** Append the token as the `token` query parameter, if one is given. */
+export function withToken(url: string, token?: string): string {
+  if (!token) return url;
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}token=${encodeURIComponent(token)}`;
+}
+
 /**
  * High-level client for communicating with an OpenRoIS gateway.
  *
@@ -164,6 +168,7 @@ export class RoISError extends Error {
  *   "rois.event.notify"         - Component event (person_detected, reached_target, etc.).
  *   "rois.command.completed"    - A command finished executing.
  *   "rois.system.notify_error"  - The gateway reported an error.
+ *   "rois.stream.notify_status" - The status of a stream this client connected changed.
  *   "close"                     - The connection was lost.
  *   "error"                     - A transport-level error occurred.
  */
@@ -234,10 +239,12 @@ export class RoISClient extends EventEmitter {
     // Step 1: Create the transport with any caller-provided options.
     const transport = new WebSocketTransport(options?.transport);
 
-    // Step 2: Open the WebSocket connection.
-    // The bearer token, if any, is passed at the transport layer via
-    // the webSocketFactory (e.g. as a query param or upgrade header).
-    await transport.connect(url);
+    // Step 2: Open the WebSocket connection, presenting the token at the
+    // upgrade as a query parameter (browsers cannot set upgrade headers). A
+    // custom webSocketFactory owns the upgrade and may send the token as an
+    // Authorization header instead, so the URL is left untouched for it.
+    const factoryOwnsUpgrade = options?.transport?.webSocketFactory !== undefined;
+    await transport.connect(factoryOwnsUpgrade ? url : withToken(url, options?.token));
 
     // Step 3: Create the client.
     const client = new RoISClient(transport);
@@ -678,6 +685,70 @@ export class RoISClient extends EventEmitter {
   }
 
   // -----------------------------------------------------------------------
+  // Streaming operations (rois.stream.*)
+  // -----------------------------------------------------------------------
+
+  /**
+   * Open a stream on a streaming component (AudioStreaming, VideoStreaming).
+   *
+   * Maps to: rois.stream.connect_stream
+   *
+   * The results carry what the transport needs to attach to the media, for
+   * example a media_url. Media never crosses the gateway.
+   */
+  async connectStream(
+    componentRef: string,
+    parameters: Parameter[] = [],
+  ): Promise<{ streamId: string; results: Result[] }> {
+    this.ensureConnected("connectStream");
+    const result = await this.transport.send("rois.stream.connect_stream", {
+      component_ref: componentRef,
+      parameters,
+    });
+    const parsed = result as Record<string, unknown>;
+    this.checkReturnCode(ReturnCodeSchema.parse(parsed.return_code), "rois.stream.connect_stream");
+    return {
+      streamId: String(parsed.stream_id ?? ""),
+      results: ResultSchema.array().parse(parsed.results ?? []),
+    };
+  }
+
+  /** Close a stream. Maps to: rois.stream.disconnect_stream */
+  async disconnectStream(streamId: string): Promise<ReturnCode> {
+    return this.streamOperation("rois.stream.disconnect_stream", streamId);
+  }
+
+  /** Pause a stream without closing it. Maps to: rois.stream.suspend_stream */
+  async suspendStream(streamId: string): Promise<ReturnCode> {
+    return this.streamOperation("rois.stream.suspend_stream", streamId);
+  }
+
+  /** Resume a suspended stream. Maps to: rois.stream.resume_stream */
+  async resumeStream(streamId: string): Promise<ReturnCode> {
+    return this.streamOperation("rois.stream.resume_stream", streamId);
+  }
+
+  /** The current status of a stream. Maps to: rois.stream.query_stream_status */
+  async queryStreamStatus(streamId: string): Promise<string> {
+    this.ensureConnected("queryStreamStatus");
+    const result = await this.transport.send("rois.stream.query_stream_status", {
+      stream_id: streamId,
+    });
+    const parsed = result as Record<string, unknown>;
+    this.checkReturnCode(ReturnCodeSchema.parse(parsed.return_code), "rois.stream.query_stream_status");
+    return String(parsed.status ?? "");
+  }
+
+  private async streamOperation(method: string, streamId: string): Promise<ReturnCode> {
+    this.ensureConnected(method);
+    const result = await this.transport.send(method, { stream_id: streamId });
+    const parsed = result as Record<string, unknown>;
+    const returnCode = ReturnCodeSchema.parse(parsed.return_code);
+    this.checkReturnCode(returnCode, method);
+    return returnCode;
+  }
+
+  // -----------------------------------------------------------------------
   // Private: event forwarding
   // -----------------------------------------------------------------------
 
@@ -724,6 +795,10 @@ export class RoISClient extends EventEmitter {
 
     this.transport.on("rois.system.notify_error", (notification) => {
       this.emit("rois.system.notify_error", notification);
+    });
+
+    this.transport.on("rois.stream.notify_status", (notification) => {
+      this.emit("rois.stream.notify_status", notification);
     });
 
     // Forward connection lifecycle events.
