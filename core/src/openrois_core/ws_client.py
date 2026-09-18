@@ -49,15 +49,19 @@ class WsClient:
         self,
         engine: Engine,
         gateway_url: str,
+        token: str | None = None,
     ) -> None:
         """Initialize the WsClient.
 
         Args:
             engine: The Engine instance with local components registered.
             gateway_url: The WebSocket URL of the gateway.
+            token: Bearer token presented at the WebSocket upgrade when the
+                gateway requires authentication (a JWT with the adapter role).
         """
         self._engine = engine
         self._gateway_url = gateway_url
+        self._token = token
 
         self._ws: Any = None
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -151,7 +155,8 @@ class WsClient:
                 if "/adapter" not in url:
                     url = url.rstrip("/") + "/adapter"
                 logger.info("Connecting to %s", url)
-                ws = await websockets.connect(url)
+                headers = {"Authorization": f"Bearer {self._token}"} if self._token else {}
+                ws = await websockets.connect(url, additional_headers=headers)
                 return ws
             except (
                 ConnectionRefusedError,

@@ -84,16 +84,13 @@ import {
  */
 export interface ClientOptions {
   /**
-   * Authentication token for the gateway (e.g. a JWT or bearer token).
+   * Authentication token for the gateway (a JWT issued for a RoIS role).
    *
-   * The token is NOT sent in the `rois.system.connect` message params.
-   * Auth is a transport-layer concern. A custom `webSocketFactory` in
-   * `transport.webSocketFactory` can read this token from the
-   * `ClientOptions` and attach it to the WebSocket upgrade request
-   * (e.g. as an `Authorization` header or query parameter).
-   *
-   * The client itself does not use this field. It is here so callers
-   * can pass it through to a custom factory in a type-safe way.
+   * The token is never part of a RoIS message. It is presented at the
+   * WebSocket upgrade as the `token` query parameter, which is what a
+   * browser can send (the WebSocket API cannot set headers). A custom
+   * `transport.webSocketFactory` may attach it as an `Authorization: Bearer`
+   * header instead; the gateway accepts both.
    */
   token?: string;
 
@@ -148,6 +145,13 @@ export class RoISError extends Error {
 // ---------------------------------------------------------------------------
 // RoISClient
 // ---------------------------------------------------------------------------
+
+/** Append the token as the `token` query parameter, if one is given. */
+export function withToken(url: string, token?: string): string {
+  if (!token) return url;
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}token=${encodeURIComponent(token)}`;
+}
 
 /**
  * High-level client for communicating with an OpenRoIS gateway.
@@ -234,10 +238,9 @@ export class RoISClient extends EventEmitter {
     // Step 1: Create the transport with any caller-provided options.
     const transport = new WebSocketTransport(options?.transport);
 
-    // Step 2: Open the WebSocket connection.
-    // The bearer token, if any, is passed at the transport layer via
-    // the webSocketFactory (e.g. as a query param or upgrade header).
-    await transport.connect(url);
+    // Step 2: Open the WebSocket connection, presenting the token at the
+    // upgrade as a query parameter (browsers cannot set upgrade headers).
+    await transport.connect(withToken(url, options?.token));
 
     // Step 3: Create the client.
     const client = new RoISClient(transport);

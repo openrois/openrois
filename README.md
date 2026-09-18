@@ -229,7 +229,7 @@ open.
 | Reference components for the Preferred Robotics Kachaka (gRPC and ROS 2) | Available |
 | C# client SDK for Unity | In progress |
 | Open reference platform based on the Pollen Robotics Reachy Mini | Planned |
-| Authentication (JWT) and authorization (RBAC) | Planned |
+| Authentication (JWT), authorization (RBAC), and TLS at the gateway | Available, off by default |
 | Streaming Interface with WebRTC media | Planned |
 | Packages on PyPI, npm, NuGet, and the Unity Package Manager | Planned |
 | All 17 basic RoIS HRI Components (v1.0) | Planned |

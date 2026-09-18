@@ -8,6 +8,7 @@
  * Run with: npx vitest run
  */
 
+import { withToken } from "../src/rois-client";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   RoISClient,
@@ -798,5 +799,16 @@ describe("RoISClient", () => {
       // 6. Disconnect.
       await client.disconnect();
     });
+  });
+});
+
+describe("withToken()", () => {
+  it("leaves the URL alone without a token", () => {
+    expect(withToken("ws://gateway:8765")).toBe("ws://gateway:8765");
+  });
+
+  it("appends the token as a query parameter, encoded", () => {
+    expect(withToken("ws://gateway:8765", "a.b c")).toBe("ws://gateway:8765?token=a.b%20c");
+    expect(withToken("ws://gateway:8765/?x=1", "t")).toBe("ws://gateway:8765/?x=1&token=t");
   });
 });

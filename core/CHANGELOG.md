@@ -29,6 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Authentication and authorization at the gateway: `WsServer(engine, auth=AuthConfig(...))`
+  verifies a JSON Web Token at the WebSocket upgrade (`Authorization: Bearer` header or
+  `token` query parameter, HS256 or asymmetric algorithms, issuer and audience checks),
+  the `roles` claim (viewer, maintenance, operator, administrator, adapter) decides which
+  RoIS operations a connection may call, and the `scope` claim limits the component refs
+  it may see and address. `openrois-gateway --auth-key ...` turns it on; `--tls-cert` and
+  `--tls-key` serve `wss://`. `WsClient(..., token=...)` presents the adapter's token.
 - `rois.command.bind_any`, `rois.command.get_parameter`, `rois.command.get_command_result`,
   `rois.system.get_error_detail`, and `rois.event.get_event_detail`.
 - `rois.command.completed` and `rois.system.notify_error` notifications. Components report

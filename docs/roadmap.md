@@ -29,7 +29,7 @@ Until version 1.0, all releases are **alpha, with an unstable API**.
 | **6** | Gateway process | in progress |
 | **7** | Adapter process | planned |
 | **8** | Open reference platform and mixed paradigms | planned |
-| **9** | Authentication, security, and media | planned |
+| **9** | Authentication, security, and media | in progress |
 | **10** | Full component library (`v1.0`) | planned |
 | **11** | Component registry and Hub | after 1.0 |
 
@@ -107,10 +107,12 @@ one application that does not know which is which.
 Completing this phase starts the transfer of OpenRoIS to a neutral open-source
 foundation.
 
-### Phase 9: Authentication, Security, and Media (Planned)
+### Phase 9: Authentication, Security, and Media (In Progress)
 
-JWT authentication at the WebSocket upgrade, role-based authorization per RoIS
-operation, the RoIS Streaming Interface with WebRTC media, and DDS Security for ROS 2
+**Done:** JWT authentication at the WebSocket upgrade, role-based authorization per RoIS
+operation with scopes, and TLS at the gateway.
+
+**Planned:** the RoIS Streaming Interface with WebRTC media, and DDS Security for ROS 2
 based adapters.
 
 ### Phase 10: Full Component Library (Planned)

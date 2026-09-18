@@ -283,7 +283,11 @@ def main() -> None:
             meta,
         )
 
-    ws_client = WsClient(engine, profile["engine"]["gateway_url"])
+    ws_client = WsClient(
+        engine,
+        profile["engine"]["gateway_url"],
+        token=profile["engine"].get("token"),  # required when the gateway authenticates
+    )
     ws_client.run()
 
 

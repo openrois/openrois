@@ -72,6 +72,22 @@ engine.register_component(meta.ref, Navigation(component_config(profile, meta.re
 WsClient(engine, profile["engine"]["gateway_url"]).run()
 ```
 
+## Authentication
+
+Off by default in the alpha. To require tokens:
+
+```bash
+openrois-gateway --auth-key "$SECRET" --auth-issuer my-issuer --tls-cert cert.pem --tls-key key.pem
+```
+
+Clients present a JWT at the WebSocket upgrade (`Authorization: Bearer`, or the `token`
+query parameter from a browser). The `roles` claim grants operations (`viewer`,
+`maintenance`, `operator`, `administrator`, `adapter`) and the optional `scope` claim lists
+the component ref patterns the token may see, for example `["robot_1/*"]`. Adapters connect
+with a token that carries the `adapter` role: `WsClient(engine, url, token=...)`, or the
+`engine.token` key of the profile YAML. See the
+[security page](https://openrois.org/docs/concepts/security).
+
 ## Design Constraints
 
 - The engine is transport-neutral and paradigm-neutral. It reaches everything through the
