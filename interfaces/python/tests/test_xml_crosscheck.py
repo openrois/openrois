@@ -64,7 +64,6 @@ def _extract_identifier(root: etree._Element) -> dict:
 
     # The identifier text is the URN, e.g., "urn:x-rois:def:component:OMG::PersonDetection"
     urn = ident_elem.text or ""
-    code_space = ident_elem.get(f"{{{GML_NS}}}codeSpace", "")
 
     # Parse the URN to extract authority and code
     # Format: urn:x-rois:def:component:AUTHORITY::CODE
@@ -132,7 +131,9 @@ def _extract_message_profiles(root: etree._Element) -> tuple[list, list, list]:
 
             results.append({
                 "name": res_name,
-                "data_type_ref": {"authority": "", "code": dt_code, "codebook_ref": "", "version": ""},
+                "data_type_ref": {
+                    "authority": "", "code": dt_code, "codebook_ref": "", "version": "",
+                },
                 "default_value": "",
                 "description": res_desc,
             })
@@ -147,7 +148,9 @@ def _extract_message_profiles(root: etree._Element) -> tuple[list, list, list]:
 
             arguments.append({
                 "name": arg_name,
-                "data_type_ref": {"authority": "", "code": dt_code, "codebook_ref": "", "version": ""},
+                "data_type_ref": {
+                    "authority": "", "code": dt_code, "codebook_ref": "", "version": "",
+                },
                 "default_value": "",
                 "description": arg_desc,
             })
@@ -342,7 +345,7 @@ class TestNavigationXMLCrossCheck:
                 assert p.default_value == "time"
 
     def test_typed_event_fields_match_xml(self) -> None:
-        """The NavigationReachedTargetEvent typed model fields should match the XML event results."""
+        """NavigationReachedTargetEvent fields should match the XML event results."""
         from openrois.interfaces.components.navigation import NavigationReachedTargetEvent
 
         profile = _build_component_profile_from_xml("Navigation.xml")

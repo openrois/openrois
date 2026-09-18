@@ -5,8 +5,8 @@ from pydantic import ValidationError
 
 from openrois.interfaces.bus import (
     BusAdapterError,
-    ComponentContractError,
     CommandRequest,
+    ComponentContractError,
     ComponentNotFoundError,
     DiscoverRequest,
     DiscoverResponse,
@@ -20,7 +20,14 @@ from openrois.interfaces.bus import (
 from openrois.interfaces.common import StreamStatus
 from openrois.interfaces.components.navigation import NavigationSetParameter
 from openrois.interfaces.components.person_detection import PersonDetectedEvent
-from openrois.interfaces.hri import Argument, CommandUnit, CommandUnitSequence, Parameter, Result, ReturnCode
+from openrois.interfaces.hri import (
+    Argument,
+    CommandUnit,
+    CommandUnitSequence,
+    Parameter,
+    Result,
+    ReturnCode,
+)
 from openrois.interfaces.service import CompletedStatus, ErrorType
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,5 @@
 """Tests for openrois.interfaces.common — Common component types."""
 
-import pytest
 
 from openrois.interfaces.common import (
     COMPONENT_STATUS_MAP,

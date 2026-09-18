@@ -37,15 +37,15 @@ from openrois.interfaces.components.navigation import (
     NavigationSetParameterResult,
     NavigationStatusResult,
 )
+from openrois.interfaces.components.person_detection import (
+    PersonDetectedEvent,
+    PersonDetectionStatusResult,
+)
 from openrois.interfaces.components.reaction import (
     ReactionGetParameterResult,
     ReactionSetParameter,
     ReactionSetParameterResult,
     ReactionStatusResult,
-)
-from openrois.interfaces.components.person_detection import (
-    PersonDetectedEvent,
-    PersonDetectionStatusResult,
 )
 from openrois.interfaces.components.system_information import (
     SystemInformationEngineStatusResult,

@@ -15,7 +15,6 @@ import logging
 
 from openrois.interfaces.bus import InvokeResponse
 from openrois.interfaces.hri import ReturnCode
-from openrois_core import Engine, WsClient, component_config, read_profile
 from openrois_components_core import (
     component,
     invoke,
@@ -24,6 +23,7 @@ from openrois_components_core import (
     results,
     subscribe,
 )
+from openrois_core import Engine, WsClient, component_config, read_profile
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,9 @@ def _param(parameters: list, name: str, default: str = "") -> str:
     for p in parameters or []:
         pname = p.get("name") if isinstance(p, dict) else getattr(p, "name", None)
         if pname == name:
-            return str(p.get("value", default) if isinstance(p, dict) else getattr(p, "value", default))
+            if isinstance(p, dict):
+                return str(p.get("value", default))
+            return str(getattr(p, "value", default))
     return default
 
 

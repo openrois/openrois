@@ -16,10 +16,10 @@ from __future__ import annotations
 import json
 import logging
 import threading
-from typing import Callable
+from collections.abc import Callable
 
 from openrois.interfaces.bus import InvokeResponse
-from openrois.interfaces.hri import ReturnCode, Result
+from openrois.interfaces.hri import Result, ReturnCode
 from openrois_components_core import component, invoke, query, results, subscribe
 
 logger = logging.getLogger(__name__)
@@ -79,12 +79,12 @@ class Ros2Navigation:
     async def connect(self) -> None:
         """Create the rclpy node, subscribe to locations, create action client."""
         import rclpy
+        from kachaka_interfaces.action import ExecKachakaCommand
+        from kachaka_interfaces.msg import LocationList
         from rclpy.action import ActionClient
         from rclpy.callback_groups import ReentrantCallbackGroup
         from rclpy.node import Node
-        from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
-        from kachaka_interfaces.msg import LocationList
-        from kachaka_interfaces.action import ExecKachakaCommand
+        from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 
         if not rclpy.ok():
             rclpy.init()
@@ -316,7 +316,7 @@ class Ros2Navigation:
                 return_code=ReturnCode.BAD_PARAMETER, command_id="",
             )
         loc = next(
-            (l for l in locations if l["name"] == target or l["id"] == target),
+            (loc for loc in locations if loc["name"] == target or loc["id"] == target),
             None,
         )
         if loc is None:

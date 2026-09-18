@@ -18,7 +18,7 @@ import json
 import logging
 
 from openrois.interfaces.bus import InvokeResponse
-from openrois.interfaces.hri import ReturnCode, Result
+from openrois.interfaces.hri import Result, ReturnCode
 from openrois_components_core import component, invoke, query, results, subscribe
 
 logger = logging.getLogger(__name__)
@@ -170,7 +170,7 @@ class GrpcNavigation:
             locations = await self._client.get_locations()
             self._locations_cache = list(locations)
         loc = next(
-            (l for l in self._locations_cache if l.name == target or l.id == target),
+            (loc for loc in self._locations_cache if loc.name == target or loc.id == target),
             None,
         )
         if loc is None:
