@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 612" width="960" height="612" role="img" aria-labelledby="t d">
+<title id="t">OpenRoIS architecture</title>
+<desc id="d">Service applications use the TypeScript or C# SDK to reach the OpenRoIS gateway over WebSocket and JSON-RPC 2.0. The gateway hosts the main HRI Engine, which aggregates profiles, allocates components, and authenticates callers. It forwards calls over the Component Contract to adapters, each a sub HRI Engine hosting components for one robot, avatar, or service. Each adapter reaches its host through the transport that host requires. Media flows directly between hosts and applications, outside RoIS scope. At build time, Python Pydantic models are exported to JSON Schema and generated into C# and TypeScript types.</desc>
+<style>
+  .bt { font: 600 13px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f3864; }
+  .bs { font: 400 11.5px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #3d4b5c; }
+  .bsm { font: 400 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #3d4b5c; }
+  .hdr { font: italic 500 11.5px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #4a5a6e; }
+  .role { font: italic 500 12px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #6b7785; }
+  .wire1 { font: 600 11.5px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f3864; }
+  .wire2 { font: 400 11px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #3d4b5c; }
+  .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 10.5px; }
+  .legend { font: 400 11.5px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #3d4b5c; }
+  .data { font: 500 11px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #b03a2e; }
+</style>
+<rect x="0.5" y="0.5" width="959" height="611" rx="14" fill="#ffffff" stroke="#d0d7de"/>
+<text x="150" y="59.5" text-anchor="end" class="role">Service</text>
+<text x="150" y="74.5" text-anchor="end" class="role">Application</text>
+<rect x="170" y="30" width="730" height="66" rx="9" fill="none" stroke="#8b98a8" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="186" y="42" width="339" height="42" rx="6" fill="#deebf7" stroke="#2e5c8a" stroke-width="1.2"/>
+<text x="355.5" y="60.0" text-anchor="middle" class="bt" style="font-size:13px">Web application</text>
+<text x="355.5" y="76.0" text-anchor="middle" class="bs">TypeScript SDK</text>
+<rect x="545" y="42" width="339" height="42" rx="6" fill="#deebf7" stroke="#2e5c8a" stroke-width="1.2"/>
+<text x="714.5" y="60.0" text-anchor="middle" class="bt" style="font-size:13px">Unity application</text>
+<text x="714.5" y="76.0" text-anchor="middle" class="bs">C# SDK</text>
+<line x1="300" y1="96" x2="300" y2="133" stroke="#1f3864" stroke-width="1.6"/>
+<path d="M295,132 L300,140 L305,132 Z" fill="#1f3864"/>
+<line x1="770" y1="96" x2="770" y2="133" stroke="#1f3864" stroke-width="1.6"/>
+<path d="M765,132 L770,140 L775,132 Z" fill="#1f3864"/>
+<rect x="307.4" y="101" width="455.20000000000005" height="34" rx="5" fill="#ffffff"/>
+<text x="535" y="115" text-anchor="middle" class="wire1">WebSocket + JSON-RPC 2.0 (TLS)</text>
+<text x="535" y="130" text-anchor="middle" class="wire2">five RoIS interfaces: <tspan class="code">rois.system | command | query | event | stream</tspan></text>
+<text x="150" y="178.5" text-anchor="end" class="role">Main</text>
+<text x="150" y="193.5" text-anchor="end" class="role">HRI Engine</text>
+<rect x="170" y="140" width="730" height="84" rx="9" fill="none" stroke="#8b98a8" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="182" y="132" width="104.5" height="16" fill="#ffffff"/>
+<text x="187" y="144" class="hdr">Gateway process</text>
+<rect x="186" y="156" width="164" height="52" rx="6" fill="#e2f0d9" stroke="#4e7a38" stroke-width="1.2"/>
+<text x="268.0" y="179.0" text-anchor="middle" class="bt" style="font-size:13px">Engine (main)</text>
+<text x="268.0" y="195.0" text-anchor="middle" class="bs">child engine registry</text>
+<rect x="364" y="156" width="164" height="52" rx="6" fill="#e2f0d9" stroke="#4e7a38" stroke-width="1.2"/>
+<text x="446.0" y="179.0" text-anchor="middle" class="bt" style="font-size:13px">Profile aggregator</text>
+<text x="446.0" y="195.0" text-anchor="middle" class="bs">one engine profile</text>
+<rect x="542" y="156" width="164" height="52" rx="6" fill="#e2f0d9" stroke="#4e7a38" stroke-width="1.2"/>
+<text x="624.0" y="179.0" text-anchor="middle" class="bt" style="font-size:13px">Component allocator</text>
+<text x="624.0" y="195.0" text-anchor="middle" class="bs">bind, release</text>
+<rect x="720" y="156" width="164" height="52" rx="6" fill="#e2f0d9" stroke="#4e7a38" stroke-width="1.2"/>
+<text x="802.0" y="179.0" text-anchor="middle" class="bt" style="font-size:13px">Auth (planned)</text>
+<text x="802.0" y="195.0" text-anchor="middle" class="bs">JWT, RBAC</text>
+<line x1="300" y1="224" x2="300" y2="263" stroke="#1f3864" stroke-width="1.6"/>
+<path d="M295,262 L300,270 L305,262 Z" fill="#1f3864"/>
+<line x1="810" y1="224" x2="810" y2="263" stroke="#1f3864" stroke-width="1.6"/>
+<path d="M805,262 L810,270 L815,262 Z" fill="#1f3864"/>
+<rect x="310.6" y="230" width="448.8" height="34" rx="5" fill="#ffffff"/>
+<text x="535" y="244" text-anchor="middle" class="wire1">WebSocket + JSON-RPC 2.0 (TLS)</text>
+<text x="535" y="259" text-anchor="middle" class="wire2">Component Contract: <tspan class="code">discover, invoke, query, subscribe, unsubscribe</tspan></text>
+<text x="150" y="316.5" text-anchor="end" class="role">Sub</text>
+<text x="150" y="331.5" text-anchor="end" class="role">HRI Engines</text>
+<rect x="170" y="270" width="230" height="100" rx="9" fill="none" stroke="#8b98a8" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="182" y="262" width="91.89999999999999" height="16" fill="#ffffff"/>
+<text x="187" y="274" class="hdr">Robot adapter</text>
+<rect x="182" y="284" width="206" height="42" rx="6" fill="#fff2cc" stroke="#a6821a" stroke-width="1.2"/>
+<text x="285.0" y="302.0" text-anchor="middle" class="bt" style="font-size:13px">Engine (sub)</text>
+<text x="285.0" y="318.0" text-anchor="middle" class="bs">component registry</text>
+<rect x="182" y="332" width="206" height="28" rx="6" fill="#fff2cc" stroke="#a6821a" stroke-width="1.2"/>
+<text x="285.0" y="350.5" text-anchor="middle" class="bs">Navigation, PersonDetection, …</text>
+<rect x="420" y="270" width="230" height="100" rx="9" fill="none" stroke="#8b98a8" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="432" y="262" width="98.2" height="16" fill="#ffffff"/>
+<text x="437" y="274" class="hdr">Avatar adapter</text>
+<rect x="432" y="284" width="206" height="42" rx="6" fill="#fff2cc" stroke="#a6821a" stroke-width="1.2"/>
+<text x="535.0" y="302.0" text-anchor="middle" class="bt" style="font-size:13px">Engine (sub)</text>
+<text x="535.0" y="318.0" text-anchor="middle" class="bs">component registry</text>
+<rect x="432" y="332" width="206" height="28" rx="6" fill="#fff2cc" stroke="#a6821a" stroke-width="1.2"/>
+<text x="535.0" y="350.5" text-anchor="middle" class="bs">Reaction, SpeechSynthesis, …</text>
+<rect x="670" y="270" width="230" height="100" rx="9" fill="none" stroke="#8b98a8" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="682" y="262" width="104.5" height="16" fill="#ffffff"/>
+<text x="687" y="274" class="hdr">Service adapter</text>
+<rect x="682" y="284" width="206" height="42" rx="6" fill="#fff2cc" stroke="#a6821a" stroke-width="1.2"/>
+<text x="785.0" y="302.0" text-anchor="middle" class="bt" style="font-size:13px">Engine (sub)</text>
+<text x="785.0" y="318.0" text-anchor="middle" class="bs">component registry</text>
+<rect x="682" y="332" width="206" height="28" rx="6" fill="#fff2cc" stroke="#a6821a" stroke-width="1.2"/>
+<text x="785.0" y="350.5" text-anchor="middle" class="bs">SpeechRecognition, …</text>
+<line x1="285.0" y1="370" x2="285.0" y2="401" stroke="#1f3864" stroke-width="1.6"/>
+<path d="M280.0,400 L285.0,408 L290.0,400 Z" fill="#1f3864"/>
+<rect x="242.8" y="381" width="84.4" height="16" rx="3" fill="#ffffff"/>
+<text x="285.0" y="393" text-anchor="middle" class="wire2">ROS 2 (DDS)</text>
+<line x1="535.0" y1="370" x2="535.0" y2="401" stroke="#1f3864" stroke-width="1.6"/>
+<path d="M530.0,400 L535.0,408 L540.0,400 Z" fill="#1f3864"/>
+<rect x="518.4" y="381" width="33.2" height="16" rx="3" fill="#ffffff"/>
+<text x="535.0" y="393" text-anchor="middle" class="wire2">IPC</text>
+<line x1="785.0" y1="370" x2="785.0" y2="401" stroke="#1f3864" stroke-width="1.6"/>
+<path d="M780.0,400 L785.0,408 L790.0,400 Z" fill="#1f3864"/>
+<rect x="765.2" y="381" width="39.6" height="16" rx="3" fill="#ffffff"/>
+<text x="785.0" y="393" text-anchor="middle" class="wire2">gRPC</text>
+<text x="150" y="427.5" text-anchor="end" class="role">Implementation</text>
+<text x="150" y="442.5" text-anchor="end" class="role">Layer</text>
+<rect x="170" y="408" width="230" height="46" rx="6" fill="#ededed" stroke="#707070" stroke-width="1.2"/>
+<text x="285.0" y="428.0" text-anchor="middle" class="bt" style="font-size:13px">ROS 2 robot</text>
+<text x="285.0" y="444.0" text-anchor="middle" class="bs">Nav2, YOLO</text>
+<rect x="420" y="408" width="230" height="46" rx="6" fill="#ededed" stroke="#707070" stroke-width="1.2"/>
+<text x="535.0" y="428.0" text-anchor="middle" class="bt" style="font-size:13px">Virtual avatar</text>
+<text x="535.0" y="444.0" text-anchor="middle" class="bs">Unity runtime</text>
+<rect x="670" y="408" width="230" height="46" rx="6" fill="#ededed" stroke="#707070" stroke-width="1.2"/>
+<text x="785.0" y="428.0" text-anchor="middle" class="bt" style="font-size:13px">Cloud services</text>
+<text x="785.0" y="444.0" text-anchor="middle" class="bs">Whisper, LLM</text>
+<path d="M900,431 H928 V63 H907" fill="none" stroke="#c0392b" stroke-width="1.6" stroke-dasharray="6 4"/>
+<path d="M908,58 L900,63 L908,68 Z" fill="#c0392b"/>
+<path d="M907,426 L915,431 L907,436 Z" fill="#c0392b" transform="translate(-7,0)"/>
+<text class="data" transform="translate(944,247) rotate(90)" text-anchor="middle">media over WebRTC, outside RoIS scope</text>
+<text x="150" y="514.0" text-anchor="end" class="role">Build time</text>
+<rect x="170" y="482" width="730" height="58" rx="9" fill="none" stroke="#8b98a8" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="182" y="474" width="457.3" height="16" fill="#ffffff"/>
+<text x="187" y="486" class="hdr">Interface type pipeline, drift-checked against the normative RoIS files</text>
+<rect x="186" y="496" width="196" height="32" rx="6" fill="#e2f0d9" stroke="#4e7a38" stroke-width="1.2"/>
+<text x="284.0" y="516.5" text-anchor="middle" class="bs">Python Pydantic models (authored)</text>
+<rect x="438" y="496" width="194" height="32" rx="6" fill="#e2f0d9" stroke="#4e7a38" stroke-width="1.2"/>
+<text x="535.0" y="516.5" text-anchor="middle" class="bs">JSON Schema (canonical)</text>
+<rect x="688" y="496" width="196" height="32" rx="6" fill="#deebf7" stroke="#2e5c8a" stroke-width="1.2" stroke-dasharray="5 3"/>
+<text x="786.0" y="516.5" text-anchor="middle" class="bs">C# and TypeScript types (generated)</text>
+<line x1="382" y1="512" x2="431" y2="512" stroke="#1f3864" stroke-width="1.4"/>
+<path d="M430,507 L438,512 L430,517 Z" fill="#1f3864"/>
+<line x1="632" y1="512" x2="681" y2="512" stroke="#1f3864" stroke-width="1.4"/>
+<path d="M680,507 L688,512 L680,517 Z" fill="#1f3864"/>
+<text x="410" y="531" text-anchor="middle" class="wire2">export</text>
+<text x="660" y="531" text-anchor="middle" class="wire2">generate</text>
+<rect x="170" y="562" width="18" height="14" rx="3" fill="#deebf7" stroke="#2e5c8a" stroke-width="1.1"/>
+<text x="195" y="573.5" class="legend">Service application</text>
+<rect x="331.0" y="562" width="18" height="14" rx="3" fill="#e2f0d9" stroke="#4e7a38" stroke-width="1.1"/>
+<text x="356.0" y="573.5" class="legend">OpenRoIS core</text>
+<rect x="456.0" y="562" width="18" height="14" rx="3" fill="#fff2cc" stroke="#a6821a" stroke-width="1.1"/>
+<text x="481.0" y="573.5" class="legend">Adapter (sub HRI Engine)</text>
+<rect x="647.0" y="562" width="18" height="14" rx="3" fill="#ededed" stroke="#707070" stroke-width="1.1"/>
+<text x="672.0" y="573.5" class="legend">Host, outside OpenRoIS</text>
+<line x1="826.0" y1="569" x2="852.0" y2="569" stroke="#c0392b" stroke-width="1.6" stroke-dasharray="6 4"/>
+<text x="859.0" y="573.5" class="legend">Data plane</text>
+</svg>

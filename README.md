@@ -1,212 +1,306 @@
-# OpenRoIS
+<p align="center">
+  <a href="https://openrois.org/">
+    <img src="docs/assets/openrois-logo.svg" alt="OpenRoIS logo" width="104" height="104">
+  </a>
+</p>
 
-[![RoIS Specification](https://img.shields.io/badge/RoIS%20Specification-2.0%20beta%202-2376BC)](https://www.omg.org/spec/RoIS/2.0/Beta2)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](https://www.apache.org/licenses/LICENSE-2.0)
-[![Status](https://img.shields.io/badge/status-alpha-orange)](#status)
-[![Python](https://img.shields.io/badge/python-3.12+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![.NET](https://img.shields.io/badge/.NET%20Standard-2.1-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.4+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+<h1 align="center">OpenRoIS</h1>
 
-> Open-source middleware for the [OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0/Beta2).
-> Control **physical robots, virtual avatars, and digital agents** from one
-> paradigm-neutral SDK. Apache-2.0. Alpha, pre-1.0, unstable API.
+<p align="center">
+  <strong>Open-source middleware implementing the OMG Robotic Interaction Service (RoIS) Framework 2.0</strong><br>
+  Write a service application once. Run it on physical robots, virtual avatars, and AI services.
+</p>
 
-OpenRoIS lets operator applications control robots, avatars, and digital agents over
-the internet through a single SDK. The host paradigm is hidden behind a gateway. A
-scenario written once can drive a ROS 2 robot, a Unity avatar, or a distributed AI
-service without code changes.
+<p align="center">
+  <a href="https://www.omg.org/spec/RoIS/2.0"><img src="https://img.shields.io/badge/OMG%20RoIS-2.0-0070C0" alt="OMG RoIS 2.0"></a>
+  <img src="https://img.shields.io/badge/paper-arXiv%20(coming%20soon)-B31B1B?logo=arxiv&logoColor=white" alt="Paper on arXiv, Coming Soon">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2E5C8A" alt="License: Apache-2.0"></a>
+  <a href="#project-status"><img src="https://img.shields.io/badge/status-alpha-A6821A" alt="Status: alpha"></a>
+  <img src="https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white" alt="Python 3.12+">
+  <img src="https://img.shields.io/badge/TypeScript-5.4+-3178C6?logo=typescript&logoColor=white" alt="TypeScript 5.4+">
+  <img src="https://img.shields.io/badge/.NET%20Standard-2.1-512BD4?logo=dotnet&logoColor=white" alt=".NET Standard 2.1">
+  <img src="https://img.shields.io/badge/ROS%202-Jazzy-22314E?logo=ros&logoColor=white" alt="ROS 2 Jazzy">
+</p>
 
-The primary demonstrated path is a Unity operator application controlling a ROS 2
-robot over WebSocket. The same interfaces also drive in-process avatars and
-distributed services.
+<p align="center">
+  <a href="https://openrois.org/">Website</a> ·
+  <a href="https://github.com/openrois">OpenRoIS GitHub Organization</a> ·
+  OpenRoIS arXiv Preprint (coming soon) ·
+  <a href="https://www.omg.org/spec/RoIS/2.0">OMG RoIS Specification</a> ·
+  <a href="#quickstart">Quickstart</a> ·
+  <a href="docs/white-paper.md">White Paper</a> ·
+  <a href="docs/architecture.md">Architecture</a> ·
+  <a href="docs/roadmap.md">Roadmap</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
 
 ---
 
-## What is in this repository
+## Overview
 
-This is the **core middleware repository**. It contains the interfaces, the engine,
-the gateway, bus adapters, components, SDKs, and documentation.
+Service applications for human-robot interaction are usually written against the
+hardware-specific interface of one platform, so a change of hardware forces a rewrite
+of the application. The [OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0)
+addresses this fragmentation with a platform-independent model: applications talk to
+HRI Engines through five standard interfaces and exchange symbolic messages such as
+"a person was detected" or "navigate to the kitchen", never raw sensor data or motor
+commands.
 
-```
-openrois/
-├── examples/                # Runnable examples: mock-engine, mock-robot, web-operator
-├── sdk/                     # Client SDKs
-│   ├── typescript/          #   @openrois/sdk (npm, web + Node)
-│   └── csharp/              #   OpenRoIS.Sdk (NuGet + UPM, Unity)
-├── interfaces/              # Shared types: single source of truth
-│   ├── python/              #   Pydantic models (hand-authored, source of truth)
-│   ├── schema/              #   Canonical JSON Schema (generated, wire contract)
-│   ├── csharp/              #   Generated C# types (OpenRoIS.Interfaces)
-│   └── typescript/          #   Generated TypeScript types (@openrois/interfaces)
-├── gateway/                 # WebSocket server (Python), RoIS to BusAdapter, WebRTC bridge
-├── engine/                  # Bus-independent engine (Python): lifecycle, bind/execute
-├── bus/                     # BusAdapter contract + reference adapters
-│   ├── ros2/                #   ROS2BusAdapter (rclpy), primary robot adapter
-│   └── universal/           #   UniversalBusAdapter (WS+JSON-RPC, avatars and services)
-└── docs/                    # Documentation
-```
+A specification alone does not provide the maintained implementation, SDKs, and
+adapters that adoption requires. **OpenRoIS is an openly developed implementation of
+RoIS 2.0** that carries the standard from specification to practice, for physical
+robots and virtual agents alike.
 
-## The one critical rule
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/openrois-concept-dark.svg">
+    <img src="docs/assets/openrois-concept.svg" alt="Without a standard interface, N applications and M platforms need N times M integrations. With OpenRoIS, they need N plus M." width="860">
+  </picture>
+</p>
 
-Types flow in one direction. **Never edit generated files by hand.**
+## Key Features
 
-```
-Python (Pydantic) → JSON Schema → C# + TypeScript
-```
+- **Recursive engine.** A single `Engine` class realizes both the main and the sub HRI
+  Engine roles defined by RoIS. The gateway and every adapter share one dispatch
+  implementation.
+- **Five-method Component Contract.** The engine depends only on `discover`, `invoke`,
+  `query`, `subscribe`, and `unsubscribe`. ROS 2, gRPC, game engines, and cloud APIs
+  stay inside adapters, so adding a paradigm never touches the core.
+- **JSON-RPC 2.0 over WebSocket.** Every operation of the five RoIS interfaces maps to
+  a namespaced method (`rois.system.*`, `rois.command.*`, `rois.query.*`,
+  `rois.event.*`, `rois.stream.*`). The control plane works from browsers and across
+  the internet. The Streaming Interface is planned.
+- **Single source of truth for types.** RoIS types are authored once as Python
+  Pydantic models, exported to JSON Schema, and generated into TypeScript and C#.
+  Tests check the models against the normative RoIS XML profiles and schema.
+- **Profile-driven applications.** Clients discover components, queries, commands, and
+  events from the engine profile at runtime, so one application works with any robot
+  behind the gateway.
+- **Decorator-based components.** Adapter authors declare a component with
+  `@component`, `@query`, `@invoke`, and `@subscribe`, and write only the code that
+  talks to their robot.
 
-- **Edit:** `interfaces/python/src/openrois/interfaces/*.py`
-- **Don't edit:** `interfaces/schema/`, `interfaces/csharp/src/OpenRoIS.Interfaces/Generated/`, `interfaces/typescript/src/`
+## Architecture
 
-After editing Python models, run the full pipeline and all tests:
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/openrois-architecture-dark.svg">
+    <img src="docs/assets/openrois-architecture.svg" alt="OpenRoIS architecture: service applications use an SDK to reach the gateway, which hosts the main HRI Engine and forwards calls over the Component Contract to adapters hosting sub HRI Engines for robots, avatars, and services." width="860">
+  </picture>
+</p>
+
+| RoIS concept | OpenRoIS realization |
+|--------------|----------------------|
+| Service Application | Your application, built with the TypeScript or C# SDK |
+| Main HRI Engine | The gateway process: `Engine` with child engines, behind a WebSocket server |
+| Sub HRI Engine | An adapter process: `Engine` with local components, connected to the gateway |
+| HRI Component | A class decorated with `@component`, hosted by an adapter |
+| RoIS interfaces | JSON-RPC 2.0 methods in the `rois.*` namespaces |
+
+Read the [white paper](docs/white-paper.md) for the design rationale and the full wire
+protocol, and the [architecture document](docs/architecture.md) for implementation
+details.
+
+## Quickstart
+
+Run a RoIS engine with simulated components and inspect it from the browser. You need
+[Node.js](https://nodejs.org/) 22 or later.
 
 ```bash
-cd interfaces/python && python scripts/export_schema.py
-cd ../typescript && npx tsx scripts/generate.ts && npm run typecheck && npm test
-cd ../csharp && dotnet run --project scripts/Generator/Generator.csproj -- ../../schema && dotnet test
+git clone https://github.com/openrois/openrois.git
+cd openrois
+
+# Build the generated TypeScript types and the TypeScript SDK.
+(cd interfaces/typescript && npm install && npm run build)
+(cd sdk/typescript && npm install && npm run build)
+
+# Terminal 1: start a RoIS engine with simulated components on ws://127.0.0.1:8765.
+cd examples/mock-engine && npm install && npm start
 ```
 
-## Build and test
-
-| Stack | Dir | Commands |
-|-------|-----|----------|
-| Python (source) | `interfaces/python` | `pip install -e ".[dev]"`, `ruff check src/`, `mypy src/`, `pytest -q` |
-| TypeScript (generated) | `interfaces/typescript` | `npm install`, `npm run generate`, `npm run typecheck`, `npm test` |
-| C# (generated) | `interfaces/csharp` | `dotnet build`, `dotnet test` |
-
-CI (`.github/workflows/ci.yml`) runs all three on changes to `interfaces/**`.
-
-## Architecture at a glance
-
-```mermaid
-flowchart TB
-    subgraph L1["Layer 1: Client"]
-        direction LR
-        WebApp["Web App<br/>+ TS SDK"]
-        UnityApp["Unity App<br/>+ C# SDK"]
-        PyScript["Python Script<br/>+ Py SDK"]
-    end
-
-    subgraph L2["Layer 2: Gateway"]
-        GW["WebSocket / JSON-RPC 2.0<br/>Auth, RBAC, WebRTC Bridge"]
-    end
-
-    subgraph L3["Layer 3: BusAdapter"]
-        Bus["discover, invoke,<br/>query, subscribe"]
-    end
-
-    subgraph L4["Layer 4: Hosts"]
-        direction LR
-        Robot["ROS 2 Robot<br/>(Nav2, YOLO)"]
-        Avatar["Universal Avatar<br/>(WS+JSON-RPC)"]
-        Services["Universal Services<br/>(WS+JSON-RPC)"]
-    end
-
-    L1 -->|"WebSocket / TLS"| L2
-    L2 --> Bus
-    Bus --> Robot
-    Bus --> Avatar
-    Bus --> Services
+```bash
+# Terminal 2: start the web inspector, then open http://localhost:5173 and click Connect.
+cd examples/hri-client && npm install && npm run dev
 ```
 
-The same four layers compose into physical robots, mixed fleets, single-process
-avatars, and distributed services. Only the BusAdapter and host layout changes.
+The inspector reads the engine profile and renders every component it finds, with its
+queries, commands, and events. Nothing in the client is specific to the components on
+the other side.
 
-## Quick example
+<p align="center">
+  <img src="docs/assets/hri-client-demo.gif" alt="Screen recording of the OpenRoIS HRI Client connecting to the mock engine, querying components, binding, subscribing to events, and executing a command." width="760">
+</p>
 
-What it looks like to control a robot from a web application:
+<p align="center"><sub>Recorded from this quickstart, with no robot attached. A <a href="https://openrois.org/#see-it-run">higher-resolution version</a> is on the website.</sub></p>
+
+## Usage
+
+### Write a Service Application
+
+The TypeScript SDK exposes the RoIS interfaces with typed responses and runtime
+validation.
 
 ```ts
 import { RoISClient } from "@openrois/sdk";
 
-const client = await RoISClient.connect("wss://gateway.example.com", {
-  token: await getAccessToken(),
-});
+const client = await RoISClient.connect("ws://localhost:8765");
 
-// Detect people (identical API whether the host is a robot or an avatar)
-const pd = await client.bind("PersonDetection");
-pd.on("person_detected", (e) => console.log(`${e.number} people`));
-await pd.start();
+// Discover the components offered by every connected robot.
+const refs = await client.search();
 
-// Navigate
-const nav = await client.bind("Navigation");
-await nav.execute({ target_positions: ["3.0,1.5,0.0"], time_limit: 30 });
+// Query state synchronously.
+const status = await client.query("robot_1/Navigation", "component_status");
 
-// Stream live video
-const video = await client.bind("VideoStreaming");
-const track = await video.connectStream();    // WebRTC track to <video> element
+// Subscribe to events.
+client.on("reached_target", (notification) => console.log(notification.params));
+await client.subscribe("robot_1/Navigation", "reached_target");
+
+// Reserve an actuation component, command it, then release it.
+await client.bind("robot_1/Navigation");
+await client.setParameter("robot_1/Navigation", [
+  { name: "target_positions", data_type_ref: "string[]", value: '["kitchen"]' },
+]);
+await client.execute("robot_1/Navigation", { command_type: "start" });
+await client.release("robot_1/Navigation");
+
+await client.disconnect();
 ```
 
-The same calls work from C# (Unity) or Python. The host paradigm is hidden behind
-the gateway.
+### Write a Component for Your Robot
 
-## Status
+A component translates RoIS operations into calls to your platform, whether that is a
+ROS 2 action, a gRPC service, or an HTTP API. The adapter hosts it in a sub HRI Engine
+and connects it to the gateway.
 
-**Alpha, pre-1.0, unstable API.** The interface types (M0) are complete and stable.
-The engine, gateway, bus adapters, components, and SDKs are under construction.
+```python
+from openrois.interfaces.bus import InvokeResponse
+from openrois.interfaces.hri import ReturnCode
+from openrois_components_core import component, invoke, query, results, subscribe
 
-| Milestone | Theme | Status |
-|-----------|-------|--------|
-| M0 | Paradigm-Neutral Interfaces | DONE |
-| M1 | Engine and In-Process Bus | TODO |
-| M2 | Remote Gateway | TODO |
-| M3 | ROS 2 Bus Adapter | TODO |
-| M4 | Mock ROS 2 Robot Components | TODO |
-| M5 | SDK and Robot MVP (v0.1.0) | TODO |
-| M8 | Real Component and Mixed Paradigm | TODO |
-| M9 | Auth and Bus Security | TODO |
-| M10 | WebRTC Media | TODO |
-| M11 | Full Component Library (v1.0) | TODO |
 
-See the [roadmap](docs/roadmap.md) for milestone details and dependencies.
+@component("Navigation", function="actuation")
+class Navigation:
+    def __init__(self, config: dict) -> None:
+        self._robot_url = config["robot_url"]
+
+    async def connect(self) -> None:
+        self._robot = await MyRobotClient.open(self._robot_url)
+
+    @query("component_status")
+    async def status(self):
+        return results.status("BUSY" if self._robot.moving else "READY")
+
+    @invoke("start")
+    async def start(self, parameters):
+        await self._robot.go_to(parameters)
+        return InvokeResponse(return_code=ReturnCode.OK, command_id="nav-1")
+
+    @subscribe("reached_target")
+    async def on_reached_target(self):
+        """Registers the event. Emit it with self.parent.emit_async(...)."""
+```
+
+```python
+from openrois_core import Engine, WsClient
+from openrois_components_core import meta_from_decorators
+
+config = {"robot_url": "http://192.168.0.10:8080"}
+engine = Engine(engine_id="robot_1", platform="my_robot")
+engine.register_component("Navigation", Navigation(config), meta_from_decorators(Navigation))
+WsClient(engine, "ws://gateway.example.com:8765").run()
+```
+
+See [`examples/adapter-template`](examples/adapter-template) for a complete starting
+point and [`components/kachaka`](components/kachaka) for reference components backed by
+both gRPC and ROS 2.
+
+## Project Status
+
+OpenRoIS is **alpha, pre-1.0, with an unstable API**. The foundations are in place and
+demonstrated with a physical robot. The rest of the RoIS surface is being built in the
+open.
+
+| Area | Status |
+|------|--------|
+| RoIS interface types (Python, JSON Schema, TypeScript, C#) | Available |
+| Recursive engine, WebSocket server and client, and adapter SDK (Python) | Available, hardening |
+| TypeScript client SDK and web inspector | Available |
+| Reference components for the Preferred Robotics Kachaka (gRPC and ROS 2) | Available |
+| C# client SDK for Unity | In progress |
+| Open reference platform based on the Pollen Robotics Reachy Mini | Planned |
+| Authentication (JWT) and authorization (RBAC) | Planned |
+| Streaming Interface with WebRTC media | Planned |
+| Packages on PyPI, npm, NuGet, and the Unity Package Manager | Planned |
+| All 17 basic RoIS HRI Components (v1.0) | Planned |
+
+The [roadmap](docs/roadmap.md) describes each phase and its exit criteria.
+
+## Repository Layout
+
+```
+openrois/
+├── interfaces/          RoIS types: Python models, JSON Schema, generated TypeScript and C#
+├── core/                Recursive Engine, WebSocket server and client (openrois-core)
+├── components/
+│   ├── core/            Component decorators and result helpers (openrois-components-core)
+│   ├── common/          Platform-independent components
+│   └── kachaka/         Preferred Robotics Kachaka components (gRPC and ROS 2)
+├── sdk/
+│   ├── typescript/      Client SDK for web and Node.js (@openrois/sdk)
+│   └── csharp/          Client SDK for Unity (OpenRoIS.Sdk, in progress)
+├── gateway/             TypeScript gateway prototype, superseded by core/
+├── examples/
+│   ├── mock-engine/     RoIS engine test double with simulated components
+│   ├── hri-client/      Profile-driven web inspector for any RoIS engine
+│   ├── mock-adapter/    Adapter with simulated components
+│   └── adapter-template/  Starting point for a new robot adapter
+├── apps/hub/            Management dashboard (planned)
+└── docs/                White paper, architecture, roadmap, RoIS reference
+```
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [White paper](docs/white-paper.md) | Architecture, design decisions, wire protocol, and deployment topologies for the R&D community |
-| [Architecture](docs/architecture.md) | Engineering design document (how the system is designed) |
-| [RoIS reference](docs/rois-reference.md) | OMG RoIS specification summary and reference (what the spec says) |
-| [Roadmap](docs/roadmap.md) | Milestone roadmap (what is built and in what order) |
+| Document | Contents |
+|----------|----------|
+| [White paper](docs/white-paper.md) | Motivation, design decisions, wire protocol, deployment topologies |
+| [Architecture](docs/architecture.md) | Engineering design of the engine, adapters, and components |
+| [RoIS reference](docs/rois-reference.md) | Summary of the OMG RoIS Framework 2.0 specification |
+| [Roadmap](docs/roadmap.md) | Phases, status, and exit criteria |
+| [openrois.org](https://openrois.org/) | The same documentation as a website |
 
-## Key conventions
+## Development
 
-- Python 3.12+, Pydantic v2, `from __future__ import annotations`, PEP 695 `type` statements, mypy strict, ruff line-length 100
-- TypeScript ESM, strict typecheck, vitest
-- C# `netstandard2.1` (Unity 6.3+), `sealed class`, `Nullable` enabled
-- `interfaces/python/src/` must stay transport-neutral. No ROS, DDS, gRPC, or WebSocket imports.
-- Don't change the `BusAdapter` protocol without reading `docs/architecture.md` section 7.5.
+The RoIS types flow in one direction: **Python models, then JSON Schema, then TypeScript
+and C#.** Edit the Python models in `interfaces/python`, regenerate, and never edit the
+generated files by hand.
+
+| Stack | Directory | Commands |
+|-------|-----------|----------|
+| Python types | `interfaces/python` | `pip install -e ".[dev]"`, `pytest`, `mypy src/`, `ruff check src/` |
+| TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test` |
+| C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
+| TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` |
+| Mock engine | `examples/mock-engine` | `npm install`, `npm test` |
+
+[`AGENTS.md`](AGENTS.md) documents the conventions and the generation pipeline in
+detail.
 
 ## Contributing
 
-Contributions are welcome. The milestone roadmap defines clear, parallelizable work
-items. Reference components are the natural entry point for new contributors.
+Contributions are welcome. Reference components for new robots are the natural entry
+point, and the [roadmap](docs/roadmap.md) lists work items that can be taken up in
+parallel. Please read the [contributing guide](CONTRIBUTING.md) before opening a pull
+request.
 
-Before contributing, read:
+## Citation
 
-- [AGENTS.md](AGENTS.md) for coding conventions and the critical rule about generated files
-- [CONTRIBUTING.md](CONTRIBUTING.md) for the PR process
-- [docs/roadmap.md](docs/roadmap.md) for open work items
+The position paper describing OpenRoIS was submitted to SII 2027 and is under review. Its
+preprint has been submitted to arXiv and will be linked here once it is announced. Until
+then, please cite the software using the metadata in [`CITATION.cff`](CITATION.cff), which
+also carries the paper as its preferred citation.
 
 ## License
 
-```
-Copyright 2026 Coarobo GK
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-```
-
----
-
-*OpenRoIS is an open-source middleware for the OMG RoIS Framework 2.0. Control
-robots, avatars, and digital agents from one paradigm-neutral SDK. Apache-2.0.
-Alpha, pre-1.0, unstable API.*
+OpenRoIS is licensed under the [Apache License 2.0](LICENSE). Copyright 2026 Coarobo GK.
+OpenRoIS is developed by Coarobo GK and the OpenRoIS community. OpenRoIS is a trademark
+of Coarobo GK. RoIS is a trademark of the Object Management Group.
