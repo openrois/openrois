@@ -253,6 +253,8 @@ openrois/
 │   ├── mock-engine/     RoIS engine test double with simulated components
 │   ├── hri-client/      Profile-driven web inspector for any RoIS engine
 │   ├── mock-adapter/    Adapter with simulated components
+│   ├── avatar-adapter/  Virtual agent behind the same interfaces
+│   ├── mixed-paradigm/  One application driving a robot and an avatar through one gateway
 │   └── adapter-template/  Starting point for a new robot adapter
 ├── apps/hub/            Management dashboard (planned)
 └── docs/                White paper, architecture, roadmap, RoIS reference

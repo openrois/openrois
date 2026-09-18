@@ -28,7 +28,7 @@ Until version 1.0, all releases are **alpha, with an unstable API**.
 | **5** | Hardening the core | planned |
 | **6** | Gateway process | in progress |
 | **7** | Adapter process | planned |
-| **8** | Open reference platform and mixed paradigms | planned |
+| **8** | Open reference platform and mixed paradigms | in progress |
 | **9** | Authentication, security, and media | in progress |
 | **10** | Full component library (`v1.0`) | planned |
 | **11** | Component registry and Hub | after 1.0 |
@@ -100,12 +100,15 @@ handling, and `docker compose up`.
 A standalone adapter process composed from `Engine`, `WsClient`, and a backend bridge,
 configured by the adapter profile.
 
-### Phase 8: Open Reference Platform and Mixed Paradigms (Planned)
+### Phase 8: Open Reference Platform and Mixed Paradigms (In Progress)
 
-A reference platform based on the open-source Pollen Robotics Reachy Mini, shipped with
-OpenRoIS so that anyone can run the full stack on affordable, openly documented hardware.
-A demonstration of a physical robot and a virtual agent behind one gateway, controlled by
-one application that does not know which is which.
+**Done:** the mixed-paradigm demonstration (`examples/mixed-paradigm`): a simulated robot
+and a text-based virtual agent behind one gateway, driven by one application with
+identical calls, both completing the same spoken sentence.
+
+**Planned:** a reference platform based on the open-source Pollen Robotics Reachy Mini,
+shipped with OpenRoIS so that anyone can run the full stack on affordable, openly
+documented hardware, and the demonstration repeated with that robot and a rendered avatar.
 
 Completing this phase starts the transfer of OpenRoIS to a neutral open-source
 foundation.

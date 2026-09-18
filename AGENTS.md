@@ -18,7 +18,7 @@ What exists today:
 | Adapter SDK (component framework) and reference components | `components/` | Available |
 | TypeScript client SDK | `sdk/typescript/` | Available |
 | C# client SDK for Unity | `sdk/csharp/` | Available (Streaming planned) |
-| Examples: mock engine, mock adapter, web client, adapter template | `examples/` | Available |
+| Examples: mock engine, mock adapter, avatar adapter, mixed-paradigm demo, web client, adapter template | `examples/` | Available |
 | Hub management application | `apps/hub/` | Not started, scaffold only |
 
 See [docs/roadmap.md](docs/roadmap.md) for what comes next, and

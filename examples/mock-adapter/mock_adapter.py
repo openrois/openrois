@@ -1,6 +1,6 @@
 """Mock adapter for testing the OpenRoIS middleware without a real robot.
 
-Connects to the gateway, registers 4 components, and responds with
+Connects to the gateway, registers 5 components, and responds with
 hardcoded data. Fires events on a timer to simulate robot activity.
 
 Usage:
@@ -246,6 +246,65 @@ class ObjectManipulation:
         logger.info("Fired manipulation_complete event and completed cmd-manip")
 
 
+# ─── SpeechSynthesis ─────────────────────────────────────────
+
+@component(
+    "SpeechSynthesis",
+    function="actuation",
+    parameters=[{"name": "speech_text", "data_type_ref": "string", "default_value": ""}],
+)
+class SpeechSynthesis:
+    """A robot voice: speaks by logging and completes when the speech would end."""
+
+    def __init__(self, config: dict) -> None:
+        self._text = ""
+        self._speaking = False
+        self._counter = 0
+
+    @query("component_status")
+    async def status(self):
+        return results.status("BUSY" if self._speaking else "READY")
+
+    @invoke("set_parameter")
+    async def set_parameter(self, parameters):
+        self._text = _param(parameters, "speech_text", self._text)
+        return InvokeResponse(return_code=ReturnCode.OK, command_id="")
+
+    @invoke("start")
+    async def start(self, parameters):
+        return await self.execute(parameters)
+
+    @invoke("execute")
+    async def execute(self, parameters):
+        text = _param(parameters, "speech_text", self._text)
+        if self._speaking:
+            return InvokeResponse(return_code=ReturnCode.ERROR, command_id="")
+        self._counter += 1
+        command_id = f"say-{self._counter}"
+        self._speaking = True
+        logger.info("[robot] says: %s", text)
+        asyncio.get_running_loop().create_task(self._finish(command_id, text))
+        return InvokeResponse(return_code=ReturnCode.OK, command_id=command_id)
+
+    async def _finish(self, command_id: str, text: str) -> None:
+        await asyncio.sleep(max(0.2, len(text) * 0.05))
+        self._speaking = False
+        await self.parent.complete_async(command_id, "OK")  # type: ignore[attr-defined]
+
+    @invoke("stop")
+    async def stop(self, parameters):
+        self._speaking = False
+        return InvokeResponse(return_code=ReturnCode.OK, command_id="")
+
+    @invoke("suspend")
+    async def suspend(self, parameters):
+        return InvokeResponse(return_code=ReturnCode.OK, command_id="")
+
+    @invoke("resume")
+    async def resume(self, parameters):
+        return InvokeResponse(return_code=ReturnCode.OK, command_id="")
+
+
 # ─── Registration ────────────────────────────────────────────
 
 COMPONENT_CLASSES = [
@@ -253,6 +312,7 @@ COMPONENT_CLASSES = [
     Navigation,
     ObjectDetection,
     ObjectManipulation,
+    SpeechSynthesis,
 ]
 
 

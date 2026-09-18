@@ -30,6 +30,14 @@ async def test_common_components_conform() -> None:
     await assert_conformant(engine_with(MockSystemInformation()))
 
 
+async def test_avatar_adapter_conforms() -> None:
+    sys.path.insert(0, str(ROOT / "examples" / "avatar-adapter"))
+    import avatar_adapter
+
+    engine = engine_with(*(cls({}) for cls in avatar_adapter.COMPONENT_CLASSES))
+    await assert_conformant(engine)
+
+
 async def test_mock_adapter_conforms() -> None:
     sys.path.insert(0, str(ROOT / "examples" / "mock-adapter"))
     import mock_adapter
