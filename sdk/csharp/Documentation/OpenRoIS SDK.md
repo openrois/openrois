@@ -52,7 +52,7 @@ The package depends on `com.unity.test-framework` for its tests only.
 
 ## Known Limitations
 
-OpenRoIS SDK version 0.1.0-alpha.1 includes the following known limitations:
+OpenRoIS SDK version 0.1.0-alpha.3 includes the following known limitations:
 
 - No high-level RoIS client yet. Applications build and parse JSON-RPC messages and
   manage their own WebSocket.
@@ -71,4 +71,4 @@ OpenRoIS SDK version 0.1.0-alpha.1 includes the following known limitations:
 
 | Date | Reason |
 |------|--------|
-| September 18, 2026 | Document created for package version 0.1.0-alpha.1 |
+| September 18, 2026 | Document created for package version 0.1.0-alpha.3 |

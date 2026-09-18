@@ -1,7 +1,7 @@
 {
 	"name": "org.openrois.sdk",
 	"displayName": "OpenRoIS SDK",
-	"version": "0.1.0-alpha.1",
+	"version": "0.1.0-alpha.3",
 	"unity": "6000.5",
 	"unityRelease": "3f1",
 	"description": "RoIS Framework 2.0 client SDK for the OpenRoIS middleware. Paradigm-neutral HRI middleware for Unity.",

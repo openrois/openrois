@@ -40,7 +40,7 @@ Once published to a UPM registry, add via `manifest.json`:
 ```json
 {
   "dependencies": {
-    "org.openrois.interfaces": "0.1.0-alpha.2"
+    "org.openrois.interfaces": "0.1.0-alpha.3"
   }
 }
 ```
