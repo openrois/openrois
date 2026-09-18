@@ -29,8 +29,10 @@ COMMON_COMMANDS = ("start", "stop", "suspend", "resume")
 # OpenRoIS adds these keys to profiles; they are stripped before validation.
 EXTENSION_KEYS = {"function", "platform", "sub_engine_ids"}
 
-# The 17 basic HRI Components of RoIS 2.0, with the messages OpenRoIS has typed
-# models for. A basic component that declares other names is reported.
+# The normative message names of the basic components OpenRoIS has typed models
+# for so far. A basic component listed here that declares other names is reported;
+# the other basic components are checked for RoIS_Common only until their models
+# land (Phase 10 of the roadmap).
 BASIC_MESSAGES: dict[str, dict[str, set[str]]] = {
     "PersonDetection": {"events": {"person_detected"}},
     "Navigation": {"events": {"reached_target"}, "queries": {"get_parameter"},

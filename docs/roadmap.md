@@ -81,8 +81,10 @@ The TypeScript proof of concept is retired.
 
 ### Phase 5: Hardening the Core (Planned)
 
-**Done:** control-plane latency benchmarks (`core/benchmarks/latency.py`, results at
-[openrois.org](https://openrois.org/docs/reference/benchmarks)).
+**Done:** control-plane latency benchmarks on loopback with the mock adapter
+(`core/benchmarks/latency.py`, results at
+[openrois.org](https://openrois.org/docs/reference/benchmarks)). LAN and Kachaka numbers are
+still to be measured.
 
 **Done:** a `GET /health` liveness endpoint on the gateway port.
 

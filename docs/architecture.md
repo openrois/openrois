@@ -424,7 +424,7 @@ The RoIS logic lives in the engine, which is fully open source.
   `rois.system.profile_changed` when a sub HRI Engine registers or disconnects.
   Clients re-fetch the profile automatically. No polling needed.
 - **Filter** `search()`/`query()` results and **guard** `bind()`/`execute()` per
-  the caller's authorization scope (planned, Phase 9).
+  the caller's authorization scope (available, off by default).
 
 The gateway accepts both adapter connections (on the `/adapter` path) and client
 connections (which send `rois.system.*` etc.) on the same WebSocket port. It
