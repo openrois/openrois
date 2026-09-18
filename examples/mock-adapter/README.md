@@ -36,18 +36,6 @@ components appear, run their queries, and subscribe to their events.
 | `ObjectDetection` | Lists two detected objects, fires `object_detected` 3 seconds after a subscription |
 | `ObjectManipulation` | Reports gripper state, fires `manipulation_complete` 4 seconds after a command |
 
-## Known Issues
-
-Two defects in this example prevent the full loop from running:
-
-- The `@invoke` handlers read `parameters[0].value`, but parameters reach the handler as
-  plain dictionaries, so `execute` raises.
-- The event helpers call `self.parent.emit_async(...)` without awaiting it, so events are
-  never delivered.
-
-Discovery, profiles, queries, bind, and release do work. The fixes are part of
-[Phase 4](https://openrois.org/docs/project/roadmap).
-
 ## Read It as a Template
 
 `mock_adapter.py` is a single file that shows the whole adapter shape: decorated component

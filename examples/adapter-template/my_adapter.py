@@ -100,7 +100,8 @@ class Navigation:
     @invoke("execute")
     async def navigate(self, parameters):
         # IMPLEMENT YOUR CODE HERE
-        # parameters[0].value is the target WayPoint name.
+        # The "target_positions" parameter carries the target WayPoint name:
+        #   target = next(p["value"] for p in parameters if p["name"] == "target_positions")
         # Call your robot's navigation API.
         # Return InvokeResponse with a command_id.
         raise NotImplementedError
@@ -203,7 +204,8 @@ class ObjectManipulation:
     @invoke("execute")
     async def execute(self, parameters):
         # IMPLEMENT YOUR CODE HERE
-        # parameters[0].value is the command: "grasp" or "place".
+        # The "command" parameter carries "grasp" or "place":
+        #   command = next(p["value"] for p in parameters if p["name"] == "command")
         # For grasp: parameters[1].value is the object_id.
         # For place: parameters[1].value is object_id,
         #            parameters[2].value is plane_id,

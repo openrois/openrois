@@ -28,6 +28,20 @@ from openrois_components_core import (
 logger = logging.getLogger(__name__)
 
 
+def _param(parameters: list, name: str, default: str = "") -> str:
+    """Return the value of a named parameter.
+
+    The engine passes parameters as plain dictionaries with the RoIS shape
+    (name, data_type_ref, value). Typed Parameter objects are accepted too, so
+    the same helper works for in-process tests.
+    """
+    for p in parameters or []:
+        pname = p.get("name") if isinstance(p, dict) else getattr(p, "name", None)
+        if pname == name:
+            return str(p.get("value", default) if isinstance(p, dict) else getattr(p, "value", default))
+    return default
+
+
 # ─── SystemInformation ───────────────────────────────────────
 
 @component("SystemInformation")
@@ -73,7 +87,7 @@ class Navigation:
     async def navigate(self, parameters):
         if self._busy:
             return InvokeResponse(return_code=ReturnCode.ERROR, command_id="")
-        target = parameters[0].value if parameters else "unknown"
+        target = _param(parameters, "target_positions", "unknown")
         logger.info("Navigate to: %s", target)
         self._busy = True
         self._target = target
@@ -93,7 +107,7 @@ class Navigation:
     async def _fire_reached(self):
         await asyncio.sleep(5.0)
         self._busy = False
-        self.parent.emit_async(  # type: ignore[attr-defined]
+        await self.parent.emit_async(  # type: ignore[attr-defined]
             "Navigation",
             "reached_target",
             results.reached_target(
@@ -138,7 +152,7 @@ class ObjectDetection:
 
     async def _fire_detected(self):
         await asyncio.sleep(3.0)
-        self.parent.emit_async(  # type: ignore[attr-defined]
+        await self.parent.emit_async(  # type: ignore[attr-defined]
             "ObjectDetection",
             "object_detected",
             results.detection(
@@ -174,7 +188,7 @@ class ObjectManipulation:
     async def execute(self, parameters):
         if self._busy:
             return InvokeResponse(return_code=ReturnCode.ERROR, command_id="")
-        command = parameters[0].value if parameters else "unknown"
+        command = _param(parameters, "command", "unknown")
         logger.info("Manipulation: %s", command)
         self._busy = True
         return InvokeResponse(return_code=ReturnCode.OK, command_id="cmd-manip")
@@ -193,7 +207,7 @@ class ObjectManipulation:
     async def _fire_complete(self):
         await asyncio.sleep(4.0)
         self._busy = False
-        self.parent.emit_async(  # type: ignore[attr-defined]
+        await self.parent.emit_async(  # type: ignore[attr-defined]
             "ObjectManipulation",
             "manipulation_complete",
             results.manipulation_complete(success=True, detail="grasp succeeded"),
