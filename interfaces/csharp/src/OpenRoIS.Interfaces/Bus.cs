@@ -33,7 +33,13 @@ namespace OpenRoIS.Interfaces.Bus
     }
 
     /// <summary>Raised when a component_ref cannot be resolved by the adapter.</summary>
-    public class ComponentNotFoundError : ComponentContractError
+    /// <remarks>
+    /// Derives from the deprecated <see cref="BusAdapterError"/> during the compatibility
+    /// window so that existing <c>catch (BusAdapterError)</c> blocks keep catching it.
+    /// </remarks>
+#pragma warning disable CS0618
+    public class ComponentNotFoundError : BusAdapterError
+#pragma warning restore CS0618
     {
         /// <summary>The component reference that was not found.</summary>
         public string ComponentRef { get; }

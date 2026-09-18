@@ -37,6 +37,18 @@ namespace OpenRoIS.Interfaces.Tests
     }
 
     [Fact]
+    public void ComponentNotFoundError_StillCaughtAsBusAdapterError()
+    {
+        // The deprecated base stays in the hierarchy for one alpha, so existing
+        // catch (BusAdapterError) blocks keep working.
+#pragma warning disable CS0618
+        Exception err = new ComponentNotFoundError("robot/missing");
+        Assert.IsAssignableFrom<BusAdapterError>(err);
+        Assert.IsAssignableFrom<ComponentContractError>(new BusAdapterError("old"));
+#pragma warning restore CS0618
+    }
+
+    [Fact]
     public async Task ComponentContract_CanBeImplemented()
     {
         var adapter = new DummyAdapter();
