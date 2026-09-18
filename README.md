@@ -229,7 +229,7 @@ open.
 | TypeScript client SDK and web inspector | Available |
 | Reference components for the Preferred Robotics Kachaka (gRPC and ROS 2) | Available |
 | C# client SDK for Unity | Available |
-| Open reference platform based on the Pollen Robotics Reachy Mini | Planned |
+| Open reference platform based on the Pollen Robotics Reachy Mini | In progress, simulated first |
 | Authentication (JWT), authorization (RBAC), and TLS at the gateway | Available, off by default |
 | Streaming Interface control plane (`rois.stream.*`) | Available |
 | WebRTC media on the data plane (signaling through streaming components) | Planned |

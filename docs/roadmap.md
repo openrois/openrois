@@ -110,9 +110,13 @@ configured by the adapter profile.
 and a text-based virtual agent behind one gateway, driven by one application with
 identical calls, both completing the same spoken sentence.
 
-**Planned:** a reference platform based on the open-source Pollen Robotics Reachy Mini,
+**In progress:** a reference platform based on the open-source Pollen Robotics Reachy Mini,
 shipped with OpenRoIS so that anyone can run the full stack on affordable, openly
-documented hardware, and the demonstration repeated with that robot and a rendered avatar.
+documented hardware. The adapter (eight basic components over head and body poses), a
+simulated backend, and a one-command bring-up with a scripted demo are written and pass
+the conformance suite in simulation, in the `openrois-adapter-reachy-mini` repository.
+Verification on a robot is pending, as is the demonstration repeated with that robot and
+a rendered avatar.
 
 Completing this phase starts the transfer of OpenRoIS to a neutral open-source
 foundation.
