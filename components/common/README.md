@@ -1,4 +1,4 @@
-# openrois-Components-Common
+# openrois-components-common
 
 Platform-independent components for OpenRoIS adapters. They implement RoIS component
 interfaces with simulated data, which makes them useful for testing, for bringing an
