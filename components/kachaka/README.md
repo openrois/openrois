@@ -1,4 +1,4 @@
-# openrois-Components-Kachaka
+# openrois-components-kachaka
 
 OpenRoIS components for the [Preferred Robotics Kachaka](https://kachaka.life/). They
 implement canonical RoIS components and translate RoIS messages into Kachaka calls, over
