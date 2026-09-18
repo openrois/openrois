@@ -81,8 +81,11 @@ The TypeScript proof of concept is retired.
 
 ### Phase 5: Hardening the Core (Planned)
 
-Graceful shutdown, reconnection behavior, loading component packages from a local path
-or a Git URL, and minimal health and status endpoints.
+**Done:** control-plane latency benchmarks (`core/benchmarks/latency.py`, results at
+[openrois.org](https://openrois.org/docs/reference/benchmarks)).
+
+**Planned:** graceful shutdown, reconnection behavior, loading component packages from a
+local path or a Git URL, and minimal health and status endpoints.
 
 ### Phase 6: Gateway Process (In Progress)
 

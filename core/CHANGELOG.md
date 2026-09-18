@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `benchmarks/latency.py`: control-plane latency through the gateway and direct to an
+  adapter (query, execute, event delivery), p50/p95/p99 over loopback.
 - Authentication and authorization at the gateway: `WsServer(engine, auth=AuthConfig(...))`
   verifies a JSON Web Token at the WebSocket upgrade (`Authorization: Bearer` header or
   `token` query parameter, HS256 or asymmetric algorithms, issuer and audience checks),

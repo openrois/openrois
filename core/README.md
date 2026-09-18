@@ -99,6 +99,12 @@ See [architecture](https://openrois.org/docs/concepts/architecture) and
 [the recursive engine](https://openrois.org/docs/concepts/recursive-engine) for the
 rationale.
 
+## Benchmarks
+
+`python benchmarks/latency.py` measures the control-plane round trip through a gateway and
+directly against an adapter, over loopback. Results and the method are on the
+[benchmarks page](https://openrois.org/docs/reference/benchmarks).
+
 ## Status
 
 Alpha, pre-1.0, unstable API. A regression test suite covers dispatch, bindings, events,
