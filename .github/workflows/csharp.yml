@@ -18,3 +18,6 @@ jobs:
         run: |
           dotnet build src/OpenRoIS.Interfaces/OpenRoIS.Interfaces.csproj --configuration Release
           dotnet test tests/OpenRoIS.Interfaces.Tests/OpenRoIS.Interfaces.Tests.csproj --configuration Release
+      - name: Test the Unity SDK runtime outside Unity
+        working-directory: sdk/csharp/DotNetTests~
+        run: dotnet test --configuration Release

@@ -227,7 +227,7 @@ open.
 | Recursive engine, gateway process, WebSocket server and client, and adapter SDK (Python) | Available |
 | TypeScript client SDK and web inspector | Available |
 | Reference components for the Preferred Robotics Kachaka (gRPC and ROS 2) | Available |
-| C# client SDK for Unity | In progress |
+| C# client SDK for Unity | Available |
 | Open reference platform based on the Pollen Robotics Reachy Mini | Planned |
 | Authentication (JWT), authorization (RBAC), and TLS at the gateway | Available, off by default |
 | Streaming Interface with WebRTC media | Planned |
@@ -248,7 +248,7 @@ openrois/
 │   └── kachaka/         Preferred Robotics Kachaka components (gRPC and ROS 2)
 ├── sdk/
 │   ├── typescript/      Client SDK for web and Node.js (@openrois/sdk)
-│   └── csharp/          Client SDK for Unity (OpenRoIS.Sdk, in progress)
+│   └── csharp/          Client SDK for Unity and .NET (org.openrois.sdk)
 ├── examples/
 │   ├── mock-engine/     RoIS engine test double with simulated components
 │   ├── hri-client/      Profile-driven web inspector for any RoIS engine

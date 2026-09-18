@@ -66,8 +66,8 @@ backends.
 demonstration of a web application controlling a physical robot through the gateway and
 an adapter.
 
-**In progress:** the C# client SDK for Unity. Its JSON-RPC layer exists, and the
-high-level client does not yet.
+**Done:** the C# client SDK for Unity (`RoISClient`, callbacks on the main thread, tested
+outside the editor).
 
 **Exit criteria:** tagged release `v0.1.0`.
 

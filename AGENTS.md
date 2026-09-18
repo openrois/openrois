@@ -17,7 +17,7 @@ What exists today:
 | Recursive engine, gateway process, WebSocket server and client | `core/` | Available |
 | Adapter SDK (component framework) and reference components | `components/` | Available |
 | TypeScript client SDK | `sdk/typescript/` | Available |
-| C# client SDK for Unity | `sdk/csharp/` | JSON-RPC layer only, client in progress |
+| C# client SDK for Unity | `sdk/csharp/` | Available (Streaming planned) |
 | Examples: mock engine, mock adapter, web client, adapter template | `examples/` | Available |
 | Hub management application | `apps/hub/` | Not started, scaffold only |
 
@@ -58,6 +58,7 @@ the XML profile disagree, follow the XML profile and document the divergence in
 | Python types | `interfaces/python` | `pip install -e ".[dev]"`, `pytest`, `mypy src/`, `ruff check src/` |
 | TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test` |
 | C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
+| C# SDK | `sdk/csharp` | `dotnet test DotNetTests~` (no Unity editor needed) |
 | Engine core | `core` | `pip install -e ".[dev]"`, `pytest`, `mypy src/`, `ruff check src/ tests/` |
 | Component framework | `components/core` | `pip install -e .` |
 | TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` |
@@ -72,7 +73,7 @@ skipped or fail without them.
 - Python 3.12+, Pydantic v2, `from __future__ import annotations`, PEP 695 `type`
   statements, mypy strict, ruff line length 100.
 - TypeScript ESM, strict typecheck, vitest.
-- C# `netstandard2.1` (Unity 6.3+), `sealed class`, `Nullable` enabled.
+- C# `netstandard2.1` (Unity 6.5+), `sealed class`, `Nullable` enabled.
 - `interfaces/python/src/` and `core/src/` stay transport-neutral and paradigm-neutral.
   No ROS, DDS, gRPC, or game engine imports. Those belong in components.
 - Do not change the `Component Contract` (`discover`, `invoke`, `query`, `subscribe`,

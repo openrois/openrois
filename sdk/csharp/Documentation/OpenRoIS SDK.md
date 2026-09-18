@@ -6,8 +6,9 @@ drive robots, avatars, and AI services through the standard interfaces of the
 physical robot and for a virtual character, which lets one Unity application serve as
 the front end of either.
 
-This version of the package is an alpha. It contains the JSON-RPC 2.0 layer used by the
-protocol. The high-level `RoISClient` is in progress. See the
+This version of the package is an alpha. It contains `RoISClient`, the System, Command,
+Query, and Event interfaces as async methods with notifications as C# events, and the
+JSON-RPC 2.0 layer underneath. The Streaming Interface is planned. See the
 [roadmap](https://openrois.org/docs/project/roadmap).
 
 # Installing OpenRoIS SDK
@@ -29,12 +30,18 @@ For general guidance, see the Unity Manual on
 
 # Using OpenRoIS SDK
 
-Everything currently available lives in the `OpenRoIS.Sdk.JsonRpc` namespace.
+`OpenRoIS.Sdk.RoISClient` is the entry point:
 
-- `JsonRpcBuilder.CreateRequest(id, method, parameters)` and
-  `JsonRpcBuilder.CreateNotification(method, parameters)` produce wire-ready strings.
-- `JsonRpcParser.Parse(json)` classifies an incoming string as a request, response, error,
-  or notification and exposes the typed message.
+- `RoISClient.ConnectAsync(url, options)` opens the WebSocket and performs the RoIS
+  connect handshake. `ClientOptions.Token` presents a bearer token when the gateway
+  authenticates.
+- `SearchAsync`, `GetProfileAsync`, `QueryAsync`, `BindAsync`, `SetParameterAsync`,
+  `ExecuteAsync`, `SubscribeAsync`, and the other operations mirror the RoIS interfaces.
+- `EventReceived`, `CommandCompleted`, `ErrorNotified`, `ProfileChanged`, and `Closed` are
+  raised on the thread that called `ConnectAsync`, the main thread from a MonoBehaviour.
+
+`Samples/Example/SampleExample.cs` shows the whole flow in a scene. The JSON-RPC 2.0 layer
+(`OpenRoIS.Sdk.JsonRpc`) remains available for custom transports.
 
 The [wire protocol reference](https://openrois.org/docs/reference/wire-protocol) lists
 every RoIS method, its parameters, and its implementation status in the engine.
@@ -54,18 +61,18 @@ The package depends on `com.unity.test-framework` for its tests only.
 
 OpenRoIS SDK version 0.1.0-alpha.3 includes the following known limitations:
 
-- No high-level RoIS client yet. Applications build and parse JSON-RPC messages and
-  manage their own WebSocket.
-- No authentication. The OpenRoIS gateway does not authenticate connections in the alpha
-  releases. Use it on trusted networks only.
+- The Streaming Interface is not implemented yet.
+- WebGL builds cannot use `ClientWebSocket`; a browser transport is planned.
+- Authentication is off by default on the gateway. Pass `ClientOptions.Token` when it is on.
 
 ## Package Contents
 
 | Location | Description |
 |----------|-------------|
-| `Runtime/JsonRpc` | The JSON-RPC 2.0 builder, parser, and message types |
-| `Tests/Runtime` | Unity Test Framework tests for the builder and the parser |
-| `Samples/Example` | Placeholder sample, to be replaced by a RoIS client sample |
+| `Runtime` | `RoISClient`, its value types, and the JSON-RPC 2.0 layer under `Runtime/JsonRpc` |
+| `Tests/Runtime` | Unity Test Framework tests for the JSON-RPC layer |
+| `DotNetTests~` | Plain .NET tests of the client, ignored by Unity |
+| `Samples/Example` | A MonoBehaviour that discovers components, subscribes, and commands |
 
 ## Document Revision History
 
