@@ -1,4 +1,4 @@
-# openrois-Components-Core
+# openrois-components-core
 
 The component framework for OpenRoIS: the decorators you write components with, the
 metadata extractor that turns them into a RoIS component profile, and the helpers that
