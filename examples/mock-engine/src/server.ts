@@ -198,9 +198,26 @@ function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
       return;
 
     // Query interface
-    case "rois.query.query":
+    case "rois.query.query": {
+      // The Navigation profile advertises get_parameter as a query, so answer it
+      // from the registry rather than the canned table, and keep it consistent
+      // with what set_parameter stored.
+      if (paramStr(request.params, "query_type") === "get_parameter") {
+        const ref = paramStr(request.params, "component_ref");
+        const { returnCode, parameters } = registry.getParameter(ref);
+        send(socket, resultResponse(request.id, {
+          return_code: returnCode,
+          results: parameters.map((p) => ({
+            name: p.name,
+            data_type_ref: p.data_type_ref,
+            value: p.value,
+          })),
+        }));
+        return;
+      }
       send(socket, queryResponse(request.id, request.params));
       return;
+    }
 
     // Event interface
     case "rois.event.subscribe":

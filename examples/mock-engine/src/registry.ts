@@ -146,8 +146,9 @@ export class ComponentRegistry {
   /**
    * Reserve a component for exclusive use.
    *
-   * Returns OK if the component exists and is not already bound. Returns ERROR
-   * if the component does not exist or is already bound by another client.
+   * Returns OK if the component exists and is not already bound, UNSUPPORTED if
+   * the component does not exist, and OUT_OF_RESOURCES if it is already bound,
+   * matching the Python engine.
    */
   bind(ref: string): ReturnCode {
     const entry = this.components.get(ref);
@@ -155,7 +156,7 @@ export class ComponentRegistry {
       return "UNSUPPORTED";
     }
     if (entry.bound) {
-      return "ERROR";
+      return "OUT_OF_RESOURCES";
     }
     entry.bound = true;
     return "OK";
