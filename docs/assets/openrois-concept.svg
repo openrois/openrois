@@ -1,4 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" width="960" height="420" role="img" aria-labelledby="title desc">
+  <title id="t">What OpenRoIS changes</title>
+  <desc id="d">Left: without a standard interface, N applications are each integrated against M platforms, N times M integrations. Right: with OpenRoIS, applications speak the RoIS interfaces over JSON-RPC 2.0 to a gateway (main HRI Engine), and each platform is integrated once by an adapter (sub HRI Engine) through the Component Contract, N plus M integrations.</desc>
   <title id="title">What OpenRoIS changes</title>
   <desc id="desc">Without a standard interface, every application is integrated against every platform, which is N times M integrations. With OpenRoIS, applications use the RoIS interfaces through one gateway and each platform is integrated once by an adapter, which is N plus M integrations.</desc>
   <defs>
