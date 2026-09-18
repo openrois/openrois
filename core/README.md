@@ -1,4 +1,4 @@
-# openrois-Core
+# openrois-core
 
 The recursive RoIS HRI Engine, with its WebSocket server and client.
 
