@@ -34,11 +34,19 @@ pip install -e ./core
 As a gateway:
 
 ```python
+import asyncio
+
 from openrois_core import Engine, WsServer
 
-engine = Engine(engine_id="gateway", platform="", enforce_bindings=True)
-server = WsServer(engine)
-await server.start(host="0.0.0.0", port=8765)
+
+async def main() -> None:
+    server = WsServer(Engine(engine_id="gateway", platform="", enforce_bindings=True))
+    await server.start("0.0.0.0", 8765)
+    # start() returns once the server is listening, so keep the loop alive.
+    await asyncio.Event().wait()
+
+
+asyncio.run(main())
 ```
 
 As an adapter:

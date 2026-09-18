@@ -145,23 +145,24 @@ import { RoISClient } from "@openrois/sdk";
 
 const client = await RoISClient.connect("ws://localhost:8765");
 
-// Discover the components offered by every connected robot.
+// Discover the components offered by every connected robot, then pick one by type.
 const refs = await client.search();
+const nav = refs.find((ref) => ref.includes("Navigation"))!;
 
 // Query state synchronously.
-const status = await client.query("robot_1/Navigation", "component_status");
+const status = await client.query(nav, "component_status");
 
 // Subscribe to events.
 client.on("reached_target", (notification) => console.log(notification.params));
-await client.subscribe("robot_1/Navigation", "reached_target");
+await client.subscribe(nav, "reached_target");
 
 // Reserve an actuation component, command it, then release it.
-await client.bind("robot_1/Navigation");
-await client.setParameter("robot_1/Navigation", [
+await client.bind(nav);
+await client.setParameter(nav, [
   { name: "target_positions", data_type_ref: "string[]", value: '["kitchen"]' },
 ]);
-await client.execute("robot_1/Navigation", { command_type: "start" });
-await client.release("robot_1/Navigation");
+await client.execute(nav, { command_type: "start" });
+await client.release(nav);
 
 await client.disconnect();
 ```

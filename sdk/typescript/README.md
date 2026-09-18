@@ -32,10 +32,10 @@ Node.js.
 import { RoISClient } from "@openrois/sdk";
 
 const client = await RoISClient.connect("ws://localhost:8765");
-const nav = "robot_1/Navigation";
 
-// Discover what is connected.
+// Discover what is connected, then pick a component by type.
 const refs = await client.search();
+const nav = refs.find((ref) => ref.includes("Navigation"))!;
 
 // Read state.
 const status = await client.query(nav, "component_status");
