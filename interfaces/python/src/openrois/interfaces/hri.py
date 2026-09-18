@@ -50,9 +50,10 @@ class ReturnCode(StrEnum):
 class CommandType(StrEnum):
     """Command operation type for RoIS commands.
 
-    Not an IDL enum — the IDL uses plain `string` for command_type. OpenRoIS
+    Not an IDL enum: the IDL uses plain `string` for command_type. OpenRoIS
     defines this enum for compile-time safety. The wire values match the
-    RoIS_Common::Command method names plus `set_parameter` and `execute`.
+    RoIS_Common::Command method names plus `set_parameter` and `execute`, and
+    the stream control commands of the Audio and Video Streaming profiles.
     """
 
     START = "start"
@@ -61,6 +62,10 @@ class CommandType(StrEnum):
     RESUME = "resume"
     SET_PARAMETER = "set_parameter"
     EXECUTE = "execute"
+    CONNECT_STREAM = "connect_stream"
+    DISCONNECT_STREAM = "disconnect_stream"
+    SUSPEND_STREAM = "suspend_stream"
+    RESUME_STREAM = "resume_stream"
 
 
 # ---------------------------------------------------------------------------

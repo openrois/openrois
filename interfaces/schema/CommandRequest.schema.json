@@ -35,14 +35,18 @@
       "type": "string"
     },
     "CommandType": {
-      "description": "Command operation type for RoIS commands.\n\nNot an IDL enum — the IDL uses plain `string` for command_type. OpenRoIS\ndefines this enum for compile-time safety. The wire values match the\nRoIS_Common::Command method names plus `set_parameter` and `execute`.",
+      "description": "Command operation type for RoIS commands.\n\nNot an IDL enum: the IDL uses plain `string` for command_type. OpenRoIS\ndefines this enum for compile-time safety. The wire values match the\nRoIS_Common::Command method names plus `set_parameter` and `execute`, and\nthe stream control commands of the Audio and Video Streaming profiles.",
       "enum": [
         "start",
         "stop",
         "suspend",
         "resume",
         "set_parameter",
-        "execute"
+        "execute",
+        "connect_stream",
+        "disconnect_stream",
+        "suspend_stream",
+        "resume_stream"
       ],
       "title": "CommandType",
       "type": "string"

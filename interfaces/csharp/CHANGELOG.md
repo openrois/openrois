@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `CommandType` gains the Streaming Interface commands: `connect_stream`, `disconnect_stream`, `suspend_stream`, and `resume_stream`.
+
 ### Changed
 
 - Renamed `IBusAdapter` to `IComponentContract` and `BusAdapterError` to `ComponentContractError`, matching the Python source of truth and the paper. The old names remain, marked obsolete, for one alpha release.

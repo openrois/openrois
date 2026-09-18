@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `CommandType` gains the Streaming Interface commands: `connect_stream`, `disconnect_stream`, `suspend_stream`, and `resume_stream`.
+
 ### Changed
 
 - Renamed `BusAdapterError` to `ComponentContractError` to match the `ComponentContract` protocol and the paper. `BusAdapterError` remains as a deprecated alias for one alpha release.
