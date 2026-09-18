@@ -77,6 +77,13 @@ jobs:
         run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Point the SDK at the published interfaces package
+        # In the repository the SDK links the interfaces package by path, which
+        # a consumer cannot resolve. The published package depends on the version.
+        working-directory: sdk/typescript
+        run: |
+          version="$(node -p "require('../../interfaces/typescript/package.json').version")"
+          npm pkg set "dependencies.@openrois/interfaces=$version"
       - name: Publish @openrois/sdk
         working-directory: sdk/typescript
         run: npm publish --access public --provenance

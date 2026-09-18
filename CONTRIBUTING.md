@@ -341,7 +341,8 @@ To release:
 1. Bump the version in every manifest (the check script lists them) and move the
    `Unreleased` entries of each `CHANGELOG.md` under the new version and date.
 2. Open a pull request with those changes, merge it into `dev`.
-3. Tag the merge commit `v<version>` (for example `v0.1.0a3`) and push the tag.
+3. Tag the merge commit `v<version>` with the SemVer spelling that `CITATION.cff` uses (for
+   example `v0.1.0-alpha.3`) and push the tag.
 
 The `Release` workflow verifies that the tag matches `CITATION.cff`, builds the five Python
 packages and publishes them to PyPI through trusted publishing, builds and publishes
