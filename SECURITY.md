@@ -35,10 +35,12 @@ documented at [openrois.org](https://openrois.org/docs/concepts/security).
 
 Please **do not open a public issue** for a security problem.
 
-1. Preferred: report privately through GitHub, using
-   [private vulnerability reporting](https://github.com/openrois/openrois/security/advisories/new)
-   on this repository.
-2. Alternative: email **info@coarobo.com** with the subject "OpenRoIS security report".
+Email **info@coarobo.com** with the subject "OpenRoIS security report".
+
+GitHub private vulnerability reporting is intentionally not enabled yet. The alpha
+releases implement the message-passing framework only, and access control sits outside
+the middleware, so advisory reports would not describe an OpenRoIS defect. It will be
+enabled when authentication and session management land (roadmap Phase 9).
 
 Please include the affected component and version or commit, a description of the issue,
 the steps to reproduce it, and the impact you expect.

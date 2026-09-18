@@ -7,5 +7,5 @@ contact_links:
     url: https://openrois.org/docs/project/roadmap
     about: Check whether what you need is already planned, and which phase it belongs to.
   - name: Report a security issue
-    url: https://github.com/openrois/openrois/security/advisories/new
-    about: Report vulnerabilities privately instead of opening a public issue.
+    url: https://github.com/openrois/openrois/blob/dev/SECURITY.md
+    about: Email the maintainers instead of opening a public issue. See the security policy.
