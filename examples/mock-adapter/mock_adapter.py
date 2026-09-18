@@ -91,6 +91,9 @@ class Navigation:
         logger.info("Navigate to: %s", target)
         self._busy = True
         self._target = target
+        # Simulate the drive: five seconds later the target is reached, the
+        # event goes to subscribers, and the command completes for its caller.
+        asyncio.get_running_loop().create_task(self._fire_reached())
         return InvokeResponse(return_code=ReturnCode.OK, command_id="cmd-nav")
 
     @invoke("stop")
@@ -100,9 +103,8 @@ class Navigation:
 
     @subscribe("reached_target")
     async def on_reached(self):
-        # Fire a reached_target event after 5 seconds.
-        loop = asyncio.get_event_loop()
-        loop.create_task(self._fire_reached())
+        # Nothing to set up: navigate() emits the event when the drive ends.
+        pass
 
     async def _fire_reached(self):
         await asyncio.sleep(5.0)
@@ -114,7 +116,9 @@ class Navigation:
                 target=self._target, is_final_target=True,
             ),
         )
-        logger.info("Fired reached_target event")
+        # The command that started this navigation is done: tell its caller.
+        await self.parent.complete_async("cmd-nav", "OK")  # type: ignore[attr-defined]
+        logger.info("Fired reached_target event and completed cmd-nav")
 
 
 # ─── ObjectDetection ────────────────────────────────────────
@@ -191,6 +195,9 @@ class ObjectManipulation:
         command = _param(parameters, "command", "unknown")
         logger.info("Manipulation: %s", command)
         self._busy = True
+        # Simulate the grasp: four seconds later the event fires and the
+        # command completes.
+        asyncio.get_running_loop().create_task(self._fire_complete())
         return InvokeResponse(return_code=ReturnCode.OK, command_id="cmd-manip")
 
     @invoke("stop")
@@ -200,9 +207,8 @@ class ObjectManipulation:
 
     @subscribe("manipulation_complete")
     async def on_complete(self):
-        # Fire a manipulation_complete event after 4 seconds.
-        loop = asyncio.get_event_loop()
-        loop.create_task(self._fire_complete())
+        # Nothing to set up: execute() emits the event when the grasp ends.
+        pass
 
     async def _fire_complete(self):
         await asyncio.sleep(4.0)
@@ -212,7 +218,8 @@ class ObjectManipulation:
             "manipulation_complete",
             results.manipulation_complete(success=True, detail="grasp succeeded"),
         )
-        logger.info("Fired manipulation_complete event")
+        await self.parent.complete_async("cmd-manip", "OK")  # type: ignore[attr-defined]
+        logger.info("Fired manipulation_complete event and completed cmd-manip")
 
 
 # ─── Registration ────────────────────────────────────────────

@@ -117,9 +117,15 @@ class Navigation:
     async def on_reached(self):
         # Called once when an operator subscribes.
         # Do setup here if needed (e.g., start monitoring).
-        # Use self.parent.emit_async("Navigation", "reached_target",
-        #     results.reached_target(...))
-        # to push events when navigation completes.
+        # Push events when navigation completes, from the asyncio loop:
+        #   await self.parent.emit_async("Navigation", "reached_target",
+        #       results.reached_target(...))
+        # From a background thread (a ROS 2 callback), use the thread-safe
+        #   self.parent.emit(...) instead.
+        # When the command that started the navigation is done, report it so
+        # the caller receives rois.command.completed:
+        #   await self.parent.complete_async(command_id, "OK")
+        # (thread-safe variant: self.parent.complete(command_id, "OK"))
         pass
 
 
@@ -161,9 +167,9 @@ class ObjectDetection:
     @subscribe("object_detected")
     async def on_object_detected(self):
         # Called once when an operator subscribes.
-        # Use self.parent.emit_async("ObjectDetection", "object_detected",
-        #     results.detection(...))
-        # to push events when new detections arrive.
+        # Push events when new detections arrive:
+        #   await self.parent.emit_async("ObjectDetection", "object_detected",
+        #       results.detection(...))
         pass
 
 
