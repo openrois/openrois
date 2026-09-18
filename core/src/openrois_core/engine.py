@@ -209,6 +209,23 @@ def _bare_ref(component_ref: str) -> str:
     return component_ref.split("/", 1)[1] if "/" in component_ref else component_ref
 
 
+def parameter_profile(raw: dict[str, Any]) -> dict[str, Any]:
+    """Normalize a decorator parameter dict to the RoIS ParameterProfile shape.
+
+    Components declare data_type_ref as a plain code ("string[]"); the profile
+    carries a RoISIdentifierType.
+    """
+    ref = raw.get("data_type_ref", "")
+    if not isinstance(ref, dict):
+        ref = {"authority": "", "code": str(ref), "codebook_ref": "", "version": ""}
+    return {
+        "name": str(raw.get("name", "")),
+        "data_type_ref": ref,
+        "default_value": str(raw.get("default_value", "")),
+        "description": str(raw.get("description", "")),
+    }
+
+
 def _to_parameters(raw: list[Any]) -> list[Parameter]:
     """Validate raw parameter dicts into Parameter models.
 
@@ -470,11 +487,14 @@ class ComponentRegistry:
                     "codebook_ref": "",
                     "version": "",
                 },
+                "name": ref,
+                # OpenRoIS extension: the RoSO function class, which the gateway
+                # uses to decide whether a component needs a reservation.
                 "function": meta.function.value if meta.function else None,
-                "query_profiles": [{"name": q} for q in meta.queries],
-                "command_profiles": [{"name": c} for c in meta.invokes],
-                "event_profiles": [{"name": e} for e in meta.subscribes],
-                "parameter_profiles": meta.parameters,
+                "query_profiles": [{"name": q, "results": []} for q in meta.queries],
+                "command_profiles": [{"name": c, "results": []} for c in meta.invokes],
+                "event_profiles": [{"name": e, "results": []} for e in meta.subscribes],
+                "parameter_profiles": [parameter_profile(p) for p in meta.parameters],
             })
         return {
             "component_ids": component_ids,
@@ -1102,7 +1122,7 @@ class Engine:
                     "event_profiles": [
                         {"name": name, "results": []} for name in c.get("events", [])
                     ],
-                    "parameter_profiles": c.get("parameters", []),
+                    "parameter_profiles": [parameter_profile(p) for p in c.get("parameters", [])],
                 })
 
         return {

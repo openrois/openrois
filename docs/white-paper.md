@@ -1925,8 +1925,12 @@ An implementation claiming RoIS conformance shall:
 
 OpenRoIS targets full conformance. The interface types are cross-checked against the
 normative XML profiles and validated against `XML-Profiles.xsd` by the test suite. A
-conformance test suite that asserts behavior against the specification's interfaces
-and profiles, run against every adapter, is planned.
+conformance suite (`openrois_components_core.conformance`) drives any engine through the
+RoIS operations and reports every component that breaks a rule: invalid profile,
+unanswered query, missing `component_status`, missing lifecycle commands, a
+`set_parameter` that does not round-trip, an event that refuses a subscription, or an
+invented message name on a basic component. The reference components and the mock
+adapter pass it in continuous integration.
 
 ---
 

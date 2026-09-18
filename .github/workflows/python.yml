@@ -32,3 +32,5 @@ jobs:
         run: cd interfaces/python && pytest -q
       - name: Test the engine core
         run: cd core && pytest -q
+      - name: Test the component framework and the conformance suite
+        run: cd components/core && pytest -q

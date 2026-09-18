@@ -56,10 +56,6 @@ class SystemInformation:
     async def robot_position(self):
         return results.position(x=3.2, y=1.8, theta=0.5)
 
-    @query("battery_level")
-    async def battery_level(self):
-        return results.battery_level(percentage=85.5)
-
     @query("component_status")
     async def status(self):
         return results.status("READY")
@@ -67,29 +63,43 @@ class SystemInformation:
 
 # ─── Navigation ──────────────────────────────────────────────
 
-@component("Navigation", function="actuation")
+@component(
+    "Navigation",
+    function="actuation",
+    parameters=[{"name": "target_positions", "data_type_ref": "string[]", "default_value": "[]"}],
+)
 class Navigation:
 
     def __init__(self, config: dict) -> None:
         self._busy = False
         self._target = ""
 
-    @query("waypoints")
-    async def get_waypoints(self):
-        return results.waypoints([
-            {"id": "desk", "name": "desk", "x": 2.0, "y": 1.5, "theta": 0.0},
-            {"id": "kitchen", "name": "kitchen", "x": 5.0, "y": 3.0, "theta": 1.57},
-        ])
-
     @query("component_status")
     async def status(self):
         return results.status("BUSY" if self._busy else "READY")
+
+    @invoke("set_parameter")
+    async def set_parameter(self, parameters):
+        self._target = _param(parameters, "target_positions", self._target)
+        return InvokeResponse(return_code=ReturnCode.OK, command_id="")
+
+    @invoke("start")
+    async def start(self, parameters):
+        return await self.navigate(parameters)
+
+    @invoke("suspend")
+    async def suspend(self, parameters):
+        return InvokeResponse(return_code=ReturnCode.OK, command_id="")
+
+    @invoke("resume")
+    async def resume(self, parameters):
+        return InvokeResponse(return_code=ReturnCode.OK, command_id="")
 
     @invoke("execute")
     async def navigate(self, parameters):
         if self._busy:
             return InvokeResponse(return_code=ReturnCode.ERROR, command_id="")
-        target = _param(parameters, "target_positions", "unknown")
+        target = _param(parameters, "target_positions", self._target or "unknown")
         logger.info("Navigate to: %s", target)
         self._busy = True
         self._target = target
@@ -205,6 +215,18 @@ class ObjectManipulation:
     @invoke("stop")
     async def stop(self, parameters):
         self._busy = False
+        return InvokeResponse(return_code=ReturnCode.OK, command_id="")
+
+    @invoke("start")
+    async def start(self, parameters):
+        return await self.execute(parameters)
+
+    @invoke("suspend")
+    async def suspend(self, parameters):
+        return InvokeResponse(return_code=ReturnCode.OK, command_id="")
+
+    @invoke("resume")
+    async def resume(self, parameters):
         return InvokeResponse(return_code=ReturnCode.OK, command_id="")
 
     @subscribe("manipulation_complete")

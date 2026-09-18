@@ -31,7 +31,7 @@ components appear, run their queries, and subscribe to their events.
 
 | Component | Behavior |
 |-----------|----------|
-| `SystemInformation` | Fixed position and battery level |
+| `SystemInformation` | Fixed position and engine status |
 | `Navigation` | Accepts a target, reports `BUSY`, then fires `reached_target` and completes the command after 5 seconds |
 | `ObjectDetection` | Lists two detected objects, fires `object_detected` 3 seconds after a subscription |
 | `ObjectManipulation` | Reports gripper state, fires `manipulation_complete` and completes the command 4 seconds after `execute` |
