@@ -27,11 +27,19 @@ pip install -e ./core
 | `EventEmitter` | Delivers events to subscribers |
 | `WsServer` | WebSocket server, for a gateway |
 | `WsClient` | WebSocket client, for an adapter connecting out to a gateway |
+| `openrois_core.gateway` | The gateway process: `serve()` and the `openrois-gateway` command |
 | `read_profile`, `component_config` | Load a profile YAML file and slice per-component configuration out of it |
 
 ## Usage
 
-As a gateway:
+As a gateway, from the command line (also `python -m openrois_core.gateway`, and
+`docker compose up` at the repository root):
+
+```bash
+openrois-gateway --host 0.0.0.0 --port 8765
+```
+
+The same composition in code:
 
 ```python
 import asyncio

@@ -4,15 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openrois-core"
-version = "0.1.0a2"
+version = "0.1.0a3"
 description = "OpenRoIS core: recursive Engine, WebSocket server and client"
 license = "Apache-2.0"
 requires-python = ">=3.12"
 dependencies = [
-    "openrois-interfaces>=0.1.0a2",
+    "openrois-interfaces>=0.1.0a3",
     "websockets>=12.0",
     "pyyaml>=6.0",
 ]
+
+[project.scripts]
+openrois-gateway = "openrois_core.gateway:main"
 
 [project.optional-dependencies]
 dev = [
