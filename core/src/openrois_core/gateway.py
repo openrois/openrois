@@ -191,6 +191,11 @@ async def serve(
     server = WsServer(engine, auth=auth, ssl_context=ssl_context)
     if auth is None:
         logger.warning("Authentication is off: every client on the network can command every robot")
+    if ssl_context is None and host not in ("127.0.0.1", "localhost", "::1"):
+        logger.warning(
+            "TLS is off and the gateway listens on %s: tokens and commands travel in "
+            "plaintext beyond this host. Pass --tls-cert and --tls-key, or bind 127.0.0.1", host,
+        )
     await server.start(host, port)
     stop = stop or asyncio.Event()
     loop = asyncio.get_running_loop()

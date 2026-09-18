@@ -10,7 +10,7 @@ license = "Apache-2.0"
 requires-python = ">=3.12"
 dependencies = [
     "openrois-interfaces>=0.1.0a3",
-    "websockets>=14.0",
+    "websockets>=14.0,<18",
     "pyyaml>=6.0",
     "PyJWT>=2.8",
 ]

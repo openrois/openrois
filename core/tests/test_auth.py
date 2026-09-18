@@ -166,6 +166,11 @@ async def test_viewer_can_read_but_not_command(secured) -> None:
         assert denied["return_code"] == "ERROR"
         error = next(n for n in app.notifications if n["method"] == "rois.system.notify_error")
         assert "rois.command.bind" in error["params"]["message"]
+        # The refusal is on record, like any other engine error.
+        error_id = error["params"]["error_id"]
+        detail = await app.call("rois.system.get_error_detail", error_id=error_id)
+        assert detail["return_code"] == "OK"
+        assert "rois.command.bind" in json.dumps(detail)
 
 
 async def test_operator_can_command_within_scope(secured) -> None:
@@ -188,3 +193,9 @@ async def test_operator_can_command_within_scope(secured) -> None:
             query_type="robot_position",
         )
         assert outside["return_code"] == "ERROR"
+        # bind_any cannot reach past the scope either, whatever the condition says.
+        await app.call("rois.command.release", component_ref="robot_1/Navigation")
+        sneaky = await app.call("rois.command.bind_any", condition="SystemInformation")
+        assert sneaky["return_code"] == "UNSUPPORTED"
+        allowed = await app.call("rois.command.bind_any", condition="")
+        assert allowed == {"return_code": "OK", "component_ref": "robot_1/Navigation"}

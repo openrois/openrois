@@ -17,11 +17,13 @@ for pushing event notifications to subscribed clients.
 from __future__ import annotations
 
 import asyncio
+import fnmatch
 import json
 import logging
 import uuid
 from collections import OrderedDict
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from openrois.interfaces.bus import (
@@ -236,6 +238,49 @@ def _stream_status_of(event_type: str, results: list[Result]) -> StreamStatus | 
         return StreamStatus(_result_value(results, "status"))
     except ValueError:
         return StreamStatus.NOT_CONNECTED
+
+
+def _matches(condition: str, ref: str) -> bool:
+    """Whether a search or bind_any condition selects a component ref.
+
+    RoIS leaves the condition language to the implementation. OpenRoIS matches
+    it against the ref case-insensitively: as a glob when it contains a wildcard
+    ("robot_1/*"), as a substring otherwise ("Navigation" finds
+    "robot_1/Navigation"). An empty condition selects everything.
+    """
+    if not condition:
+        return True
+    if any(c in condition for c in "*?["):
+        return fnmatch.fnmatchcase(ref.lower(), condition.lower())
+    return condition.lower() in ref.lower()
+
+
+def _stream_sink(sink: EventSink, local_id: str, public_id: str) -> EventSink:
+    """Forward the status events of one stream, renamed to the id the client knows."""
+
+    async def forward(envelope: EventEnvelope) -> None:
+        if envelope.event_type == STREAM_STATUS:
+            if _result_value(envelope.payload, "stream_id") != local_id:
+                return
+            payload = [
+                Result(name="stream_id", data_type_ref="string", value=public_id)
+                if r.name == "stream_id" else r
+                for r in envelope.payload
+            ]
+            envelope = envelope.model_copy(update={"payload": payload})
+        await sink(envelope)
+
+    return forward
+
+
+@dataclass
+class _Stream:
+    """A stream the engine opened on behalf of a client."""
+
+    component_ref: str
+    local_id: str  # the id the component knows
+    subscribe_id: str  # the status subscription that routes its events
+    owner: str  # the client that connected it, "" when unknown
 
 
 def _remember(store: OrderedDict[str, Any], key: str, value: Any) -> None:
@@ -990,8 +1035,11 @@ class Engine:
         self._events: OrderedDict[str, EventEnvelope] = OrderedDict()
         self._errors: OrderedDict[str, EventEnvelope] = OrderedDict()
         self._parameters: dict[str, list[Parameter]] = {}
-        # stream_id -> (component_ref, subscribe_id of its status events)
-        self._streams: dict[str, tuple[str, str]] = {}
+        # public stream id -> the stream; the public id is component_ref/local_id so
+        # streams of different adapters never collide at the gateway
+        self._streams: dict[str, _Stream] = {}
+        # subscribe_id -> the client that holds it
+        self._subscription_owners: dict[str, str] = {}
 
         # Local component registry
         self._component_registry = ComponentRegistry()
@@ -1046,6 +1094,33 @@ class Engine:
         ]
         for ref in to_remove:
             del self._bindings[ref]
+        for subscribe_id, owner in list(self._subscription_owners.items()):
+            if owner == client_id:
+                self._subscription_owners.pop(subscribe_id, None)
+
+    async def release_streams(self, client_id: str) -> None:
+        """Disconnect every stream a client connected, once the client is gone."""
+        for public_id, stream in list(self._streams.items()):
+            if stream.owner == client_id:
+                await self._handle_stream_command(
+                    "disconnect_stream", {"stream_id": public_id}, client_id,
+                )
+
+    def stream_component(self, stream_id: str) -> str | None:
+        """The component ref behind a public stream id, for authorization checks."""
+        stream = self._streams.get(stream_id)
+        return stream.component_ref if stream else None
+
+    def remember(self, envelope: EventEnvelope) -> None:
+        """Keep an envelope for the detail queries (get_error_detail and friends)."""
+        if envelope.event_type == COMPLETED:
+            command_id = _result_value(envelope.payload, "command_id")
+            results = [r for r in envelope.payload if r.name != "command_id"]
+            _remember(self._command_results, command_id, results)
+        elif envelope.event_type == NOTIFY_ERROR:
+            _remember(self._errors, envelope.event_id, envelope)
+        else:
+            _remember(self._events, envelope.event_id, envelope)
 
     @property
     def engine_id(self) -> str:
@@ -1084,10 +1159,14 @@ class Engine:
         params: dict[str, Any],
         sink: EventSink | None = None,
         client_id: str | None = None,
+        visible: Callable[[str], bool] | None = None,
     ) -> dict[str, Any]:
         """Dispatch a JSON-RPC method to the appropriate handler.
 
-        Returns a result dict for the JSON-RPC response.
+        ``client_id`` identifies the caller for reservations, subscriptions, and
+        streams; ``visible`` limits which component refs search and bind_any may
+        select (the caller's authorization scope). Returns a result dict for the
+        JSON-RPC response.
         """
         logger.debug("[engine] %s %s", method, json.dumps(params))
         if sink is not None:
@@ -1107,13 +1186,13 @@ class Engine:
             return self._handle_get_error_detail(params)
 
         if method == "rois.command.search":
-            return await self._handle_search()
+            return await self._handle_search(str(params.get("condition", "")), visible)
 
         if method == "rois.command.bind":
             return self._handle_bind(params, client_id)
 
         if method == "rois.command.bind_any":
-            return self._handle_bind_any(params, client_id)
+            return self._handle_bind_any(params, client_id, visible)
 
         if method == "rois.command.release":
             return self._handle_release(params, client_id)
@@ -1134,10 +1213,10 @@ class Engine:
             return await self._handle_query(params)
 
         if method == "rois.event.subscribe":
-            return await self._handle_subscribe(params, sink)
+            return await self._handle_subscribe(params, sink, client_id)
 
         if method == "rois.event.unsubscribe":
-            return await self._handle_unsubscribe(params)
+            return await self._handle_unsubscribe(params, client_id)
 
         if method == "rois.event.get_event_detail":
             return self._handle_get_event_detail(params)
@@ -1150,7 +1229,7 @@ class Engine:
             return await self._handle_stream_command(method.rsplit(".", 1)[1], params, client_id)
 
         if method == "rois.stream.query_stream_status":
-            return await self._handle_query_stream_status(params)
+            return await self._handle_query_stream_status(params, client_id)
 
         return {"return_code": ReturnCode.UNSUPPORTED.value}
 
@@ -1180,20 +1259,37 @@ class Engine:
         ))
         if response.return_code != ReturnCode.OK:
             return {"return_code": response.return_code.value, "stream_id": ""}
-        stream_id = _result_value(response.results, "stream_id") or response.command_id
+        local_id = _result_value(response.results, "stream_id") or response.command_id
+        # Components pick their own ids, and two adapters may pick the same one, so
+        # the client sees an id qualified by the component ref.
+        public_id = f"{component_ref}/{local_id}"
         subscribe_id = ""
         if sink is not None:
+            routed = _stream_sink(sink, local_id, public_id)
             subscribed = await contract.subscribe(SubscribeRequest(
                 component_ref=component_ref, event_type=STREAM_STATUS,
-            ), sink)
+            ), routed)
             subscribe_id = subscribed.subscribe_id
-            contract.track_stream(stream_id, sink)  # type: ignore[attr-defined]
-        self._streams[stream_id] = (component_ref, subscribe_id)
+            contract.track_stream(local_id, routed)  # type: ignore[attr-defined]
+        self._streams[public_id] = _Stream(component_ref, local_id, subscribe_id, client_id or "")
         return {
             "return_code": ReturnCode.OK.value,
-            "stream_id": stream_id,
+            "stream_id": public_id,
             "results": [r.model_dump() for r in response.results if r.name != "stream_id"],
         }
+
+    def _stream_for(self, params: dict[str, Any], client_id: str | None) -> _Stream | None:
+        """The stream a request names, if it exists and the caller may act on it.
+
+        A stream belongs to the client that connected it. Another client gets the
+        same answer as for an unknown id, so ids do not leak what exists.
+        """
+        stream = self._streams.get(str(params.get("stream_id", "")))
+        if stream is None:
+            return None
+        if client_id is not None and stream.owner and stream.owner != client_id:
+            return None
+        return stream
 
     async def _handle_stream_command(
         self,
@@ -1201,39 +1297,43 @@ class Engine:
         params: dict[str, Any],
         client_id: str | None,
     ) -> dict[str, Any]:
-        stream_id = str(params.get("stream_id", ""))
-        entry = self._streams.get(stream_id)
-        if entry is None:
+        stream = self._stream_for(params, client_id)
+        if stream is None:
             return {"return_code": ReturnCode.UNSUPPORTED.value}
-        component_ref, subscribe_id = entry
-        contract = self._contract_for(component_ref)
+        contract = self._contract_for(stream.component_ref)
         if contract is None:
             return {"return_code": ReturnCode.UNSUPPORTED.value}
         response = await contract.invoke(CommandRequest(
-            component_ref=component_ref,
+            component_ref=stream.component_ref,
             command_type=CommandType(operation),
             command_id=str(uuid.uuid4()),
-            parameters=[Parameter(name="stream_id", data_type_ref="string", value=stream_id)],
+            parameters=[
+                Parameter(name="stream_id", data_type_ref="string", value=stream.local_id),
+            ],
         ))
         if operation == "disconnect_stream" and response.return_code == ReturnCode.OK:
-            self._streams.pop(stream_id, None)
-            if subscribe_id:
-                await contract.unsubscribe(subscribe_id)
-            contract.track_stream(stream_id, None)  # type: ignore[attr-defined]
+            self._streams.pop(str(params.get("stream_id", "")), None)
+            if stream.subscribe_id:
+                await contract.unsubscribe(stream.subscribe_id)
+            contract.track_stream(stream.local_id, None)  # type: ignore[attr-defined]
         return {"return_code": response.return_code.value}
 
-    async def _handle_query_stream_status(self, params: dict[str, Any]) -> dict[str, Any]:
-        stream_id = str(params.get("stream_id", ""))
-        entry = self._streams.get(stream_id)
-        if entry is None:
+    async def _handle_query_stream_status(
+        self,
+        params: dict[str, Any],
+        client_id: str | None,
+    ) -> dict[str, Any]:
+        stream = self._stream_for(params, client_id)
+        if stream is None:
             return {"return_code": ReturnCode.UNSUPPORTED.value, "status": ""}
-        contract = self._contract_for(entry[0])
+        contract = self._contract_for(stream.component_ref)
         if contract is None:
             return {"return_code": ReturnCode.UNSUPPORTED.value, "status": ""}
         # The profile's get_stream_status takes the stream_id as its argument; the
         # query condition carries it.
         response = await contract.query(QueryRequest(
-            component_ref=entry[0], query_type="get_stream_status", condition=stream_id,
+            component_ref=stream.component_ref, query_type="get_stream_status",
+            condition=stream.local_id,
         ))
         return {
             "return_code": response.return_code.value,
@@ -1244,26 +1344,25 @@ class Engine:
         """Wrap a sink so every delivered envelope stays available for the detail queries."""
 
         async def record_and_forward(envelope: EventEnvelope) -> None:
-            if envelope.event_type == COMPLETED:
-                command_id = _result_value(envelope.payload, "command_id")
-                results = [r for r in envelope.payload if r.name != "command_id"]
-                _remember(self._command_results, command_id, results)
-            elif envelope.event_type == NOTIFY_ERROR:
-                _remember(self._errors, envelope.event_id, envelope)
-            else:
-                _remember(self._events, envelope.event_id, envelope)
+            self.remember(envelope)
             await sink(envelope)
 
         return record_and_forward
 
     # -- Handlers --
 
-    async def _handle_search(self) -> dict[str, Any]:
-        """Return every component ref: local ones bare, child engine ones prefixed."""
-        local = await self._component_registry.discover(DiscoverRequest())
+    async def _handle_search(
+        self,
+        condition: str = "",
+        visible: Callable[[str], bool] | None = None,
+    ) -> dict[str, Any]:
+        """Return the component refs the condition selects: local ones bare, child
+        engine ones prefixed. See _matches for the condition language."""
+        local = await self._component_registry.discover(DiscoverRequest(condition=condition))
         refs = list(local.component_ref_list)
         for entry in self._sub_engines.values():
             refs.extend(f"{entry['engine_id']}/{c['ref']}" for c in entry["components"])
+        refs = [r for r in refs if _matches(condition, r) and (visible is None or visible(r))]
         return {"return_code": ReturnCode.OK.value, "component_ref_list": refs}
 
     async def _handle_get_profile(self) -> dict[str, Any]:
@@ -1346,16 +1445,14 @@ class Engine:
         self,
         params: dict[str, Any],
         client_id: str | None,
+        visible: Callable[[str], bool] | None = None,
     ) -> dict[str, Any]:
-        """Bind the first free component whose ref matches the condition.
-
-        RoIS leaves the condition language to the implementation. OpenRoIS
-        matches it against the component refs, case-insensitively, so
-        "Navigation" finds "robot_1/Navigation".
-        """
-        condition = str(params.get("condition", "")).lower()
+        """Bind the first free component the condition selects (see _matches),
+        among those the caller may see."""
+        condition = str(params.get("condition", ""))
         candidates = [
-            ref for ref in self._all_refs() if condition in ref.lower()
+            ref for ref in self._all_refs()
+            if _matches(condition, ref) and (visible is None or visible(ref))
         ]
         if not candidates:
             return {"return_code": ReturnCode.UNSUPPORTED.value, "component_ref": ""}
@@ -1535,6 +1632,7 @@ class Engine:
         self,
         params: dict[str, Any],
         sink: EventSink | None,
+        client_id: str | None = None,
     ) -> dict[str, Any]:
         component_ref = str(params.get("component_ref", ""))
         if sink is None:
@@ -1548,10 +1646,21 @@ class Engine:
             event_type=str(params.get("event_type", "")),
             condition=str(params.get("condition", "")),
         ), sink)
+        if response.subscribe_id:
+            self._subscription_owners[response.subscribe_id] = client_id or ""
         return response.model_dump(mode="json")
 
-    async def _handle_unsubscribe(self, params: dict[str, Any]) -> dict[str, Any]:
+    async def _handle_unsubscribe(
+        self,
+        params: dict[str, Any],
+        client_id: str | None,
+    ) -> dict[str, Any]:
         subscribe_id = str(params.get("subscribe_id", ""))
+        owner = self._subscription_owners.get(subscribe_id, "")
+        if client_id is not None and owner and owner != client_id:
+            # Another client's subscription: refuse, without confirming it exists.
+            return {"return_code": ReturnCode.UNSUPPORTED.value}
+        self._subscription_owners.pop(subscribe_id, None)
         if self._component_registry.owns_subscription(subscribe_id):
             code = await self._component_registry.unsubscribe(subscribe_id)
             return {"return_code": code.value}

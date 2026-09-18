@@ -145,14 +145,32 @@ class WsServer:
         return None
 
     def _authorized(self, ws: Any, method: str, params: dict[str, Any]) -> bool:
-        """Whether the connection may call the method on the referenced component."""
+        """Whether the connection may call the method on the referenced component.
+
+        Subscriptions belong to the connection that made them, with or without
+        authentication. With authentication, the principal's role decides the
+        method and its scope decides the component, which for stream operations
+        is the component behind the stream id.
+        """
+        if method == "rois.event.unsubscribe" and self._held_by_another(ws, params):
+            return False
         principal = self._principals.get(ws)
         if principal is None:
             return self._auth is None
         if not principal.may_call(method):
             return False
         ref = str(params.get("component_ref", ""))
+        if not ref and method.startswith("rois.stream."):
+            ref = self._engine.stream_component(str(params.get("stream_id", ""))) or ""
         return not ref or principal.may_see(ref)
+
+    def _held_by_another(self, ws: Any, params: dict[str, Any]) -> bool:
+        subscribe_id = str(params.get("subscribe_id", ""))
+        return any(
+            subscribe_id in held
+            for other, held in self._client_subscriptions.items()
+            if other is not ws
+        )
 
     def _scoped(self, ws: Any, method: str, result: dict[str, Any]) -> dict[str, Any]:
         """Hide components outside the caller's scope from search and profile answers."""
@@ -304,12 +322,18 @@ class WsServer:
                     try:
                         if not self._authorized(ws, method, params):
                             result = {"return_code": "ERROR"}
-                            await sink(error_envelope(
+                            refused = error_envelope(
                                 ErrorType.ENGINE_INTERNAL_ERROR,
                                 f"not authorized to call {method}",
-                            ))
+                            )
+                            self._engine.remember(refused)  # get_error_detail can explain
+                            await sink(refused)
                         else:
-                            result = await self._engine.dispatch(method, params, sink, client_id)
+                            principal = self._principals.get(ws)
+                            result = await self._engine.dispatch(
+                                method, params, sink, client_id,
+                                visible=principal.may_see if principal else None,
+                            )
                             result = self._scoped(ws, method, result)
                         self._track_subscription(ws, method, params, result)
                         await ws.send(json.dumps({
@@ -329,6 +353,8 @@ class WsServer:
                 # A notification from the client: only unsubscribe is meaningful.
                 if has_method and not has_id and msg["method"] == "rois.event.unsubscribe":
                     params = msg.get("params", {})
+                    if not self._authorized(ws, "rois.event.unsubscribe", params):
+                        continue
                     result = await self._engine.dispatch(
                         "rois.event.unsubscribe", params, sink, client_id,
                     )
@@ -337,6 +363,10 @@ class WsServer:
         except websockets.ConnectionClosed:
             pass
         finally:
+            try:
+                await self._engine.release_streams(client_id)
+            except Exception as exc:
+                logger.warning("Cleanup of streams failed: %s", exc)
             self._engine.release_all(client_id)
             self._client_sockets.discard(ws)
             self._principals.pop(ws, None)
