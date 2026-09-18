@@ -192,6 +192,29 @@ describe("RoISClient", () => {
       expect(connectMsg.params).toBeUndefined();
     });
 
+    it("leaves the token out of the URL when a custom factory owns the upgrade", async () => {
+      const seen: string[] = [];
+      const options: ClientOptions = {
+        token: "secret",
+        transport: {
+          webSocketFactory: (url: string) => {
+            seen.push(url);
+            currentMock = new MockWebSocket();
+            return currentMock as any;
+          },
+        },
+      };
+      const connectPromise = RoISClient.connect("ws://test-gateway:8765", options);
+      currentMock.simulateOpen();
+      for (let i = 0; i < 5; i++) {
+        await Promise.resolve();
+      }
+      respondWithResult(currentMock, { return_code: "OK" });
+      await connectPromise;
+      // The factory sends the token as a header itself; a URL would leak it to logs.
+      expect(seen).toEqual(["ws://test-gateway:8765"]);
+    });
+
     it("rejects if the gateway returns a non-OK return code", async () => {
       const connectPromise = RoISClient.connect("ws://test-gateway:8765", testOptions);
       currentMock.simulateOpen();

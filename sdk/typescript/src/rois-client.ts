@@ -86,9 +86,10 @@ export interface ClientOptions {
    *
    * The token is never part of a RoIS message. It is presented at the
    * WebSocket upgrade as the `token` query parameter, which is what a
-   * browser can send (the WebSocket API cannot set headers). A custom
-   * `transport.webSocketFactory` may attach it as an `Authorization: Bearer`
-   * header instead; the gateway accepts both.
+   * browser can send (the WebSocket API cannot set headers). When a custom
+   * `transport.webSocketFactory` is given, the token is not put in the URL:
+   * the factory attaches it as an `Authorization: Bearer` header itself, and
+   * the gateway accepts both.
    */
   token?: string;
 
@@ -239,8 +240,11 @@ export class RoISClient extends EventEmitter {
     const transport = new WebSocketTransport(options?.transport);
 
     // Step 2: Open the WebSocket connection, presenting the token at the
-    // upgrade as a query parameter (browsers cannot set upgrade headers).
-    await transport.connect(withToken(url, options?.token));
+    // upgrade as a query parameter (browsers cannot set upgrade headers). A
+    // custom webSocketFactory owns the upgrade and may send the token as an
+    // Authorization header instead, so the URL is left untouched for it.
+    const factoryOwnsUpgrade = options?.transport?.webSocketFactory !== undefined;
+    await transport.connect(factoryOwnsUpgrade ? url : withToken(url, options?.token));
 
     // Step 3: Create the client.
     const client = new RoISClient(transport);
