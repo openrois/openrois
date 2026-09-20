@@ -54,6 +54,16 @@ from openrois.interfaces.components.person_detection import (
     PersonDetectedEvent,
     PersonDetectionStatusResult,
 )
+from openrois.interfaces.components.person_identification import (
+    PersonIdentifiedEvent,
+    PersonIdentificationStatusResult,
+    PersonIdentifier,
+)
+from openrois.interfaces.components.person_localization import (
+    PersonLocalizedEvent,
+    PersonLocalizationStatusResult,
+    PersonPosition,
+)
 from openrois.interfaces.components.system_information import (
     SystemInformationEngineStatusResult,
     SystemInformationRobotPositionResult,
@@ -124,6 +134,14 @@ MODELS: list[type[BaseModel]] = [
     # components/person_detection
     PersonDetectedEvent,
     PersonDetectionStatusResult,
+    # components/person_identification
+    PersonIdentifiedEvent,
+    PersonIdentificationStatusResult,
+    PersonIdentifier,
+    # components/person_localization
+    PersonLocalizedEvent,
+    PersonLocalizationStatusResult,
+    PersonPosition,
     # components/navigation
     NavigationSetParameter,
     NavigationSetParameterResult,
@@ -190,8 +208,14 @@ MODULE_MAP: dict[type, str] = {
     EventEnvelope: "bus",
     # components/person_detection
     PersonDetectedEvent: "components/person-detection",
-    PersonDetectionStatusResult: "components/person-detection",
-    # components/navigation
+    PersonDetectionStatusResult: "components/person-detection",    # components/person-identification
+    PersonIdentifiedEvent: "components/person-identification",
+    PersonIdentificationStatusResult: "components/person-identification",
+    PersonIdentifier: "components/person-identification",
+    # components/person-localization
+    PersonLocalizedEvent: "components/person-localization",
+    PersonLocalizationStatusResult: "components/person-localization",
+    PersonPosition: "components/person-localization",    # components/navigation
     NavigationSetParameter: "components/navigation",
     NavigationSetParameterResult: "components/navigation",
     NavigationGetParameterResult: "components/navigation",

@@ -258,3 +258,83 @@ def current_grasped_object(object_id: str) -> list[Result]:
     return [
         Result(name="object_id", data_type_ref="string", value=object_id),
     ]
+
+
+def person_detected(timestamp: str, number: int) -> list[Result]:
+    """Build a person_detected event Result list.
+
+    Matches the RoIS PersonDetection IDL: person_detected(timestamp, number).
+
+    Args:
+        timestamp: ISO 8601 datetime when the detection was measured.
+        number: Number of detected persons in the current observation.
+
+    Returns:
+        A list of 2 Result objects (timestamp, number).
+    """
+    return [
+        Result(name="timestamp", data_type_ref="DateTime", value=timestamp),
+        Result(name="number", data_type_ref="int", value=str(number)),
+    ]
+
+
+def person_localized(
+    timestamp: str,
+    positions: list[dict[str, object]],
+) -> list[Result]:
+    """Build a person_localized event Result list.
+
+    Matches the RoIS PersonLocalization IDL:
+    person_localized(timestamp, number, positions).
+
+    Each position dict must have: id (str), x (float), y (float),
+    z (float) — in the robot body frame (REP-103: +x forward, +y left,
+    +z up), meters.
+
+    Args:
+        timestamp: ISO 8601 datetime when the positions were measured.
+        positions: List of per-person position dicts.
+
+    Returns:
+        A list of 3 Result objects (timestamp, number, positions).
+    """
+    return [
+        Result(name="timestamp", data_type_ref="DateTime", value=timestamp),
+        Result(name="number", data_type_ref="int", value=str(len(positions))),
+        Result(
+            name="positions",
+            data_type_ref="PersonPosition[]",
+            value=json.dumps(positions, ensure_ascii=False),
+        ),
+    ]
+
+
+def person_identified(
+    timestamp: str,
+    identifiers: list[dict[str, object]],
+) -> list[Result]:
+    """Build a person_identified event Result list.
+
+    Matches the RoIS PersonIdentification IDL:
+    person_identified(timestamp, number, identifiers).
+
+    Each identifier dict must have: id (str), name (str, optional).
+    The IDs are session-scoped tracking IDs, not persistent personal
+    identities.
+
+    Args:
+        timestamp: ISO 8601 datetime when the identification was measured.
+        identifiers: List of per-person identifier dicts.
+
+    Returns:
+        A list of 3 Result objects (timestamp, number, identifiers).
+    """
+    return [
+        Result(name="timestamp", data_type_ref="DateTime", value=timestamp),
+        Result(name="number", data_type_ref="int", value=str(len(identifiers))),
+        Result(
+            name="identifiers",
+            data_type_ref="PersonIdentifier[]",
+            value=json.dumps(identifiers, ensure_ascii=False),
+        ),
+    ]

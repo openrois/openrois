@@ -21,6 +21,26 @@ from openrois_core.engine import Engine, SubEngine
 logger = logging.getLogger(__name__)
 
 
+def _ws_path(ws: Any) -> str:
+    """Return the connection's URL path.
+
+    websockets >= 14 (new asyncio API) exposes the path on
+    connection.request.path; the legacy API exposed ws.path.
+    """
+    request = getattr(ws, "request", None)
+    if request is not None:
+        return getattr(request, "path", "/")
+    return getattr(ws, "path", "/")
+
+
+def _ws_is_open(ws: Any) -> bool:
+    """Return True if the connection is open (new and legacy APIs)."""
+    state = getattr(ws, "state", None)
+    if state is not None:
+        return getattr(state, "name", "") == "OPEN"
+    return not getattr(ws, "closed", False)
+
+
 class WsServer:
     """WebSocket server with role-based routing for the OpenRoIS gateway.
 
@@ -82,7 +102,7 @@ class WsServer:
             "params": {},
         })
         for ws in list(self._client_sockets):
-            if not ws.closed:
+            if _ws_is_open(ws):
                 asyncio.ensure_future(ws.send(notification))
 
     async def _handle_connection(self, ws: Any) -> None:
@@ -92,7 +112,7 @@ class WsServer:
         get discovered via rois.command.search. All other paths are
         clients that send RoIS operations.
         """
-        path = getattr(ws, "path", "/")
+        path = _ws_path(ws)
         is_adapter = "/adapter" in path
 
         if is_adapter:
@@ -114,6 +134,13 @@ class WsServer:
 
         sub_engine = SubEngine(ws_send, loop)
 
+        # Run the receive loop in parallel with discover(). The
+        # SubEngine resolves discover()'s future from the responses
+        # arriving on this loop, so it must be running before we await
+        # the discovery handshake (otherwise the response is never
+        # read and discover() deadlocks until timeout).
+        receive_task = asyncio.ensure_future(self._adapter_receive_loop(ws, sub_engine))
+
         try:
             # Pull the adapter's profile via discover.
             await sub_engine.discover()
@@ -130,37 +157,48 @@ class WsServer:
                 sub_engine.engine_id,
                 len(sub_engine.components),
             )
-
-            # Adapter message loop: responses and event notifications.
-            async for raw in ws:
-                try:
-                    msg = json.loads(raw)
-                except json.JSONDecodeError:
-                    logger.warning("Invalid JSON from adapter: %s", raw[:100])
-                    continue
-
-                has_id = "id" in msg
-                has_method = "method" in msg
-
-                # Response: has id, no method.
-                if has_id and not has_method:
-                    sub_engine.handle_response(msg)
-                    continue
-                # Notification: has method, no id.
-                if has_method and not has_id:
-                    if msg["method"] == "rois.event.notify":
-                        self._relay_event_to_clients(msg.get("params", {}))
-                    continue
+            # Keep serving until the adapter disconnects.
+            await receive_task
 
         except websockets.ConnectionClosed:
             pass
         finally:
+            receive_task.cancel()
             logger.info("Adapter %s disconnected", sub_engine.engine_id)
             if sub_engine.engine_id:
                 self._engine.unregister_sub_engine(sub_engine.engine_id)
             sub_engine.detach_websocket()
             self._sub_engines.pop(ws, None)
             self._notify_profile_changed()
+
+    async def _adapter_receive_loop(self, ws: Any, sub_engine: SubEngine) -> None:
+        """Adapter message loop: responses and event notifications.
+
+        Runs concurrently with the discovery handshake so responses
+        are processed as soon as they arrive.
+        """
+        async for raw in ws:
+            try:
+                msg = json.loads(raw)
+            except json.JSONDecodeError:
+                logger.warning("Invalid JSON from adapter: %s", raw[:100])
+                continue
+
+            has_id = "id" in msg
+            has_method = "method" in msg
+
+            # Response: has id, no method.
+            if has_id and not has_method:
+                sub_engine.handle_response(msg)
+                continue
+            # Notification: has method, no id.
+            if has_method and not has_id:
+                if msg["method"] == "rois.event.notify":
+                    # Route through the SubEngine so the event
+                    # reaches the EventSink registered at subscribe
+                    # time (which pushes to the subscribed client).
+                    await sub_engine.handle_notification(msg)
+                continue
 
     async def _handle_client_connection(self, ws: Any) -> None:
         """Handle a client (service application) WebSocket connection."""
@@ -236,6 +274,11 @@ class WsServer:
                 subs.discard(ws)
                 if not subs:
                     self._client_subscriptions.pop(sub_id, None)
+                    # Also drop the sink on the owning sub-engine so
+                    # late events from the adapter do not try to send
+                    # on this closed WebSocket.
+                    for sub_engine in self._sub_engines.values():
+                        sub_engine.remove_event_sink(sub_id)
 
     def _relay_event_to_clients(self, params: dict[str, Any]) -> None:
         """Relay an event notification from an adapter to subscribed clients."""
@@ -248,5 +291,5 @@ class WsServer:
                 "params": params,
             })
             for ws in list(subs):
-                if not ws.closed:
+                if _ws_is_open(ws):
                     asyncio.ensure_future(ws.send(notification))

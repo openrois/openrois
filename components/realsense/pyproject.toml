@@ -1,0 +1,19 @@
+[project]
+name = "openrois-components-realsense"
+version = "0.1.0"
+description = "OpenRoIS components for Intel RealSense cameras (ROS 2 perception pipeline)"
+license = "Apache-2.0"
+requires-python = ">=3.12"
+dependencies = [
+    "openrois-components-core>=0.1.0a2",
+]
+
+[project.optional-dependencies]
+ros2 = ["rclpy"]
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["openrois_components.*"]

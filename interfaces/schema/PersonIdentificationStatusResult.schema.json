@@ -1,0 +1,29 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "ComponentStatus": {
+      "description": "Status of a RoIS component.\n\nMaps to RoIS_Common::Component_Status in the IDL.\n\nUNINITIALIZED: Component has not been initialized.\nREADY: Component is ready to operate.\nBUSY: Component is currently processing.\nWARNING: Component is operational but has a warning condition.\nERROR: Component has encountered an error.",
+      "enum": [
+        "UNINITIALIZED",
+        "READY",
+        "BUSY",
+        "WARNING",
+        "ERROR"
+      ],
+      "title": "ComponentStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Result model for PersonIdentification component_status query.\n\nAttributes:\n    status: Current status of the PersonIdentification component.",
+  "properties": {
+    "status": {
+      "$ref": "#/$defs/ComponentStatus"
+    }
+  },
+  "required": [
+    "status"
+  ],
+  "title": "PersonIdentificationStatusResult",
+  "type": "object"
+}

@@ -1,0 +1,9 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[codz]
+*$py.class
+
+# Local profile (contains machine-specific URLs)
+openrois-profile.yaml
+# Model weights used by the ROS 2 pipeline (large, not part of the example)
+*.pt
