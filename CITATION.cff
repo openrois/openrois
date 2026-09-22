@@ -50,7 +50,11 @@ preferred-citation:
     city: Kobe
     country: JP
   year: 2026
-  notes: Submitted to SII 2027. Preprint on arXiv, forthcoming.
+  doi: 10.48550/arXiv.2609.21178
+  url: "https://arxiv.org/abs/2609.21178"
+  notes: >-
+    Submitted to SII 2027 and under review. Preprint on arXiv as
+    arXiv:2609.21178.
 keywords:
   - RoIS
   - Robotic Interaction Service
