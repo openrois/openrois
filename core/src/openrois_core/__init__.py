@@ -14,12 +14,15 @@ Public API:
 
 from __future__ import annotations
 
+from openrois_core.auth import AuthConfig, Principal
 from openrois_core.config import component_config, read_profile
 from openrois_core.engine import ComponentRegistry, Engine, EventEmitter, SubEngine
 from openrois_core.ws_client import WsClient
 from openrois_core.ws_server import WsServer
 
 __all__ = [
+    "AuthConfig",
+    "Principal",
     "Engine",
     "ComponentRegistry",
     "SubEngine",

@@ -93,7 +93,7 @@ def engine_status(
     Returns:
         A list of 2 Result objects (status, operable_time).
     """
-    from openrois.interfaces.common import ComponentStatus, COMPONENT_STATUS_MAP
+    from openrois.interfaces.common import COMPONENT_STATUS_MAP, ComponentStatus
 
     status_enum = ComponentStatus(status)
     numeric_value = str(COMPONENT_STATUS_MAP[status_enum])
@@ -147,7 +147,7 @@ def status(component_status: str) -> list[Result]:
     Returns:
         A list of 1 Result object (status).
     """
-    from openrois.interfaces.common import ComponentStatus, COMPONENT_STATUS_MAP
+    from openrois.interfaces.common import COMPONENT_STATUS_MAP, ComponentStatus
 
     status_enum = ComponentStatus(component_status)
     numeric_value = str(COMPONENT_STATUS_MAP[status_enum])

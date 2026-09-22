@@ -35,7 +35,6 @@ import {
 import type {
   ReturnCode,
   Result,
-  NotifyEventPayload,
 } from "@openrois/interfaces";
 
 // 4. Local modules

@@ -20,7 +20,7 @@ authors:
 repository-code: "https://github.com/openrois/openrois"
 url: "https://openrois.org/"
 license: Apache-2.0
-version: 0.1.0-alpha.2
+version: 0.1.0-alpha.3
 date-released: "2026-09-18"
 preferred-citation:
   type: conference-paper

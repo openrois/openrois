@@ -1,6 +1,6 @@
 [project]
 name = "openrois-components-kachaka"
-version = "0.1.0"
+version = "0.1.0a3"
 description = "OpenRoIS components for the Kachaka robot"
 license = "Apache-2.0"
 requires-python = ">=3.12"

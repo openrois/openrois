@@ -114,7 +114,11 @@ def component(
     def decorator(cls: type) -> type:
         # Normalize function: accept str, ComponentFunction, or None.
         if function is not None:
-            fn = ComponentFunction(function) if not isinstance(function, ComponentFunction) else function
+            fn = (
+                function
+                if isinstance(function, ComponentFunction)
+                else ComponentFunction(function)
+            )
         else:
             fn = _BASIC_COMPONENT_FUNCTIONS.get(ref)
         setattr(cls, _ROIS_COMPONENT_REF, ref)

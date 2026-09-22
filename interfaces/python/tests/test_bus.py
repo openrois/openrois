@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from openrois.interfaces.bus import (
     BusAdapterError,
     CommandRequest,
+    ComponentContractError,
     ComponentNotFoundError,
     DiscoverRequest,
     DiscoverResponse,
@@ -19,7 +20,14 @@ from openrois.interfaces.bus import (
 from openrois.interfaces.common import StreamStatus
 from openrois.interfaces.components.navigation import NavigationSetParameter
 from openrois.interfaces.components.person_detection import PersonDetectedEvent
-from openrois.interfaces.hri import Argument, CommandUnit, CommandUnitSequence, Parameter, Result, ReturnCode
+from openrois.interfaces.hri import (
+    Argument,
+    CommandUnit,
+    CommandUnitSequence,
+    Parameter,
+    Result,
+    ReturnCode,
+)
 from openrois.interfaces.service import CompletedStatus, ErrorType
 
 # ---------------------------------------------------------------------------
@@ -361,14 +369,14 @@ class TestTypedPayloadMapping:
 # ---------------------------------------------------------------------------
 
 
-class TestBusAdapterError:
+class TestComponentContractError:
     def test_default_return_code(self) -> None:
-        err = BusAdapterError("something went wrong")
+        err = ComponentContractError("something went wrong")
         assert err.message == "something went wrong"
         assert err.return_code == ReturnCode.ERROR
 
     def test_custom_return_code(self) -> None:
-        err = BusAdapterError("not supported", return_code=ReturnCode.UNSUPPORTED)
+        err = ComponentContractError("not supported", return_code=ReturnCode.UNSUPPORTED)
         assert err.return_code == ReturnCode.UNSUPPORTED
 
 
@@ -378,3 +386,8 @@ class TestComponentNotFoundError:
         assert err.component_ref == "robot-a1/unknown"
         assert err.return_code == ReturnCode.UNSUPPORTED
         assert "robot-a1/unknown" in str(err)
+
+
+class TestDeprecatedAlias:
+    def test_bus_adapter_error_is_component_contract_error(self) -> None:
+        assert BusAdapterError is ComponentContractError

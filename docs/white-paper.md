@@ -2,7 +2,7 @@
 
 > **White paper for the R&D community.** This document presents the architecture,
 > design decisions, developer experience, wire protocol, and deployment topologies
-> of OpenRoIS, an open-source middleware implementing the OMG Robotic Interaction
+> of OpenRoIS, a community-driven open-source middleware implementing the OMG Robotic Interaction
 > Service (RoIS) Framework 2.0. It is written for robotics researchers, HRI
 > engineers, and platform integrators evaluating or adopting the RoIS standard.
 >
@@ -69,7 +69,7 @@ component library that demonstrates the full stack working end to end.
 
 **OpenRoIS** is that implementation. It is an open-source, Apache-2.0 licensed
 middleware that implements the OMG RoIS Framework 2.0 and lets service applications
-control **physical robots, virtual avatars, and virtual agents** over the internet
+control **physical robots, virtual avatars, and AI services** over the internet
 through a single, paradigm-neutral SDK.
 
 ### 1.1 Contributions
@@ -259,8 +259,8 @@ adapter IS an engine (a sub HRI Engine), not a separate kind of process. There i
 `Engine` class, one dispatch implementation. See section 4 for the full model.
 
 **Current state:** the Python `openrois_core` package implements the recursive
-`Engine`, and existing adapters run on it. The earlier TypeScript proof of concept
-remains in `gateway/` until Phase 4 of the roadmap retires it.
+`Engine`, and existing adapters run on it. The earlier TypeScript proof of concept is
+retired: `openrois-core` is the only dispatch implementation.
 
 ### 3.6 Package Management Is a Process Feature, Not Engine Logic
 
@@ -368,8 +368,8 @@ with no shared core. The recursive model dissolves this problem:
   spec: the Sub HRI Engine is an engine, not a passive backend.
 
 **Current state:** the Python `openrois_core` package implements this model with a
-single recursive `Engine` class. The TypeScript proof of concept in `gateway/` is
-retired at the end of Phase 4.
+single recursive `Engine` class, and the gateway process (`openrois-gateway`) is
+composed from it. The TypeScript proof of concept is retired.
 
 ### 4.4 the Adapter as a Sub HRI Engine
 
@@ -380,7 +380,7 @@ The adapter process owns three concerns:
    dispatches RoIS calls to component handlers via decorators (`@component`,
    `@query`, `@invoke`, `@subscribe`).
 2. **Gateway connection**: the `WsClient` connects to the gateway over WebSocket,
-   answers the gateway's discovery request (`rois.command.search`), and forwards RoIS calls to
+   answers the gateway's discovery request (`rois.system.get_profile`), and forwards RoIS calls to
    the local `Engine`.
 3. **Backend bridge**: the adapter loads a backend (rclpy, gRPC, IPC) based on its
    profile YAML. Each component owns its own connection to its backend, created in
@@ -1815,7 +1815,7 @@ details, dependency graph, and open decisions.
 | 1 | Engine and Sub HRI Engine | TypeScript proof of concept, `SubEngine` proxy, mock components | done |
 | 2 | Adapter Framework and Components | component framework, reference components, real robot adapter | done |
 | 3 | Client SDKs and First Demonstration | TypeScript SDK and web client done, C# SDK in progress, exit tag `v0.1.0` | in progress |
-| 4 | Recursive Core in Python | one `Engine` class in `openrois_core`, TypeScript proof of concept retired | in progress |
+| 4 | Recursive Core in Python | one `Engine` class in `openrois_core`, TypeScript proof of concept retired | done |
 | 5 | Solidify the Core | harden engine, component framework, package management v0 | planned |
 | 6 | Gateway Process | compose `Engine` + `WsServer` from `openrois_core` | planned |
 | 7 | Adapter Process | compose `Engine` + `WsClient` from `openrois_core` + backend bridge | planned |
@@ -1849,9 +1849,10 @@ Pre-1.0 releases are Alpha, unstable API. Do not use in production until v1.0.
 The type pipeline, the recursive Python engine (`openrois_core`), the component
 framework, reference components, and the TypeScript SDK are built and working, and
 the first end-to-end demonstration runs against a real robot via gRPC. Phase 4
-finishes the migration by hardening the Python core and retiring the TypeScript
-proof of concept, which removes the duplicate dispatch implementation. The C#
-client SDK is in progress.
+finished the migration: the Python core dispatches through the typed Component
+Contract, has a regression test suite, and the TypeScript proof of concept is
+retired, which removed the duplicate dispatch implementation. The C# client SDK is
+in progress.
 
 ---
 
@@ -1924,8 +1925,12 @@ An implementation claiming RoIS conformance shall:
 
 OpenRoIS targets full conformance. The interface types are cross-checked against the
 normative XML profiles and validated against `XML-Profiles.xsd` by the test suite. A
-conformance test suite that asserts behavior against the specification's interfaces
-and profiles, run against every adapter, is planned.
+conformance suite (`openrois_components_core.conformance`) drives any engine through the
+RoIS operations and reports every component that breaks a rule: invalid profile,
+unanswered query, missing `component_status`, missing lifecycle commands, a
+`set_parameter` that does not round-trip, an event that refuses a subscription, or an
+invented message name on a basic component. The reference components and the mock
+adapter pass it in continuous integration.
 
 ---
 
@@ -1970,6 +1975,6 @@ items. Reference components are the natural entry point for new contributors.
 
 ---
 
-*OpenRoIS is an open-source middleware for the OMG RoIS Framework 2.0. Control
-robots, avatars, and virtual agents from one paradigm-neutral SDK. Apache-2.0.
+*OpenRoIS is a community-driven open-source middleware for the OMG RoIS Framework 2.0. Control
+robots, avatars, and AI services from one paradigm-neutral SDK. Apache-2.0.
 Alpha, pre-1.0, unstable API.*

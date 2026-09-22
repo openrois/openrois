@@ -14,18 +14,18 @@ namespace OpenRoIS.Interfaces.Bus
 {
     // ─── Event sink ──────────────────────────────────────────────────────
 
-    /// <summary>Async callback that receives event envelopes from a BusAdapter.</summary>
+    /// <summary>Async callback that receives event envelopes from a Component Contract implementation.</summary>
     public delegate Task EventSink(EventEnvelope envelope);
 
     // ─── Exceptions ──────────────────────────────────────────────────────
 
-    /// <summary>Base error raised by BusAdapter implementations.</summary>
-    public class BusAdapterError : Exception
+    /// <summary>Base error raised by Component Contract implementations.</summary>
+    public class ComponentContractError : Exception
     {
         /// <summary>The RoIS return code associated with this error.</summary>
         public ReturnCode ReturnCode { get; }
 
-        public BusAdapterError(string message, ReturnCode returnCode = ReturnCode.ERROR)
+        public ComponentContractError(string message, ReturnCode returnCode = ReturnCode.ERROR)
             : base(message)
         {
             ReturnCode = returnCode;
@@ -33,7 +33,13 @@ namespace OpenRoIS.Interfaces.Bus
     }
 
     /// <summary>Raised when a component_ref cannot be resolved by the adapter.</summary>
+    /// <remarks>
+    /// Derives from the deprecated <see cref="BusAdapterError"/> during the compatibility
+    /// window so that existing <c>catch (BusAdapterError)</c> blocks keep catching it.
+    /// </remarks>
+#pragma warning disable CS0618
     public class ComponentNotFoundError : BusAdapterError
+#pragma warning restore CS0618
     {
         /// <summary>The component reference that was not found.</summary>
         public string ComponentRef { get; }
@@ -45,14 +51,14 @@ namespace OpenRoIS.Interfaces.Bus
         }
     }
 
-    // ─── BusAdapter interface ────────────────────────────────────────────
+    // ─── Component Contract interface ────────────────────────────────────
 
     /// <summary>
     /// Transport-neutral contract between the RoIS engine and a concrete bus.
-    /// Implementations include UniversalBusAdapter (M1, WS+JSON-RPC), ROS2BusAdapter (M3),
-    /// RosBridgeBusAdapter (future).
+    /// Implementations include a remote child engine reached over WebSocket and JSON-RPC,
+    /// and an in-process component registry.
     /// </summary>
-    public interface IBusAdapter
+    public interface IComponentContract
     {
         /// <summary>Discover components matching the request condition. Maps to CommandIF.search().</summary>
         Task<DiscoverResponse> Discover(DiscoverRequest request);
@@ -68,5 +74,23 @@ namespace OpenRoIS.Interfaces.Bus
 
         /// <summary>Cancel an event subscription. Maps to EventIF.unsubscribe(). Duplicate requests are silently ignored.</summary>
         Task<ReturnCode> Unsubscribe(string subscribeId);
+    }
+
+    // ─── Deprecated names, kept for one alpha release ────────────────────
+
+    /// <summary>Deprecated. Use <see cref="IComponentContract"/>.</summary>
+    [System.Obsolete("Use IComponentContract.")]
+    public interface IBusAdapter : IComponentContract
+    {
+    }
+
+    /// <summary>Deprecated. Use <see cref="ComponentContractError"/>.</summary>
+    [System.Obsolete("Use ComponentContractError.")]
+    public class BusAdapterError : ComponentContractError
+    {
+        public BusAdapterError(string message, ReturnCode returnCode = ReturnCode.ERROR)
+            : base(message, returnCode)
+        {
+        }
     }
 }

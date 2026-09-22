@@ -10,10 +10,12 @@ nested dict so components can access config.get("engine", {}).get("id").
 
 from __future__ import annotations
 
+from typing import Any
+
 import yaml
 
 
-def read_profile(path: str) -> dict:
+def read_profile(path: str) -> dict[str, Any]:
     """Read profile YAML and return a config dict.
 
     Args:
@@ -27,10 +29,11 @@ def read_profile(path: str) -> dict:
         yaml.YAMLError: If the file is not valid YAML.
     """
     with open(path) as f:
-        return yaml.safe_load(f)
+        loaded = yaml.safe_load(f)
+    return dict(loaded) if isinstance(loaded, dict) else {}
 
 
-def component_config(profile: dict, ref: str) -> dict:
+def component_config(profile: dict[str, Any], ref: str) -> dict[str, Any]:
     """Build per-component config dict from profile.
 
     Merges engine section (lowest priority) + environment + per-component

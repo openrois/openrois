@@ -3,34 +3,35 @@
 C# client SDK for [OpenRoIS](https://openrois.org/), an open-source middleware
 implementing the [OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0). Shipped as
 the Unity package `org.openrois.sdk` (assembly `OpenRoIS.Sdk`), targeting Unity 6.5 and
-later as declared in its package manifest.
+later as declared in its package manifest, and usable from any .NET runtime that provides
+`System.Net.WebSockets` (.NET Standard 2.1).
 
-> **In progress.** The JSON-RPC 2.0 layer is available. The high-level `RoISClient`,
-> with callbacks marshaled to the Unity main thread, is being built. Follow
-> [Phase 3 of the roadmap](https://openrois.org/docs/project/roadmap). For a complete
-> client today, use the [TypeScript SDK](../typescript/README.md).
+> **Alpha, pre-1.0, unstable API.** Not yet listed on a package registry. Install from a
+> clone or a Git URL as shown below.
 
 ## What Is Available
 
 | Type | Namespace | Purpose |
 |------|-----------|---------|
-| `JsonRpcBuilder` | `OpenRoIS.Sdk.JsonRpc` | Build JSON-RPC 2.0 request and notification strings |
-| `JsonRpcParser` | `OpenRoIS.Sdk.JsonRpc` | Parse an incoming message into a request, response, error, or notification |
-| `JsonRpcRequest`, `JsonRpcResponse`, `JsonRpcError`, `JsonRpcNotification`, `JsonRpcMessage` | `OpenRoIS.Sdk.JsonRpc` | Message types |
+| `RoISClient` | `OpenRoIS.Sdk` | The client: the System, Command, Query, and Event interfaces as async methods, notifications as events |
+| `RoISValue`, `ExecuteResult`, `EventNotification`, `CommandCompletion`, `ErrorNotification` | `OpenRoIS.Sdk` | The values exchanged with the gateway |
+| `RoISException`, `RpcException` | `OpenRoIS.Sdk` | A RoIS return code other than `OK`, a JSON-RPC error object |
+| `ClientOptions` | `OpenRoIS.Sdk` | Token, request timeout, callback context |
+| `JsonRpcBuilder`, `JsonRpcParser` | `OpenRoIS.Sdk.JsonRpc` | The JSON-RPC 2.0 layer underneath |
 
-The RoIS message types themselves live in
-[`OpenRoIS.Interfaces`](../../interfaces/csharp/README.md) and are generated from the
-canonical JSON Schema.
+The generated RoIS message types live in
+[`OpenRoIS.Interfaces`](../../interfaces/csharp/README.md) for applications that want
+typed models on top of `RoISValue`.
 
 ## Install
 
-Not published to a registry yet. Add the package from a local clone by pointing your
-Unity project manifest at this directory:
+Point your Unity project manifest at this directory (from a clone) or at the repository
+(Git URL):
 
 ```json title="Packages/manifest.json"
 {
   "dependencies": {
-    "org.openrois.sdk": "file:../../openrois/sdk/csharp"
+    "org.openrois.sdk": "https://github.com/openrois/openrois.git?path=sdk/csharp"
   }
 }
 ```
@@ -38,42 +39,58 @@ Unity project manifest at this directory:
 ## Usage
 
 ```csharp
-using OpenRoIS.Sdk.JsonRpc;
+using OpenRoIS.Sdk;
 
-// Build a request and send it over your WebSocket.
-string request = JsonRpcBuilder.CreateRequest(
-    id: "1",
-    method: "rois.command.search",
-    parameters: new { condition = "" });
+var client = await RoISClient.ConnectAsync("ws://localhost:8765");
 
-// Parse whatever comes back.
-JsonRpcMessage message = JsonRpcParser.Parse(received);
-switch (message.Type)
-{
-    case JsonRpcMessageType.Response:
-        // message.Response.Result holds the RoIS result object.
-        break;
-    case JsonRpcMessageType.Notification:
-        // message.Notification.Method, for example "rois.event.notify".
-        break;
-    case JsonRpcMessageType.Error:
-        // message.Error.Error.Code and .Message.
-        break;
-}
+// Discover, then pick a component by type.
+var refs = await client.SearchAsync();
+var nav = refs.Find(r => r.Contains("Navigation"));
+
+// Read state.
+var status = await client.QueryAsync(nav, "component_status");
+
+// React to events and completions. Callbacks run on the thread that called
+// ConnectAsync (Unity's main thread when called from a MonoBehaviour).
+client.EventReceived += e => Debug.Log($"{e.EventType}: {e.Results.Count} results");
+client.CommandCompleted += c => Debug.Log($"{c.CommandId} {c.Status}");
+await client.SubscribeAsync(nav, "reached_target");
+
+// Reserve, command, release.
+await client.BindAsync(nav);
+var executed = await client.ExecuteAsync(nav);
+await client.ReleaseAsync(nav);
+
+await client.DisconnectAsync();
 ```
 
-Until the high-level client lands, the
-[wire protocol reference](https://openrois.org/docs/reference/wire-protocol) documents
-every method, its parameters, and its implementation status.
+A gateway that authenticates takes the token through `ClientOptions.Token`, presented as
+an `Authorization: Bearer` header at the WebSocket upgrade.
+
+| RoIS interface | Methods |
+|----------------|---------|
+| System | `ConnectAsync()`, `DisconnectAsync()`, `GetProfileAsync()`, `GetErrorDetailAsync()` |
+| Command | `SearchAsync()`, `BindAsync()`, `BindAnyAsync()`, `ReleaseAsync()`, `GetParameterAsync()`, `SetParameterAsync()`, `ExecuteAsync()`, `GetCommandResultAsync()` |
+| Query | `QueryAsync()` |
+| Event | `SubscribeAsync()`, `UnsubscribeAsync()`, `GetEventDetailAsync()` |
+| Streaming | `ConnectStreamAsync()`, `DisconnectStreamAsync()`, `SuspendStreamAsync()`, `ResumeStreamAsync()`, `QueryStreamStatusAsync()` |
+
+| Event | Raised for |
+|-------|-----------|
+| `EventReceived` | Every `rois.event.notify` for this client's subscriptions |
+| `CommandCompleted` | `rois.command.completed` for a command this client issued |
+| `ErrorNotified` | `rois.system.notify_error` |
+| `ProfileChanged` | `rois.system.profile_changed`, an adapter connected or left |
+| `Closed` | The connection closed |
+
+`Samples/Example/SampleExample.cs` is a `MonoBehaviour` that runs this flow in a scene.
 
 ## Tests
 
-The package includes Unity Test Framework tests under `Tests/Runtime`. Run them from the
-Unity Test Runner window, or in batch mode:
-
-```bash
-Unity -batchmode -runTests -testPlatform EditMode -projectPath <your project>
-```
+`DotNetTests~` is a plain .NET test project that compiles the runtime sources and drives
+the client against an in-process fake gateway, so the client is verified without the
+Unity editor (`dotnet test DotNetTests~`). Unity ignores the folder because of the `~`
+suffix. `Tests/Runtime` holds the Unity Test Framework tests of the JSON-RPC layer.
 
 ## License
 

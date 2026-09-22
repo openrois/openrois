@@ -7,6 +7,7 @@ the XML definitions — field names, data types, and default values must match.
 This is step 9 of the M0 Task 0.1 plan.
 """
 
+import os
 from pathlib import Path
 
 import pytest
@@ -27,7 +28,16 @@ from openrois.interfaces.profiles import (
 
 # tests/test_xml_crosscheck.py  →  tests/  →  python/  →  interfaces/  →  repo root
 REPO_ROOT = Path(__file__).resolve().parents[3]
-NORMATIVE_DIR = REPO_ROOT / "normative" / "machine-readable"
+# The OMG machine-readable files are not redistributed in this repository. Point
+# OPENROIS_NORMATIVE_DIR at a directory containing them to run these tests.
+NORMATIVE_DIR = Path(
+    os.environ.get("OPENROIS_NORMATIVE_DIR", REPO_ROOT / "normative" / "machine-readable")
+)
+
+pytestmark = pytest.mark.skipif(
+    not NORMATIVE_DIR.is_dir(),
+    reason="normative RoIS files not available (set OPENROIS_NORMATIVE_DIR)",
+)
 
 ROIS_NS = "http://www.omg.org/spec/RoIS/20240801"
 GML_NS = "http://www.opengis.net/gml/3.2"
@@ -54,7 +64,6 @@ def _extract_identifier(root: etree._Element) -> dict:
 
     # The identifier text is the URN, e.g., "urn:x-rois:def:component:OMG::PersonDetection"
     urn = ident_elem.text or ""
-    code_space = ident_elem.get(f"{{{GML_NS}}}codeSpace", "")
 
     # Parse the URN to extract authority and code
     # Format: urn:x-rois:def:component:AUTHORITY::CODE
@@ -122,7 +131,9 @@ def _extract_message_profiles(root: etree._Element) -> tuple[list, list, list]:
 
             results.append({
                 "name": res_name,
-                "data_type_ref": {"authority": "", "code": dt_code, "codebook_ref": "", "version": ""},
+                "data_type_ref": {
+                    "authority": "", "code": dt_code, "codebook_ref": "", "version": "",
+                },
                 "default_value": "",
                 "description": res_desc,
             })
@@ -137,7 +148,9 @@ def _extract_message_profiles(root: etree._Element) -> tuple[list, list, list]:
 
             arguments.append({
                 "name": arg_name,
-                "data_type_ref": {"authority": "", "code": dt_code, "codebook_ref": "", "version": ""},
+                "data_type_ref": {
+                    "authority": "", "code": dt_code, "codebook_ref": "", "version": "",
+                },
                 "default_value": "",
                 "description": arg_desc,
             })
@@ -332,7 +345,7 @@ class TestNavigationXMLCrossCheck:
                 assert p.default_value == "time"
 
     def test_typed_event_fields_match_xml(self) -> None:
-        """The NavigationReachedTargetEvent typed model fields should match the XML event results."""
+        """NavigationReachedTargetEvent fields should match the XML event results."""
         from openrois.interfaces.components.navigation import NavigationReachedTargetEvent
 
         profile = _build_component_profile_from_xml("Navigation.xml")

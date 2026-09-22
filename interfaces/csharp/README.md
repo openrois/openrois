@@ -40,7 +40,7 @@ Once published to a UPM registry, add via `manifest.json`:
 ```json
 {
   "dependencies": {
-    "org.openrois.interfaces": "0.1.0-alpha.2"
+    "org.openrois.interfaces": "0.1.0-alpha.3"
   }
 }
 ```
@@ -59,8 +59,8 @@ var result = JsonSerializer.Deserialize<Result>(
 // Type-safe enum
 ReturnCode code = ReturnCode.OK;
 
-// Implement the BusAdapter contract
-class MyAdapter : IBusAdapter
+// Implement the Component Contract
+class MyAdapter : IComponentContract
 {
     public Task<DiscoverResponse> Discover(DiscoverRequest request) { /* ... */ }
     public Task<InvokeResponse> Invoke(CommandRequest request) { /* ... */ }
@@ -78,7 +78,7 @@ class MyAdapter : IBusAdapter
 | `OpenRoIS.Interfaces.Common` | `ComponentStatus`, `StreamStatus` |
 | `OpenRoIS.Interfaces.Service` | `CompletedStatus`, `ErrorType`, `CompletedEvent`, `NotifyErrorEvent`, `NotifyEventPayload` |
 | `OpenRoIS.Interfaces.Profiles` | Component profile schema models |
-| `OpenRoIS.Interfaces.Bus` | `IBusAdapter` interface, request/response models, `EventEnvelope`, error classes |
+| `OpenRoIS.Interfaces.Bus` | `IComponentContract` interface, request/response models, `EventEnvelope`, error classes |
 | `OpenRoIS.Interfaces.Components` | Per-component typed message models |
 
 ## Generation
@@ -90,11 +90,11 @@ The source files (except `Bus.cs`) are generated from `interfaces/schema/*.schem
 dotnet run --project scripts/Generator/Generator.csproj
 ```
 
-The `IBusAdapter` interface and error classes in `Bus.cs` are hand-written, because JSON Schema cannot represent behavioral interfaces.
+The `IComponentContract` interface and error classes in `Bus.cs` are hand-written, because JSON Schema cannot represent behavioral interfaces.
 
 ## Naming
 
-This interface is called `ComponentContract` in the Python source of truth. The C# stack still uses the older name `IBusAdapter`, and the TypeScript stack `BusAdapter`. They will be renamed to match before `v1.0`.
+The interface was called `IBusAdapter` before 0.1.0-alpha.3. `IBusAdapter` and `BusAdapterError` remain as deprecated (obsolete) names for one alpha release.
 
 ## License
 

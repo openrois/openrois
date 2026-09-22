@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `CommandType` gains the Streaming Interface commands: `connect_stream`, `disconnect_stream`, `suspend_stream`, and `resume_stream`.
+
+### Changed
+
+- Renamed `BusAdapterError` to `ComponentContractError` to match the `ComponentContract` protocol and the paper. `BusAdapterError` remains as a deprecated alias for one alpha release.
+- Normative cross-check tests (`test_xml_crosscheck.py`, `test_xsd_consistency.py`) skip cleanly when the OMG machine-readable files are absent, and honor `OPENROIS_NORMATIVE_DIR`.
+
 ## [0.1.0a2] - 2026-07-02
 
 ### Added

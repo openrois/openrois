@@ -1,0 +1,61 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Changed
+
+- `ComponentRegistry` and `SubEngine` now implement the `ComponentContract` protocol with
+  its typed request and response models (`DiscoverRequest`, `CommandRequest`,
+  `QueryRequest`, `SubscribeRequest` and their responses), and `Engine` dispatches through
+  that protocol only.
+- `EventEmitter` delivers events to the `EventSink` passed at subscribe time instead of
+  writing to a WebSocket directly. Its constructor takes only the event loop.
+- The gateway discovers an adapter through `rois.system.get_profile` and answers
+  `rois.command.search` with the standard `component_ref_list` only.
+- Command types are validated against the RoIS `CommandType` enum; unknown ones return
+  `BAD_PARAMETER`.
+- Subscriptions held by a client are released upstream when the client disconnects.
+
+### Fixed
+
+- Adapter discovery no longer deadlocks: the adapter receive loop runs while the gateway
+  awaits the profile.
+- Compatible with `websockets` 14 and later (connection path and state accessors).
+
+### Added
+
+- `openrois-gateway --config gateway.yaml` (or `OPENROIS_GATEWAY_CONFIG`): every option
+  from a YAML file, below the command line and the `OPENROIS_*` environment in precedence.
+  Unknown keys are rejected. The container image reads `/etc/openrois/gateway.yaml`.
+- `GET /health` on the gateway port answers a JSON liveness summary, and the container
+  image declares it as its `HEALTHCHECK`. `Engine.engine_id` is a public property.
+- `benchmarks/latency.py`: control-plane latency through the gateway and direct to an
+  adapter (query, execute, event delivery), p50/p95/p99 over loopback.
+- Authentication and authorization at the gateway: `WsServer(engine, auth=AuthConfig(...))`
+  verifies a JSON Web Token at the WebSocket upgrade (`Authorization: Bearer` header or
+  `token` query parameter, HS256 or asymmetric algorithms, issuer and audience checks),
+  the `roles` claim (viewer, maintenance, operator, administrator, adapter) decides which
+  RoIS operations a connection may call, and the `scope` claim limits the component refs
+  it may see and address. `openrois-gateway --auth-key ...` turns it on; `--tls-cert` and
+  `--tls-key` serve `wss://`. `WsClient(..., token=...)` presents the adapter's token.
+- `rois.command.bind_any`, `rois.command.get_parameter`, `rois.command.get_command_result`,
+  `rois.system.get_error_detail`, and `rois.event.get_event_detail`.
+- `rois.command.completed` and `rois.system.notify_error` notifications. Components report
+  completion with `self.parent.complete(command_id, status)` (thread-safe) or
+  `complete_async`; a handler that raises produces a `notify_error` for the caller.
+- Regression test suite (`tests/`): engine dispatch, bindings, events, and a gateway plus
+  adapter round trip over a real WebSocket.
+- Streaming Interface control plane: `rois.stream.connect_stream`, `disconnect_stream`,
+  `suspend_stream`, `resume_stream`, and `query_stream_status` are routed to the
+  streaming component that owns the stream, and its `notify_stream_status` events reach
+  the application that connected the stream as `rois.stream.notify_status`. The
+  transport descriptor (a media URL or an SDP answer) travels opaquely in the
+  `connect_stream` results; media stays on its own data plane.
+- Query handlers that declare an argument receive the request's `condition`, which is
+  how `get_stream_status` learns its `stream_id`.
+

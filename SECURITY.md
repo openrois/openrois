@@ -14,22 +14,23 @@ receives fixes. There are no long-term support branches before `v1.0`.
 
 Please read this before deploying OpenRoIS.
 
-The alpha releases **do not authenticate or authorize connections**. Any client that can
-reach the gateway can list components, reserve them, and command them, and any process
-that can reach the gateway can register itself as an adapter. Transport encryption is
-not enabled by default either.
+Authentication, authorization, and TLS exist but are **off by default** in the alpha. A
+gateway started without `--auth-key` trusts every connection: any client that can reach
+it can list components, reserve them, and command them, and any process can register as
+an adapter.
 
 As a result:
 
-- Run the gateway **only on trusted networks**, and do not expose its port to the
-  internet.
-- Put your own authenticated reverse proxy or VPN in front of it if remote access is
-  required.
-- Treat every connected robot as reachable by every client on that network.
+- Start the gateway with `--auth-key` (JWT verification, role-based authorization) and
+  `--tls-cert`/`--tls-key` before exposing it beyond a trusted network.
+- Without those options, run it **only on trusted networks** and do not expose its port
+  to the internet.
+- Token issuance is outside OpenRoIS: use an identity provider that signs JWTs with the
+  `roles` and `scope` claims documented at
+  [openrois.org](https://openrois.org/docs/concepts/security).
 
-Authentication with JSON Web Tokens, role-based authorization per RoIS operation, and
-TLS by default are Phase 9 of the [roadmap](docs/roadmap.md). The intended design is
-documented at [openrois.org](https://openrois.org/docs/concepts/security).
+Making authentication the default, DDS Security for ROS 2 adapters, and media encryption
+remain on the [roadmap](docs/roadmap.md).
 
 ## Reporting a Vulnerability
 
@@ -60,5 +61,5 @@ In scope: the OpenRoIS engine, gateway, component framework, SDKs, interface typ
 the examples in this repository.
 
 Out of scope: vulnerabilities in the robots, avatars, or services behind an adapter, in
-third-party dependencies (please report those upstream), and the known absence of
-authentication described above, which is tracked on the roadmap.
+third-party dependencies (please report those upstream), and deployments that run the
+gateway with authentication off.

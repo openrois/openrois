@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 import math
 import threading
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from openrois_components_core import component, query, results
 
@@ -34,15 +34,15 @@ class Ros2SystemInformation:
         )
         self._node = None
         self._connected = False
-        self._init_time = datetime.now(timezone.utc).isoformat()
+        self._init_time = datetime.now(UTC).isoformat()
 
     async def connect(self) -> None:
         """Create the rclpy node and subscribe to odometry."""
         import rclpy
+        from nav_msgs.msg import Odometry
         from rclpy.callback_groups import ReentrantCallbackGroup
         from rclpy.node import Node
-        from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
-        from nav_msgs.msg import Odometry
+        from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 
         if not rclpy.ok():
             rclpy.init()
@@ -94,7 +94,7 @@ class Ros2SystemInformation:
         pose = self._get_pose() if self._connected else None
         if pose is None:
             pose = (0.0, 0.0, 0.0)
-        timestamp = datetime.now(timezone.utc).isoformat()
+        timestamp = datetime.now(UTC).isoformat()
         return results.robot_position(
             x=round(pose[0], 4), y=round(pose[1], 4), theta=round(pose[2], 4),
             timestamp=timestamp, robot_ref=[self._engine_id],

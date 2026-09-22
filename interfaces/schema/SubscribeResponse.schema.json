@@ -19,7 +19,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Response from BusAdapter.subscribe().",
+  "description": "Response from ComponentContract.subscribe().",
   "properties": {
     "return_code": {
       "$ref": "#/$defs/ReturnCode",

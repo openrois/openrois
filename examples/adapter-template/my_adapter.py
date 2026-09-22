@@ -14,7 +14,6 @@ import logging
 
 from openrois.interfaces.bus import InvokeResponse
 from openrois.interfaces.hri import ReturnCode
-from openrois_core import Engine, WsClient, component_config, read_profile
 from openrois_components_core import (
     component,
     invoke,
@@ -23,6 +22,7 @@ from openrois_components_core import (
     results,
     subscribe,
 )
+from openrois_core import Engine, WsClient, component_config, read_profile
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +100,8 @@ class Navigation:
     @invoke("execute")
     async def navigate(self, parameters):
         # IMPLEMENT YOUR CODE HERE
-        # parameters[0].value is the target WayPoint name.
+        # The "target_positions" parameter carries the target WayPoint name:
+        #   target = next(p["value"] for p in parameters if p["name"] == "target_positions")
         # Call your robot's navigation API.
         # Return InvokeResponse with a command_id.
         raise NotImplementedError
@@ -116,9 +117,15 @@ class Navigation:
     async def on_reached(self):
         # Called once when an operator subscribes.
         # Do setup here if needed (e.g., start monitoring).
-        # Use self.parent.emit_async("Navigation", "reached_target",
-        #     results.reached_target(...))
-        # to push events when navigation completes.
+        # Push events when navigation completes, from the asyncio loop:
+        #   await self.parent.emit_async("Navigation", "reached_target",
+        #       results.reached_target(...))
+        # From a background thread (a ROS 2 callback), use the thread-safe
+        #   self.parent.emit(...) instead.
+        # When the command that started the navigation is done, report it so
+        # the caller receives rois.command.completed:
+        #   await self.parent.complete_async(command_id, "OK")
+        # (thread-safe variant: self.parent.complete(command_id, "OK"))
         pass
 
 
@@ -160,9 +167,9 @@ class ObjectDetection:
     @subscribe("object_detected")
     async def on_object_detected(self):
         # Called once when an operator subscribes.
-        # Use self.parent.emit_async("ObjectDetection", "object_detected",
-        #     results.detection(...))
-        # to push events when new detections arrive.
+        # Push events when new detections arrive:
+        #   await self.parent.emit_async("ObjectDetection", "object_detected",
+        #       results.detection(...))
         pass
 
 
@@ -203,7 +210,8 @@ class ObjectManipulation:
     @invoke("execute")
     async def execute(self, parameters):
         # IMPLEMENT YOUR CODE HERE
-        # parameters[0].value is the command: "grasp" or "place".
+        # The "command" parameter carries "grasp" or "place":
+        #   command = next(p["value"] for p in parameters if p["name"] == "command")
         # For grasp: parameters[1].value is the object_id.
         # For place: parameters[1].value is object_id,
         #            parameters[2].value is plane_id,
@@ -264,7 +272,11 @@ def main() -> None:
             meta,
         )
 
-    ws_client = WsClient(engine, profile["engine"]["gateway_url"])
+    ws_client = WsClient(
+        engine,
+        profile["engine"]["gateway_url"],
+        token=profile["engine"].get("token"),  # required when the gateway authenticates
+    )
     ws_client.run()
 
 

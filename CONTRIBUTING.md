@@ -1,6 +1,7 @@
 # Contributing to OpenRoIS
 
-> How to contribute code to OpenRoIS. Read this before your first PR. For AI
+> OpenRoIS is a community-driven open-source project. This is how to contribute code to
+> it. Read this before your first PR. For AI
 > coding agent guidance, see `AGENTS.md`. For the milestone roadmap, see
 > `docs/roadmap.md`.
 
@@ -19,7 +20,8 @@
 9. [Additional Conventions](#9-additional-conventions)
 10. [Git Workflow](#10-git-workflow)
 11. [Checks](#11-checks)
-12. [Base Branch](#12-base-branch)
+12. [Releasing](#12-releasing)
+13. [Base Branch](#13-base-branch)
 
 ---
 
@@ -329,7 +331,28 @@ those files, which is expected.
 Adding GitHub Actions workflows for these checks is an open task on the
 [roadmap](docs/roadmap.md), and a welcome contribution.
 
-## 12. Base Branch
+## 12. Releasing
+
+Every package in the monorepo shares one version, `0.1.0a3` in PEP 440 spelling for the
+Python packages and `0.1.0-alpha.3` in SemVer spelling for npm, NuGet, the Unity package,
+and `CITATION.cff`. `python scripts/check_versions.py` fails on drift.
+
+To release:
+
+1. Bump the version in every manifest (the check script lists them) and move the
+   `Unreleased` entries of each `CHANGELOG.md` under the new version and date.
+2. Open a pull request with those changes, merge it into `dev`.
+3. Tag the merge commit `v<version>` with the SemVer spelling that `CITATION.cff` uses (for
+   example `v0.1.0-alpha.3`) and push the tag.
+
+The `Release` workflow verifies that the tag matches `CITATION.cff`, builds the five Python
+packages and publishes them to PyPI through trusted publishing, builds and publishes
+`@openrois/interfaces` and `@openrois/sdk` to npm (secret `NPM_TOKEN`), and creates a
+GitHub release with the changelog entries and the Python distributions attached. Unity
+Package Manager distribution is a Git URL install of `sdk/csharp` at the tag until the
+package is listed on a registry.
+
+## 13. Base Branch
 
 Development happens on `dev`. Base your branch on `dev` and open pull requests against
 it. The `main` branch holds released snapshots.

@@ -1,7 +1,7 @@
 /**
  * Transport-neutral bus adapter contract for OpenRoIS.
  *
- * This module defines the BusAdapter interface — the only boundary the RoIS
+ * This module defines the ComponentContract interface — the only boundary the RoIS
  * engine and gateway depend on. Every concrete bus (in-process, ROS 2, gRPC,
  * WebSocket, etc.) implements this four-method contract:
  *
@@ -14,7 +14,7 @@
  * WebSocket, or socket symbols appear here.
  *
  * The request/response models and EventEnvelope are generated from JSON Schema
- * in `./generated/bus-models.ts`. The BusAdapter interface, EventSink type,
+ * in `./generated/bus-models.ts`. The ComponentContract interface, EventSink type,
  * and error classes are hand-written here because JSON Schema cannot
  * represent behavioral interfaces.
  *
@@ -23,7 +23,7 @@
 
 import type { ReturnCode, RoISIdentifier, CommandType } from "./hri";
 
-// Import generated bus data models (so they're in scope for the BusAdapter interface)
+// Import generated bus data models (so they're in scope for the ComponentContract interface)
 import type {
   DiscoverRequest,
   DiscoverResponse,
@@ -65,7 +65,7 @@ export type {
 // Type aliases
 // ---------------------------------------------------------------------------
 
-/** Async callback that receives event envelopes from a BusAdapter. */
+/** Async callback that receives event envelopes from a ComponentContract implementation. */
 export type EventSink = (envelope: EventEnvelope) => Promise<void>;
 
 // Re-export CommandType from hri (now an enum, not a type alias)
@@ -87,19 +87,19 @@ export type CommandId = string;
 // Exceptions
 // ---------------------------------------------------------------------------
 
-/** Base error raised by BusAdapter implementations. */
-export class BusAdapterError extends Error {
+/** Base error raised by ComponentContract implementations. */
+export class ComponentContractError extends Error {
   readonly returnCode: ReturnCode;
 
   constructor(message: string, returnCode: ReturnCode = "ERROR") {
     super(message);
-    this.name = "BusAdapterError";
+    this.name = "ComponentContractError";
     this.returnCode = returnCode;
   }
 }
 
 /** Raised when a component_ref cannot be resolved by the adapter. */
-export class ComponentNotFoundError extends BusAdapterError {
+export class ComponentNotFoundError extends ComponentContractError {
   readonly componentRef: RoISIdentifier;
 
   constructor(componentRef: RoISIdentifier) {
@@ -110,21 +110,19 @@ export class ComponentNotFoundError extends BusAdapterError {
 }
 
 // ---------------------------------------------------------------------------
-// BusAdapter interface
+// ComponentContract interface
 // ---------------------------------------------------------------------------
 
 /**
  * Transport-neutral contract between the RoIS engine and a concrete bus.
  *
- * Implementations include:
- *   - UniversalBusAdapter  (M1, WS+JSON-RPC for non-ROS hosts)
- *   - ROS2BusAdapter        (M3)
- *   - RosBridgeBusAdapter   (future)
+ * Implementations include a remote child engine reached over WebSocket and
+ * JSON-RPC, and an in-process component registry.
  *
  * The contract is intentionally limited to five async methods. Adapters must
  * not leak transport-specific types through these signatures.
  */
-export interface BusAdapter {
+export interface ComponentContract {
   /** Discover components matching the request condition. Maps to CommandIF.search(). */
   discover(request: DiscoverRequest): Promise<DiscoverResponse>;
 
@@ -140,3 +138,13 @@ export interface BusAdapter {
   /** Cancel an event subscription. Maps to EventIF.unsubscribe(). Duplicate requests are silently ignored. */
   unsubscribe(subscribeId: SubscribeId): Promise<ReturnCode>;
 }
+
+// ---------------------------------------------------------------------------
+// Deprecated aliases, kept for one alpha release
+// ---------------------------------------------------------------------------
+
+/** @deprecated Use ComponentContract. */
+export type BusAdapter = ComponentContract;
+
+/** @deprecated Use ComponentContractError. */
+export const BusAdapterError = ComponentContractError;

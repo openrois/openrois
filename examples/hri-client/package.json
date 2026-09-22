@@ -1,6 +1,6 @@
 {
   "name": "@openrois/hri-client",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.3",
   "description": "Generic RoIS HRI Client: a browser-based component inspector for any RoIS engine",
   "license": "Apache-2.0",
   "author": "OpenRoIS Community",

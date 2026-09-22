@@ -31,22 +31,13 @@
 // 1. Node.js built-ins
 import { EventEmitter } from "events";
 
-// 2. External packages
-import { z } from "zod";
-
 // 3. Local modules
 import {
-  JsonRpcRequestSchema,
   JsonRpcResponseSchema,
   JsonRpcErrorSchema,
   JsonRpcNotificationSchema,
   JSONRPC_VERSION,
   type JsonRpcRequest,
-  type JsonRpcResponse,
-  type JsonRpcError,
-  type JsonRpcNotification,
-  type JsonRpcId,
-  type JsonRpcParams,
   type JsonRpcErrorObject,
 } from "./jsonrpc";
 
@@ -694,7 +685,7 @@ export class WebSocketTransport extends EventEmitter {
    * hanging forever.
    */
   private rejectAllPending(error: Error): void {
-    for (const [id, pending] of this.pending) {
+    for (const pending of this.pending.values()) {
       clearTimeout(pending.timer);
       pending.reject(error);
     }
@@ -758,7 +749,7 @@ export class WebSocketTransport extends EventEmitter {
     // 2. Try the 'ws' package for Node.js.
     try {
       // Dynamic require so browser bundlers can ignore or externalize this.
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const WS = require("ws");
       return new WS(url) as unknown as WebSocketLike;
     } catch {

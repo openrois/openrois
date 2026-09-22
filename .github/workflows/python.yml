@@ -1,0 +1,36 @@
+name: Python
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install the packages from source
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "interfaces/python[dev]" -e components/core -e components/common -e "core[dev]"
+      - name: Lint
+        run: |
+          ruff check interfaces/python/src interfaces/python/tests
+          ruff check components/core components/common components/kachaka
+          ruff check core/src core/tests
+      - name: Type check
+        run: |
+          (cd interfaces/python && mypy src/)
+          (cd core && mypy src/)
+      - name: Test the interface types
+        # The normative OMG files are not redistributed, so their cross-checks skip.
+        run: cd interfaces/python && pytest -q
+      - name: Test the engine core
+        run: cd core && pytest -q
+      - name: Test the component framework and the conformance suite
+        run: cd components/core && pytest -q

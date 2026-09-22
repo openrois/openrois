@@ -14,12 +14,11 @@ What exists today:
 | Area | Directory | State |
 |------|-----------|-------|
 | RoIS interface types (Python, JSON Schema, TypeScript, C#) | `interfaces/` | Available |
-| Recursive engine, WebSocket server and client | `core/` | Available, hardening |
+| Recursive engine, gateway process, WebSocket server and client | `core/` | Available |
 | Adapter SDK (component framework) and reference components | `components/` | Available |
 | TypeScript client SDK | `sdk/typescript/` | Available |
-| C# client SDK for Unity | `sdk/csharp/` | JSON-RPC layer only, client in progress |
-| TypeScript gateway proof of concept | `gateway/` | Superseded by `core/`, retired at the end of Phase 4 |
-| Examples: mock engine, mock adapter, web client, adapter template | `examples/` | Available |
+| C# client SDK for Unity | `sdk/csharp/` | Available |
+| Examples: mock engine, mock adapter, avatar adapter, mixed-paradigm demo, web client, adapter template | `examples/` | Available |
 | Hub management application | `apps/hub/` | Not started, scaffold only |
 
 See [docs/roadmap.md](docs/roadmap.md) for what comes next, and
@@ -59,7 +58,8 @@ the XML profile disagree, follow the XML profile and document the divergence in
 | Python types | `interfaces/python` | `pip install -e ".[dev]"`, `pytest`, `mypy src/`, `ruff check src/` |
 | TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test` |
 | C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
-| Engine core | `core` | `pip install -e .`, `ruff check src/` |
+| C# SDK | `sdk/csharp` | `dotnet test DotNetTests~` (no Unity editor needed) |
+| Engine core | `core` | `pip install -e ".[dev]"`, `pytest`, `mypy src/`, `ruff check src/ tests/` |
 | Component framework | `components/core` | `pip install -e .` |
 | TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` |
 | Mock engine | `examples/mock-engine` | `npm install`, `npm test` |
@@ -73,7 +73,7 @@ skipped or fail without them.
 - Python 3.12+, Pydantic v2, `from __future__ import annotations`, PEP 695 `type`
   statements, mypy strict, ruff line length 100.
 - TypeScript ESM, strict typecheck, vitest.
-- C# `netstandard2.1` (Unity 6.3+), `sealed class`, `Nullable` enabled.
+- C# `netstandard2.1` (Unity 6.5+), `sealed class`, `Nullable` enabled.
 - `interfaces/python/src/` and `core/src/` stay transport-neutral and paradigm-neutral.
   No ROS, DDS, gRPC, or game engine imports. Those belong in components.
 - Do not change the `Component Contract` (`discover`, `invoke`, `query`, `subscribe`,

@@ -58,7 +58,7 @@ type EventSink = Callable[[EventEnvelope], Awaitable[None]]
 # ---------------------------------------------------------------------------
 
 
-class BusAdapterError(Exception):
+class ComponentContractError(Exception):
     """Base exception raised by ComponentContract implementations."""
 
     def __init__(self, message: str, return_code: ReturnCode = ReturnCode.ERROR) -> None:
@@ -67,7 +67,7 @@ class BusAdapterError(Exception):
         self.return_code = return_code
 
 
-class ComponentNotFoundError(BusAdapterError):
+class ComponentNotFoundError(ComponentContractError):
     """Raised when a component_ref cannot be resolved by the adapter."""
 
     def __init__(self, component_ref: RoISIdentifier) -> None:
@@ -76,6 +76,10 @@ class ComponentNotFoundError(BusAdapterError):
             return_code=ReturnCode.UNSUPPORTED,
         )
         self.component_ref = component_ref
+
+
+# Deprecated alias, kept for one alpha release. Use ComponentContractError.
+BusAdapterError = ComponentContractError
 
 
 # ---------------------------------------------------------------------------
@@ -271,11 +275,8 @@ class ComponentContract(Protocol):
     """Transport-neutral contract between the RoIS engine and a concrete bus.
 
     Implementations include:
-      - SubEngine (remote adapter via WebSocket JSON-RPC)
-      - ComponentRegistry (local components in-process)
-      - UniversalBusAdapter  (M1, WS+JSON-RPC for non-ROS hosts)
-      - ROS2BusAdapter        (M3)
-      - RosBridgeBusAdapter   (future)
+      - SubEngine (a remote child engine, reached over WebSocket and JSON-RPC)
+      - ComponentRegistry (local components, in-process)
 
     The contract is intentionally limited to five async methods. Adapters must
     not leak transport-specific types through these signatures.
