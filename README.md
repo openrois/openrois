@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="https://www.omg.org/spec/RoIS/2.0"><img src="https://img.shields.io/badge/OMG%20RoIS-2.0-0070C0" alt="OMG RoIS 2.0"></a>
-  <img src="https://img.shields.io/badge/paper-arXiv%20(coming%20soon)-B31B1B?logo=arxiv&logoColor=white" alt="Paper on arXiv, Coming Soon">
+  <a href="https://arxiv.org/abs/2609.21178"><img src="https://img.shields.io/badge/paper-arXiv%3A2609.21178-B31B1B?logo=arxiv&logoColor=white" alt="Paper on arXiv: 2609.21178"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2E5C8A" alt="License: Apache-2.0"></a>
   <a href="#project-status"><img src="https://img.shields.io/badge/status-alpha-A6821A" alt="Status: alpha"></a>
   <img src="https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white" alt="Python 3.12+">
@@ -25,7 +25,7 @@
 <p align="center">
   <a href="https://openrois.org/">Website</a> ·
   <a href="https://github.com/openrois">OpenRoIS GitHub Organization</a> ·
-  OpenRoIS arXiv Preprint (coming soon) ·
+  <a href="https://arxiv.org/abs/2609.21178">OpenRoIS arXiv Preprint</a> ·
   <a href="https://www.omg.org/spec/RoIS/2.0">OMG RoIS Specification</a> ·
   <a href="#quickstart">Quickstart</a> ·
   <a href="docs/white-paper.md">White Paper</a> ·
@@ -296,9 +296,31 @@ request.
 ## Citation
 
 The position paper describing OpenRoIS was submitted to SII 2027 and is under review. Its
-preprint has been submitted to arXiv and will be linked here once it is announced. Until
-then, please cite the software using the metadata in [`CITATION.cff`](CITATION.cff), which
-also carries the paper as its preferred citation.
+preprint is on arXiv as [arXiv:2609.21178](https://arxiv.org/abs/2609.21178), with the DOI
+[10.48550/arXiv.2609.21178](https://doi.org/10.48550/arXiv.2609.21178).
+
+```bibtex
+@misc{carrera2026openrois,
+  author        = {Carrera Villalobos, Sebastian and Arellano, Christopher Nolan and
+                   Hitzmann, Arne and Morais Brito, Edilson and Utsumi, Akira and
+                   Horikawa, Yukiko and Miyashita, Takahiro and El Hafi, Lotfi},
+  title         = {{OpenRoIS}: A Community-Driven Open-Source Middleware Implementing
+                   the Robotic Interaction Service ({RoIS}) Framework for Physical
+                   Robots and Virtual Agents},
+  year          = {2026},
+  eprint        = {2609.21178},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.RO},
+  doi           = {10.48550/arXiv.2609.21178},
+  url           = {https://arxiv.org/abs/2609.21178},
+  note          = {Submitted to the 2027 IEEE/SICE International Symposium on
+                   System Integration (SII 2027)}
+}
+```
+
+Please also cite the software using the metadata in [`CITATION.cff`](CITATION.cff), which
+carries the paper as its preferred citation. The website has the full
+[citation guidance](https://openrois.org/docs/project/citing).
 
 ## License
 
