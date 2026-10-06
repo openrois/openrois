@@ -1,0 +1,132 @@
+name: Interfaces
+
+# Types flow in one direction: Python (Pydantic) → JSON Schema → TypeScript and C#.
+# Each job checks one link of that chain, so a change that skips a regeneration
+# step fails here instead of reaching a release.
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - "interfaces/**"
+      - ".github/workflows/interfaces.yml"
+  pull_request:
+    paths:
+      - "interfaces/**"
+      - ".github/workflows/interfaces.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: interfaces-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    defaults:
+      run:
+        working-directory: interfaces/python
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: interfaces/python/pyproject.toml
+
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check src/
+
+      - name: Type check
+        # The openrois namespace package has no __init__.py at its root, so mypy needs
+        # src/ as an explicit package base to resolve openrois.interfaces imports.
+        env:
+          MYPYPATH: src
+        run: mypy --explicit-package-bases src/
+
+      - name: Test
+        # The normative cross-check tests skip here: the OMG files are not
+        # redistributed in this repository (see CONTRIBUTING.md).
+        run: pytest
+
+      - name: JSON Schema is up to date
+        run: |
+          python scripts/export_schema.py
+          if [ -n "$(git status --porcelain -- ../schema)" ]; then
+            git status --short -- ../schema
+            git diff -- ../schema
+            echo "::error::interfaces/schema is out of date. Run: cd interfaces/python && python scripts/export_schema.py"
+            exit 1
+          fi
+
+  typescript:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: interfaces/typescript
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: interfaces/typescript/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Generated types are up to date
+        run: |
+          npm run generate
+          if [ -n "$(git status --porcelain -- src)" ]; then
+            git status --short -- src
+            git diff -- src
+            echo "::error::interfaces/typescript/src is out of date. Run: cd interfaces/typescript && npm run generate"
+            exit 1
+          fi
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+  csharp:
+    name: C#
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: interfaces/csharp
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Generated types are up to date
+        run: |
+          dotnet run --project scripts/Generator/Generator.csproj
+          if [ -n "$(git status --porcelain -- src)" ]; then
+            git status --short -- src
+            git diff -- src
+            echo "::error::interfaces/csharp/src is out of date. Run: cd interfaces/csharp && dotnet run --project scripts/Generator/Generator.csproj"
+            exit 1
+          fi
+
+      - name: Test
+        run: dotnet test tests/OpenRoIS.Interfaces.Tests

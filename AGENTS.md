@@ -66,7 +66,7 @@ the XML profile disagree, follow the XML profile and document the divergence in
 
 Some tests in `interfaces/python` cross-check the models against the normative RoIS
 machine-readable files, which are not redistributed in this repository. Those tests are
-skipped or fail without them.
+skipped unless `OPENROIS_NORMATIVE_DIR` points to a local copy of the files.
 
 ## Key Conventions
 

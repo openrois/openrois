@@ -92,7 +92,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Generic event envelope delivered to an EventSink.\n\nThe BusAdapter emits this for every async notification: component events,\ncommand completion, errors, and stream status changes. The engine/gateway\ninspects event_type and dispatches to the appropriate ServiceApplicationBase\ncallback.",
+  "description": "Generic event envelope delivered to an EventSink.\n\nThe ComponentContract emits this for every async notification: component events,\ncommand completion, errors, and stream status changes. The engine/gateway\ninspects event_type and dispatches to the appropriate ServiceApplicationBase\ncallback.",
   "properties": {
     "event_id": {
       "description": "Unique identifier for this event occurrence",

@@ -7,8 +7,6 @@ the XML definitions — field names, data types, and default values must match.
 This is step 9 of the M0 Task 0.1 plan.
 """
 
-from pathlib import Path
-
 import pytest
 from lxml import etree
 
@@ -20,14 +18,14 @@ from openrois.interfaces.profiles import (
     QueryMessageProfile,
     RoISIdentifierType,
 )
+from tests._normative import NORMATIVE_DIR, requires_normative
+
+# Every test in this module reads the normative XML profiles.
+pytestmark = requires_normative
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-# tests/test_xml_crosscheck.py  →  tests/  →  python/  →  interfaces/  →  repo root
-REPO_ROOT = Path(__file__).resolve().parents[3]
-NORMATIVE_DIR = REPO_ROOT / "normative" / "machine-readable"
 
 ROIS_NS = "http://www.omg.org/spec/RoIS/20240801"
 GML_NS = "http://www.opengis.net/gml/3.2"

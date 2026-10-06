@@ -310,8 +310,10 @@ Use this template for every PR:
 
 ## 11. Checks
 
-Continuous integration is not set up yet, so run the checks for every stack you touched
-before opening a pull request, and say in the pull request which ones you ran.
+Continuous integration runs the checks for the interface types (Python, TypeScript, and
+C#) on every pull request that touches `interfaces/`. For every other stack you touched,
+run the checks before opening a pull request, and say in the pull request which ones you
+ran.
 
 | Stack | Directory | Commands |
 |-------|-----------|----------|
@@ -323,11 +325,17 @@ before opening a pull request, and say in the pull request which ones you ran.
 | Python packages | `core`, `components/*` | `ruff check .` |
 
 Some tests in `interfaces/python` cross-check the models against the normative RoIS
-machine-readable files, which this repository does not redistribute. They fail without
-those files, which is expected.
+machine-readable files, which this repository does not redistribute: they carry OMG's
+copyright and licence. Those tests are skipped unless `OPENROIS_NORMATIVE_DIR` points to
+a local copy of the OMG RoIS Framework 2.0 machine-readable files, downloaded from
+<https://www.omg.org/spec/RoIS/2.0>.
 
-Adding GitHub Actions workflows for these checks is an open task on the
-[roadmap](docs/roadmap.md), and a welcome contribution.
+```bash
+OPENROIS_NORMATIVE_DIR=~/omg/rois-2.0/machine-readable pytest
+```
+
+Workflows for the other stacks are an open task on the [roadmap](docs/roadmap.md), and a
+welcome contribution.
 
 ## 12. Base Branch
 

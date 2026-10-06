@@ -70,7 +70,8 @@ python scripts/export_schema.py  # regenerate the JSON Schema
 ```
 
 Some tests cross-check the models against the normative RoIS machine-readable files, which
-are not redistributed here. Those tests fail without them.
+are not redistributed here. Those tests are skipped unless `OPENROIS_NORMATIVE_DIR` points
+to a local copy of the OMG RoIS Framework 2.0 machine-readable files.
 
 After regenerating the schema, regenerate the other two stacks as described in
 [AGENTS.md](../../AGENTS.md).
