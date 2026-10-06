@@ -17,7 +17,7 @@ import asyncio
 import json
 import logging
 
-from openrois.interfaces.bus import InvokeResponse
+from openrois.interfaces.contract import InvokeResponse
 from openrois.interfaces.hri import ReturnCode, Result
 from openrois_components_core import component, invoke, query, results, subscribe
 

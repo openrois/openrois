@@ -33,8 +33,8 @@ Python (Pydantic) ──export_schema.py──► JSON Schema ──Generator─
 
 The schema drift test (`python/tests/test_schema_drift.py`) verifies that the committed
 schemas still match what the Pydantic models produce. The C# and TypeScript sources are
-never hand-written, except `typescript/src/bus.ts`, because JSON Schema cannot express a
-behavioral interface.
+never hand-written, except `typescript/src/contract.ts` and `csharp/src/OpenRoIS.Interfaces/Contract.cs`,
+because JSON Schema cannot express a behavioral interface.
 
 ## Packages
 

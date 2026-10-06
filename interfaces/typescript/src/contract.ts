@@ -1,29 +1,30 @@
 /**
- * Transport-neutral bus adapter contract for OpenRoIS.
+ * Transport-neutral component contract for OpenRoIS.
  *
- * This module defines the BusAdapter interface — the only boundary the RoIS
- * engine and gateway depend on. Every concrete bus (in-process, ROS 2, gRPC,
- * WebSocket, etc.) implements this four-method contract:
+ * This module defines the ComponentContract interface, the only boundary between
+ * an engine and the components it reaches. Local components and remote child
+ * engines implement the same five-method contract:
  *
- *   discover  → CommandIF.search
- *   invoke    → CommandIF.bind/set_parameter/execute/start/stop/suspend/resume
- *   query     → QueryIF.query / RoIS_Common.component_status
- *   subscribe → EventIF.subscribe (async push via EventSink)
+ *   discover    → CommandIF.search
+ *   invoke      → CommandIF.bind/set_parameter/execute/start/stop/suspend/resume
+ *   query       → QueryIF.query / RoIS_Common.component_status
+ *   subscribe   → EventIF.subscribe (async push via EventSink)
+ *   unsubscribe → EventIF.unsubscribe
  *
  * The contract is intentionally transport-agnostic. No ROS, DDS, gRPC,
  * WebSocket, or socket symbols appear here.
  *
  * The request/response models and EventEnvelope are generated from JSON Schema
- * in `./generated/bus-models.ts`. The BusAdapter interface, EventSink type,
- * and error classes are hand-written here because JSON Schema cannot
+ * in `./generated/contract-models.ts`. The ComponentContract interface, EventSink
+ * type, and error classes are hand-written here because JSON Schema cannot
  * represent behavioral interfaces.
  *
- * Source: roadmap.md M0 Task 0.2; mirrors interfaces/python/.../bus.py
+ * Mirrors interfaces/python/src/openrois/interfaces/contract.py.
  */
 
 import type { ReturnCode, RoISIdentifier, CommandType } from "./hri";
 
-// Import generated bus data models (so they're in scope for the BusAdapter interface)
+// Import the generated contract data models, so they are in scope for the interface below.
 import type {
   DiscoverRequest,
   DiscoverResponse,
@@ -34,9 +35,9 @@ import type {
   SubscribeRequest,
   SubscribeResponse,
   EventEnvelope,
-} from "./generated/bus-models";
+} from "./generated/contract-models";
 
-// Re-export generated bus data models
+// Re-export the generated contract data models.
 export {
   DiscoverRequestSchema,
   DiscoverResponseSchema,
@@ -47,7 +48,7 @@ export {
   SubscribeRequestSchema,
   SubscribeResponseSchema,
   EventEnvelopeSchema,
-} from "./generated/bus-models";
+} from "./generated/contract-models";
 
 export type {
   DiscoverRequest,
@@ -59,13 +60,13 @@ export type {
   SubscribeRequest,
   SubscribeResponse,
   EventEnvelope,
-} from "./generated/bus-models";
+} from "./generated/contract-models";
 
 // ---------------------------------------------------------------------------
 // Type aliases
 // ---------------------------------------------------------------------------
 
-/** Async callback that receives event envelopes from a BusAdapter. */
+/** Async callback that receives event envelopes from a ComponentContract. */
 export type EventSink = (envelope: EventEnvelope) => Promise<void>;
 
 // Re-export CommandType from hri (now an enum, not a type alias)
@@ -87,19 +88,19 @@ export type CommandId = string;
 // Exceptions
 // ---------------------------------------------------------------------------
 
-/** Base error raised by BusAdapter implementations. */
-export class BusAdapterError extends Error {
+/** Base error raised by ComponentContract implementations. */
+export class ComponentContractError extends Error {
   readonly returnCode: ReturnCode;
 
   constructor(message: string, returnCode: ReturnCode = "ERROR") {
     super(message);
-    this.name = "BusAdapterError";
+    this.name = "ComponentContractError";
     this.returnCode = returnCode;
   }
 }
 
 /** Raised when a component_ref cannot be resolved by the adapter. */
-export class ComponentNotFoundError extends BusAdapterError {
+export class ComponentNotFoundError extends ComponentContractError {
   readonly componentRef: RoISIdentifier;
 
   constructor(componentRef: RoISIdentifier) {
@@ -110,21 +111,19 @@ export class ComponentNotFoundError extends BusAdapterError {
 }
 
 // ---------------------------------------------------------------------------
-// BusAdapter interface
+// ComponentContract interface
 // ---------------------------------------------------------------------------
 
 /**
- * Transport-neutral contract between the RoIS engine and a concrete bus.
+ * Transport-neutral contract between an engine and the components it reaches.
  *
- * Implementations include:
- *   - UniversalBusAdapter  (M1, WS+JSON-RPC for non-ROS hosts)
- *   - ROS2BusAdapter        (M3)
- *   - RosBridgeBusAdapter   (future)
+ * The Python engine implements it with ComponentRegistry (local components) and
+ * ChildEngineProxy (a remote child engine over WebSocket JSON-RPC).
  *
- * The contract is intentionally limited to five async methods. Adapters must
- * not leak transport-specific types through these signatures.
+ * The contract is intentionally limited to five async methods. Implementations
+ * must not leak transport-specific types through these signatures.
  */
-export interface BusAdapter {
+export interface ComponentContract {
   /** Discover components matching the request condition. Maps to CommandIF.search(). */
   discover(request: DiscoverRequest): Promise<DiscoverResponse>;
 

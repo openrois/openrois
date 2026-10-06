@@ -3,8 +3,8 @@ using OpenRoIS.Interfaces.Hri;
 using OpenRoIS.Interfaces.Common;
 using OpenRoIS.Interfaces.Service;
 using OpenRoIS.Interfaces.Profiles;
-using OpenRoIS.Interfaces.Bus;
-using OpenRoIS.Interfaces.Bus.Models;
+using OpenRoIS.Interfaces.Contract;
+using OpenRoIS.Interfaces.Contract.Models;
 using OpenRoIS.Interfaces.Components.PersonDetection;
 using OpenRoIS.Interfaces.Components.Navigation;
 using Xunit;
@@ -55,10 +55,10 @@ namespace OpenRoIS.Interfaces.Tests
     }
 
     [Fact]
-    public void Bus_TypesExist()
+    public void Contract_TypesExist()
     {
-        Assert.NotNull(typeof(IBusAdapter));
-        Assert.NotNull(typeof(BusAdapterError));
+        Assert.NotNull(typeof(IComponentContract));
+        Assert.NotNull(typeof(ComponentContractError));
         Assert.NotNull(typeof(ComponentNotFoundError));
         Assert.NotNull(typeof(DiscoverRequest));
         Assert.NotNull(typeof(DiscoverResponse));

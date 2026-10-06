@@ -13,8 +13,6 @@ matches the structural expectations defined in the XSD schema. We check:
 This is step 10 of the M0 Task 0.1 plan.
 """
 
-from pathlib import Path
-
 import pytest
 from lxml import etree
 
@@ -29,14 +27,11 @@ from openrois.interfaces.profiles import (
     RoISIdentifierType,
 )
 from openrois.interfaces.hri import Argument, CommandUnit, CommandUnitSequence, ConcurrentCommands
+from tests._normative import NORMATIVE_DIR, requires_normative
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-# tests/test_xsd_consistency.py  →  tests/  →  python/  →  interfaces/  →  repo root
-REPO_ROOT = Path(__file__).resolve().parents[3]
-NORMATIVE_DIR = REPO_ROOT / "normative" / "machine-readable"
 
 XSD_PATH = NORMATIVE_DIR / "XML-Profiles.xsd"
 
@@ -99,6 +94,7 @@ def _get_xsd_element_names_in_sequence(type_name: str) -> set[str]:
 # ---------------------------------------------------------------------------
 
 
+@requires_normative
 class TestXSDRoISIdentifierType:
     """Verify RoISIdentifierType Pydantic model matches XSD definition."""
 
@@ -149,6 +145,7 @@ class TestXSDRoISIdentifierType:
 # ---------------------------------------------------------------------------
 
 
+@requires_normative
 class TestXSDParameterProfile:
     """Verify ParameterProfile Pydantic model matches XSD definition."""
 
@@ -333,6 +330,7 @@ class TestXSDCommandUnitSequence:
 # ---------------------------------------------------------------------------
 
 
+@requires_normative
 class TestXSDValidation:
     """Validate that the normative XML files are structurally consistent with the XSD schema.
 

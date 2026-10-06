@@ -7,7 +7,7 @@ verify that the contract module remains transport-neutral.
 
 from typing import Protocol
 
-from openrois.interfaces.bus import (
+from openrois.interfaces.contract import (
     CommandRequest,
     ComponentContract,
     DiscoverRequest,
@@ -94,13 +94,13 @@ class TestComponentContractProtocol:
 
 
 class TestTransportNeutrality:
-    def test_no_transport_imports_in_bus_module(self) -> None:
-        """Verify the bus module does not import transport-specific libraries."""
+    def test_no_transport_imports_in_contract_module(self) -> None:
+        """Verify the contract module does not import transport-specific libraries."""
         import ast
 
-        import openrois.interfaces.bus as bus_module
+        import openrois.interfaces.contract as contract_module
 
-        source = bus_module.__loader__.get_source(bus_module.__name__)  # type: ignore[union-attr]
+        source = contract_module.__loader__.get_source(contract_module.__name__)  # type: ignore[union-attr]
         assert source is not None
 
         tree = ast.parse(source)
@@ -115,10 +115,10 @@ class TestTransportNeutrality:
 
         forbidden = {"rclpy", "grpc", "websockets", "socket", "paho", "mqtt"}
         found = forbidden & imported_names
-        assert not found, f"Transport-specific imports found in bus.py: {found}"
+        assert not found, f"Transport-specific imports found in contract.py: {found}"
 
     def test_component_contract_signature_has_no_transport_types(self) -> None:
-        """ComponentContract methods only use types from openrois.interfaces.bus."""
+        """ComponentContract methods only use types from openrois.interfaces.contract."""
         import inspect
 
         for name in ("discover", "invoke", "query", "subscribe"):

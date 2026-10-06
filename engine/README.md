@@ -1,4 +1,4 @@
-# openrois-core
+# openrois-engine
 
 The recursive RoIS HRI Engine, with its WebSocket server and client.
 
@@ -14,7 +14,7 @@ Not published to PyPI yet. From a clone of the repository:
 
 ```bash
 pip install -e ./interfaces/python
-pip install -e ./core
+pip install -e ./engine
 ```
 
 ## Public API
@@ -23,7 +23,7 @@ pip install -e ./core
 |------|---------|
 | `Engine` | The recursive HRI Engine: routing, profile aggregation, bind and release |
 | `ComponentRegistry` | Local components, the in-process side of the Component Contract |
-| `SubEngine` | A remote child engine, the WebSocket side of the Component Contract |
+| `ChildEngineProxy` | The gateway's stand-in for one connected child engine (an adapter or a lower gateway), the WebSocket side of the Component Contract |
 | `EventEmitter` | Delivers events to subscribers |
 | `WsServer` | WebSocket server, for a gateway |
 | `WsClient` | WebSocket client, for an adapter connecting out to a gateway |
@@ -36,7 +36,7 @@ As a gateway:
 ```python
 import asyncio
 
-from openrois_core import Engine, WsServer
+from openrois.engine import Engine, WsServer
 
 
 async def main() -> None:
@@ -52,7 +52,7 @@ asyncio.run(main())
 As an adapter:
 
 ```python
-from openrois_core import Engine, WsClient, component_config, read_profile
+from openrois.engine import Engine, WsClient, component_config, read_profile
 from openrois_components_core import meta_from_decorators
 
 profile = read_profile("openrois-profile.yaml")

@@ -174,7 +174,7 @@ ROS 2 action, a gRPC service, or an HTTP API. The adapter hosts it in a sub HRI 
 and connects it to the gateway.
 
 ```python
-from openrois.interfaces.bus import InvokeResponse
+from openrois.interfaces.contract import InvokeResponse
 from openrois.interfaces.hri import ReturnCode
 from openrois_components_core import component, invoke, query, results, subscribe
 
@@ -202,7 +202,7 @@ class Navigation:
 ```
 
 ```python
-from openrois_core import Engine, WsClient
+from openrois.engine import Engine, WsClient
 from openrois_components_core import meta_from_decorators
 
 config = {"robot_url": "http://192.168.0.10:8080"}
@@ -241,7 +241,7 @@ The [roadmap](docs/roadmap.md) describes each phase and its exit criteria.
 ```
 openrois/
 ├── interfaces/          RoIS types: Python models, JSON Schema, generated TypeScript and C#
-├── core/                Recursive Engine, WebSocket server and client (openrois-core)
+├── engine/              Recursive Engine, WebSocket server and client (openrois-engine)
 ├── components/
 │   ├── core/            Component decorators and result helpers (openrois-components-core)
 │   ├── common/          Platform-independent components
@@ -249,7 +249,6 @@ openrois/
 ├── sdk/
 │   ├── typescript/      Client SDK for web and Node.js (@openrois/sdk)
 │   └── csharp/          Client SDK for Unity (OpenRoIS.Sdk, in progress)
-├── gateway/             TypeScript gateway prototype, superseded by core/
 ├── examples/
 │   ├── mock-engine/     RoIS engine test double with simulated components
 │   ├── hri-client/      Profile-driven web inspector for any RoIS engine

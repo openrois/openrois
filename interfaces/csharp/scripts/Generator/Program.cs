@@ -49,13 +49,13 @@ internal static class Program
                 .Select(n => n!.GetValue<string>())
                 .ToList();
 
-            if (moduleName == "bus")
+            if (moduleName == "contract")
             {
-                // Bus data models go to Generated/BusModels.cs
-                var output = GenerateModule("OpenRoIS.Interfaces.Bus.Models", schemaFiles, modules, moduleName);
-                var outPath = Path.Combine(s_outputDir, "Generated", "BusModels.cs");
+                // Contract data models go to Generated/ContractModels.cs
+                var output = GenerateModule("OpenRoIS.Interfaces.Contract.Models", schemaFiles, modules, moduleName);
+                var outPath = Path.Combine(s_outputDir, "Generated", "ContractModels.cs");
                 WriteFile(outPath, output);
-                Console.WriteLine($"  Generated/BusModels.cs ({schemaFiles.Count} schemas)");
+                Console.WriteLine($"  Generated/ContractModels.cs ({schemaFiles.Count} schemas)");
                 continue;
             }
 
@@ -69,7 +69,7 @@ internal static class Program
             Console.WriteLine($"  {relativePath} ({schemaFiles.Count} schemas)");
         }
 
-        Console.WriteLine("\nDone. IBusAdapter interface is hand-written in Bus.cs.");
+        Console.WriteLine("\nDone. IComponentContract interface is hand-written in Contract.cs.");
         return 0;
     }
 

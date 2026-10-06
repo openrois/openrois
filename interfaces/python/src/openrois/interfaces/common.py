@@ -15,7 +15,7 @@ from enum import StrEnum
 # Enumerations
 # ---------------------------------------------------------------------------
 
- 
+
 class ComponentStatus(StrEnum):
     """Status of a RoIS component.
 

@@ -32,7 +32,7 @@ The ROS 2 backend additionally needs a sourced ROS 2 installation with `rclpy`.
 ```python
 from openrois_components.kachaka import GrpcNavigation
 from openrois_components_core import meta_from_decorators
-from openrois_core import Engine, WsClient, component_config, read_profile
+from openrois.engine import Engine, WsClient, component_config, read_profile
 
 profile = read_profile("openrois-profile.yaml")
 engine = Engine(engine_id=profile["engine"]["id"], platform="kachaka")

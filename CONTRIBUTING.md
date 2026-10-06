@@ -63,7 +63,7 @@ apply to all documentation, code comments, commit messages, and PR descriptions.
 ## 4. Changelog
 
 The `interfaces/*`, `sdk/*`, and `gateway` packages have a `CHANGELOG.md` file. Update
-it when you change one of them. The Python packages under `core/` and `components/` will
+it when you change one of them. The Python packages under `engine/` and `components/` will
 get one with their first tagged release.
 
 - Format: [Keep a Changelog](https://keepachangelog.com/en/2.0.0/)
@@ -143,7 +143,11 @@ chore(ci): add sdk typescript workflow with vitest and coverage
 - Lowercase, no period at the end
 - Description under 72 characters in the subject line
 - Body explains *why*, not *what* (the diff shows what)
-- Use `BREAKING CHANGE:` in the footer for breaking changes (rare at alpha stage)
+- Use `BREAKING CHANGE:` in the footer for breaking changes. Before v1.0 they are
+  expected: OpenRoIS keeps no backwards compatibility, so change APIs and wire formats
+  outright instead of adding deprecated aliases, fallbacks, or compatibility shims. The
+  only exception is the TypeScript gateway proof of concept, which was removed from this
+  repository and stays as it was at tag `ts-gateway-final`.
 
 ## 7. Conventional Branches
 
@@ -310,8 +314,10 @@ Use this template for every PR:
 
 ## 11. Checks
 
-Continuous integration is not set up yet, so run the checks for every stack you touched
-before opening a pull request, and say in the pull request which ones you ran.
+Continuous integration runs the checks for the interface types (Python, TypeScript, and
+C#) on every pull request that touches `interfaces/`. For every other stack you touched,
+run the checks before opening a pull request, and say in the pull request which ones you
+ran.
 
 | Stack | Directory | Commands |
 |-------|-----------|----------|
@@ -320,14 +326,20 @@ before opening a pull request, and say in the pull request which ones you ran.
 | C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
 | TypeScript SDK | `sdk/typescript` | `npm run build`, `npm test` |
 | Mock engine | `examples/mock-engine` | `npm test` |
-| Python packages | `core`, `components/*` | `ruff check .` |
+| Python packages | `engine`, `components/*` | `ruff check .` |
 
 Some tests in `interfaces/python` cross-check the models against the normative RoIS
-machine-readable files, which this repository does not redistribute. They fail without
-those files, which is expected.
+machine-readable files, which this repository does not redistribute: they carry OMG's
+copyright and licence. Those tests are skipped unless `OPENROIS_NORMATIVE_DIR` points to
+a local copy of the OMG RoIS Framework 2.0 machine-readable files, downloaded from
+<https://www.omg.org/spec/RoIS/2.0>.
 
-Adding GitHub Actions workflows for these checks is an open task on the
-[roadmap](docs/roadmap.md), and a welcome contribution.
+```bash
+OPENROIS_NORMATIVE_DIR=~/omg/rois-2.0/machine-readable pytest
+```
+
+Workflows for the other stacks are an open task on the [roadmap](docs/roadmap.md), and a
+welcome contribution.
 
 ## 12. Base Branch
 

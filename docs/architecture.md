@@ -500,7 +500,7 @@ interface ComponentContract {
 
 | Implementation | Transport | Status |
 |----------------|-----------|--------|
-| **SubEngine** (remote) | WebSocket + JSON-RPC | Current. The engine's proxy for a child engine (adapter) over WebSocket. |
+| **ChildEngineProxy** (remote) | WebSocket + JSON-RPC | Current. The engine's proxy for a child engine (adapter) over WebSocket. |
 | **ComponentRegistry** (local) | In-process | Current. The engine's local component dispatch via decorators. |
 
 ### Method Semantics
@@ -1033,10 +1033,9 @@ product component, not an example or a demo.
 ```
 openrois/
 ├── interfaces/    # Shared types: single source of truth (Python to JSON Schema to C#/TS)
-├── core/          # Engine library: recursive Engine, ComponentRegistry, WsServer, WsClient (openrois-core)
+├── engine/        # Engine library: recursive Engine, ComponentRegistry, WsServer, WsClient (openrois-engine)
 ├── components/    # Component framework and reference components (per robot platform)
 ├── sdk/           # Client SDKs (TypeScript, C#)
-├── gateway/       # TypeScript gateway proof of concept, retired at the end of Phase 4
 ├── examples/      # Mock engine, mock adapter, web client, adapter template
 ├── apps/          # Product applications (Hub visualizer, planned)
 └── docs/          # Architecture, white paper, roadmap, spec reference
@@ -1045,9 +1044,8 @@ openrois/
 | Directory | Role |
 |-----------|------|
 | `interfaces/` | Type pipeline. Pydantic models are the source of truth. JSON Schema is the canonical wire contract. C# and TypeScript types are generated. |
-| `core/` | Engine library (`openrois-core`). Recursive RoIS dispatch logic: one `Engine` class used by both the gateway and adapters, plus `WsServer` and `WsClient`. Zero media and zero paradigm-specific imports. |
+| `engine/` | Engine library (`openrois-engine`). Recursive RoIS dispatch logic: one `Engine` class used by both the gateway and adapters, plus `WsServer` and `WsClient`. Zero media and zero paradigm-specific imports. |
 | `components/` | The component framework (`openrois-components-core`) and reference components per robot platform. |
-| `gateway/` | The TypeScript proof of concept that preceded `core/`. Retired at the end of Phase 4. |
 | `sdk/` | Client SDKs: TypeScript for web and Node.js, C# for Unity (in progress). |
 | `examples/` | Reference implementations and templates for testing and onboarding. |
 | `apps/` | Product applications: the Hub (a gateway visualizer, planned). |

@@ -28,7 +28,7 @@ Register the component with the `Engine` of your adapter, exactly like one of yo
 ```python
 from openrois_components.common import MockSystemInformation
 from openrois_components_core import meta_from_decorators
-from openrois_core import Engine
+from openrois.engine import Engine
 
 engine = Engine(engine_id="my_robot", platform="my_platform")
 

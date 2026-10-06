@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** rename the `openrois.interfaces.bus` module to `openrois.interfaces.contract`, and `BusAdapterError` to `ComponentContractError`. The JSON Schema manifest module is now `contract`.
+
+### Fixed
+
+- Regenerate the contract schemas, whose descriptions still named `BusAdapter`.
+- Skip the normative cross-check tests unless `OPENROIS_NORMATIVE_DIR` points to the OMG files.
+
 ## [0.1.0a2] - 2026-07-02
 
 ### Added

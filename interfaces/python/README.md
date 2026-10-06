@@ -32,7 +32,7 @@ transport. Implement its five methods and the engine can drive your platform wit
 knowing anything about it:
 
 ```python
-from openrois.interfaces.bus import ComponentContract
+from openrois.interfaces.contract import ComponentContract
 
 
 class MyContract(ComponentContract):
@@ -43,8 +43,8 @@ class MyContract(ComponentContract):
     async def unsubscribe(self, subscribe_id): ...
 ```
 
-Most adapter authors do not implement it directly: `ComponentRegistry` and `SubEngine` in
-[`openrois-core`](../../core/README.md) play this role (aligning their signatures with the
+Most adapter authors do not implement it directly: `ComponentRegistry` and `ChildEngineProxy` in
+[`openrois-engine`](../../engine/README.md) play this role (aligning their signatures with the
 protocol exactly is part of Phase 4), and components are written with the
 decorators in [`openrois-components-core`](../../components/core/README.md).
 
@@ -56,7 +56,7 @@ decorators in [`openrois-components-core`](../../components/core/README.md).
 | `openrois.interfaces.common` | `ComponentStatus`, `StreamStatus` |
 | `openrois.interfaces.service` | `CompletedStatus`, `ErrorType`, `CompletedEvent`, `NotifyErrorEvent`, `NotifyEventPayload` |
 | `openrois.interfaces.profiles` | Component and engine profile models |
-| `openrois.interfaces.bus` | `ComponentContract` protocol, request and response models, `EventEnvelope`, error classes |
+| `openrois.interfaces.contract` | `ComponentContract` protocol, request and response models, `EventEnvelope`, error classes |
 | `openrois.interfaces.components` | Per-component typed message models |
 
 ## Development
@@ -70,7 +70,8 @@ python scripts/export_schema.py  # regenerate the JSON Schema
 ```
 
 Some tests cross-check the models against the normative RoIS machine-readable files, which
-are not redistributed here. Those tests fail without them.
+are not redistributed here. Those tests are skipped unless `OPENROIS_NORMATIVE_DIR` points
+to a local copy of the OMG RoIS Framework 2.0 machine-readable files.
 
 After regenerating the schema, regenerate the other two stacks as described in
 [AGENTS.md](../../AGENTS.md).

@@ -16,7 +16,7 @@ from typing import Any
 
 import websockets
 
-from openrois_core.engine import Engine, SubEngine
+from openrois.engine.engine import ChildEngineProxy, Engine
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class WsServer:
         """
         self._engine = engine
         self._server: websockets.WebSocketServer | None = None
-        self._sub_engines: dict[Any, SubEngine] = {}
+        self._sub_engines: dict[Any, ChildEngineProxy] = {}
         # subscribe_id -> set of client WebSockets to push events to
         self._client_subscriptions: dict[str, set] = {}
         # All client WebSockets (for profile-change broadcasts)
@@ -112,7 +112,7 @@ class WsServer:
         async def ws_send(data: str) -> None:
             await ws.send(data)
 
-        sub_engine = SubEngine(ws_send, loop)
+        sub_engine = ChildEngineProxy(ws_send, loop)
 
         try:
             # Pull the adapter's profile via discover.

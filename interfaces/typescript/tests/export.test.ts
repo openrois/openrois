@@ -26,8 +26,8 @@ describe("Export completeness", () => {
     expect(openrois.NotifyEventPayloadSchema).toBeDefined();
   });
 
-  it("exports Bus types", () => {
-    expect(openrois.BusAdapterError).toBeDefined();
+  it("exports Component Contract types", () => {
+    expect(openrois.ComponentContractError).toBeDefined();
     expect(openrois.ComponentNotFoundError).toBeDefined();
     expect(openrois.DiscoverRequestSchema).toBeDefined();
     expect(openrois.DiscoverResponseSchema).toBeDefined();

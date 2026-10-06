@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "openrois-engine"
+version = "0.1.0a2"
+description = "OpenRoIS engine: the recursive RoIS HRI Engine, with its WebSocket server and client"
+license = "Apache-2.0"
+requires-python = ">=3.12"
+dependencies = [
+    "openrois-interfaces>=0.1.0a2",
+    "websockets>=12.0",
+    "pyyaml>=6.0",
+]
+
+# openrois is a namespace package shared with openrois-interfaces, so there is no
+# src/openrois/__init__.py and this distribution ships only openrois/engine/.
+[tool.hatch.build.targets.wheel]
+packages = ["src/openrois"]

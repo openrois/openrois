@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
-  BusAdapterError,
+  ComponentContractError,
   ComponentNotFoundError,
-  type BusAdapter,
+  type ComponentContract,
   type DiscoverRequest,
   type DiscoverResponse,
   type CommandRequest,
@@ -13,20 +13,20 @@ import {
   type SubscribeRequest,
   type SubscribeResponse,
   type EventSink,
-} from "../src/bus";
+} from "../src/contract";
 import type { ReturnCode } from "../src/hri";
 
-describe("BusAdapterError", () => {
+describe("ComponentContractError", () => {
   it("creates with default return code", () => {
-    const err = new BusAdapterError("something went wrong");
+    const err = new ComponentContractError("something went wrong");
     expect(err.message).toBe("something went wrong");
     expect(err.returnCode).toBe("ERROR");
-    expect(err.name).toBe("BusAdapterError");
+    expect(err.name).toBe("ComponentContractError");
     expect(err instanceof Error).toBe(true);
   });
 
   it("creates with custom return code", () => {
-    const err = new BusAdapterError("bad param", "BAD_PARAMETER");
+    const err = new ComponentContractError("bad param", "BAD_PARAMETER");
     expect(err.returnCode).toBe("BAD_PARAMETER");
   });
 });
@@ -37,13 +37,13 @@ describe("ComponentNotFoundError", () => {
     expect(err.message).toBe("Component not found: robot/missing");
     expect(err.returnCode).toBe("UNSUPPORTED");
     expect(err.componentRef).toBe("robot/missing");
-    expect(err instanceof BusAdapterError).toBe(true);
+    expect(err instanceof ComponentContractError).toBe(true);
   });
 });
 
-describe("BusAdapter interface", () => {
+describe("ComponentContract interface", () => {
   it("can be implemented by a dummy class", () => {
-    class DummyAdapter implements BusAdapter {
+    class DummyAdapter implements ComponentContract {
       async discover(_request: DiscoverRequest): Promise<DiscoverResponse> {
         return { return_code: "OK", component_ref_list: [] };
       }

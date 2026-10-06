@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel, TypeAdapter
 
-from openrois.interfaces.bus import (
+from openrois.interfaces.contract import (
     CommandRequest,
     DiscoverRequest,
     DiscoverResponse,
@@ -103,7 +103,7 @@ MODELS: list[type[BaseModel]] = [
     EventMessageProfile,
     HRIComponentProfile,
     HRIEngineProfileType,
-    # bus
+    # contract
     DiscoverRequest,
     DiscoverResponse,
     CommandRequest,

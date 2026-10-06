@@ -34,7 +34,7 @@ running server.
 ## Scope
 
 This is a test double, not a reference implementation. It answers with fixed data and
-does not drive anything. For a real engine, use the Python `openrois-core` package. See
+does not drive anything. For a real engine, use the Python `openrois-engine` package. See
 the [architecture](https://openrois.org/docs/concepts/architecture).
 
 ## License

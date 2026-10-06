@@ -1,10 +1,10 @@
-"""Tests for openrois.interfaces.bus — ComponentContract request/response/event models."""
+"""Tests for openrois.interfaces.contract: ComponentContract request, response and event models."""
 
 import pytest
 from pydantic import ValidationError
 
-from openrois.interfaces.bus import (
-    BusAdapterError,
+from openrois.interfaces.contract import (
+    ComponentContractError,
     CommandRequest,
     ComponentNotFoundError,
     DiscoverRequest,
@@ -361,14 +361,14 @@ class TestTypedPayloadMapping:
 # ---------------------------------------------------------------------------
 
 
-class TestBusAdapterError:
+class TestComponentContractError:
     def test_default_return_code(self) -> None:
-        err = BusAdapterError("something went wrong")
+        err = ComponentContractError("something went wrong")
         assert err.message == "something went wrong"
         assert err.return_code == ReturnCode.ERROR
 
     def test_custom_return_code(self) -> None:
-        err = BusAdapterError("not supported", return_code=ReturnCode.UNSUPPORTED)
+        err = ComponentContractError("not supported", return_code=ReturnCode.UNSUPPORTED)
         assert err.return_code == ReturnCode.UNSUPPORTED
 
 

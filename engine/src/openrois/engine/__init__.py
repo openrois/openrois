@@ -1,4 +1,4 @@
-"""OpenRoIS core: recursive Engine, WebSocket server and client.
+"""OpenRoIS engine: the recursive RoIS HRI Engine, with its WebSocket server and client.
 
 This package provides the recursive Engine class that serves both the
 gateway (main engine with child engines) and the adapter (sub-engine with
@@ -14,15 +14,20 @@ Public API:
 
 from __future__ import annotations
 
-from openrois_core.config import component_config, read_profile
-from openrois_core.engine import ComponentRegistry, Engine, EventEmitter, SubEngine
-from openrois_core.ws_client import WsClient
-from openrois_core.ws_server import WsServer
+from openrois.engine.config import component_config, read_profile
+from openrois.engine.engine import (
+    ChildEngineProxy,
+    ComponentRegistry,
+    Engine,
+    EventEmitter,
+)
+from openrois.engine.ws_client import WsClient
+from openrois.engine.ws_server import WsServer
 
 __all__ = [
     "Engine",
     "ComponentRegistry",
-    "SubEngine",
+    "ChildEngineProxy",
     "EventEmitter",
     "WsServer",
     "WsClient",

@@ -10,13 +10,20 @@ Modules:
     common:     Common component types (ComponentStatus, StreamStatus)
     service:    Service application callback types (CompletedStatus, ErrorType)
     profiles:   Component profile schema models (from XML-Profiles.xsd)
+    contract:   ComponentContract protocol and its request, response and event models
     components: Per-component typed message models
 """
 
-from openrois.interfaces.bus import (
-    BusAdapterError,
+from openrois.interfaces.common import (
+    ComponentStatus,
+    ComponentStatusT,
+    StreamStatus,
+    StreamStatusT,
+)
+from openrois.interfaces.contract import (
     CommandRequest,
     ComponentContract,
+    ComponentContractError,
     ComponentNotFoundError,
     DiscoverRequest,
     DiscoverResponse,
@@ -27,12 +34,6 @@ from openrois.interfaces.bus import (
     QueryResponse,
     SubscribeRequest,
     SubscribeResponse,
-)
-from openrois.interfaces.common import (
-    ComponentStatus,
-    ComponentStatusT,
-    StreamStatus,
-    StreamStatusT,
 )
 from openrois.interfaces.hri import (
     Argument,
@@ -115,8 +116,8 @@ __all__ = [
     "ErrorType",
     "NotifyErrorEvent",
     "NotifyEventPayload",
-    # Bus
-    "BusAdapterError",
+    # Component Contract
+    "ComponentContractError",
     "CommandId",
     "CommandRequest",
     "CommandType",
