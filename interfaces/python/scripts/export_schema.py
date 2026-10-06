@@ -21,6 +21,8 @@ Source: roadmap.md M0 Task 0.5
 from __future__ import annotations
 
 import json
+import re
+import tomllib
 from pathlib import Path
 
 from pydantic import BaseModel, TypeAdapter
@@ -213,6 +215,21 @@ MODULE_MAP: dict[type, str] = {
 
 # scripts/export_schema.py → scripts/ → python/ → interfaces/ → schema/
 SCHEMA_DIR = Path(__file__).resolve().parents[2] / "schema"
+PYPROJECT = Path(__file__).resolve().parents[1] / "pyproject.toml"
+
+
+def package_version() -> str:
+    """The interfaces package version, written as the npm and NuGet packages spell it.
+
+    The manifest belongs to the interfaces package, so it carries that package's version
+    instead of a hard-coded string. PEP 440 "0.1.0a2" becomes "0.1.0-alpha.2".
+    """
+    version = str(tomllib.loads(PYPROJECT.read_text())["project"]["version"])
+    match = re.fullmatch(r"(\d+\.\d+\.\d+)(?:a(\d+))?", version)
+    if match is None:
+        raise ValueError(f"Unsupported version in {PYPROJECT}: {version}")
+    base, alpha = match.groups()
+    return f"{base}-alpha.{alpha}" if alpha else base
 
 
 def export_model(model: type[BaseModel]) -> dict[str, object]:
@@ -253,7 +270,7 @@ def write_manifest() -> Path:
     # Sort file lists for deterministic output
     for file_list in modules.values():
         file_list.sort()
-    manifest = {"version": "0.1.0-alpha.1", "modules": modules}
+    manifest = {"version": package_version(), "modules": modules}
     path = SCHEMA_DIR / "manifest.json"
     path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False))
     return path
