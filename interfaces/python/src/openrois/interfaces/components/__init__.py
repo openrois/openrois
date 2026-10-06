@@ -19,6 +19,18 @@ from openrois.interfaces.components.person_detection import (
     PersonDetectedEvent,
     PersonDetectionStatusResult,
 )
+from openrois.interfaces.components.person_identification import (
+    PERSON_IDENTIFICATION_URN,
+    PersonIdentifiedEvent,
+    PersonIdentificationStatusResult,
+    PersonIdentifier,
+)
+from openrois.interfaces.components.person_localization import (
+    PERSON_LOCALIZATION_URN,
+    PersonLocalizedEvent,
+    PersonLocalizationStatusResult,
+    PersonPosition,
+)
 from openrois.interfaces.components.reaction import (
     REACTION_URN,
     ReactionGetParameterResult,
@@ -37,6 +49,16 @@ __all__ = [
     "PERSON_DETECTION_URN",
     "PersonDetectedEvent",
     "PersonDetectionStatusResult",
+    # PersonIdentification
+    "PERSON_IDENTIFICATION_URN",
+    "PersonIdentifiedEvent",
+    "PersonIdentificationStatusResult",
+    "PersonIdentifier",
+    # PersonLocalization
+    "PERSON_LOCALIZATION_URN",
+    "PersonLocalizedEvent",
+    "PersonLocalizationStatusResult",
+    "PersonPosition",
     # Navigation
     "NAVIGATION_URN",
     "NavigationSetParameter",

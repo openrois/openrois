@@ -47,6 +47,16 @@ from openrois.interfaces.components.person_detection import (
     PersonDetectedEvent,
     PersonDetectionStatusResult,
 )
+from openrois.interfaces.components.person_identification import (
+    PersonIdentifiedEvent,
+    PersonIdentificationStatusResult,
+    PersonIdentifier,
+)
+from openrois.interfaces.components.person_localization import (
+    PersonLocalizedEvent,
+    PersonLocalizationStatusResult,
+    PersonPosition,
+)
 from openrois.interfaces.components.system_information import (
     SystemInformationEngineStatusResult,
     SystemInformationRobotPositionResult,
@@ -116,6 +126,14 @@ MODELS: list[type[BaseModel]] = [
     # components/person_detection
     PersonDetectedEvent,
     PersonDetectionStatusResult,
+    # components/person_identification
+    PersonIdentifiedEvent,
+    PersonIdentificationStatusResult,
+    PersonIdentifier,
+    # components/person_localization
+    PersonLocalizedEvent,
+    PersonLocalizationStatusResult,
+    PersonPosition,
     # components/navigation
     NavigationSetParameter,
     NavigationSetParameterResult,

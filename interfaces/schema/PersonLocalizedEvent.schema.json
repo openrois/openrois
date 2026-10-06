@@ -1,0 +1,72 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "DateTime": {
+      "type": "string"
+    },
+    "Integer": {
+      "type": "integer"
+    },
+    "PersonPosition": {
+      "additionalProperties": false,
+      "description": "3D position of a single localized person.\n\nAttributes:\n    id: Session-scoped tracking identifier of the person. Not a\n        persistent personal identifier: it is reset when the\n        perception pipeline restarts and may switch under\n        occlusion.\n    x: X coordinate [m] in the robot body frame (+x forward).\n    y: Y coordinate [m] in the robot body frame (+y left).\n    z: Z coordinate [m] in the robot body frame (+z up).",
+      "properties": {
+        "id": {
+          "description": "Session-scoped tracking ID of the person",
+          "title": "Id",
+          "type": "string"
+        },
+        "x": {
+          "description": "X coordinate [m], robot body frame (+x forward)",
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "description": "Y coordinate [m], robot body frame (+y left)",
+          "title": "Y",
+          "type": "number"
+        },
+        "z": {
+          "description": "Z coordinate [m], robot body frame (+z up)",
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "x",
+        "y",
+        "z"
+      ],
+      "title": "PersonPosition",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Event payload for Person_Localization::Event::person_localized.\n\nAttributes:\n    timestamp: ISO 8601 datetime when the positions were measured.\n    number: Number of localized persons in this observation.\n    positions: 3D position of each localized person, in the robot\n        body frame (REP-103: +x forward, +y left, +z up), meters.",
+  "properties": {
+    "timestamp": {
+      "$ref": "#/$defs/DateTime",
+      "description": "Time when measured"
+    },
+    "number": {
+      "$ref": "#/$defs/Integer",
+      "description": "Number of localized persons"
+    },
+    "positions": {
+      "description": "3D positions of localized persons (robot body frame, meters)",
+      "items": {
+        "$ref": "#/$defs/PersonPosition"
+      },
+      "title": "Positions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "timestamp",
+    "number",
+    "positions"
+  ],
+  "title": "PersonLocalizedEvent",
+  "type": "object"
+}

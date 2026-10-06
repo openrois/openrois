@@ -1,0 +1,23 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "additionalProperties": false,
+  "description": "Identifier assigned to a single identified person.\n\nAttributes:\n    id: Session-scoped tracking identifier. Not a persistent\n        personal identifier: it is reset when the perception\n        pipeline restarts and may switch under occlusion.\n    name: Optional human-readable name, empty when unknown.",
+  "properties": {
+    "id": {
+      "description": "Session-scoped tracking ID (not persistent)",
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "default": "",
+      "description": "Human-readable name, empty if unknown",
+      "title": "Name",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "title": "PersonIdentifier",
+  "type": "object"
+}
