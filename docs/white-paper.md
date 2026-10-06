@@ -260,7 +260,7 @@ adapter IS an engine (a sub HRI Engine), not a separate kind of process. There i
 
 **Current state:** the Python `openrois.engine` package implements the recursive
 `Engine`, and existing adapters run on it. The earlier TypeScript proof of concept
-remains in `gateway/`, frozen for early adopters.
+has been removed. Its last version is at tag `ts-gateway-final`.
 
 ### 3.6 Package Management Is a Process Feature, Not Engine Logic
 
@@ -368,8 +368,8 @@ with no shared core. The recursive model dissolves this problem:
   spec: the Sub HRI Engine is an engine, not a passive backend.
 
 **Current state:** the Python `openrois.engine` package implements this model with a
-single recursive `Engine` class. The TypeScript proof of concept in `gateway/` is
-frozen and kept only for early adopters.
+single recursive `Engine` class. The TypeScript proof of concept has been
+removed, with its last version at tag `ts-gateway-final`.
 
 ### 4.4 the Adapter as a Sub HRI Engine
 
@@ -1815,7 +1815,7 @@ details, dependency graph, and open decisions.
 | 1 | Engine and Sub HRI Engine | TypeScript proof of concept, `SubEngine` proxy, mock components | done |
 | 2 | Adapter Framework and Components | component framework, reference components, real robot adapter | done |
 | 3 | Client SDKs and First Demonstration | TypeScript SDK and web client done, C# SDK in progress, exit tag `v0.1.0` | in progress |
-| 4 | Recursive Engine in Python | one `Engine` class in `openrois.engine` as the reference, TypeScript proof of concept frozen | in progress |
+| 4 | Recursive Engine in Python | one `Engine` class in `openrois.engine`, TypeScript proof of concept removed | in progress |
 | 5 | Solidify the Engine | harden engine, component framework, package management v0 | planned |
 | 6 | Gateway Process | compose `Engine` + `WsServer` from `openrois.engine` | planned |
 | 7 | Adapter Process | compose `Engine` + `WsClient` from `openrois.engine` + backend bridge | planned |

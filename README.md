@@ -249,7 +249,6 @@ openrois/
 ├── sdk/
 │   ├── typescript/      Client SDK for web and Node.js (@openrois/sdk)
 │   └── csharp/          Client SDK for Unity (OpenRoIS.Sdk, in progress)
-├── gateway/             TypeScript gateway prototype, superseded by core/
 ├── examples/
 │   ├── mock-engine/     RoIS engine test double with simulated components
 │   ├── hri-client/      Profile-driven web inspector for any RoIS engine

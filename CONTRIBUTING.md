@@ -146,7 +146,8 @@ chore(ci): add sdk typescript workflow with vitest and coverage
 - Use `BREAKING CHANGE:` in the footer for breaking changes. Before v1.0 they are
   expected: OpenRoIS keeps no backwards compatibility, so change APIs and wire formats
   outright instead of adding deprecated aliases, fallbacks, or compatibility shims. The
-  frozen TypeScript gateway in `gateway/` is the only exception.
+  only exception is the TypeScript gateway proof of concept, which was removed from this
+  repository and stays as it was at tag `ts-gateway-final`.
 
 ## 7. Conventional Branches
 

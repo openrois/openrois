@@ -18,7 +18,6 @@ What exists today:
 | Adapter SDK (component framework) and reference components | `components/` | Available |
 | TypeScript client SDK | `sdk/typescript/` | Available |
 | C# client SDK for Unity | `sdk/csharp/` | JSON-RPC layer only, client in progress |
-| TypeScript gateway proof of concept | `gateway/` | Frozen for early adopters: no features, fixes, or updates. Superseded by `engine/` |
 | Examples: mock engine, mock adapter, web client, adapter template | `examples/` | Available |
 | Hub management application | `apps/hub/` | Not started, scaffold only |
 
@@ -74,7 +73,8 @@ skipped unless `OPENROIS_NORMATIVE_DIR` points to a local copy of the files.
   format, or file layout outright. Do not add deprecated aliases, fallback code paths,
   dual formats, or compatibility shims, and remove existing ones when you touch that
   code. Mark the change with `BREAKING CHANGE:` in the commit footer and in the package
-  CHANGELOG. The frozen TypeScript gateway in `gateway/` is the only exception.
+  CHANGELOG. The only exception is the TypeScript gateway proof of concept, which was
+  removed from this repository and stays as it was at tag `ts-gateway-final`.
 - Python 3.12+, Pydantic v2, `from __future__ import annotations`, PEP 695 `type`
   statements, mypy strict, ruff line length 100.
 - TypeScript ESM, strict typecheck, vitest.
