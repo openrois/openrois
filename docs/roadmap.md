@@ -24,8 +24,8 @@ Until version 1.0, all releases are **alpha, with an unstable API**.
 | **1** | Engine and sub HRI Engine proof of concept | done |
 | **2** | Adapter framework and reference components | done |
 | **3** | Client SDKs and first end-to-end demonstration | in progress |
-| **4** | Recursive core in Python | in progress |
-| **5** | Hardening the core | planned |
+| **4** | Recursive engine in Python | in progress |
+| **5** | Hardening the engine | planned |
 | **6** | Gateway process | planned |
 | **7** | Adapter process | planned |
 | **8** | Open reference platform and mixed paradigms | planned |
@@ -71,19 +71,19 @@ high-level client does not yet.
 
 **Exit criteria:** tagged release `v0.1.0`.
 
-### Phase 4: Recursive Core in Python (In Progress)
+### Phase 4: Recursive Engine in Python (In Progress)
 
-**Done:** the `openrois-core` package with the recursive `Engine`, the
+**Done:** the `openrois-engine` package with the recursive `Engine`, the
 `ComponentRegistry`, the `SubEngine` proxy, and the `WsServer` and `WsClient` that
 existing adapters run on.
 
 **In progress:** reliability fixes for adapter discovery and event delivery in the
-gateway, and a regression test suite for the core.
+gateway, and a regression test suite for the engine.
 
 **Exit criteria:** one dispatch implementation, with the TypeScript proof of concept
 retired.
 
-### Phase 5: Hardening the Core (Planned)
+### Phase 5: Hardening the Engine (Planned)
 
 Graceful shutdown, reconnection behavior, loading component packages from a local path
 or a Git URL, and minimal health and status endpoints.

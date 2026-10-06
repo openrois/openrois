@@ -63,7 +63,7 @@ apply to all documentation, code comments, commit messages, and PR descriptions.
 ## 4. Changelog
 
 The `interfaces/*`, `sdk/*`, and `gateway` packages have a `CHANGELOG.md` file. Update
-it when you change one of them. The Python packages under `core/` and `components/` will
+it when you change one of them. The Python packages under `engine/` and `components/` will
 get one with their first tagged release.
 
 - Format: [Keep a Changelog](https://keepachangelog.com/en/2.0.0/)
@@ -322,7 +322,7 @@ ran.
 | C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
 | TypeScript SDK | `sdk/typescript` | `npm run build`, `npm test` |
 | Mock engine | `examples/mock-engine` | `npm test` |
-| Python packages | `core`, `components/*` | `ruff check .` |
+| Python packages | `engine`, `components/*` | `ruff check .` |
 
 Some tests in `interfaces/python` cross-check the models against the normative RoIS
 machine-readable files, which this repository does not redistribute: they carry OMG's

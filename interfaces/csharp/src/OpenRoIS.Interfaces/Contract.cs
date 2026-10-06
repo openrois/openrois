@@ -1,31 +1,31 @@
-// Transport-neutral bus adapter contract for OpenRoIS.
+// Transport-neutral component contract for OpenRoIS.
 //
-// This file is hand-written — JSON Schema cannot represent behavioral interfaces.
-// The request/response models and EventEnvelope are generated in Generated/BusModels.cs.
+// This file is hand-written, because JSON Schema cannot represent behavioral interfaces.
+// The request/response models and EventEnvelope are generated in Generated/ContractModels.cs.
 //
-// Source: roadmap.md M0 Task 0.2; mirrors interfaces/python/.../bus.py
+// Mirrors interfaces/python/src/openrois/interfaces/contract.py.
 
 using System;
 using System.Threading.Tasks;
-using OpenRoIS.Interfaces.Bus.Models;
+using OpenRoIS.Interfaces.Contract.Models;
 using ReturnCode = OpenRoIS.Interfaces.Hri.ReturnCode;
 
-namespace OpenRoIS.Interfaces.Bus
+namespace OpenRoIS.Interfaces.Contract
 {
     // ─── Event sink ──────────────────────────────────────────────────────
 
-    /// <summary>Async callback that receives event envelopes from a BusAdapter.</summary>
+    /// <summary>Async callback that receives event envelopes from a ComponentContract.</summary>
     public delegate Task EventSink(EventEnvelope envelope);
 
     // ─── Exceptions ──────────────────────────────────────────────────────
 
-    /// <summary>Base error raised by BusAdapter implementations.</summary>
-    public class BusAdapterError : Exception
+    /// <summary>Base error raised by ComponentContract implementations.</summary>
+    public class ComponentContractError : Exception
     {
         /// <summary>The RoIS return code associated with this error.</summary>
         public ReturnCode ReturnCode { get; }
 
-        public BusAdapterError(string message, ReturnCode returnCode = ReturnCode.ERROR)
+        public ComponentContractError(string message, ReturnCode returnCode = ReturnCode.ERROR)
             : base(message)
         {
             ReturnCode = returnCode;
@@ -33,7 +33,7 @@ namespace OpenRoIS.Interfaces.Bus
     }
 
     /// <summary>Raised when a component_ref cannot be resolved by the adapter.</summary>
-    public class ComponentNotFoundError : BusAdapterError
+    public class ComponentNotFoundError : ComponentContractError
     {
         /// <summary>The component reference that was not found.</summary>
         public string ComponentRef { get; }
@@ -45,14 +45,14 @@ namespace OpenRoIS.Interfaces.Bus
         }
     }
 
-    // ─── BusAdapter interface ────────────────────────────────────────────
+    // ─── ComponentContract interface ─────────────────────────────────────
 
     /// <summary>
-    /// Transport-neutral contract between the RoIS engine and a concrete bus.
-    /// Implementations include UniversalBusAdapter (M1, WS+JSON-RPC), ROS2BusAdapter (M3),
-    /// RosBridgeBusAdapter (future).
+    /// Transport-neutral contract between an engine and the components it reaches.
+    /// The Python engine implements it with ComponentRegistry (local components) and
+    /// SubEngine (a remote child engine over WebSocket JSON-RPC).
     /// </summary>
-    public interface IBusAdapter
+    public interface IComponentContract
     {
         /// <summary>Discover components matching the request condition. Maps to CommandIF.search().</summary>
         Task<DiscoverResponse> Discover(DiscoverRequest request);

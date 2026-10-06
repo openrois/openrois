@@ -87,14 +87,14 @@ namespace OpenRoIS.Interfaces.Tests
     [Fact]
     public void DiscoverRequest_DefaultCondition()
     {
-        var req = new OpenRoIS.Interfaces.Bus.Models.DiscoverRequest("");
+        var req = new OpenRoIS.Interfaces.Contract.Models.DiscoverRequest("");
         Assert.Equal("", req.Condition);
     }
 
     [Fact]
     public void DiscoverResponse_WithComponentRefs()
     {
-        var resp = new OpenRoIS.Interfaces.Bus.Models.DiscoverResponse(
+        var resp = new OpenRoIS.Interfaces.Contract.Models.DiscoverResponse(
             ReturnCode.OK, new List<string> { "robot/nav" });
         Assert.Equal(ReturnCode.OK, resp.ReturnCode);
         Assert.Single(resp.ComponentRefList!);

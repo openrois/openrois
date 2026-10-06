@@ -27,7 +27,7 @@
       "QueryMessageProfile.schema.json",
       "RoISIdentifierType.schema.json"
     ],
-    "bus": [
+    "contract": [
       "CommandRequest.schema.json",
       "DiscoverRequest.schema.json",
       "DiscoverResponse.schema.json",

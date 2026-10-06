@@ -25,7 +25,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, TypeAdapter
 
-from openrois.interfaces.bus import (
+from openrois.interfaces.contract import (
     CommandRequest,
     DiscoverRequest,
     DiscoverResponse,
@@ -111,7 +111,7 @@ MODELS: list[type[BaseModel]] = [
     EventMessageProfile,
     HRIComponentProfile,
     HRIEngineProfileType,
-    # bus
+    # contract
     DiscoverRequest,
     DiscoverResponse,
     CommandRequest,
@@ -178,16 +178,16 @@ MODULE_MAP: dict[type, str] = {
     EventMessageProfile: "profiles",
     HRIComponentProfile: "profiles",
     HRIEngineProfileType: "profiles",
-    # bus
-    DiscoverRequest: "bus",
-    DiscoverResponse: "bus",
-    CommandRequest: "bus",
-    InvokeResponse: "bus",
-    QueryRequest: "bus",
-    QueryResponse: "bus",
-    SubscribeRequest: "bus",
-    SubscribeResponse: "bus",
-    EventEnvelope: "bus",
+    # contract
+    DiscoverRequest: "contract",
+    DiscoverResponse: "contract",
+    CommandRequest: "contract",
+    InvokeResponse: "contract",
+    QueryRequest: "contract",
+    QueryResponse: "contract",
+    SubscribeRequest: "contract",
+    SubscribeResponse: "contract",
+    EventEnvelope: "contract",
     # components/person_detection
     PersonDetectedEvent: "components/person-detection",
     PersonDetectionStatusResult: "components/person-detection",

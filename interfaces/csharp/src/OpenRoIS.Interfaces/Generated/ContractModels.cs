@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace OpenRoIS.Interfaces.Bus.Models
+namespace OpenRoIS.Interfaces.Contract.Models
 {
     // ─── Shared type definitions ($defs) ─────────────────────────────
 

@@ -18,7 +18,7 @@
 >   guides and a wire protocol reference with the implementation status of every method.
 >
 > **Status:** Alpha, pre-1.0, unstable API. The type pipeline, the recursive engine
-> (Python `openrois_core`), the component framework, reference components, and the
+> (Python `openrois.engine`), the component framework, reference components, and the
 > TypeScript SDK are built and demonstrated with a physical robot. The C# SDK,
 > authentication, and media streaming are in progress or planned. This document
 > describes the target architecture and marks features that are not implemented yet.
@@ -247,7 +247,7 @@ technology for the middleware boundaries.
 ### 3.5 Recursive Engine, Not a Monolithic Gateway
 
 The engine is a recursive unit, not a single process. It is a Python library
-(`openrois_core`) that manages components and routes RoIS calls to child engines.
+(`openrois.engine`) that manages components and routes RoIS calls to child engines.
 The same `Engine` class is used by both the gateway and the adapter. The difference
 is what is populated: the gateway has child engines (sub HRI Engines connected over
 WebSocket), the adapter has local components (registered via `ComponentRegistry`).
@@ -258,7 +258,7 @@ This decision eliminates the duplicate dispatch implementation problem. The
 adapter IS an engine (a sub HRI Engine), not a separate kind of process. There is one
 `Engine` class, one dispatch implementation. See section 4 for the full model.
 
-**Current state:** the Python `openrois_core` package implements the recursive
+**Current state:** the Python `openrois.engine` package implements the recursive
 `Engine`, and existing adapters run on it. The earlier TypeScript proof of concept
 remains in `gateway/` until Phase 4 of the roadmap retires it.
 
@@ -289,7 +289,7 @@ The difference is what is populated, not whether it is an engine.
 
 ### 4.1 the Engine Class
 
-The `Engine` class is a Python library in `openrois_core`. It has:
+The `Engine` class is a Python library in `openrois.engine`. It has:
 
 - A `ComponentRegistry` for local components (populated when acting as a sub HRI Engine).
 - A child engine registry for child engines (populated when acting as the main engine).
@@ -299,7 +299,7 @@ The `Engine` class is a Python library in `openrois_core`. It has:
 
 ```mermaid
 flowchart TB
-    subgraph Engine["Engine class (openrois_core)"]
+    subgraph Engine["Engine class (openrois.engine)"]
         direction TB
         CR["ComponentRegistry<br/>local components (adapter)"]
         SR["Child engine registry<br/>child engines (gateway)"]
@@ -367,7 +367,7 @@ with no shared core. The recursive model dissolves this problem:
   hosts local components and registers with a parent engine. This matches the RoIS
   spec: the Sub HRI Engine is an engine, not a passive backend.
 
-**Current state:** the Python `openrois_core` package implements this model with a
+**Current state:** the Python `openrois.engine` package implements this model with a
 single recursive `Engine` class. The TypeScript proof of concept in `gateway/` is
 retired at the end of Phase 4.
 
@@ -731,12 +731,12 @@ Target characteristics (the JSON-RPC 2.0 layer exists today, the rest is in prog
 
 ### 8.3 Python SDK for Components and Adapters
 
-The Python packages (`openrois-core` and `openrois-components-core`) serve adapter
+The Python packages (`openrois-engine` and `openrois-components-core`) serve adapter
 authors. A component declares its RoIS operations with decorators, and the adapter
 hosts it in a sub HRI Engine connected to the gateway.
 
 ```python
-from openrois.interfaces.bus import InvokeResponse
+from openrois.interfaces.contract import InvokeResponse
 from openrois.interfaces.hri import ReturnCode
 from openrois_components_core import component, invoke, query, results
 
@@ -1815,10 +1815,10 @@ details, dependency graph, and open decisions.
 | 1 | Engine and Sub HRI Engine | TypeScript proof of concept, `SubEngine` proxy, mock components | done |
 | 2 | Adapter Framework and Components | component framework, reference components, real robot adapter | done |
 | 3 | Client SDKs and First Demonstration | TypeScript SDK and web client done, C# SDK in progress, exit tag `v0.1.0` | in progress |
-| 4 | Recursive Core in Python | one `Engine` class in `openrois_core`, TypeScript proof of concept retired | in progress |
-| 5 | Solidify the Core | harden engine, component framework, package management v0 | planned |
-| 6 | Gateway Process | compose `Engine` + `WsServer` from `openrois_core` | planned |
-| 7 | Adapter Process | compose `Engine` + `WsClient` from `openrois_core` + backend bridge | planned |
+| 4 | Recursive Engine in Python | one `Engine` class in `openrois.engine`, TypeScript proof of concept retired | in progress |
+| 5 | Solidify the Engine | harden engine, component framework, package management v0 | planned |
+| 6 | Gateway Process | compose `Engine` + `WsServer` from `openrois.engine` | planned |
+| 7 | Adapter Process | compose `Engine` + `WsClient` from `openrois.engine` + backend bridge | planned |
 | 8 | Open Reference Platform and Mixed Paradigm | reference platform on open hardware, paradigm-neutrality proof | planned |
 | 9 | Auth, Security, Media | parallelizable after Phase 7 | planned |
 | 10 | Full Component Library | all 17 basic components, packages published, `v1.0` | planned |
@@ -1846,7 +1846,7 @@ Pre-1.0 releases are Alpha, unstable API. Do not use in production until v1.0.
 
 ### 15.2 Current State
 
-The type pipeline, the recursive Python engine (`openrois_core`), the component
+The type pipeline, the recursive Python engine (`openrois.engine`), the component
 framework, reference components, and the TypeScript SDK are built and working, and
 the first end-to-end demonstration runs against a real robot via gRPC. Phase 4
 finishes the migration by hardening the Python core and retiring the TypeScript

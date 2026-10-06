@@ -32,7 +32,7 @@ transport. Implement its five methods and the engine can drive your platform wit
 knowing anything about it:
 
 ```python
-from openrois.interfaces.bus import ComponentContract
+from openrois.interfaces.contract import ComponentContract
 
 
 class MyContract(ComponentContract):
@@ -44,7 +44,7 @@ class MyContract(ComponentContract):
 ```
 
 Most adapter authors do not implement it directly: `ComponentRegistry` and `SubEngine` in
-[`openrois-core`](../../core/README.md) play this role (aligning their signatures with the
+[`openrois-engine`](../../engine/README.md) play this role (aligning their signatures with the
 protocol exactly is part of Phase 4), and components are written with the
 decorators in [`openrois-components-core`](../../components/core/README.md).
 
@@ -56,7 +56,7 @@ decorators in [`openrois-components-core`](../../components/core/README.md).
 | `openrois.interfaces.common` | `ComponentStatus`, `StreamStatus` |
 | `openrois.interfaces.service` | `CompletedStatus`, `ErrorType`, `CompletedEvent`, `NotifyErrorEvent`, `NotifyEventPayload` |
 | `openrois.interfaces.profiles` | Component and engine profile models |
-| `openrois.interfaces.bus` | `ComponentContract` protocol, request and response models, `EventEnvelope`, error classes |
+| `openrois.interfaces.contract` | `ComponentContract` protocol, request and response models, `EventEnvelope`, error classes |
 | `openrois.interfaces.components` | Per-component typed message models |
 
 ## Development

@@ -1,8 +1,8 @@
 """Transport-neutral component contract for OpenRoIS.
 
-This module defines the ComponentContract protocol — the only boundary the RoIS
-engine and gateway depend on. Every concrete bus (in-process, ROS 2, gRPC,
-WebSocket, etc.) implements this five-method contract:
+This module defines the ComponentContract protocol, the only boundary between an
+engine and the components it reaches. Local components (in-process) and remote
+child engines (over WebSocket) implement the same five-method contract:
 
     discover  -> CommandIF.search
     invoke    -> CommandIF.bind/set_parameter/execute/start/stop/suspend/resume
@@ -12,8 +12,6 @@ WebSocket, etc.) implements this five-method contract:
 
 The contract is intentionally transport-agnostic. No ROS, DDS, gRPC, WebSocket,
 or socket symbols appear here.
-
-Source: roadmap.md M0 Task 0.2
 """
 
 from __future__ import annotations
@@ -58,7 +56,7 @@ type EventSink = Callable[[EventEnvelope], Awaitable[None]]
 # ---------------------------------------------------------------------------
 
 
-class BusAdapterError(Exception):
+class ComponentContractError(Exception):
     """Base exception raised by ComponentContract implementations."""
 
     def __init__(self, message: str, return_code: ReturnCode = ReturnCode.ERROR) -> None:
@@ -67,7 +65,7 @@ class BusAdapterError(Exception):
         self.return_code = return_code
 
 
-class ComponentNotFoundError(BusAdapterError):
+class ComponentNotFoundError(ComponentContractError):
     """Raised when a component_ref cannot be resolved by the adapter."""
 
     def __init__(self, component_ref: RoISIdentifier) -> None:
@@ -268,17 +266,14 @@ class EventEnvelope(BaseModel):
 
 @runtime_checkable
 class ComponentContract(Protocol):
-    """Transport-neutral contract between the RoIS engine and a concrete bus.
+    """Transport-neutral contract between an engine and the components it reaches.
 
-    Implementations include:
-      - SubEngine (remote adapter via WebSocket JSON-RPC)
-      - ComponentRegistry (local components in-process)
-      - UniversalBusAdapter  (M1, WS+JSON-RPC for non-ROS hosts)
-      - ROS2BusAdapter        (M3)
-      - RosBridgeBusAdapter   (future)
+    Implementations in the engine package:
+      - ComponentRegistry (local components, in-process)
+      - SubEngine (a remote child engine, over WebSocket JSON-RPC)
 
-    The contract is intentionally limited to five async methods. Adapters must
-    not leak transport-specific types through these signatures.
+    The contract is intentionally limited to five async methods. Implementations
+    must not leak transport-specific types through these signatures.
     """
 
     async def discover(self, request: DiscoverRequest) -> DiscoverResponse:

@@ -13,7 +13,7 @@ Use it to develop clients and to exercise a gateway end to end.
 # From the repository root. The packages are not published yet.
 pip install -e ./interfaces/python
 pip install -e ./components/core
-pip install -e ./core
+pip install -e ./engine
 ```
 
 ## Run

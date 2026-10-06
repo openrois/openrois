@@ -16,7 +16,7 @@ from typing import Any
 
 import websockets
 
-from openrois_core.engine import Engine, SubEngine
+from openrois.engine.engine import Engine, SubEngine
 
 logger = logging.getLogger(__name__)
 

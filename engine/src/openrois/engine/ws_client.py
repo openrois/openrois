@@ -31,7 +31,7 @@ from typing import Any
 
 import websockets
 
-from openrois_core.engine import Engine, EventEmitter
+from openrois.engine.engine import Engine, EventEmitter
 
 logger = logging.getLogger(__name__)
 

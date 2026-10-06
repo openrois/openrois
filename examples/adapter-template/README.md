@@ -14,7 +14,7 @@ repository:
 ```bash
 pip install -e ./interfaces/python
 pip install -e ./components/core
-pip install -e ./core
+pip install -e ./engine
 ```
 
 ## Use the Template
@@ -85,5 +85,5 @@ the [component reference](https://openrois.org/docs/reference/components).
 ## Learn More
 
 - [Component framework](../../components/core/README.md)
-- [Engine core](../../core/README.md)
+- [Engine](../../engine/README.md)
 - [Working example](../mock-adapter/README.md)

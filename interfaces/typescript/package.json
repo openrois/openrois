@@ -45,9 +45,9 @@
       "import": "./dist/profiles.js",
       "types": "./dist/profiles.d.ts"
     },
-    "./bus": {
-      "import": "./dist/bus.js",
-      "types": "./dist/bus.d.ts"
+    "./contract": {
+      "import": "./dist/contract.js",
+      "types": "./dist/contract.d.ts"
     },
     "./components": {
       "import": "./dist/components/index.js",

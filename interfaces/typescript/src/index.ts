@@ -6,6 +6,6 @@ export * from "./common";
 export * from "./service";
 // Profiles
 export * from "./profiles";
-// Bus adapter contract (hand-written interface + generated models)
-export * from "./bus";
+// Component Contract (hand-written interface + generated models)
+export * from "./contract";
 // Components are available via the @openrois/interfaces/components subpath export.

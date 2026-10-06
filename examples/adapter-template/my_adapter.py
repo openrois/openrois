@@ -12,9 +12,9 @@ from __future__ import annotations
 import argparse
 import logging
 
-from openrois.interfaces.bus import InvokeResponse
+from openrois.interfaces.contract import InvokeResponse
 from openrois.interfaces.hri import ReturnCode
-from openrois_core import Engine, WsClient, component_config, read_profile
+from openrois.engine import Engine, WsClient, component_config, read_profile
 from openrois_components_core import (
     component,
     invoke,

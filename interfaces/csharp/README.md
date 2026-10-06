@@ -49,7 +49,7 @@ Once published to a UPM registry, add via `manifest.json`:
 
 ```csharp
 using OpenRoIS.Interfaces.Hri;
-using OpenRoIS.Interfaces.Bus;
+using OpenRoIS.Interfaces.Contract;
 using System.Text.Json;
 
 // Deserialize a RoIS Result
@@ -59,8 +59,8 @@ var result = JsonSerializer.Deserialize<Result>(
 // Type-safe enum
 ReturnCode code = ReturnCode.OK;
 
-// Implement the BusAdapter contract
-class MyAdapter : IBusAdapter
+// Implement the Component Contract
+class MyComponents : IComponentContract
 {
     public Task<DiscoverResponse> Discover(DiscoverRequest request) { /* ... */ }
     public Task<InvokeResponse> Invoke(CommandRequest request) { /* ... */ }
@@ -78,23 +78,19 @@ class MyAdapter : IBusAdapter
 | `OpenRoIS.Interfaces.Common` | `ComponentStatus`, `StreamStatus` |
 | `OpenRoIS.Interfaces.Service` | `CompletedStatus`, `ErrorType`, `CompletedEvent`, `NotifyErrorEvent`, `NotifyEventPayload` |
 | `OpenRoIS.Interfaces.Profiles` | Component profile schema models |
-| `OpenRoIS.Interfaces.Bus` | `IBusAdapter` interface, request/response models, `EventEnvelope`, error classes |
+| `OpenRoIS.Interfaces.Contract` | `IComponentContract` interface, `ComponentContractError`, `EventSink`. Request/response models and `EventEnvelope` are in `OpenRoIS.Interfaces.Contract.Models` |
 | `OpenRoIS.Interfaces.Components` | Per-component typed message models |
 
 ## Generation
 
-The source files (except `Bus.cs`) are generated from `interfaces/schema/*.schema.json`:
+The source files (except `Contract.cs`) are generated from `interfaces/schema/*.schema.json`:
 
 ```bash
 # Reads ../schema by default (or the directory in OPENROIS_SCHEMA_DIR).
 dotnet run --project scripts/Generator/Generator.csproj
 ```
 
-The `IBusAdapter` interface and error classes in `Bus.cs` are hand-written, because JSON Schema cannot represent behavioral interfaces.
-
-## Naming
-
-This interface is called `ComponentContract` in the Python source of truth. The C# stack still uses the older name `IBusAdapter`, and the TypeScript stack `BusAdapter`. They will be renamed to match before `v1.0`.
+The `IComponentContract` interface and error classes in `Contract.cs` are hand-written, because JSON Schema cannot represent behavioral interfaces.
 
 ## License
 

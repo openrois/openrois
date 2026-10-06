@@ -14,11 +14,11 @@ What exists today:
 | Area | Directory | State |
 |------|-----------|-------|
 | RoIS interface types (Python, JSON Schema, TypeScript, C#) | `interfaces/` | Available |
-| Recursive engine, WebSocket server and client | `core/` | Available, hardening |
+| Recursive engine, WebSocket server and client | `engine/` | Available, hardening |
 | Adapter SDK (component framework) and reference components | `components/` | Available |
 | TypeScript client SDK | `sdk/typescript/` | Available |
 | C# client SDK for Unity | `sdk/csharp/` | JSON-RPC layer only, client in progress |
-| TypeScript gateway proof of concept | `gateway/` | Superseded by `core/`, retired at the end of Phase 4 |
+| TypeScript gateway proof of concept | `gateway/` | Superseded by `engine/`, retired at the end of Phase 4 |
 | Examples: mock engine, mock adapter, web client, adapter template | `examples/` | Available |
 | Hub management application | `apps/hub/` | Not started, scaffold only |
 
@@ -36,7 +36,7 @@ Python (Pydantic) → JSON Schema → C# + TypeScript
 - **Edit:** `interfaces/python/src/openrois/interfaces/*.py`
 - **Never edit:** `interfaces/schema/`,
   `interfaces/csharp/src/OpenRoIS.Interfaces/Generated/`,
-  `interfaces/typescript/src/` (except `bus.ts` and the `index.ts` barrels, which are
+  `interfaces/typescript/src/` (except `contract.ts` and the `index.ts` barrels, which are
   hand-written)
 
 After editing the Python models, run the full pipeline and the tests:
@@ -59,7 +59,7 @@ the XML profile disagree, follow the XML profile and document the divergence in
 | Python types | `interfaces/python` | `pip install -e ".[dev]"`, `pytest`, `mypy src/`, `ruff check src/` |
 | TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test` |
 | C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
-| Engine core | `core` | `pip install -e .`, `ruff check src/` |
+| Engine | `engine` | `pip install -e .`, `ruff check src/` |
 | Component framework | `components/core` | `pip install -e .` |
 | TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` |
 | Mock engine | `examples/mock-engine` | `npm install`, `npm test` |
@@ -74,7 +74,7 @@ skipped unless `OPENROIS_NORMATIVE_DIR` points to a local copy of the files.
   statements, mypy strict, ruff line length 100.
 - TypeScript ESM, strict typecheck, vitest.
 - C# `netstandard2.1` (Unity 6.3+), `sealed class`, `Nullable` enabled.
-- `interfaces/python/src/` and `core/src/` stay transport-neutral and paradigm-neutral.
+- `interfaces/python/src/` and `engine/src/` stay transport-neutral and paradigm-neutral.
   No ROS, DDS, gRPC, or game engine imports. Those belong in components.
 - Do not change the `Component Contract` (`discover`, `invoke`, `query`, `subscribe`,
   `unsubscribe`) without reading section 8 of [docs/architecture.md](docs/architecture.md).
