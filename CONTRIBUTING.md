@@ -143,7 +143,10 @@ chore(ci): add sdk typescript workflow with vitest and coverage
 - Lowercase, no period at the end
 - Description under 72 characters in the subject line
 - Body explains *why*, not *what* (the diff shows what)
-- Use `BREAKING CHANGE:` in the footer for breaking changes (rare at alpha stage)
+- Use `BREAKING CHANGE:` in the footer for breaking changes. Before v1.0 they are
+  expected: OpenRoIS keeps no backwards compatibility, so change APIs and wire formats
+  outright instead of adding deprecated aliases, fallbacks, or compatibility shims. The
+  frozen TypeScript gateway in `gateway/` is the only exception.
 
 ## 7. Conventional Branches
 
