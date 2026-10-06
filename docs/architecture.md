@@ -1036,7 +1036,7 @@ openrois/
 ├── engine/        # Engine library: recursive Engine, ComponentRegistry, WsServer, WsClient (openrois-engine)
 ├── components/    # Component framework and reference components (per robot platform)
 ├── sdk/           # Client SDKs (TypeScript, C#)
-├── gateway/       # TypeScript gateway proof of concept, retired at the end of Phase 4
+├── gateway/       # TypeScript gateway proof of concept, frozen for early adopters
 ├── examples/      # Mock engine, mock adapter, web client, adapter template
 ├── apps/          # Product applications (Hub visualizer, planned)
 └── docs/          # Architecture, white paper, roadmap, spec reference
@@ -1047,7 +1047,7 @@ openrois/
 | `interfaces/` | Type pipeline. Pydantic models are the source of truth. JSON Schema is the canonical wire contract. C# and TypeScript types are generated. |
 | `engine/` | Engine library (`openrois-engine`). Recursive RoIS dispatch logic: one `Engine` class used by both the gateway and adapters, plus `WsServer` and `WsClient`. Zero media and zero paradigm-specific imports. |
 | `components/` | The component framework (`openrois-components-core`) and reference components per robot platform. |
-| `gateway/` | The TypeScript proof of concept that preceded `engine/`. Retired at the end of Phase 4. |
+| `gateway/` | The TypeScript proof of concept that preceded `engine/`. Frozen for early adopters: no new features, fixes, or updates. |
 | `sdk/` | Client SDKs: TypeScript for web and Node.js, C# for Unity (in progress). |
 | `examples/` | Reference implementations and templates for testing and onboarding. |
 | `apps/` | Product applications: the Hub (a gateway visualizer, planned). |

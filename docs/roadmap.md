@@ -50,7 +50,8 @@ five-method `Component Contract` that decouples the engine from any middleware.
 
 A TypeScript engine that routes RoIS calls to sub HRI Engines over WebSocket, aggregates
 their profiles, tracks reservations, and broadcasts profile changes. This proof of
-concept lives in `gateway/` and is retired at the end of Phase 4.
+concept lives in `gateway/`, where it stays frozen for early adopters: no new features,
+fixes, or updates.
 
 ### Phase 2: Adapter Framework and Reference Components (Done)
 
@@ -80,8 +81,8 @@ existing adapters run on.
 **In progress:** reliability fixes for adapter discovery and event delivery in the
 gateway, and a regression test suite for the engine.
 
-**Exit criteria:** one dispatch implementation, with the TypeScript proof of concept
-retired.
+**Exit criteria:** the Python engine is the reference dispatch implementation, and the
+TypeScript proof of concept is frozen.
 
 ### Phase 5: Hardening the Engine (Planned)
 
