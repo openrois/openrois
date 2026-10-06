@@ -23,7 +23,7 @@ pip install -e ./engine
 |------|---------|
 | `Engine` | The recursive HRI Engine: routing, profile aggregation, bind and release |
 | `ComponentRegistry` | Local components, the in-process side of the Component Contract |
-| `SubEngine` | A remote child engine, the WebSocket side of the Component Contract |
+| `ChildEngineProxy` | The gateway's stand-in for one connected child engine (an adapter or a lower gateway), the WebSocket side of the Component Contract |
 | `EventEmitter` | Delivers events to subscribers |
 | `WsServer` | WebSocket server, for a gateway |
 | `WsClient` | WebSocket client, for an adapter connecting out to a gateway |

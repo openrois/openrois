@@ -75,7 +75,7 @@ high-level client does not yet.
 ### Phase 4: Recursive Engine in Python (In Progress)
 
 **Done:** the `openrois-engine` package with the recursive `Engine`, the
-`ComponentRegistry`, the `SubEngine` proxy, and the `WsServer` and `WsClient` that
+`ComponentRegistry`, the `ChildEngineProxy`, and the `WsServer` and `WsClient` that
 existing adapters run on.
 
 **In progress:** reliability fixes for adapter discovery and event delivery in the

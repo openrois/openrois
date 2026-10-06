@@ -1,11 +1,11 @@
-"""Recursive Engine, ComponentRegistry, SubEngine, and EventEmitter.
+"""Recursive Engine, ComponentRegistry, ChildEngineProxy, and EventEmitter.
 
 The Engine class is the recursive HRI engine. One class serves both the
-gateway (main engine, child engines populated via SubEngine proxies) and
+gateway (main engine, child engines reached through ChildEngineProxy instances) and
 the adapter (local components populated via ComponentRegistry). Both
 registries can be populated simultaneously.
 
-ComponentRegistry manages local component handlers. SubEngine is a proxy
+ComponentRegistry manages local component handlers. ChildEngineProxy is a proxy
 for a remote child engine connected via WebSocket. Both implement the
 ComponentContract protocol (discover, invoke, query, subscribe,
 unsubscribe).
@@ -470,11 +470,11 @@ class ComponentRegistry:
 
 
 # ---------------------------------------------------------------------------
-# SubEngine
+# ChildEngineProxy
 # ---------------------------------------------------------------------------
 
 
-class SubEngine:
+class ChildEngineProxy:
     """Proxy for a remote child engine connected via WebSocket.
 
     Implements the ComponentContract protocol by forwarding JSON-RPC
@@ -482,7 +482,7 @@ class SubEngine:
     notifications from the adapter are routed to the EventSink associated
     with the subscribe_id.
 
-    Multiple SubEngine instances can exist simultaneously, one per
+    Multiple ChildEngineProxy instances can exist simultaneously, one per
     connected adapter.
     """
 
@@ -689,7 +689,7 @@ class Engine:
     (sub-engines) or local components based on component ref. Implements
     the five RoIS interfaces: System, Command, Query, Event, Streaming.
 
-    When hosted by the gateway: has child engines (SubEngine proxies),
+    When hosted by the gateway: has child engines (ChildEngineProxy instances),
     optionally local components. Aggregates profiles from all sources.
 
     When hosted by an adapter: has local components (ComponentRegistry),
@@ -753,7 +753,7 @@ class Engine:
         self,
         engine_id: str,
         components: list[dict[str, Any]],
-        sub_engine: SubEngine,
+        sub_engine: ChildEngineProxy,
         platform: str = "",
     ) -> None:
         """Register a sub-engine and its components."""
@@ -1149,8 +1149,8 @@ class Engine:
                     return c
         return None
 
-    def _find_sub_engine(self, ref: str) -> SubEngine | None:
-        """Find the SubEngine that owns a component ref."""
+    def _find_sub_engine(self, ref: str) -> ChildEngineProxy | None:
+        """Find the ChildEngineProxy that owns a component ref."""
         if "/" in ref:
             slash_idx = ref.index("/")
             engine_id = ref[:slash_idx]

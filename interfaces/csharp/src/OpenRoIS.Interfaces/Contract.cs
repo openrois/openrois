@@ -50,7 +50,7 @@ namespace OpenRoIS.Interfaces.Contract
     /// <summary>
     /// Transport-neutral contract between an engine and the components it reaches.
     /// The Python engine implements it with ComponentRegistry (local components) and
-    /// SubEngine (a remote child engine over WebSocket JSON-RPC).
+    /// ChildEngineProxy (a remote child engine over WebSocket JSON-RPC).
     /// </summary>
     public interface IComponentContract
     {

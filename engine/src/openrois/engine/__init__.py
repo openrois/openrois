@@ -15,14 +15,19 @@ Public API:
 from __future__ import annotations
 
 from openrois.engine.config import component_config, read_profile
-from openrois.engine.engine import ComponentRegistry, Engine, EventEmitter, SubEngine
+from openrois.engine.engine import (
+    ChildEngineProxy,
+    ComponentRegistry,
+    Engine,
+    EventEmitter,
+)
 from openrois.engine.ws_client import WsClient
 from openrois.engine.ws_server import WsServer
 
 __all__ = [
     "Engine",
     "ComponentRegistry",
-    "SubEngine",
+    "ChildEngineProxy",
     "EventEmitter",
     "WsServer",
     "WsClient",

@@ -118,7 +118,7 @@ export class ComponentNotFoundError extends ComponentContractError {
  * Transport-neutral contract between an engine and the components it reaches.
  *
  * The Python engine implements it with ComponentRegistry (local components) and
- * SubEngine (a remote child engine over WebSocket JSON-RPC).
+ * ChildEngineProxy (a remote child engine over WebSocket JSON-RPC).
  *
  * The contract is intentionally limited to five async methods. Implementations
  * must not leak transport-specific types through these signatures.

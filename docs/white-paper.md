@@ -359,7 +359,7 @@ with no shared core. The recursive model dissolves this problem:
 - One `Engine` class, one dispatch implementation. The gateway uses it with child
   engines. The adapter uses it with local components. Both are engines.
 - The `Component Contract` is the generated interface from `interfaces/`. The
-  `SubEngine` proxy implements it remotely (forwarding over WebSocket to a child
+  `ChildEngineProxy` implements it remotely (forwarding over WebSocket to a child
   engine). The `ComponentRegistry` implements it locally (dispatching to component
   handlers via decorators). The engine calls the contract. It does not know which
   implementation it is calling.
@@ -474,7 +474,7 @@ enforcement point for security. It:
 
 The `Component Contract` is the contract between the engine and the components it
 manages. The engine and SDK depend only on this five-method contract. They never
-reference ROS, DDS, gRPC, or a game engine. The `SubEngine` proxy implements it
+reference ROS, DDS, gRPC, or a game engine. The `ChildEngineProxy` implements it
 remotely (forwarding over WebSocket to a child engine). The `ComponentRegistry`
 implements it locally (dispatching to component handlers via decorators).
 
@@ -489,7 +489,7 @@ classDiagram
         +unsubscribe(subscribe_id) void
     }
 
-    class SubEngine {
+    class ChildEngineProxy {
         +WebSocket connection
         +JSON-RPC 2.0 forwarding
         +event routing
@@ -501,11 +501,11 @@ classDiagram
         +local handler lookup
     }
 
-    ComponentContract <|.. SubEngine
+    ComponentContract <|.. ChildEngineProxy
     ComponentContract <|.. ComponentRegistry
 ```
 
-`SubEngine` is the remote implementation: the engine's proxy for a child engine
+`ChildEngineProxy` is the remote implementation: the engine's proxy for a child engine
 (an adapter) over WebSocket. `ComponentRegistry` is the local implementation: the
 engine's direct dispatch to component handlers via decorators. The engine calls
 the contract. It does not know which implementation it is calling.
@@ -1812,7 +1812,7 @@ details, dependency graph, and open decisions.
 | Phase | Theme | Exit criteria | Status |
 |-------|-------|---------------|--------|
 | 0 | Paradigm-Neutral Interfaces | type pipeline, `Component Contract` | done |
-| 1 | Engine and Sub HRI Engine | TypeScript proof of concept, `SubEngine` proxy, mock components | done |
+| 1 | Engine and Sub HRI Engine | TypeScript proof of concept, child engine proxy, mock components | done |
 | 2 | Adapter Framework and Components | component framework, reference components, real robot adapter | done |
 | 3 | Client SDKs and First Demonstration | TypeScript SDK and web client done, C# SDK in progress, exit tag `v0.1.0` | in progress |
 | 4 | Recursive Engine in Python | one `Engine` class in `openrois.engine`, TypeScript proof of concept removed | in progress |

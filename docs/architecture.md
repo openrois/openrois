@@ -500,7 +500,7 @@ interface ComponentContract {
 
 | Implementation | Transport | Status |
 |----------------|-----------|--------|
-| **SubEngine** (remote) | WebSocket + JSON-RPC | Current. The engine's proxy for a child engine (adapter) over WebSocket. |
+| **ChildEngineProxy** (remote) | WebSocket + JSON-RPC | Current. The engine's proxy for a child engine (adapter) over WebSocket. |
 | **ComponentRegistry** (local) | In-process | Current. The engine's local component dispatch via decorators. |
 
 ### Method Semantics

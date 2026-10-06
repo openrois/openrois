@@ -270,7 +270,7 @@ class ComponentContract(Protocol):
 
     Implementations in the engine package:
       - ComponentRegistry (local components, in-process)
-      - SubEngine (a remote child engine, over WebSocket JSON-RPC)
+      - ChildEngineProxy (a remote child engine, over WebSocket JSON-RPC)
 
     The contract is intentionally limited to five async methods. Implementations
     must not leak transport-specific types through these signatures.

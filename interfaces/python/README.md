@@ -43,7 +43,7 @@ class MyContract(ComponentContract):
     async def unsubscribe(self, subscribe_id): ...
 ```
 
-Most adapter authors do not implement it directly: `ComponentRegistry` and `SubEngine` in
+Most adapter authors do not implement it directly: `ComponentRegistry` and `ChildEngineProxy` in
 [`openrois-engine`](../../engine/README.md) play this role (aligning their signatures with the
 protocol exactly is part of Phase 4), and components are written with the
 decorators in [`openrois-components-core`](../../components/core/README.md).
