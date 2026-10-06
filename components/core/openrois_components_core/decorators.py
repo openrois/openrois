@@ -38,7 +38,7 @@ class ComponentFunction(StrEnum):
     The engine derives binding enforcement from this: actuation
     components with command methods require exclusive binding.
 
-    Source: OMG RoIS Framework 2.0-beta2, RoboticInteractionServiceComponentOntology.ttl
+    Source: OMG RoIS Framework 2.0, RoboticInteractionServiceComponentOntology.ttl
     """
 
     ACTUATION = "actuation"

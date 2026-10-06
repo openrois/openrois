@@ -1,7 +1,7 @@
 """OpenRoIS Interfaces: Transport-independent RoIS type definitions.
 
 This package contains Pydantic models derived from the OMG RoIS Framework
-Version 2.0-beta2 IDL specification. They are the single source of truth for
+Version 2.0 IDL specification. They are the single source of truth for
 all OpenRoIS types, exported to JSON Schema and generated into C# and
 TypeScript.
 

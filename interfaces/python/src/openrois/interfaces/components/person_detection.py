@@ -1,8 +1,8 @@
 """Person Detection component typed message models.
 
 Derived from:
-  - OMG RoIS Framework 2.0-beta2, RoIS_Person_Detection.idl
-  - OMG RoIS Framework 2.0-beta2, PersonDetection.xml
+  - OMG RoIS Framework 2.0, RoIS_Person_Detection.idl
+  - OMG RoIS Framework 2.0, PersonDetection.xml
 
 Component URN: urn:x-rois:def:component:OMG::PersonDetection
 
