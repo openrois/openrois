@@ -326,7 +326,9 @@ ran.
 | C# types | `interfaces/csharp` | `dotnet build src/OpenRoIS.Interfaces`, `dotnet test tests/OpenRoIS.Interfaces.Tests` |
 | TypeScript SDK | `sdk/typescript` | `npm run build`, `npm test` |
 | Mock engine | `examples/mock-engine` | `npm test` |
-| Python packages | `engine`, `components/*` | `ruff check .` |
+| Engine | `engine` | `pytest`, `ruff check src/ tests/` |
+| Gateway | `gateway` | `pytest`, `mypy`, `ruff check src/ tests/` |
+| Component packages | `components/*` | `ruff check .` |
 
 Some tests in `interfaces/python` cross-check the models against the normative RoIS
 machine-readable files, which this repository does not redistribute: they carry OMG's

@@ -1,0 +1,77 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "openrois-gateway"
+version = "0.1.0a1"
+description = "OpenRoIS gateway: the process that hosts the main RoIS HRI Engine and faces the network"
+readme = "README.md"
+license = "Apache-2.0"
+authors = [
+    { name = "OpenRoIS Community" },
+]
+requires-python = ">=3.12"
+keywords = ["rois", "omg", "robotics", "hri", "middleware"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "openrois-engine>=0.1.0a2",
+    "pydantic>=2.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.8",
+    "pytest>=8.4",
+    "pytest-asyncio>=1.0",
+    "ruff>=0.4",
+    "types-PyYAML>=6.0",
+]
+
+[project.scripts]
+openrois-gateway = "openrois.gateway.cli:main"
+
+[project.urls]
+Homepage = "https://openrois.org/"
+Repository = "https://github.com/openrois/openrois"
+"Bug-Tracker" = "https://github.com/openrois/openrois/issues"
+
+# openrois is a namespace package shared with openrois-interfaces and openrois-engine, so
+# there is no src/openrois/__init__.py and this distribution ships only openrois/gateway/.
+[tool.hatch.build.targets.wheel]
+packages = ["src/openrois"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+files = ["src", "tests"]
+# The openrois namespace package has no __init__.py at its root, so mypy resolves
+# openrois.gateway from src/ as an explicit package base.
+mypy_path = "src"
+explicit_package_bases = true
+
+# Strict type checking of the engine is planned. Until then the gateway uses the
+# engine's types without reporting errors from inside it.
+[[tool.mypy.overrides]]
+module = ["openrois.engine", "openrois.engine.*"]
+follow_imports = "silent"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]

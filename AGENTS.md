@@ -15,6 +15,7 @@ What exists today:
 |------|-----------|-------|
 | RoIS interface types (Python, JSON Schema, TypeScript, C#) | `interfaces/` | Available |
 | Recursive engine, WebSocket server and client | `engine/` | Available, hardening |
+| Gateway process (`openrois-gateway`) | `gateway/` | In progress |
 | Adapter SDK (component framework) and reference components | `components/` | Available |
 | TypeScript client SDK | `sdk/typescript/` | Available |
 | C# client SDK for Unity | `sdk/csharp/` | JSON-RPC layer only, client in progress |
@@ -64,7 +65,8 @@ its description. The IDL and XSD cross-check tests fail on any other addition.
 | Python types | `interfaces/python` | `pip install -e ".[dev]"`, `pytest`, `mypy src/`, `ruff check src/` |
 | TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test` |
 | C# types | `interfaces/csharp` | `dotnet build src/OpenRoIS.Interfaces`, `dotnet test tests/OpenRoIS.Interfaces.Tests` |
-| Engine | `engine` | `pip install -e .`, `ruff check src/` |
+| Engine | `engine` | `pip install -e ../interfaces/python -e ../components/core -e ".[dev]"`, `pytest`, `ruff check src/ tests/` |
+| Gateway | `gateway` | `pip install -e ../interfaces/python -e ../engine -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | Component framework | `components/core` | `pip install -e .` |
 | TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` |
 | Mock engine | `examples/mock-engine` | `npm install`, `npm test` |
