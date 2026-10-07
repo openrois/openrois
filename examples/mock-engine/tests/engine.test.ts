@@ -281,6 +281,28 @@ describe("execute", () => {
     expect(twice.return_code).toBe("BAD_PARAMETER");
   });
 
+  it("answers BAD_PARAMETER for a command_id in the namespace of the engine", () => {
+    const result = start().handle(client("a"), "rois.command.execute", {
+      command_unit_list: [unit(PERSON, "start", "mock/param-1")],
+    });
+    expect(result.return_code).toBe("BAD_PARAMETER");
+  });
+
+  it("waits the delay_time of each command of a group", async () => {
+    const engine = start();
+    const a = client("a");
+    engine.handle(a, "rois.command.execute", {
+      command_unit_list: [
+        {
+          command_list: [unit(PERSON, "suspend", "c1"), { ...unit(PERSON, "resume", "c2"), delay_time: 30 }],
+          delay_time: null,
+        },
+      ],
+    });
+    await until(() => paramsOf(a, "rois.command.completed").length === 2);
+    expect(paramsOf(a, "rois.command.completed").map((p) => p.command_id)).toEqual(["c1", "c2"]);
+  });
+
   it("answers UNSUPPORTED for a command the component does not declare", () => {
     const result = start().handle(client("a"), "rois.command.execute", {
       command_unit_list: [unit(SYSTEM, "start", "c1")],

@@ -65,7 +65,7 @@ its description. The IDL and XSD cross-check tests fail on any other addition.
 | Python types | `interfaces/python` | `pip install -e ".[dev]"`, `pytest`, `mypy src/`, `ruff check src/` |
 | TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test` |
 | C# types | `interfaces/csharp` | `dotnet build src/OpenRoIS.Interfaces`, `dotnet test tests/OpenRoIS.Interfaces.Tests` |
-| Engine | `engine` | `pip install -e ../interfaces/python -e ../components/core -e ".[dev]"`, `pytest`, `ruff check src/ tests/` |
+| Engine | `engine` | `pip install -e ../interfaces/python -e ../components/core -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | Gateway | `gateway` | `pip install -e ../interfaces/python -e ../engine -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/ scripts/` |
 | Component SDK | `components/core` | `pip install -e ../../interfaces/python -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | Common components | `components/common` | `pip install -e ../../interfaces/python -e ../core -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
@@ -90,9 +90,10 @@ skipped unless `OPENROIS_NORMATIVE_DIR` points to a local copy of the files.
 - C# `netstandard2.1` (Unity 6.3+), `sealed class`, `Nullable` enabled.
 - `interfaces/python/src/` and `engine/src/` stay transport-neutral and paradigm-neutral.
   No ROS, DDS, gRPC, or game engine imports. Those belong in components.
-- Do not change the `Component Contract` (`discover`, `invoke`, `query`, `subscribe`,
-  `unsubscribe`) without reading section 8 of [docs/architecture.md](docs/architecture.md).
-  It is the contract that keeps the engine paradigm-neutral.
+- Do not change the component contract (`ComponentContract` in
+  `engine/src/openrois/engine/contract.py`) without reading section 8 of
+  [docs/architecture.md](docs/architecture.md). It is the seam that keeps the engine
+  paradigm-neutral: local components and child engines both sit behind it.
 - Components own their backend connections, created in `connect()` and closed in
   `disconnect()`. Adapters never hold shared backend state.
 

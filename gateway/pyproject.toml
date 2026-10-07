@@ -63,12 +63,6 @@ files = ["src", "tests", "scripts"]
 mypy_path = "src"
 explicit_package_bases = true
 
-# Strict type checking of the engine is planned. Until then the gateway uses the
-# engine's types without reporting errors from inside it.
-[[tool.mypy.overrides]]
-module = ["openrois.engine", "openrois.engine.*"]
-follow_imports = "silent"
-
 [tool.ruff]
 target-version = "py312"
 line-length = 100

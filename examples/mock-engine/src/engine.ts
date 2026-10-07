@@ -13,14 +13,16 @@
  *     event type: UNSUPPORTED when none does, BAD_PARAMETER when several do.
  *   - An actuation component takes commands and parameters only from the client
  *     that bound it. Another client gets OUT_OF_RESOURCES.
- *   - The command table holds every command_id. A command_id already in it is
- *     answered with BAD_PARAMETER. Each command ends exactly once with a
- *     rois.command.completed notification, and get_command_result reads its
- *     results.
+ *   - The command table holds every command_id. A command_id already in it, or
+ *     one that starts with the engine id and a slash like the ids the engine
+ *     assigns, is answered with BAD_PARAMETER. Each command ends exactly once
+ *     with a rois.command.completed notification, and get_command_result reads
+ *     its results.
  *   - execute runs its items in order, waits each item's delay_time, and runs
- *     the commands of a ConcurrentCommands item at the same time. When a
- *     command ends with a status other than OK, the sequence stops: the
- *     commands of the items after it complete with ABORT and never run.
+ *     the commands of a ConcurrentCommands item at the same time, each after its
+ *     own delay_time. When a command ends with a status other than OK, the
+ *     sequence stops: the commands of the items after it complete with ABORT and
+ *     never run.
  *   - The ids the engine assigns, for subscriptions, events and set_parameter
  *     commands, start with the engine id, like refs: mock/sub-1.
  *   - Navigation start ends after a while with the reached_target event, and
@@ -336,7 +338,11 @@ export class MockEngineCore {
         if (unit.command_type === "set_parameter" && !this.knowsParameters(component, unit.arguments ?? [])) {
           return failed("BAD_PARAMETER");
         }
-        if (this.commands.has(unit.command_id) || commandIds.has(unit.command_id)) {
+        if (
+          this.commands.has(unit.command_id) ||
+          commandIds.has(unit.command_id) ||
+          unit.command_id.startsWith(`${ENGINE_ID}/`)
+        ) {
           return failed("BAD_PARAMETER");
         }
         commandIds.add(unit.command_id);
@@ -521,7 +527,15 @@ export class MockEngineCore {
       if (item.delay_time) {
         await this.wait(item.delay_time);
       }
-      const statuses = await Promise.all(unitsOf(item).map((unit) => this.runCommand(session, unit)));
+      const grouped = "command_list" in item;
+      const statuses = await Promise.all(
+        unitsOf(item).map(async (unit) => {
+          if (grouped && unit.delay_time) {
+            await this.wait(unit.delay_time);
+          }
+          return this.runCommand(session, unit);
+        }),
+      );
       if (statuses.some((status) => status !== "OK")) {
         for (const unit of items.slice(index + 1).flatMap(unitsOf)) {
           this.complete(session, unit.command_id, "ABORT");

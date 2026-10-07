@@ -74,13 +74,15 @@ high-level client does not yet.
 
 ### Phase 4: Recursive Engine in Python (In Progress)
 
-**Done:** the `openrois-engine` package with the recursive `Engine`, the
-`ComponentRegistry`, the `ChildEngineProxy`, and the `WsServer` and `WsClient` that
-existing adapters run on. Adapter discovery and event delivery through the gateway work,
-each request runs in its own task, and a test suite runs the engine over real sockets.
+**Done:** the `openrois-engine` package with the recursive `Engine` on the RoIS method
+catalog of `openrois-interfaces`, its `LocalComponents` and `ChildEngine` sources, and
+the `WsServer` and `WsClient`. A gateway discovers its child engines with
+`rois.system.get_profile`, runs command sequences across them, and routes every id to the
+engine that owns it. A test suite runs the engine in process and over real sockets,
+including a gateway under a gateway.
 
-**In progress:** the move to the RoIS method catalog of `openrois-interfaces`, and the
-first release of `openrois-engine`.
+**In progress:** the mock adapter and the reference components on the new engine, and the
+first release of `openrois-engine` with `openrois-components-core`.
 
 **Exit criteria:** the Python engine is the only dispatch implementation in the
 repository. The TypeScript proof of concept is removed, with its last version at tag
@@ -149,9 +151,9 @@ Recorded as architecture decision records when settled.
 ### Adapter Language (Decided)
 
 Adapters stay in Python for ROS 2 ergonomics through `rclpy`. An adapter hosts an
-`Engine` (a sub HRI Engine) with components registered in its `ComponentRegistry`, and
-connects to the gateway with `WsClient`. The shared contract is the generated
-`Component Contract`, not a shared codebase.
+`Engine` (a sub HRI Engine) with components written with `openrois-components-core`, and
+connects to the gateway with `WsClient`. The shared contract is the RoIS method catalog,
+not a shared codebase.
 
 ### Package Management Mechanism (Undecided)
 

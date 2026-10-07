@@ -326,7 +326,7 @@ ran.
 | C# types | `interfaces/csharp` | `dotnet build src/OpenRoIS.Interfaces`, `dotnet test tests/OpenRoIS.Interfaces.Tests` |
 | TypeScript SDK | `sdk/typescript` | `npm run build`, `npm test` |
 | Mock engine | `examples/mock-engine` | `npm test` |
-| Engine | `engine` | `pytest`, `ruff check src/ tests/` |
+| Engine | `engine` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Gateway | `gateway` | `pytest`, `mypy`, `ruff check src/ tests/ scripts/` |
 | Component SDK | `components/core` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Common components | `components/common` | `pytest`, `mypy`, `ruff check src/ tests/` |

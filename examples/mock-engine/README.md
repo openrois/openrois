@@ -34,11 +34,12 @@ The mock follows the method catalog the way an engine does:
 - The command table holds every `command_id`. Each command ends exactly once with a
   `rois.command.completed` notification, and `get_command_result` reads its results.
 - `execute` runs its items in order, waits each item's `delay_time`, and runs the commands
-  of a group at the same time. A command that ends with a status other than `OK` stops the
-  sequence: the commands of the later items complete with `ABORT` and never run.
+  of a group at the same time, each after its own `delay_time`. A command that ends with a
+  status other than `OK` stops the sequence: the commands of the later items complete with
+  `ABORT` and never run.
 - The ids the engine assigns start with its engine id, like refs: `mock/sub-1` for a
   subscription, `mock/evt-2` for an event and `mock/param-3` for a `set_parameter`
-  command.
+  command. A client's `command_id` that starts with `mock/` gets `BAD_PARAMETER`.
 - Events arrive as `rois.event.notify_event`, and `get_event_detail` reads each one for a
   minute after its notification.
 

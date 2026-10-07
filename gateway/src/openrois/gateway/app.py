@@ -20,13 +20,13 @@ class Gateway:
     """The main HRI Engine of an OpenRoIS deployment, on a WebSocket port.
 
     Adapters and lower gateways connect as child engines on ``/adapter``, and
-    service applications connect as clients on any other path. The engine
-    enforces bindings, as the Main HRI Engine holds them for the hierarchy.
+    service applications connect as clients on any other path. The engine holds
+    the bindings of its clients for the whole hierarchy below it.
     """
 
     def __init__(self, config: GatewayConfig) -> None:
         self.config = config
-        self.engine = Engine(engine_id=config.engine_id, enforce_bindings=True)
+        self.engine = Engine(config.engine_id)
         self.server = WsServer(self.engine, child_timeout=config.child_timeout)
 
     @property
@@ -36,11 +36,13 @@ class Gateway:
 
     async def start(self) -> None:
         """Start listening. Returns once the gateway accepts connections."""
+        await self.engine.start()
         await self.server.start(self.config.host, self.config.port)
 
     async def stop(self) -> None:
-        """Close every connection and stop listening."""
+        """Close every connection, stop listening, and stop the engine."""
         await self.server.stop()
+        await self.engine.stop()
 
     async def run(self, stop: asyncio.Event | None = None) -> None:
         """Serve until SIGTERM or SIGINT arrives, or until ``stop`` is set.

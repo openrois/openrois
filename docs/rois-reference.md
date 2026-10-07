@@ -619,13 +619,16 @@ engine refuses a parameter value that does not fit its type with `BAD_PARAMETER`
 ### 17.7 Commands, Ids and Status
 
 - `execute` runs its items in order. It waits each item's `delay_time` before the item
-  starts, and runs the commands of a `ConcurrentCommands` item at the same time.
+  starts, and runs the commands of a `ConcurrentCommands` item at the same time, each
+  after its own `delay_time`. An engine that forwards a command to a child engine waits
+  the delay itself, so the delay counts once.
 - Every command completes exactly once, with one `rois.command.completed` notification
   to the client that sent it. `get_command_result` reads its results afterwards.
 - A command that ends with a status other than `OK` stops the sequence. The commands of
   the later items complete with `ABORT` and never run, so a step that depends on an
   earlier one does not run after it failed.
-- An engine refuses a `command_id` it already tracks with `BAD_PARAMETER`.
+- An engine refuses a `command_id` it already tracks with `BAD_PARAMETER`, and one that
+  starts with the id of an engine and a slash, since those ids are the engines' own.
 - The ids an engine assigns, for subscriptions, events, errors and `set_parameter`
   commands, start with the id of that engine, like refs: `reachy_real/sub-1`. They stay
   the same through every gateway above that engine, never collide across engines, and

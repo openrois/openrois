@@ -174,42 +174,42 @@ ROS 2 action, a gRPC service, or an HTTP API. The adapter hosts it in a sub HRI 
 and connects it to the gateway.
 
 ```python
-from openrois.interfaces.contract import InvokeResponse
-from openrois.interfaces.hri import ReturnCode
-from openrois_components_core import component, invoke, query, results, subscribe
+from openrois.components.core import Component, component, invoke, subscribe
+from openrois.interfaces.components import NAVIGATION_PROFILE
 
 
-@component("Navigation", function="actuation")
-class Navigation:
-    def __init__(self, config: dict) -> None:
-        self._robot_url = config["robot_url"]
+@component(NAVIGATION_PROFILE)
+class Navigation(Component):
+    def __init__(self, robot_url: str) -> None:
+        self._robot_url = robot_url
 
     async def connect(self) -> None:
         self._robot = await MyRobotClient.open(self._robot_url)
 
-    @query("component_status")
-    async def status(self):
-        return results.status("BUSY" if self._robot.moving else "READY")
-
     @invoke("start")
-    async def start(self, parameters):
-        await self._robot.go_to(parameters)
-        return InvokeResponse(return_code=ReturnCode.OK, command_id="nav-1")
+    async def start(self) -> None:
+        target = self.parameters["target_positions"][0]
+        await self._robot.go_to(target)  # the command runs until the robot arrives
+        self.emit("reached_target", target=target, is_final_target=True)
 
     @subscribe("reached_target")
-    async def on_reached_target(self):
-        """Registers the event. Emit it with self.parent.emit_async(...)."""
+    async def reached_target(self) -> None:
+        pass  # start emits the event when the robot arrives.
 ```
+
+The engine stores the parameters, answers `component_status`, and reports the end of each
+command with `rois.command.completed`. Host the component in an engine and connect it to
+the gateway:
 
 ```python
 from openrois.engine import Engine, WsClient
-from openrois_components_core import meta_from_decorators
 
-config = {"robot_url": "http://192.168.0.10:8080"}
-engine = Engine(engine_id="robot_1", platform="my_robot")
-engine.register_component("Navigation", Navigation(config), meta_from_decorators(Navigation))
+engine = Engine("robot_1")
+engine.add_component("navigation", Navigation("http://192.168.0.10:8080"))
 WsClient(engine, "ws://gateway.example.com:8765").run()
 ```
+
+Clients see the component as `robot_1/navigation`.
 
 See [`examples/adapter-template`](examples/adapter-template) for a complete starting
 point and [`components/kachaka`](components/kachaka) for reference components backed by

@@ -6,19 +6,16 @@ from collections.abc import AsyncIterator
 
 import pytest
 
-from openrois.engine import Engine, WsServer
-from tests._support import CHILD_TIMEOUT, Adapter, Gateway, RpcClient, start_adapter
+from tests._support import Adapter, Gateway, RpcClient, start_adapter
 
 
 @pytest.fixture
 async def gateway() -> AsyncIterator[Gateway]:
-    engine = Engine(engine_id="gateway", enforce_bindings=True)
-    server = WsServer(engine, child_timeout=CHILD_TIMEOUT)
-    await server.start("127.0.0.1", 0)
+    running = await Gateway.start()
     try:
-        yield Gateway(engine, server)
+        yield running
     finally:
-        await server.stop()
+        await running.stop()
 
 
 @pytest.fixture
@@ -32,7 +29,7 @@ async def client(gateway: Gateway) -> AsyncIterator[RpcClient]:
 
 @pytest.fixture
 async def adapter(gateway: Gateway) -> AsyncIterator[Adapter]:
-    started = await start_adapter(gateway)
+    started = await start_adapter(gateway.url, gateway)
     try:
         yield started
     finally:
