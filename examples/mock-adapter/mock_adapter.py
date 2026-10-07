@@ -5,6 +5,9 @@ hardcoded data. Fires events on a timer to simulate robot activity.
 
 Usage:
     python mock_adapter.py --config openrois-profile.yaml
+
+OPENROIS_GATEWAY_URL, when set, overrides the profile's engine.gateway_url,
+so the same profile works on a host and inside Docker Compose.
 """
 
 from __future__ import annotations
@@ -12,10 +15,13 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import os
+from collections.abc import Coroutine
+from typing import Any
 
+from openrois.engine import Engine, WsClient, component_config, read_profile
 from openrois.interfaces.contract import InvokeResponse
 from openrois.interfaces.hri import ReturnCode
-from openrois.engine import Engine, WsClient, component_config, read_profile
 from openrois_components_core import (
     component,
     invoke,
@@ -26,6 +32,27 @@ from openrois_components_core import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Timer tasks that fire events. asyncio keeps only weak references to tasks,
+# so a task nobody holds could be collected before it fires.
+_background_tasks: set[asyncio.Task[None]] = set()
+
+
+def _in_background(coroutine: Coroutine[Any, Any, None]) -> None:
+    """Run a coroutine as a task that lives until it finishes."""
+    task = asyncio.create_task(coroutine)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+
+
+def _first_value(parameters: list[Any], default: str = "unknown") -> str:
+    """The value of the first parameter, which arrives as a JSON object."""
+    if not parameters:
+        return default
+    first = parameters[0]
+    if isinstance(first, dict):
+        return str(first.get("value", default))
+    return str(first)
 
 
 # ─── SystemInformation ───────────────────────────────────────
@@ -73,7 +100,7 @@ class Navigation:
     async def navigate(self, parameters):
         if self._busy:
             return InvokeResponse(return_code=ReturnCode.ERROR, command_id="")
-        target = parameters[0].value if parameters else "unknown"
+        target = _first_value(parameters)
         logger.info("Navigate to: %s", target)
         self._busy = True
         self._target = target
@@ -87,13 +114,12 @@ class Navigation:
     @subscribe("reached_target")
     async def on_reached(self):
         # Fire a reached_target event after 5 seconds.
-        loop = asyncio.get_event_loop()
-        loop.create_task(self._fire_reached())
+        _in_background(self._fire_reached())
 
     async def _fire_reached(self):
         await asyncio.sleep(5.0)
         self._busy = False
-        self.parent.emit_async(  # type: ignore[attr-defined]
+        await self.parent.emit_async(  # type: ignore[attr-defined]
             "Navigation",
             "reached_target",
             results.reached_target(
@@ -133,12 +159,11 @@ class ObjectDetection:
     @subscribe("object_detected")
     async def on_object_detected(self):
         # Fire an object_detected event after 3 seconds.
-        loop = asyncio.get_event_loop()
-        loop.create_task(self._fire_detected())
+        _in_background(self._fire_detected())
 
     async def _fire_detected(self):
         await asyncio.sleep(3.0)
-        self.parent.emit_async(  # type: ignore[attr-defined]
+        await self.parent.emit_async(  # type: ignore[attr-defined]
             "ObjectDetection",
             "object_detected",
             results.detection(
@@ -174,7 +199,7 @@ class ObjectManipulation:
     async def execute(self, parameters):
         if self._busy:
             return InvokeResponse(return_code=ReturnCode.ERROR, command_id="")
-        command = parameters[0].value if parameters else "unknown"
+        command = _first_value(parameters)
         logger.info("Manipulation: %s", command)
         self._busy = True
         return InvokeResponse(return_code=ReturnCode.OK, command_id="cmd-manip")
@@ -187,13 +212,12 @@ class ObjectManipulation:
     @subscribe("manipulation_complete")
     async def on_complete(self):
         # Fire a manipulation_complete event after 4 seconds.
-        loop = asyncio.get_event_loop()
-        loop.create_task(self._fire_complete())
+        _in_background(self._fire_complete())
 
     async def _fire_complete(self):
         await asyncio.sleep(4.0)
         self._busy = False
-        self.parent.emit_async(  # type: ignore[attr-defined]
+        await self.parent.emit_async(  # type: ignore[attr-defined]
             "ObjectManipulation",
             "manipulation_complete",
             results.manipulation_complete(success=True, detail="grasp succeeded"),
@@ -238,7 +262,8 @@ def main() -> None:
             meta,
         )
 
-    ws_client = WsClient(engine, profile["engine"]["gateway_url"])
+    gateway_url = os.environ.get("OPENROIS_GATEWAY_URL") or profile["engine"]["gateway_url"]
+    ws_client = WsClient(engine, gateway_url)
     ws_client.run()
 
 

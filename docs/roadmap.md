@@ -26,7 +26,7 @@ Until version 1.0, all releases are **alpha, with an unstable API**.
 | **3** | Client SDKs and first end-to-end demonstration | in progress |
 | **4** | Recursive engine in Python | in progress |
 | **5** | Hardening the engine | planned |
-| **6** | Gateway process | planned |
+| **6** | Gateway process | in progress |
 | **7** | Adapter process | planned |
 | **8** | Open reference platform and mixed paradigms | planned |
 | **9** | Authentication, security, and media | planned |
@@ -76,10 +76,11 @@ high-level client does not yet.
 
 **Done:** the `openrois-engine` package with the recursive `Engine`, the
 `ComponentRegistry`, the `ChildEngineProxy`, and the `WsServer` and `WsClient` that
-existing adapters run on.
+existing adapters run on. Adapter discovery and event delivery through the gateway work,
+each request runs in its own task, and a test suite runs the engine over real sockets.
 
-**In progress:** reliability fixes for adapter discovery and event delivery in the
-gateway, and a regression test suite for the engine.
+**In progress:** the move to the RoIS method catalog of `openrois-interfaces`, and the
+first release of `openrois-engine`.
 
 **Exit criteria:** the Python engine is the only dispatch implementation in the
 repository. The TypeScript proof of concept is removed, with its last version at tag
@@ -90,10 +91,15 @@ repository. The TypeScript proof of concept is removed, with its last version at
 Graceful shutdown, reconnection behavior, loading component packages from a local path
 or a Git URL, and minimal health and status endpoints.
 
-### Phase 6: Gateway Process (Planned)
+### Phase 6: Gateway Process (In Progress)
 
-A standalone gateway process and container image composed from `Engine` and `WsServer`,
-with configuration loading, logging, signal handling, and one-command bring-up.
+**Done:** the `openrois-gateway` package, a standalone gateway process composed from
+`Engine` and `WsServer`, with configuration from a YAML file, the environment and flags,
+logging, and a graceful stop on SIGTERM and SIGINT. Its container image, and a Docker
+Compose file that starts it with the mock adapter.
+
+**In progress:** Docker Compose as the one-command quickstart, once the engine speaks the
+RoIS method catalog, and the first release of `openrois-gateway`.
 
 ### Phase 7: Adapter Process (Planned)
 

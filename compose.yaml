@@ -1,0 +1,31 @@
+# An OpenRoIS gateway with the mock adapter behind it. From the repository root:
+#
+#     docker compose up --build
+#
+# Clients connect to ws://127.0.0.1:8765. gateway/scripts/smoke.py checks the stack.
+
+name: openrois
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    ports:
+      # Loopback only: the gateway does not authenticate its peers.
+      - "127.0.0.1:8765:8765"
+    environment:
+      OPENROIS_GATEWAY_ENGINE_ID: gateway
+      OPENROIS_GATEWAY_LOG_LEVEL: info
+
+  mock-adapter:
+    build:
+      context: .
+      dockerfile: examples/mock-adapter/Dockerfile
+    environment:
+      OPENROIS_GATEWAY_URL: ws://gateway:8765
+    depends_on:
+      - gateway
+    # The adapter installs no signal handlers. Under an init process, SIGTERM from
+    # "docker compose down" stops it at once instead of after the grace period.
+    init: true

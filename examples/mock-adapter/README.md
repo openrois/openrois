@@ -7,46 +7,45 @@ simulate activity.
 
 Use it to develop clients and to exercise a gateway end to end.
 
-## Install
+## Run With Docker Compose
+
+From the repository root, start a gateway with the mock adapter behind it:
+
+```bash
+docker compose up --build
+python gateway/scripts/smoke.py    # needs pip install websockets
+```
+
+The gateway listens on `ws://127.0.0.1:8765`. The smoke script connects as a client, waits
+until the adapter's components appear, runs a query, and waits for an event.
+
+## Run Without Docker
 
 ```bash
 # From the repository root. The packages are not published yet.
-pip install -e ./interfaces/python
-pip install -e ./components/core
-pip install -e ./engine
-```
+pip install -e ./interfaces/python -e ./components/core -e ./engine -e ./gateway
 
-## Run
+# Terminal 1: the gateway, on ws://127.0.0.1:8765.
+openrois-gateway
 
-```bash
-# 1. Start a gateway that accepts adapter registrations on ws://127.0.0.1:8765.
-# 2. Then, in another terminal:
+# Terminal 2: the adapter.
+cd examples/mock-adapter
 python mock_adapter.py --config openrois-profile.yaml
 ```
 
-Point [`examples/hri-client`](../hri-client/README.md) at the gateway to see the four
-components appear, run their queries, and subscribe to their events.
+`OPENROIS_GATEWAY_URL`, when set, overrides the gateway URL in the profile.
+
+The [HRI client](../hri-client/README.md) reaches this setup once the engine moves to the
+RoIS method catalog (in progress).
 
 ## What It Simulates
 
 | Component | Behavior |
 |-----------|----------|
 | `SystemInformation` | Fixed position and battery level |
-| `Navigation` | Accepts a target, reports `BUSY`, then fires `reached_target` after 5 seconds |
+| `Navigation` | Accepts a target and reports `BUSY`. Fires `reached_target` 5 seconds after a subscription |
 | `ObjectDetection` | Lists two detected objects, fires `object_detected` 3 seconds after a subscription |
-| `ObjectManipulation` | Reports gripper state, fires `manipulation_complete` 4 seconds after a command |
-
-## Known Issues
-
-Two defects in this example prevent the full loop from running:
-
-- The `@invoke` handlers read `parameters[0].value`, but parameters reach the handler as
-  plain dictionaries, so `execute` raises.
-- The event helpers call `self.parent.emit_async(...)` without awaiting it, so events are
-  never delivered.
-
-Discovery, profiles, queries, bind, and release do work. The fixes are part of
-[Phase 4](https://openrois.org/docs/project/roadmap).
+| `ObjectManipulation` | Reports gripper state. Fires `manipulation_complete` 4 seconds after a subscription |
 
 ## Read It as a Template
 
