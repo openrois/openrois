@@ -53,9 +53,11 @@ docker compose up --build
 python gateway/scripts/smoke.py
 ```
 
-The smoke script connects as a client, waits until the adapter's components appear in the
-profile, runs a query, and waits for a relayed event. It needs only the `websockets`
-package and exits with 0 when every check passes.
+The smoke script connects as a client and waits until the adapter's components appear. It
+then reads the profile, runs the queries, reads a relayed event, drives the mock navigation
+to a target from bind to `reached_target`, and checks that a method outside the catalog
+gets `METHOD_NOT_FOUND`. It needs only the `websockets` package and exits with 0 when every
+check passes.
 
 ## Configuration
 

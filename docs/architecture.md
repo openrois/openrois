@@ -132,38 +132,39 @@ Logical Layer (control plane)
 | HRI Component | Component registered by a sub HRI Engine | Translation layer: RoIS calls to backend calls |
 | Service Application | Client SDK (TypeScript or C#) | Drives robot scenarios via RoIS interfaces |
 | RoIS interfaces (SystemIF, CommandIF, QueryIF, EventIF, StreamingIF) | JSON-RPC 2.0 methods over WebSocket | Service application to gateway boundary (control plane) |
-| Component Contract | WebSocket + JSON-RPC 2.0 (gateway-to-adapter boundary) | Gateway to sub HRI Engine boundary |
+| Main HRI Engine to sub HRI Engine | The same JSON-RPC 2.0 methods, sent by the parent engine | Gateway to sub HRI Engine boundary (control plane) |
+| (no spec term) | Component contract (`ComponentContract`) | Inside an engine: its own components and its child engines behind one interface |
 
 ### Engine, Gateway, and Adapter
 
-The **engine** is a recursive unit, not a process. It is a Python library that
-manages components and routes RoIS calls to child engines. The same engine class
-is used by both the gateway and the adapter. The engine has two registries: a
-`ComponentRegistry` for local components and a child engine registry for child
-engines. Both can be populated. The difference between gateway and adapter is
-what is typically populated, not what is allowed:
+The **engine** is a recursive unit, not a process. It is a Python library that answers
+the RoIS method catalog and reaches every component through the component contract
+([§8](#8-the-component-contract)): the components it hosts in its own process
+(`LocalComponents`) and the components of its child engines (`ChildEngine`). The same
+engine class is used by both the gateway and the adapter, and both sources can be
+populated. The difference between gateway and adapter is what is typically populated, not
+what is allowed:
 
 - **Gateway (main engine)**: typically has child engines (sub HRI Engines connected
-  over WebSocket). It routes RoIS calls to the child engine that owns the target
-  component. It aggregates profiles from all child engines. It may also have
-  local components (e.g., cloud perception components running in the same
-  process).
-- **Adapter (sub HRI Engine)**: typically has local components (registered via
-  `ComponentRegistry`). It routes RoIS calls to local component handlers. It
-  registers with the parent engine (the gateway) over WebSocket. It may also
-  have child engines (nested sub HRI Engines, supported by design but not used in
-  current deployments).
+  over WebSocket). It holds the bindings of its clients, runs their command sequences,
+  and sends each call to the child engine that owns the target component. Its profile
+  lists every child engine as a sub profile. It may also host local components (e.g.,
+  cloud perception components running in the same process).
+- **Adapter (sub HRI Engine)**: typically hosts local components, added with
+  `Engine.add_component`. It connects out to its parent engine (the gateway) over
+  WebSocket and serves it the same methods a client calls. It may also have child
+  engines of its own.
 
-The design supports nesting (child engines with their own child engines), but
-this is not used today. Only the main engine and one level of sub HRI Engines are
-used in current deployments.
+Nesting works to any depth. A middle tier is an engine with a `WsServer` for its child
+engines and a `WsClient` to its parent, and the engine's test suite runs a gateway under
+a gateway.
 
 The **gateway** is the process that hosts the main engine and faces the network.
 It provides the WebSocket server that clients and sub HRI Engines connect to.
 
 An **adapter** is a process that hosts a sub HRI Engine, configured with a specific
-set of components for a specific robot or use case, defined by a profile YAML.
-The adapter connects to the gateway over WebSocket and registers its components.
+set of components for a specific robot or use case. The adapter connects to the gateway
+over WebSocket, and the gateway discovers its components by reading its profile.
 
 Components come from two sources:
 
@@ -348,36 +349,26 @@ the profile automatically. No polling needed.
 
 ## 6. Engine and Gateway
 
-The engine is a **recursive unit**. It manages components and routes RoIS calls
-to child engines. The same engine class is used by both the gateway and the
-adapter. The engine has two registries: a `ComponentRegistry` for local
-components and a child engine registry for child engines. Both can be populated.
-The difference between gateway and adapter is what is typically populated,
-not what is allowed:
+The engine is a **recursive unit**. One `Engine` class answers the RoIS method catalog
+(16 methods and 4 notifications, see [rois-reference.md](rois-reference.md)) for the
+sessions connected to it: the clients of a gateway, or the parent engine of an adapter.
+It reaches every component through the component contract
+([§8](#8-the-component-contract)), whether the component runs in the engine's process or
+behind a child engine. What the engine does is the same for every component:
 
-- **Gateway**: typically has child engines (sub HRI Engines connected over
-  WebSocket). It routes RoIS calls to the child engine that owns the target
-  component. It aggregates profiles from all child engines. It may also have
-  local components (e.g., cloud perception components running in the same
-  process).
-- **Adapter**: typically has local components (registered via
-  `ComponentRegistry`). It routes RoIS calls to local component handlers. It
-  registers with the parent engine (the gateway) over WebSocket. It may also
-  have child engines (nested sub HRI Engines, supported by design but not used in
-  current deployments).
+| Concern | What the engine does |
+|---------|----------------------|
+| Selection | Matches the conditions of `search`, `bind_any`, `get_profile`, `query` and `subscribe`, written in the CQL2-Text subset of OpenRoIS |
+| Profiles | Serves the profile of each component and lists each child engine as a sub profile, trimmed to the components a condition selects |
+| Bindings | Reserves actuation components for the session that binds them. A command or a parameter change on an actuation component needs that binding |
+| Command sequences | Checks a whole `execute` before it answers, runs the items in order with their `delay_time`, runs the commands of a `ConcurrentCommands` item at the same time, stops at the first command that ends other than OK, and completes the commands after it with ABORT |
+| Command table | Refuses a command id it already tracks, sends every `rois.command.completed` once to the session that started the command, and asks the source that ran a command for its results |
+| Ids | Remembers the source of every subscription and command, and sends each event and error id back to the engine that assigned it, by the engine id the id starts with |
 
-The design supports nesting (child engines with their own child engines), but
-this is not used today. Only the main engine and one level of sub HRI Engines are
-used in current deployments.
-
-The engine handles: RoIS method dispatch, profile aggregation, bind/release
-tracking, event subscription routing. The gateway provides the WebSocket server.
-The adapter provides the WebSocket client. The engine itself is a library with
-no network I/O of its own.
-
-Using one engine class for both the gateway and the adapter eliminates dispatch
-logic duplication and keeps the main engine and sub HRI Engines in lockstep as the
-RoIS protocol evolves.
+Using one engine class for the gateway, the adapter and a middle tier eliminates
+dispatch logic duplication and keeps them in lockstep as the RoIS protocol evolves. The
+engine itself is a library with no network I/O: `WsServer` and `WsClient` put it on the
+network, and both speak JSON-RPC 2.0 over WebSocket.
 
 ### The Gateway
 
@@ -387,48 +378,49 @@ for security once authentication and authorization land (roadmap Phase 9).
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Gateway                                                         │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐  │
+│  Gateway                                                        │
+│                                                                 │
+│  ┌───────────────────────────────────────────────────────────┐  │
 │  │  Engine (main)                                            │  │
-│  │  RoIS Router: SystemIF · CommandIF · QueryIF · EventIF   │  │
-│  │              · StreamingIF                                │  │
-│  │  Profile aggregator · Bind/release tracker               │  │
-│  └──────────────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  Method catalog: SystemIF · CommandIF · QueryIF · EventIF │  │
+│  │  Bindings · Command sequences · Id routing                │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────────────────────┐  │
 │  │  WebSocket server (JSON-RPC 2.0)                          │  │
 │  │  Accepts client and adapter connections on one port       │  │
-│  └──────────────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │  Infrastructure (auth, REST API, SFU, monitoring)       │  │
-│  └──────────────────────────────────────────────────────────┘  │
+│  └───────────────────────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │  Infrastructure (auth, REST API, SFU, monitoring)         │  │
+│  └───────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-The gateway hosts the main engine and provides the WebSocket server. It may
-also include infrastructure such as a REST API for authentication and fleet
-management, a WebRTC signaling server, an SFU for larger fleets, and monitoring.
-The RoIS logic lives in the engine, which is fully open source.
+The gateway hosts the main engine and provides the WebSocket server. It may later
+include infrastructure such as a REST API for authentication and fleet management, a
+WebRTC signaling server, an SFU for larger fleets, and monitoring (planned). The RoIS
+logic lives in the engine, which is fully open source.
 
 ### Gateway Responsibilities
 
-- **Terminate the control-plane transport** (WebSocket/TLS) and authenticate
-  every connection before any RoIS message is processed.
-- **Route** JSON-RPC RoIS calls to the appropriate sub HRI Engine based on
-  component ref.
-- **Aggregate profiles** from all authorized sub HRI Engines into one
-  `HRI_Engine_Profile` returned by `get_profile()`. The profile includes
-  `sub_engine_ids`, `component_ids`, and `component_profiles` from all connected
-  sub HRI Engines.
+- **Terminate the control-plane transport** (WebSocket, with TLS in front of it) and,
+  once authentication lands, authenticate every connection before any RoIS message is
+  processed (planned, Phase 9).
+- **Hold the bindings** of its clients for every engine below it. Clients connect to the
+  top engine of a hierarchy.
+- **Route** each call to the sub HRI Engine that owns the target component, and run
+  command sequences across sub HRI Engines.
+- **Aggregate profiles** into one `HRI_Engine_Profile` returned by `get_profile()`. It
+  lists each sub HRI Engine in `sub_profiles`, every component ref in `component_ids`,
+  and the profile of each component in `component_profiles`.
 - **Push profile-change notifications** to all connected clients via
-  `rois.system.profile_changed` when a sub HRI Engine registers or disconnects.
+  `rois.system.profile_changed` when a sub HRI Engine connects, changes or disconnects.
   Clients re-fetch the profile automatically. No polling needed.
 - **Filter** `search()`/`query()` results and **guard** `bind()`/`execute()` per
   the caller's authorization scope (planned, Phase 9).
 
 The gateway accepts both adapter connections (on the `/adapter` path) and client
-connections (which send `rois.system.*` etc.) on the same WebSocket port. It
-distinguishes them by the URL path.
+connections (on any other path) on the same WebSocket port. It distinguishes them by the
+URL path.
 
 ### What the Engine Does NOT Do
 
@@ -437,7 +429,7 @@ distinguishes them by the URL path.
 - No WebRTC signaling (SDP, ICE) in the current implementation. The RoIS
   streaming interface will broker descriptor exchange in the future.
 - No paradigm-specific knowledge. The engine never imports DDS, gRPC, ROS,
-  or any game engine library. It sees only the `Component Contract` interface.
+  or any game engine library. It sees only the component contract.
 - No network I/O of its own. The engine is a library. The gateway provides the
   WebSocket server. The adapter provides the WebSocket client.
 
@@ -463,13 +455,44 @@ sub HRI Engine is the boundary where paradigm-specific code lives.
 
 ### Sub HRI Engine Registration
 
-When a sub HRI Engine connects to the gateway on the `/adapter` path, the gateway
-discovers it: it sends `rois.command.search` and `rois.system.get_profile` to the
-sub HRI Engine and receives its `engine_id`, `platform`, and the list of components with
-their queries, commands, events, and parameters. The gateway caches this discovery
-result and uses it for `search()`, `get_profile()`, and routing. If the sub HRI Engine
-disconnects, the gateway removes its components and broadcasts a
-`profile_changed` notification to all connected clients.
+A sub HRI Engine connects out to the gateway on the `/adapter` path and sends no
+registration message. The gateway reads its profile with `rois.system.get_profile`, the
+same request a client sends, and checks it:
+
+- Every engine id in it, the child's own and those of its sub profiles, is non-empty,
+  free of slashes, and unused in the rest of the hierarchy.
+- Every component ref starts with one of those engine ids and a slash, and every
+  component has a profile.
+
+A child that fails a check is closed with code 1008 and the reason. Otherwise the
+gateway adds it and sends `rois.system.profile_changed` to every client. When the child
+sends `rois.system.profile_changed` itself, for example because a sub HRI Engine below it
+connected, the gateway reads its profile again and checks it the same way. When the child
+disconnects, the gateway drops its components, the bindings on them and the
+subscriptions to them, completes its running commands with ERROR, and notifies the
+clients. The adapter reconnects with a growing delay, also after a refusal.
+
+### Requests from the Parent Engine
+
+The gateway reaches a sub HRI Engine with the method catalog itself, as the child's only
+client. The child serves it through a trusted session: the gateway checked the bindings
+before it forwarded a request, so the child does not check them again.
+
+- `bind`, `bind_any`, `release`, `search` and `get_profile` are answered by the gateway
+  from what it holds and what it discovered. They do not reach the child.
+- `query`, `subscribe`, `get_parameter` and `set_parameter` go to the child with a
+  condition or a ref that names exactly one component. `get_command_result` goes to the
+  child that ran the command, and `get_event_detail` and `get_error_detail` to the engine
+  that assigned the id.
+- The gateway runs a command sequence itself and sends the child one command at a time,
+  as a one-command `execute`, with the delay already waited. The child's
+  `rois.command.completed` ends that command at the gateway.
+- Refs and the ids a child assigns keep their value on the way up, `robot_1/navigation`
+  and `robot_1/sub-3` for example. A reply that assigns an id outside the child's engine
+  ids counts as ERROR.
+- A request the child does not answer within the child timeout (10 seconds by default)
+  answers TIMEOUT. It may still take effect on the child: a subscription whose reply
+  arrives late is ended, while a command keeps running.
 
 ### What the Sub HRI Engine Does NOT Do
 
@@ -484,65 +507,65 @@ disconnects, the gateway removes its components and broadcasts a
 
 ## 8. The Component Contract
 
-The **Component Contract** is the single abstraction that decouples the engine
-from any paradigm. The engine and SDK never reference ROS, DDS, gRPC, or any
-data-plane transport. They depend only on this control-plane contract:
+The **component contract** is the seam inside an engine between what is the same for
+every component and where a component lives. The engine answers the method catalog: it
+validates requests, selects components by condition, holds the bindings, runs command
+sequences and routes ids. A source behind the contract runs what the engine hands it, for
+the components it owns. Neither side references ROS, DDS, gRPC, or any data-plane
+transport.
 
-```typescript
-interface ComponentContract {
-  discover(request: DiscoverRequest): Promise<DiscoverResponse>;
-  invoke(request: CommandRequest): Promise<InvokeResponse>;
-  query(request: QueryRequest): Promise<QueryResponse>;
-  subscribe(request: SubscribeRequest, sink: EventSink): Promise<SubscribeResponse>;
-  unsubscribe(subscribeId: string): Promise<ReturnCode>;
-}
+```python
+class ComponentContract(Protocol):
+    @property
+    def engine_ids(self) -> frozenset[str]: ...  # the engines whose components it holds
+    def profiles(self) -> Mapping[str, HRIComponentProfile]: ...  # by fully qualified ref
+    def engine_profile(self) -> HRIEngineProfileType | None: ...  # a child engine's profile
+    async def run(self, unit: CommandUnit) -> CompletedStatus: ...
+    async def set_parameter(self, ref, parameters, on_completed) -> SetParameterResult: ...
+    async def get_parameter(self, ref) -> GetParameterResult: ...
+    async def command_result(self, command_id) -> GetCommandResultResult: ...
+    async def query(self, ref, query_type) -> QueryResult: ...
+    async def subscribe(self, ref, event_type, deliver) -> SubscribeResult: ...
+    async def unsubscribe(self, subscribe_id) -> None: ...
+    async def event_detail(self, event_id) -> GetEventDetailResult: ...
+    async def error_detail(self, error_id) -> GetErrorDetailResult: ...
 ```
 
-| Implementation | Transport | Status |
-|----------------|-----------|--------|
-| **ChildEngineProxy** (remote) | WebSocket + JSON-RPC | Current. The engine's proxy for a child engine (adapter) over WebSocket. |
-| **ComponentRegistry** (local) | In-process | Current. The engine's local component dispatch via decorators. |
+| Implementation | Where the components live | What it keeps |
+|----------------|---------------------------|---------------|
+| `LocalComponents` | In the engine's process | The parameter store, `component_status`, command timeouts, start and stop, and the recent events |
+| `ChildEngine` | Behind a child engine, over WebSocket | The pending requests, the commands running on the child, and the subscriptions it relays |
 
-### Method Semantics
+The contract lives in `engine/src/openrois/engine/contract.py`.
 
-| Method | Purpose | Example |
-|--------|---------|---------|
-| `discover` | Find components by condition | Sub HRI Engine registers components at startup, gateway filters by scope |
-| `invoke` | Execute a command (start, stop, execute, set_parameter) | Gateway forwards JSON-RPC to sub HRI Engine, sub HRI Engine dispatches to component |
-| `query` | Synchronous read (component_status, get_parameter) | Gateway forwards JSON-RPC to sub HRI Engine, sub HRI Engine returns result |
-| `subscribe` | Async event push (notify_event, notify_stream_status) | Gateway subscribes, sub HRI Engine pushes events via WebSocket |
-| `unsubscribe` | Cancel an event subscription | Gateway forwards unsubscribe, sub HRI Engine stops pushing |
+### Why the Contract Speaks the Catalog
 
-### Why Five Methods
+The contract takes and returns the models of the method catalog, so a child engine is
+reached with the catalog itself and a result travels up the hierarchy unchanged. The
+engine hands a source only checked requests for one component: a ref it owns, a command
+its profile declares, arguments of the types its profile gives. Bindings, conditions and
+sequencing stay in the engine, so no source implements them again.
 
-The contract is deliberately kept to five methods. Adding data-plane-specific knobs
-(QoS policies, deadlines, reliability) to the contract would leak paradigm
-assumptions into the engine. Instead, QoS, deadlines, and reliability
-belong to the data plane of whichever sub HRI Engine needs them. A ROS 2 sub HRI Engine
-needs DDS QoS. A gRPC sub HRI Engine does not. Keeping the contract minimal means the
-engine can drive a gRPC robot, a ROS 2 robot fleet, a virtual avatar, or a
-set of AI services with the same control-plane code path.
-
-Because the engine sees only `Component Contract`, accidental coupling (for
-example, baking DDS QoS semantics into the engine) is structurally prevented.
-The same contract test suite runs against every sub HRI Engine, catching paradigm
-leakage.
+Data-plane concerns stay out of it. QoS policies, deadlines and reliability belong to
+the data plane of whichever component needs them: a ROS 2 component needs DDS QoS, a gRPC
+component does not. Keeping them out means the engine can drive a gRPC robot, a ROS 2
+robot fleet, a virtual avatar, or a set of AI services with the same control-plane code
+path. Because the engine sees only the contract, accidental coupling (for example, baking
+DDS QoS semantics into the engine) is structurally prevented.
 
 ### Four Contracts
 
 OpenRoIS defines four distinct contracts at four boundaries:
 
-1. **Service application to Gateway** (control plane): JSON-RPC 2.0 over
-   WebSocket. The service application sends RoIS operations, the gateway routes
-   them to the engine.
-2. **Gateway to Sub HRI Engine** (control plane): the `Component Contract` interface
-   (discover, invoke, query, subscribe, unsubscribe) over WebSocket +
-   JSON-RPC. The engine forwards calls to the sub HRI Engine that owns the target
-   component.
-3. **Sub HRI Engine to Component** (control plane): RoIS operations dispatched by the
-   engine in the adapter to component handler methods. The framework uses
-   decorators (`@component`, `@query`, `@invoke`, `@subscribe`) to route
-   JSON-RPC to the right method on the right component instance.
+1. **Service application to gateway** (control plane): the method catalog, JSON-RPC 2.0
+   over WebSocket.
+2. **Parent engine to child engine** (control plane): the same method catalog over the
+   same transport. The parent is the child's only client, and sends it one command at a
+   time.
+3. **Engine to component** (control plane): `LocalComponents` calls the `rois_*` methods
+   of each component. A component written with `openrois-components-core` gets them from
+   `Component`, and its author marks handlers with `@invoke`, `@query`, `@subscribe` and
+   `@on_set_parameter`.
 4. **Component to backend** (data plane): the functional implementation. gRPC,
    DDS, IPC, WebRTC, cloud API, or any other transport. This is not a middleware
    boundary. The component owns this connection.
@@ -760,8 +783,8 @@ than the robot has. These can run in two ways:
 gateway over WebSocket like any other sub HRI Engine. The gateway routes RoIS calls to
 this sub HRI Engine. The components connect to cloud-based implementations (GPU
 inference services, TTS/STT APIs).
-2. **As local components in the gateway process**. The main engine's
-`ComponentRegistry` is populated with perception components. No separate process
+2. **As local components in the gateway process**. The main engine hosts the
+perception components itself, added with `Engine.add_component`. No separate process
 is needed. This is simpler for small deployments.
 
 In both cases, the gateway routes RoIS calls to the right component. The service
@@ -957,14 +980,14 @@ Because the gateway filters at `search()`, robots outside a caller's scope are
 
 ## 16. Mapping RoIS Interfaces to the Stack
 
-| RoIS Interface (IDL) | Client SDK | Gateway | Sub HRI Engine (via Component Contract) |
-|----------------------|-----------|---------|--------------------------|
-| `SystemIF` | `SystemClient` | WS handler + auth | `discover()` (registry) |
-| `CommandIF` | `CommandClient` | RBAC filter + router | `invoke()` (data-plane call/action) |
-| `QueryIF` | `QueryClient` | result filter | `query()` (data-plane call/service) |
-| `EventIF` | `EventClient` | subscription router | `subscribe()` (data-plane callback/topic/poll) |
-| `StreamingIF` | `StreamClient` | stream control router | stream control (data-plane media via WebRTC) |
-| `ServiceApplicationBase` (`notify_*`, `completed`) | SDK callbacks | WS push | event sink (data-plane callback/topic/poll) |
+| RoIS Interface (IDL) | Client SDK (`RoISClient`) | Engine | Behind the component contract |
+|----------------------|---------------------------|--------|-------------------------------|
+| `SystemIF` | `connect`, `disconnect`, `getProfile`, `getErrorDetail` | Sessions, profile aggregation | `profiles()`, `engine_profile()`, `error_detail()` |
+| `CommandIF` | `search`, `bind`, `bindAny`, `release`, `getParameter`, `setParameter`, `execute`, `getCommandResult` | Selection, bindings, sequences, command table | `run()`, `set_parameter()`, `get_parameter()`, `command_result()` |
+| `QueryIF` | `query` | Selection of one component | `query()` |
+| `EventIF` | `subscribe`, `unsubscribe`, `getEventDetail` | Selection, subscriptions per session | `subscribe()`, `unsubscribe()`, `event_detail()` |
+| `StreamingIF` (planned) | Planned | Planned | Stream control, with media over WebRTC |
+| `ServiceApplicationBase` (`completed`, `notify_event`, `notify_error`) | Notifications | Sends each notification to the session it belongs to | `on_completed` and `deliver` callbacks |
 
 ---
 
@@ -973,42 +996,36 @@ Because the gateway filters at `search()`, robots outside a caller's scope are
 ### 17.1 Bind + Execute + Event
 
 ```
-Web App            Gateway               Sub HRI Engine (gRPC)    Robot
-  │  bind(kachaka_01/Navigation) │              │                  │
-  │ ───────────────────────────► │              │                  │
-  │            (auth check, route to sub HRI Engine) │                  │
-  │                            │  rois.command.bind               │
-  │                            │ ────────────►│                  │
-  │                            │ ◄────────────│                  │
-  │ ◄──────── OK ────────────── │              │                  │
-  │  set_parameter + execute    │              │                  │
-  │ ───────────────────────────► │  rois.command.set_parameter    │
-  │                            │ ────────────►│ ───────────────► │
-  │                            │  rois.command.execute (start)   │
-  │                            │ ────────────►│ ───────────────► │
-  │ ◄──── command_id ───────── │              │                  │
-  │                            │  ◄ reached_target (event) ────── │
-  │ ◄── notify_event ────────── │              │                  │
+Web App                  Gateway                 Sub HRI Engine (gRPC)    Robot
+  │ bind(robot_1/navigation) │                         │                    │
+  │ ───────────────────────► │ (holds the binding)     │                    │
+  │ ◄─────── OK ──────────── │                         │                    │
+  │ subscribe(reached_target)│                         │                    │
+  │ ───────────────────────► │ ─ rois.event.subscribe ►│                    │
+  │ ◄── robot_1/sub-1 ────── │ ◄───────────────────────│                    │
+  │ execute([start c1])      │                         │                    │
+  │ ───────────────────────► │ (checks the sequence)   │                    │
+  │ ◄─────── OK ──────────── │ ─ execute([start c1]) ─►│ ─ gRPC call ─────► │
+  │                          │                         │ ◄─ arrived ─────── │
+  │ ◄── notify_event ─────── │ ◄─ notify_event ────────│                    │
+  │ ◄── completed(c1, OK) ── │ ◄─ completed(c1, OK) ───│                    │
 ```
 
 ### 17.2 Profile-Driven Discovery
 
 ```
-Web App            Gateway               Sub HRI Engine
-  │  get_profile()              │              │
-  │ ───────────────────────────► │              │
-  │                            │  (aggregates all sub HRI Engine profiles)
-  │ ◄── profile ─────────────── │              │
-  │  { sub_engine_ids: ["kachaka_01"],
-  │    component_ids: ["kachaka_01/Navigation", ...],
-  │    component_profiles: [{ commands: ["start","stop"], ... }] }
-  │                             │              │
-  │  (sub HRI Engine connects)      │              │
-  │                            │ ── discover (search) ────────► │
-  │ ◄── profile_changed ─────── │              │
-  │  (re-fetch profile)         │              │
-  │ ───────────────────────────► │              │
-  │ ◄── updated profile ─────── │              │
+Web App                  Gateway                 Sub HRI Engine
+  │                          │ ◄── connects on /adapter │
+  │                          │ ── get_profile ────────► │
+  │                          │ ◄── profile ──────────── │
+  │ ◄── profile_changed ──── │ (checks the engine ids)  │
+  │ get_profile()            │                          │
+  │ ───────────────────────► │                          │
+  │ ◄── profile ──────────── │                          │
+  │  { profile: { identifier: { code: "gateway" },
+  │               sub_profiles: [{ identifier: { code: "robot_1" }, ... }],
+  │               component_ids: ["robot_1/navigation", ...] },
+  │    component_profiles: { "robot_1/navigation": { command_profiles: [...] } } }
 ```
 
 ### 17.3 Video Stream Setup (WebRTC, Planned)
@@ -1036,7 +1053,7 @@ product component, not an example or a demo.
 ```
 openrois/
 ├── interfaces/    # Shared types: single source of truth (Python to JSON Schema to C#/TS)
-├── engine/        # Engine library: recursive Engine, ComponentRegistry, WsServer, WsClient (openrois-engine)
+├── engine/        # Engine library: recursive Engine, LocalComponents, ChildEngine, WsServer, WsClient (openrois-engine)
 ├── gateway/       # Gateway process and container image (openrois-gateway)
 ├── components/    # Component framework and reference components (per robot platform)
 ├── sdk/           # Client SDKs (TypeScript, C#)

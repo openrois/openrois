@@ -2,7 +2,9 @@
 #
 #     docker compose up --build
 #
-# Clients connect to ws://127.0.0.1:8765. gateway/scripts/smoke.py checks the stack.
+# Clients connect to ws://127.0.0.1:8765, where the mock adapter serves mock/navigation,
+# mock/person_detection and mock/system_information. gateway/scripts/smoke.py checks the
+# stack.
 
 name: openrois
 
@@ -24,6 +26,8 @@ services:
       dockerfile: examples/mock-adapter/Dockerfile
     environment:
       OPENROIS_GATEWAY_URL: ws://gateway:8765
+      # Below 1 the simulated work takes less time, for example 0.1 in CI.
+      OPENROIS_MOCK_TIME_SCALE: ${OPENROIS_MOCK_TIME_SCALE:-1}
     depends_on:
       - gateway
     # The adapter installs no signal handlers. Under an init process, SIGTERM from

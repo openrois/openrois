@@ -79,10 +79,11 @@ catalog of `openrois-interfaces`, its `LocalComponents` and `ChildEngine` source
 the `WsServer` and `WsClient`. A gateway discovers its child engines with
 `rois.system.get_profile`, runs command sequences across them, and routes every id to the
 engine that owns it. A test suite runs the engine in process and over real sockets,
-including a gateway under a gateway.
+including a gateway under a gateway. The mock adapter runs on it with the components of
+the TypeScript mock engine.
 
-**In progress:** the mock adapter and the reference components on the new engine, and the
-first release of `openrois-engine` with `openrois-components-core`.
+**In progress:** the reference components and the adapter template on the new engine, and
+the first release of `openrois-engine` with `openrois-components-core`.
 
 **Exit criteria:** the Python engine is the only dispatch implementation in the
 repository. The TypeScript proof of concept is removed, with its last version at tag
@@ -98,10 +99,11 @@ or a Git URL, and minimal health and status endpoints.
 **Done:** the `openrois-gateway` package, a standalone gateway process composed from
 `Engine` and `WsServer`, with configuration from a YAML file, the environment and flags,
 logging, and a graceful stop on SIGTERM and SIGINT. Its container image, and a Docker
-Compose file that starts it with the mock adapter.
+Compose file that starts it with the mock adapter, checked end to end by a smoke script on
+the RoIS method catalog.
 
-**In progress:** Docker Compose as the one-command quickstart, once the engine speaks the
-RoIS method catalog, and the first release of `openrois-gateway`.
+**In progress:** Docker Compose as the one-command quickstart, and the first release of
+`openrois-gateway`.
 
 ### Phase 7: Adapter Process (Planned)
 
