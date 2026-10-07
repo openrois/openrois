@@ -15,7 +15,7 @@ What exists today:
 |------|-----------|-------|
 | RoIS interface types (Python, JSON Schema, TypeScript, C#) | `interfaces/` | Available |
 | Recursive engine, WebSocket server and client | `engine/` | Available, hardening |
-| Gateway process (`openrois-gateway`) | `gateway/` | In progress |
+| Gateway process (`openrois-gateway`) | `gateway/` | Available |
 | Adapter SDK (component framework) and reference components | `components/` | Available |
 | TypeScript client SDK | `sdk/typescript/` | Available |
 | C# client SDK for Unity | `sdk/csharp/` | JSON-RPC layer only, client in progress |

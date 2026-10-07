@@ -232,7 +232,7 @@ open.
 |------|--------|
 | RoIS interface types (Python, JSON Schema, TypeScript, C#) | Available |
 | Recursive engine, WebSocket server and client, and adapter SDK (Python) | Available, hardening |
-| Gateway process, container image, and Docker Compose with a mock adapter | In progress |
+| Gateway process, container image, and Docker Compose with a mock adapter | Available |
 | TypeScript client SDK and web inspector | Available |
 | Reference components for the Preferred Robotics Kachaka (gRPC and ROS 2) | Available |
 | C# client SDK for Unity | In progress |

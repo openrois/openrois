@@ -24,16 +24,16 @@ Until version 1.0, all releases are **alpha, with an unstable API**.
 | **1** | Engine and sub HRI Engine proof of concept | done |
 | **2** | Adapter framework and reference components | done |
 | **3** | Client SDKs and first end-to-end demonstration | in progress |
-| **4** | Recursive engine in Python | in progress |
+| **4** | Recursive engine in Python | done |
 | **5** | Hardening the engine | planned |
-| **6** | Gateway process | in progress |
+| **6** | Gateway process | done |
 | **7** | Adapter process | planned |
 | **8** | Open reference platform and mixed paradigms | planned |
 | **9** | Authentication, security, and media | planned |
 | **10** | Full component library (`v1.0`) | planned |
 | **11** | Component registry and Hub | after 1.0 |
 
-Phase 3 continues alongside Phase 4. Phases 8 and 9 can proceed in parallel once the
+Phase 3 continues alongside the later phases. Phases 8 and 9 can proceed in parallel once the
 gateway and adapter processes exist. Phase 11 is gated on adoption.
 
 ---
@@ -72,7 +72,7 @@ high-level client does not yet.
 
 **Exit criteria:** tagged release `v0.1.0`.
 
-### Phase 4: Recursive Engine in Python (In Progress)
+### Phase 4: Recursive Engine in Python (Done)
 
 **Done:** the `openrois-engine` package with the recursive `Engine` on the RoIS method
 catalog of `openrois-interfaces`, its `LocalComponents` and `ChildEngine` sources, and
@@ -82,7 +82,7 @@ engine that owns it. A test suite runs the engine in process and over real socke
 including a gateway under a gateway. The mock adapter, the Kachaka components and the
 adapter template run on it, and the TypeScript SDK runs its sessions against it.
 
-**In progress:** the first release of `openrois-engine` with `openrois-components-core`.
+Released as `openrois-engine` 0.1.0a1, together with `openrois-components-core` 0.1.0a1.
 
 **Exit criteria:** the Python engine is the only dispatch implementation in the
 repository. The TypeScript proof of concept is removed, with its last version at tag
@@ -93,7 +93,7 @@ repository. The TypeScript proof of concept is removed, with its last version at
 Graceful shutdown, reconnection behavior, loading component packages from a local path
 or a Git URL, and minimal health and status endpoints.
 
-### Phase 6: Gateway Process (In Progress)
+### Phase 6: Gateway Process (Done)
 
 **Done:** the `openrois-gateway` package, a standalone gateway process composed from
 `Engine` and `WsServer`, with configuration from a YAML file, the environment and flags,
@@ -101,7 +101,7 @@ logging, and a graceful stop on SIGTERM and SIGINT. Its container image, and a D
 Compose file that starts it with the mock adapter, checked end to end by a smoke script on
 the RoIS method catalog. Docker Compose is the one-command quickstart.
 
-**In progress:** the first release of `openrois-gateway`.
+Released as `openrois-gateway` 0.1.0a1.
 
 ### Phase 7: Adapter Process (Planned)
 

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0a1] - 2026-10-08
+
 ### Added
 
 - `Engine`, the recursive RoIS HRI Engine. It answers the 16 methods of the RoIS method catalog for the components it hosts in its process and for those of its child engines, so one class serves an adapter, a gateway and a middle tier. It selects components by CQL2-Text condition, aggregates the profiles of its child engines as sub profiles, reserves actuation components for the session that binds them, and routes every id to the engine that assigned it.
@@ -18,3 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `WsServer`, which serves child engines on `/adapter` and clients on any other path of one port. It discovers each child engine with `rois.system.get_profile`, refuses an empty, slashed or duplicate engine id and a ref the child does not own with close code 1008, at discovery and when the child's profile changes, and releases a client's bindings and subscriptions when it disconnects. Each request runs in its own task, and a reply always goes out before the notifications it causes. It answers PARSE_ERROR, INVALID_REQUEST, METHOD_NOT_FOUND, INVALID_PARAMS with the issues as data, and INTERNAL_ERROR, binds loopback by default, and closes every connection with code 1001 when it stops.
 - `WsClient`, which connects an adapter to a gateway, serves it through a trusted session, spins the rclpy nodes of its components when rclpy is installed, and reconnects with a growing delay. When it stops, it stops the engine while the rclpy nodes still spin, so a component can halt its robot over ROS 2.
 - Type information for every public name (`py.typed`), checked with mypy in strict mode.
+
+[unreleased]: https://github.com/openrois/openrois/compare/engine-v0.1.0-alpha.1...HEAD
+[0.1.0a1]: https://github.com/openrois/openrois/releases/tag/engine-v0.1.0-alpha.1

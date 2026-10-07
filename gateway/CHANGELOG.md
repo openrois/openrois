@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0a1] - 2026-10-08
+
 ### Added
 
 - The `openrois-gateway` command and `python -m openrois.gateway`: the main RoIS HRI Engine on a WebSocket port, with child engines on `/adapter` and clients on any other path.
@@ -15,3 +17,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A graceful stop on SIGTERM and SIGINT that closes every connection with code 1001 and exits with code 0. Exit code 1 reports a gateway that cannot start, and exit code 2 an invalid configuration.
 - `Gateway` and `GatewayConfig`, to run the gateway inside another program.
 - A container image, built from `gateway/Dockerfile`, that runs the gateway as a non-root user and listens on every interface inside the container.
+
+[unreleased]: https://github.com/openrois/openrois/compare/gateway-v0.1.0-alpha.1...HEAD
+[0.1.0a1]: https://github.com/openrois/openrois/releases/tag/gateway-v0.1.0-alpha.1

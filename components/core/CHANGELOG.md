@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0a1] - 2026-10-08
+
 ### Added
 
 - `Component`, the base class of a RoIS HRI Component, imported from `openrois.components.core`. A component reads its current parameter values as `self.parameters`, converted from their profile types, sends events with `self.emit(event_type, **values)` from any thread, and opens and closes its backend in `connect()` and `disconnect()`.
@@ -15,3 +17,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Command handlers that run for as long as the command lasts, take the command's arguments by name and return its results by name. `CommandFailed` ends a command with ERROR, ABORT, OUT_OF_RESOURCES or TIMEOUT.
 - `@on_set_parameter`, the hook that applies new parameter values to the backend or refuses them.
 - `EngineBinding` and the `rois_` methods of `Component`, the side an engine calls to host a component.
+
+[unreleased]: https://github.com/openrois/openrois/compare/components-core-v0.1.0-alpha.1...HEAD
+[0.1.0a1]: https://github.com/openrois/openrois/releases/tag/components-core-v0.1.0-alpha.1

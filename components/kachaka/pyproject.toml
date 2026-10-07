@@ -14,7 +14,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "openrois-interfaces>=0.1.0a4",
-    "openrois-components-core>=0.1.0a2",
+    "openrois-components-core>=0.1.0a1",
 ]
 
 [project.optional-dependencies]

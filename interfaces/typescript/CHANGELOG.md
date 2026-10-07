@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.4] - 2026-10-08
+
 ### Added
 
 - Add the profile constants of the basic components to `./components`: `ROIS_COMMON_PROFILE`, `NAVIGATION_PROFILE`, `PERSON_DETECTION_PROFILE`, `REACTION_PROFILE` and `SYSTEM_INFORMATION_PROFILE`, generated from `schema/profiles.json`. Each constant is the full profile of its type: the XML profile with the RoIS_Common messages listed first, and the RoSO function.
@@ -58,7 +60,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ESM package with subpath exports: `.`, `/hri`, `/common`, `/service`, `/profiles`, `/bus`, `/components`.
 - Custom generator (`scripts/generate.ts`) handling `$defs`, `$ref`, `anyOf` unions, recursive types, enums, defaults, and `additionalProperties: false`.
 
-[unreleased]: https://github.com/openrois/openrois/compare/interfaces-v0.1.0-alpha.3...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/interfaces-v0.1.0-alpha.4...HEAD
+[0.1.0-alpha.4]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.4
 [0.1.0-alpha.3]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.3
 [0.1.0-alpha.2]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.2
 [0.1.0-alpha.1]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.1

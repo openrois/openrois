@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0a4] - 2026-10-08
+
 ### Added
 
 - Add a profile constant for each basic component type the package models: `NAVIGATION_PROFILE`, `PERSON_DETECTION_PROFILE`, `REACTION_PROFILE` and `SYSTEM_INFORMATION_PROFILE` in `openrois.interfaces.components`, and `ROIS_COMMON_PROFILE` with `ROIS_COMMON_URN` for the RoIS_Common profile they include. Each constant is the full profile of its type: the XML profile with the RoIS_Common messages listed first, and the RoSO function. A component declares the constant of its type and implements a part of it.
@@ -74,7 +76,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `test_schema_drift.py` to verify committed schemas match Pydantic output (CI guard).
 - Cross-check types against `PersonDetection.xml`, `Navigation.xml`, `SystemInformation.xml` and validate against `XML-Profiles.xsd`.
 
-[unreleased]: https://github.com/openrois/openrois/compare/interfaces-v0.1.0-alpha.3...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/interfaces-v0.1.0-alpha.4...HEAD
+[0.1.0a4]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.4
 [0.1.0a3]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.3
 [0.1.0a2]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.2
 [0.1.0a1]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.1
