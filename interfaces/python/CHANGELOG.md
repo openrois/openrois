@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Regenerate the contract schemas, whose descriptions still named `BusAdapter`.
 - Skip the normative cross-check tests unless `OPENROIS_NORMATIVE_DIR` points to the OMG files.
+- Set `mypy_path` and `explicit_package_bases` in `pyproject.toml`, so `mypy src/` resolves the `openrois` namespace package without extra flags.
 
 ## [0.1.0a2] - 2026-07-02
 

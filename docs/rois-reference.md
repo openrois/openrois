@@ -31,6 +31,8 @@ schema, and the `OWL.ttl` ontology).
 13. [Platform-Specific Models & Transports](#13-platform-specific-models--transports)
 14. [Map to the Machine-Readable Files](#14-map-to-the-machine-readable-files)
 15. [Glossary](#15-glossary)
+16. [Known Normative Divergences](#16-known-normative-divergences)
+17. [How OpenRoIS Implements RoIS](#17-how-openrois-implements-rois)
 
 ---
 
@@ -163,7 +165,8 @@ interfaces, plus a Streaming interface layered on the others.
 
 ### 7.1 Return Codes (`ReturnCode_t`)
 
-`OK`, `ERROR`, `BAD_PARAMETER`, `OUT_OF_RESOURCES`, `TIMEOUT`.
+`OK`, `ERROR`, `BAD_PARAMETER`, `UNSUPPORTED`, `OUT_OF_RESOURCES`, `TIMEOUT`.
+`UNSUPPORTED` is in the IDL but not in the specification's return code table (§16).
 
 Each PSM may map these to return codes or exceptions.
 
@@ -184,10 +187,11 @@ three-step reservation pattern:
 1. **BindComponent** - `search(condition)` returns candidate `component_ref`s, then
    `bind(component_ref)`. Or `bind_any(condition)` lets the engine auto-select.
    Optionally `get_parameter`/`set_parameter`.
-2. **Execute** - `execute(command_unit_list)` sends a command message and returns a
-   `command_id` immediately. The operation runs asynchronously. Completion arrives
-   via `completed(command_id, status)`. Detailed results via
-   `get_command_result(command_id, …)`.
+2. **Execute** - `execute(command_unit_list)` sends a command message. The
+   specification text says the engine returns a `command_id` immediately, while the
+   IDL has the application name each command (§16). The operation runs
+   asynchronously. Completion arrives via `completed(command_id, status)`. Detailed
+   results via `get_command_result(command_id, …)`.
 3. **Release** - `release(component_ref)` frees the component.
 
 The `command_unit_list` can express **sequential and parallel** command operations
@@ -275,7 +279,7 @@ HRI_Engine_Profile  ──contains──►  HRI_Component_Profile  ──contai
 Profiles are authored in **XML** (Annex A). Conditions used in `search`, `query`,
 `subscribe`, etc., are **`QueryExpression`** values per **ISO 19143** (filter
 encoding. Annex E shows empty / property-value / location-name / location-coordinate
-filters).
+filters). OpenRoIS writes conditions in a subset of CQL2-Text instead (§17.4).
 
 ---
 
@@ -407,11 +411,12 @@ The spec's PSMs correspond to the OMG machine-readable files at
 
 ---
 
-## 16. Known Normative Divergences (IDL vs XML Profile)
+## 16. Known Normative Divergences
 
-The normative IDL and XML profile files occasionally disagree. Where they conflict,
-the OpenRoIS implementation follows the **XML profile** (the authoritative
-component-profile PSM). Known divergences:
+The normative files and the specification text occasionally disagree. Where the IDL
+and an XML profile conflict, the OpenRoIS implementation follows the **XML profile**
+(the authoritative component-profile PSM), with one recorded exception (item 4). Where
+the specification text and the IDL conflict, it follows the IDL. Known divergences:
 
 1. **Navigation `target_position` vs `target_positions`**: The IDL
    (`RoIS_Navigation.idl`) declares the parameter as `target_position` (singular),
@@ -428,8 +433,147 @@ component-profile PSM). Known divergences:
    a `command_list` of `CommandMessageType` (a flat list of commands executed
    concurrently). A `BranchType` is defined in the XSD but is not used by
    `ConcurrentCommandsType`. Earlier versions of this reference described
-   `ConcurrentCommands` as holding `Branch`es; this has been corrected to match the
+   `ConcurrentCommands` as holding `Branch`es. This has been corrected to match the
    XSD.
+
+4. **Reaction `reaction_ref`**: `RoIS_Reaction.idl` takes a list in
+   `set_parameter(in RoIS_IdentifierList reaction_ref)` and returns one identifier in
+   `get_parameter(out RoIS_Identifier reaction_ref, …)`. `Reaction.xml` declares the
+   `reaction_ref` parameter as a single `RoISIdentifier`, and `available_reactions` as a
+   query message, while the IDL returns it from `get_parameter`. The implementation
+   follows the IDL operation signatures (`ReactionSetParameter`,
+   `ReactionGetParameterResult`). This is the exception to the XML profile rule: the
+   profile does not say how a `set_parameter` call carries several reactions, and the
+   IDL does.
+
+5. **`UNSUPPORTED` return code**: The IDL `ReturnCode_t` has six values, including
+   `UNSUPPORTED`. The return code table of the specification text (Table 8.1 in the
+   2.0-beta2 document) lists five and omits `UNSUPPORTED`. The implementation follows
+   the IDL.
+
+6. **`execute` and `command_id`**: The specification text (Command Interface, §8.2.2.2
+   in the 2.0-beta2 document) says the engine returns a `command_id` when it receives
+   `execute()`. The IDL operation
+   `execute(in CommandUnitSequence command_unit_list)` has no out parameter, and every
+   command message in the XSD carries a required `command_id`. The implementation
+   follows the IDL and the XSD: the application names each command, and `completed`
+   and `get_command_result` use that name.
+
+---
+
+## 17. How OpenRoIS Implements RoIS
+
+This section describes OpenRoIS, not the specification. It records the choices
+OpenRoIS makes where the specification leaves them to the platform-specific model, and
+the few places where it adds to the specification. The interfaces packages
+(`interfaces/`) define all of it. The Python engine, the TypeScript SDK and the mock
+engine are moving to this method catalog (in progress).
+
+### 17.1 Wire Binding
+
+RoIS defines operations, not a transport (§6.2). OpenRoIS carries them as JSON-RPC 2.0
+messages, over WebSocket between processes.
+
+- Each operation of the System, Command, Query and Event interfaces is a JSON-RPC
+  method named `rois.<interface>.<operation>`, with `system`, `command`, `query` and
+  `event` as the interface names, for example `rois.command.bind_any`. The Streaming
+  interface is not modelled yet (planned). An engine answers any `rois.stream.*` method
+  with the JSON-RPC error `METHOD_NOT_FOUND`.
+- The `in` parameters of an operation are the method's `params`, named as in the IDL.
+  The `result` holds `return_code` and one field per `out` parameter.
+- A RoIS failure is a normal result whose `return_code` is not `OK`, with its out fields
+  empty. JSON-RPC errors are only for protocol faults: unparseable JSON (`-32700`), an
+  invalid request (`-32600`), an unknown method (`-32601`), params that fail validation
+  (`-32602`) and internal errors (`-32603`).
+- The `ServiceApplicationBase` callbacks are JSON-RPC notifications from the engine:
+  `rois.system.notify_error`, `rois.command.completed` and `rois.event.notify_event`,
+  with the IDL `in` parameters as their params.
+- `execute` carries its `command_unit_list` as JSON that follows
+  `CommandUnitSequenceType` in `XML-Profiles.xsd`: a list of command messages
+  (`component_ref`, `command_type`, `command_id`, `arguments`, `delay_time`) and
+  concurrent groups (`command_list`, `delay_time`). The IDL types it as a string that
+  holds the XML.
+- `get_profile` returns the engine profile as JSON that follows `HRIEngineProfileType`
+  in `XML-Profiles.xsd`. The IDL types `HRI_Engine_Profile` as a string that holds the
+  XML document.
+- `command_type` is a string, as in the IDL and the XSD. The standard names are
+  `start`, `stop`, `suspend` and `resume` (`RoIS_Common`) and `set_parameter`. A
+  component may define others.
+
+The method table lives in `openrois.interfaces.catalog` and in
+`interfaces/schema/catalog.json`, which the TypeScript and C# packages are generated
+from.
+
+### 17.2 Extension Policy
+
+OpenRoIS adds to the specification only where an addition passes all five tests:
+
+1. **A real need.** It serves a need the specification leaves out.
+2. **Nothing changes.** Every field, type and behavior the specification defines stays
+   as defined.
+3. **Additive and ignorable.** A client that does not know the addition still works,
+   and a sender may leave it out.
+4. **Specification types first.** It reuses the specification's types where they fit.
+5. **Documented.** It is listed in `EXTENSIONS` in `openrois.interfaces.catalog`,
+   says "OpenRoIS extension" in its description, and appears in §17.3.
+
+The cross-check tests enforce the last test. With `OPENROIS_NORMATIVE_DIR` set, every
+catalog, notification and profile model may carry only the fields of the IDL or the
+XSD plus the registered extensions.
+
+### 17.3 Extensions
+
+| Extension | Where | Need it serves |
+|-----------|-------|----------------|
+| `component_profiles` | `rois.system.get_profile` result | A client learns what each component instance supports, including user-defined components with no published profile. The XSD engine profile names its components by ref only. The UML model links it to its component profiles by reference, and this map carries each referenced profile once, keyed by fully qualified ref. |
+| `function` | `HRIComponentProfile` | The engine and clients know which components need a bind before commands. The values `actuation`, `sensing` and `function` are the RoSO classes that `OWL.ttl` assigns to the basic components (§11). |
+| `results` | `rois.event.notify_event` params | The event payload. Without it, every event costs a `get_event_detail` round trip. `get_event_detail` still returns the payload until the event expires. |
+| `rois.system.profile_changed` | Notification with no params | The specification gives a client no way to learn that components joined or left, other than polling `get_profile`. |
+
+### 17.4 Conditions
+
+The IDL types `Condition_t` as a string that carries an ISO 19143 filter expression.
+OpenRoIS keeps it a string and writes it in a subset of CQL2-Text, the text encoding of
+the OGC Common Query Language (OGC 21-065r2), which grew out of the OGC filter
+encoding that ISO 19143 is based on:
+
+```
+condition   = [ comparison *( "AND" comparison ) ]
+comparison  = property ( "=" / "LIKE" ) literal
+```
+
+- An empty condition is no filter. A literal is single-quoted, with a single quote
+  inside it written twice. In a `LIKE` pattern, `%` matches any run of characters and
+  `_` matches one.
+- Two properties select components: `component_ref`, the fully qualified ref, and
+  `component_type`, the URN of the component profile identifier, for example
+  `urn:x-rois:def:component:OMG::PersonDetection`. They apply to `search`,
+  `bind_any`, `get_profile`, `query` and `subscribe`.
+- `query` and `subscribe` go to the one component that declares the query or event
+  type and matches the condition, for example `component_ref = 'reachy_real/head'`.
+  When no component matches, the engine returns `UNSUPPORTED`. When several match, it
+  returns `BAD_PARAMETER`.
+- No property is defined yet for the result filters of `get_error_detail`,
+  `get_command_result` and `get_event_detail`, so those conditions must be empty.
+- An engine answers a condition it cannot parse, or a property the method does not
+  support, with `BAD_PARAMETER`.
+
+`openrois.interfaces.condition` parses, matches and builds conditions.
+
+### 17.5 Profiles and Refs
+
+- Every `component_ref` is fully qualified as `engine_id/ref`, for example
+  `reachy_real/head`.
+- The `identifier` of a component profile is the component type, for example
+  authority `OMG` and code `PersonDetection`. Two instances of one type share it and
+  differ by ref.
+- An engine profile's `component_ids` lists every component reachable through that
+  engine, including those of its child engines, which `sub_profiles` also list.
+- The XSD types `HRIComponent` as `xsd:ID`: a name without `/` that appears once per
+  document. Fully qualified refs contain `/`, and a parent profile repeats the refs of
+  its sub profiles. Neither matters in the JSON form, where a ref is a plain string. An
+  XML rendering of an OpenRoIS profile would have to encode the refs and list each
+  component once.
 
 ---
 

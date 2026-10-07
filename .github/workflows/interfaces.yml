@@ -50,11 +50,9 @@ jobs:
         run: ruff check src/
 
       - name: Type check
-        # The openrois namespace package has no __init__.py at its root, so mypy needs
-        # src/ as an explicit package base to resolve openrois.interfaces imports.
-        env:
-          MYPYPATH: src
-        run: mypy --explicit-package-bases src/
+        # pyproject.toml makes src/ the explicit package base, because the openrois
+        # namespace package has no __init__.py at its root.
+        run: mypy src/
 
       - name: Test
         # The normative cross-check tests skip here: the OMG files are not

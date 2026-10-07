@@ -40,9 +40,9 @@ because JSON Schema cannot express a behavioral interface.
 
 | Package | Language | Version | Role |
 |---------|----------|---------|------|
-| `openrois-interfaces` | Python 3.12+ | 0.1.0a2 | Source of truth |
-| `@openrois/interfaces` | TypeScript (ESM) | 0.1.0-alpha.2 | Generated |
-| `OpenRoIS.Interfaces` | C# (netstandard2.1) | 0.1.0-alpha.2 | Generated |
+| `openrois-interfaces` | Python 3.12+ | 0.1.0a3 | Source of truth |
+| `@openrois/interfaces` | TypeScript (ESM) | 0.1.0-alpha.3 | Generated |
+| `OpenRoIS.Interfaces` | C# (netstandard2.1) | 0.1.0-alpha.3 | Generated |
 
 None are published yet. Install them from a clone, as each package README describes.
 
@@ -61,6 +61,8 @@ modelled.
 OpenRoIS adds to RoIS in a few places, for example the component profiles in the
 `get_profile` result and the `rois.system.profile_changed` notification. Every addition is
 optional for a client, and the Python `EXTENSIONS` registry lists each one with its reason.
+Section 17 of [docs/rois-reference.md](../docs/rois-reference.md) describes the wire
+binding, the extension policy and each extension.
 
 Every `condition` is a string in a subset of CQL2-Text (OGC 21-065r2), for example
 `component_ref = 'reachy_real/head'`. The Python `condition` module defines the subset and

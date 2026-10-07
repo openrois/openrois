@@ -323,7 +323,7 @@ ran.
 |-------|-----------|----------|
 | Python types | `interfaces/python` | `pytest`, `mypy src/`, `ruff check src/` |
 | TypeScript types | `interfaces/typescript` | `npm run build`, `npm test` |
-| C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
+| C# types | `interfaces/csharp` | `dotnet build src/OpenRoIS.Interfaces`, `dotnet test tests/OpenRoIS.Interfaces.Tests` |
 | TypeScript SDK | `sdk/typescript` | `npm run build`, `npm test` |
 | Mock engine | `examples/mock-engine` | `npm test` |
 | Python packages | `engine`, `components/*` | `ruff check .` |

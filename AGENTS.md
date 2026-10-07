@@ -43,7 +43,7 @@ After editing the Python models, run the full pipeline and the tests:
 ```bash
 cd interfaces/python && python scripts/export_schema.py
 cd ../typescript && npx tsx scripts/generate.ts && npm run typecheck && npm test
-cd ../csharp && dotnet run --project scripts/Generator/Generator.csproj && dotnet test
+cd ../csharp && dotnet run --project scripts/Generator/Generator.csproj && dotnet test tests/OpenRoIS.Interfaces.Tests
 ```
 
 Every interface type must stay traceable to the normative RoIS files: the IDL, the XML
@@ -51,13 +51,19 @@ component profiles, and `XML-Profiles.xsd`. Do not invent field names. When the 
 the XML profile disagree, follow the XML profile and document the divergence in
 [docs/rois-reference.md](docs/rois-reference.md).
 
+A field or message the spec does not define is allowed only as an OpenRoIS extension. It
+must pass the extension policy in section 17 of
+[docs/rois-reference.md](docs/rois-reference.md), be listed in `EXTENSIONS` in
+`interfaces/python/src/openrois/interfaces/catalog.py`, and say "OpenRoIS extension" in
+its description. The IDL and XSD cross-check tests fail on any other addition.
+
 ## Build and Test
 
 | Stack | Directory | Commands |
 |-------|-----------|----------|
 | Python types | `interfaces/python` | `pip install -e ".[dev]"`, `pytest`, `mypy src/`, `ruff check src/` |
 | TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test` |
-| C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
+| C# types | `interfaces/csharp` | `dotnet build src/OpenRoIS.Interfaces`, `dotnet test tests/OpenRoIS.Interfaces.Tests` |
 | Engine | `engine` | `pip install -e .`, `ruff check src/` |
 | Component framework | `components/core` | `pip install -e .` |
 | TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` |
