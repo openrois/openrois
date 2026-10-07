@@ -53,9 +53,14 @@ units, component and engine profiles, event envelopes, and the `ComponentContrac
 and response models.
 
 The method catalog covers the service side. It has a params and a result model for every
-method of SystemIF, CommandIF, QueryIF and EventIF, the method names, and the JSON-RPC
-error codes, generated from one table in `schema/catalog.json`. The Streaming interface is
-not modelled.
+method of SystemIF, CommandIF, QueryIF and EventIF, the method names, the notifications an
+engine sends to a service application, the standard command names, and the JSON-RPC error
+codes, generated from one table in `schema/catalog.json`. The Streaming interface is not
+modelled.
+
+OpenRoIS adds to RoIS in a few places, for example the component profiles in the
+`get_profile` result and the `rois.system.profile_changed` notification. Every addition is
+optional for a client, and the Python `EXTENSIONS` registry lists each one with its reason.
 
 Every `condition` is a string in a subset of CQL2-Text (OGC 21-065r2), for example
 `component_ref = 'reachy_real/head'`. The Python `condition` module defines the subset and

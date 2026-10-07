@@ -4,12 +4,17 @@ import {
   GetParameterResultSchema,
   GetProfileResultSchema,
   JsonRpcErrorCode,
+  RoISCommandTypes,
   RoISMethods,
   RoISMethodSchemas,
+  RoISNotifications,
+  RoISNotificationSchemas,
   SearchResultSchema,
   UnmodelledMethodPrefixes,
   type RoISMethodMap,
+  type RoISNotificationMap,
 } from "../src/catalog";
+import { CommandUnitSchema } from "../src/hri";
 
 describe("method table", () => {
   it("lists the sixteen catalog methods", () => {
@@ -105,8 +110,99 @@ describe("results", () => {
     expect(GetProfileResultSchema.parse({ return_code: "ERROR" }).profile).toBeNull();
   });
 
+  it("carries the component profiles keyed by ref", () => {
+    const head = {
+      identifier: { authority: "OpenRoIS", code: "Head" },
+      name: "head",
+      function: "actuation",
+    };
+    const result = GetProfileResultSchema.parse({
+      return_code: "OK",
+      profile: {
+        identifier: { code: "main" },
+        component_ids: ["reachy_real/head", "reachy_sim/head"],
+      },
+      component_profiles: { "reachy_real/head": head, "reachy_sim/head": head },
+    });
+    expect(Object.keys(result.component_profiles ?? {}).sort()).toEqual(
+      result.profile.component_ids.sort(),
+    );
+    expect(result.component_profiles?.["reachy_real/head"]?.function).toBe("actuation");
+  });
+
+  it("keeps component profiles out of the engine profile", () => {
+    const parsed = GetProfileResultSchema.safeParse({
+      return_code: "OK",
+      profile: { identifier: { code: "main" }, component_profiles: [] },
+    });
+    expect(parsed.success).toBe(false);
+  });
+
   it("types the method map", () => {
     const result: RoISMethodMap["rois.command.execute"]["result"] = { return_code: "OK" };
     expect(result.return_code).toBe("OK");
+  });
+});
+
+describe("notifications", () => {
+  it("lists the three RoIS callbacks and profile_changed", () => {
+    expect(RoISNotifications).toEqual({
+      NotifyError: "rois.system.notify_error",
+      Completed: "rois.command.completed",
+      NotifyEvent: "rois.event.notify_event",
+      ProfileChanged: "rois.system.profile_changed",
+    });
+  });
+
+  it("has a params schema for every notification", () => {
+    expect(Object.keys(RoISNotificationSchemas).sort()).toEqual(
+      Object.values(RoISNotifications).sort(),
+    );
+  });
+
+  it("validates notify_event with its payload", () => {
+    const params = RoISNotificationSchemas["rois.event.notify_event"].params.parse({
+      event_id: "evt-1",
+      event_type: "person_detected",
+      subscribe_id: "sub-1",
+      results: [{ name: "number", data_type_ref: "int", value: "2" }],
+    });
+    expect(params.expire).toBe("");
+    expect(params.results).toHaveLength(1);
+  });
+
+  it("validates profile_changed with no params", () => {
+    const schema = RoISNotificationSchemas["rois.system.profile_changed"].params;
+    expect(schema.safeParse({}).success).toBe(true);
+    expect(schema.safeParse({ engine_id: "main" }).success).toBe(false);
+  });
+
+  it("types the notification map", () => {
+    const params: RoISNotificationMap["rois.command.completed"]["params"] = {
+      command_id: "nod-1",
+      status: "OK",
+    };
+    expect(params.status).toBe("OK");
+  });
+});
+
+describe("command types", () => {
+  it("lists the standard command names", () => {
+    expect(Object.values(RoISCommandTypes)).toEqual([
+      "start",
+      "stop",
+      "suspend",
+      "resume",
+      "set_parameter",
+    ]);
+  });
+
+  it("accepts command names a component defines", () => {
+    const unit = CommandUnitSchema.parse({
+      component_ref: "reachy_real/head",
+      command_type: "nod",
+      command_id: "nod-1",
+    });
+    expect(unit.command_type).toBe("nod");
   });
 });

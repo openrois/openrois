@@ -76,10 +76,10 @@ class MyComponents : IComponentContract
 |---|---|
 | `OpenRoIS.Interfaces.Hri` | Core HRI types: `ReturnCode`, `Result`, `Parameter`, `Argument`, `CommandUnit`, `CommandUnitSequence` |
 | `OpenRoIS.Interfaces.Common` | `ComponentStatus`, `StreamStatus` |
-| `OpenRoIS.Interfaces.Service` | `CompletedStatus`, `ErrorType`, `CompletedEvent`, `NotifyErrorEvent`, `NotifyEventPayload` |
+| `OpenRoIS.Interfaces.Service` | Params of the engine notifications: `NotifyErrorParams`, `CompletedParams`, `NotifyEventParams`, `ProfileChangedParams`, with `CompletedStatus` and `ErrorType` |
 | `OpenRoIS.Interfaces.Profiles` | Component profile schema models |
 | `OpenRoIS.Interfaces.Contract` | `IComponentContract` interface, `ComponentContractError`, `EventSink`. Request/response models and `EventEnvelope` are in `OpenRoIS.Interfaces.Contract.Models` |
-| `OpenRoIS.Interfaces.Catalog` | Service-side method catalog: params and result models for every `rois.*` method, `RoISMethods`, `RoISMethodTypes`, `JsonRpcErrorCodes` |
+| `OpenRoIS.Interfaces.Catalog` | Service-side method catalog: params and result models for every `rois.*` method, `RoISMethods`, `RoISMethodTypes`, the notification names and types (`RoISNotifications`, `RoISNotificationTypes`), `RoISCommandTypes`, `JsonRpcErrorCodes` |
 | `OpenRoIS.Interfaces.Components` | Per-component typed message models |
 
 ## Generation

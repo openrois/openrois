@@ -63,6 +63,7 @@ from openrois.interfaces.hri import (
 )
 from openrois.interfaces.profiles import (
     CommandMessageProfile,
+    ComponentFunction,
     EventMessageProfile,
     HRIComponentProfile,
     HRIEngineProfileType,
@@ -72,11 +73,12 @@ from openrois.interfaces.profiles import (
     RoISIdentifierType,
 )
 from openrois.interfaces.service import (
-    CompletedEvent,
+    CompletedParams,
     CompletedStatus,
     ErrorType,
-    NotifyErrorEvent,
-    NotifyEventPayload,
+    NotifyErrorParams,
+    NotifyEventParams,
+    ProfileChangedParams,
 )
 
 # ---------------------------------------------------------------------------
@@ -92,9 +94,10 @@ MODELS: list[type[BaseModel]] = [
     ConcurrentCommands,
     CommandUnitSequence,
     # service
-    NotifyErrorEvent,
-    CompletedEvent,
-    NotifyEventPayload,
+    NotifyErrorParams,
+    CompletedParams,
+    NotifyEventParams,
+    ProfileChangedParams,
     # profiles
     RoISIdentifierType,
     ParameterProfile,
@@ -141,6 +144,7 @@ ENUMS: list[type] = [
     StreamStatus,
     CompletedStatus,
     ErrorType,
+    ComponentFunction,
 ]
 
 # ---------------------------------------------------------------------------

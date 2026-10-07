@@ -55,25 +55,14 @@ export const ArgumentSchema = z.object({
 export type Argument = z.infer<typeof ArgumentSchema>;
 
 /**
- * Command operation type for RoIS commands.
- * 
- * Not an IDL enum — the IDL uses plain `string` for command_type. OpenRoIS
- * defines this enum for compile-time safety. The wire values match the
- * RoIS_Common::Command method names plus `set_parameter` and `execute`.
- */
-
-export const CommandTypeSchema = z.enum(["start", "stop", "suspend", "resume", "set_parameter", "execute"]);
-export type CommandType = z.infer<typeof CommandTypeSchema>;
-
-/**
  * A single command within a CommandUnitSequence.
  * 
  * Maps to CommandMessageType in XML-Profiles.xsd (CommandBaseType subtype).
  * 
  * Attributes:
  *     component_ref: The component to send the command to.
- *     command_type: The command operation (e.g., 'start', 'stop',
- *         'set_parameter', 'execute').
+ *     command_type: The command name: a standard one (start, stop, suspend, resume,
+ *         set_parameter) or one the component profile defines.
  *     command_id: Unique identifier for this command instance.
  *     arguments: Optional list of arguments for the command.
  *     delay_time: Optional delay in milliseconds before executing this command.
@@ -81,7 +70,7 @@ export type CommandType = z.infer<typeof CommandTypeSchema>;
 
 export const CommandUnitSchema = z.object({
   component_ref: z.string(),
-  command_type: CommandTypeSchema, // Command operation: start, stop, suspend, resume, set_parameter, execute
+  command_type: z.string(), // Command name, for example start, stop or set_parameter
   command_id: z.string(), // Unique command instance identifier
   arguments: z.array(ArgumentSchema).optional(),
   delay_time: z.number().int().nullable().default(null), // Delay in ms before execution

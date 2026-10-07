@@ -65,10 +65,10 @@ class MyComponents implements ComponentContract {
 | `@openrois/interfaces` | All types (re-exports everything) |
 | `@openrois/interfaces/hri` | Core HRI types: `ReturnCode`, `Result`, `Parameter`, `Argument`, `CommandUnit`, `CommandUnitSequence` |
 | `@openrois/interfaces/common` | `ComponentStatus`, `StreamStatus` |
-| `@openrois/interfaces/service` | `CompletedStatus`, `ErrorType`, `CompletedEvent`, `NotifyErrorEvent`, `NotifyEventPayload` |
+| `@openrois/interfaces/service` | Params of the engine notifications: `NotifyErrorParams`, `CompletedParams`, `NotifyEventParams`, `ProfileChangedParams`, with `CompletedStatus` and `ErrorType` |
 | `@openrois/interfaces/profiles` | Component profile schema models |
 | `@openrois/interfaces/contract` | `ComponentContract` interface, request/response models, `EventEnvelope`, error classes |
-| `@openrois/interfaces/catalog` | Service-side method catalog: params and result schemas for every `rois.*` method, `RoISMethods`, `RoISMethodMap`, `RoISMethodSchemas`, `JsonRpcErrorCode` |
+| `@openrois/interfaces/catalog` | Service-side method catalog: params and result schemas for every `rois.*` method, `RoISMethods`, `RoISMethodMap`, `RoISMethodSchemas`, the notification names and schemas (`RoISNotifications`, `RoISNotificationMap`, `RoISNotificationSchemas`), `RoISCommandTypes`, `JsonRpcErrorCode` |
 | `@openrois/interfaces/components` | Per-component typed message models |
 
 ## Generation

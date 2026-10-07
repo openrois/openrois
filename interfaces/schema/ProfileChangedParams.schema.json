@@ -1,0 +1,8 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "additionalProperties": false,
+  "description": "Params of the rois.system.profile_changed notification.\n\nNot part of RoIS: an OpenRoIS extension. The engine sends it when its profile\nchanges, for example when a child engine connects or disconnects, so a client\ncalls get_profile again instead of polling it. It carries no params.",
+  "properties": {},
+  "title": "ProfileChangedParams",
+  "type": "object"
+}

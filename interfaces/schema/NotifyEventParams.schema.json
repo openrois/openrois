@@ -1,0 +1,77 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "DateTime": {
+      "type": "string"
+    },
+    "EventType": {
+      "type": "string"
+    },
+    "Result": {
+      "additionalProperties": false,
+      "description": "A named result value returned by query or event operations.\n\nMaps to RoIS_HRI::Result in the IDL.\n\nAttributes:\n    name: The result parameter name (e.g., 'number', 'timestamp').\n    data_type_ref: Reference to the data type (e.g., 'int', 'DateTime').\n    value: The result value as a string. Component-specific typed models\n        provide structured access.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "data_type_ref": {
+          "$ref": "#/$defs/RoISIdentifier"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "data_type_ref",
+        "value"
+      ],
+      "title": "Result",
+      "type": "object"
+    },
+    "ResultList": {
+      "items": {
+        "$ref": "#/$defs/Result"
+      },
+      "type": "array"
+    },
+    "RoISIdentifier": {
+      "type": "string"
+    },
+    "SubscribeId": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Params of the rois.event.notify_event notification.\n\nMaps to ServiceApplicationBase::notify_event(in event_id, in event_type,\nin subscribe_id, in expire). The payload also comes from\nEventIF::get_event_detail(event_id) until the event expires.\n\nAttributes:\n    event_id: Identifier of this event, for get_event_detail.\n    event_type: The type of event (e.g., 'person_detected').\n    subscribe_id: The subscription this event matches.\n    expire: ISO 8601 datetime after which get_event_detail no longer has the\n        event, or empty if it does not expire.\n    results: The event payload. An OpenRoIS extension that saves one\n        get_event_detail round trip per event.",
+  "properties": {
+    "event_id": {
+      "description": "Identifier of this event, for get_event_detail",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "event_type": {
+      "$ref": "#/$defs/EventType"
+    },
+    "subscribe_id": {
+      "$ref": "#/$defs/SubscribeId"
+    },
+    "expire": {
+      "$ref": "#/$defs/DateTime",
+      "default": ""
+    },
+    "results": {
+      "$ref": "#/$defs/ResultList",
+      "description": "The event payload (OpenRoIS extension)"
+    }
+  },
+  "required": [
+    "event_id",
+    "event_type",
+    "subscribe_id"
+  ],
+  "title": "NotifyEventParams",
+  "type": "object"
+}

@@ -65,23 +65,6 @@ namespace OpenRoIS.Interfaces.Hri
 
 
 
-    /// <summary>
-    /// Command operation type for RoIS commands.
-    /// 
-    /// Not an IDL enum — the IDL uses plain `string` for command_type. OpenRoIS
-    /// defines this enum for compile-time safety. The wire values match the
-    /// RoIS_Common::Command method names plus `set_parameter` and `execute`.
-    /// </summary>
-    public enum CommandType
-    {
-        start,
-        stop,
-        suspend,
-        resume,
-        set_parameter,
-        execute
-    }
-
 
     /// <summary>
     /// A single command within a CommandUnitSequence.
@@ -90,8 +73,8 @@ namespace OpenRoIS.Interfaces.Hri
     /// 
     /// Attributes:
     ///     component_ref: The component to send the command to.
-    ///     command_type: The command operation (e.g., 'start', 'stop',
-    ///         'set_parameter', 'execute').
+    ///     command_type: The command name: a standard one (start, stop, suspend, resume,
+    ///         set_parameter) or one the component profile defines.
     ///     command_id: Unique identifier for this command instance.
     ///     arguments: Optional list of arguments for the command.
     ///     delay_time: Optional delay in milliseconds before executing this command.
@@ -101,7 +84,7 @@ namespace OpenRoIS.Interfaces.Hri
         [JsonPropertyName("component_ref")]
         public string ComponentRef { get; }
         [JsonPropertyName("command_type")]
-        public CommandType CommandType { get; }
+        public string CommandType { get; }
         [JsonPropertyName("command_id")]
         public string CommandId { get; }
         [JsonPropertyName("arguments")]
@@ -109,7 +92,7 @@ namespace OpenRoIS.Interfaces.Hri
         [JsonPropertyName("delay_time")]
         public int? DelayTime { get; }
 
-        public CommandUnit(string componentRef, CommandType commandType, string commandId, IReadOnlyList<Argument>? arguments = null, int? delayTime = null)
+        public CommandUnit(string componentRef, string commandType, string commandId, IReadOnlyList<Argument>? arguments = null, int? delayTime = null)
         {
             ComponentRef = componentRef;
             CommandType = commandType;

@@ -14,23 +14,6 @@ namespace OpenRoIS.Interfaces.Catalog
 
 
 
-    /// <summary>
-    /// Command operation type for RoIS commands.
-    /// 
-    /// Not an IDL enum — the IDL uses plain `string` for command_type. OpenRoIS
-    /// defines this enum for compile-time safety. The wire values match the
-    /// RoIS_Common::Command method names plus `set_parameter` and `execute`.
-    /// </summary>
-    public enum CommandType
-    {
-        start,
-        stop,
-        suspend,
-        resume,
-        set_parameter,
-        execute
-    }
-
 
 
 
@@ -800,9 +783,15 @@ namespace OpenRoIS.Interfaces.Catalog
     /// profile as an XML document in a string. OpenRoIS sends the structured form of
     /// the same XSD type.
     /// 
+    /// The XSD engine profile names its components by ref only. The UML model links an
+    /// engine profile to its component profiles by reference, and component_profiles
+    /// carries those referenced profiles once each. It is an OpenRoIS extension.
+    /// 
     /// Attributes:
     ///     return_code: Outcome of the operation.
     ///     profile: The engine profile. Null when return_code is not OK.
+    ///     component_profiles: The profile of every component in profile.component_ids,
+    ///         keyed by fully qualified ref.
     /// </summary>
     public sealed class GetProfileResult : IEquatable<GetProfileResult>
     {
@@ -810,18 +799,21 @@ namespace OpenRoIS.Interfaces.Catalog
         public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; }
         [JsonPropertyName("profile")]
         public OpenRoIS.Interfaces.Profiles.HRIEngineProfileType? Profile { get; }
+        [JsonPropertyName("component_profiles")]
+        public IReadOnlyDictionary<string, OpenRoIS.Interfaces.Profiles.HRIComponentProfile>? ComponentProfiles { get; }
 
-        public GetProfileResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode, OpenRoIS.Interfaces.Profiles.HRIEngineProfileType? profile = null)
+        public GetProfileResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode, OpenRoIS.Interfaces.Profiles.HRIEngineProfileType? profile = null, IReadOnlyDictionary<string, OpenRoIS.Interfaces.Profiles.HRIComponentProfile>? componentProfiles = null)
         {
             ReturnCode = returnCode;
             Profile = profile;
+            ComponentProfiles = componentProfiles;
         }
 
         public bool Equals(GetProfileResult? other)
         {
             if (ReferenceEquals(other, this)) return true;
             if (other is null) return false;
-            return Equals(ReturnCode, other.ReturnCode) && Equals(Profile, other.Profile);
+            return Equals(ReturnCode, other.ReturnCode) && Equals(Profile, other.Profile) && Equals(ComponentProfiles, other.ComponentProfiles);
         }
 
         public override bool Equals(object? obj)
@@ -831,7 +823,7 @@ namespace OpenRoIS.Interfaces.Catalog
 
         public override int GetHashCode()
         {
-            return System.HashCode.Combine(ReturnCode, Profile);
+            return System.HashCode.Combine(ReturnCode, Profile, ComponentProfiles);
         }
 
         public static bool operator ==(GetProfileResult? left, GetProfileResult? right)
@@ -1415,6 +1407,39 @@ namespace OpenRoIS.Interfaces.Catalog
                 [RoISMethods.Unsubscribe] = (typeof(UnsubscribeParams), typeof(UnsubscribeResult)),
                 [RoISMethods.GetEventDetail] = (typeof(GetEventDetailParams), typeof(GetEventDetailResult)),
             };
+    }
+
+    /// <summary>JSON-RPC notification names an engine sends to a service application, keyed by operation.</summary>
+    public static class RoISNotifications
+    {
+        public const string NotifyError = "rois.system.notify_error";
+        public const string Completed = "rois.command.completed";
+        public const string NotifyEvent = "rois.event.notify_event";
+        public const string ProfileChanged = "rois.system.profile_changed";
+    }
+
+    /// <summary>The params type of every notification.</summary>
+    public static class RoISNotificationTypes
+    {
+        /// <summary>Params type, keyed by JSON-RPC notification name.</summary>
+        public static readonly IReadOnlyDictionary<string, Type> ByMethod =
+            new Dictionary<string, Type>
+            {
+                [RoISNotifications.NotifyError] = typeof(OpenRoIS.Interfaces.Service.NotifyErrorParams),
+                [RoISNotifications.Completed] = typeof(OpenRoIS.Interfaces.Service.CompletedParams),
+                [RoISNotifications.NotifyEvent] = typeof(OpenRoIS.Interfaces.Service.NotifyEventParams),
+                [RoISNotifications.ProfileChanged] = typeof(OpenRoIS.Interfaces.Service.ProfileChangedParams),
+            };
+    }
+
+    /// <summary>Standard command names every component may accept. A component may define its own as well.</summary>
+    public static class RoISCommandTypes
+    {
+        public const string Start = "start";
+        public const string Stop = "stop";
+        public const string Suspend = "suspend";
+        public const string Resume = "resume";
+        public const string SetParameter = "set_parameter";
     }
 
     /// <summary>JSON-RPC 2.0 error codes an engine returns for protocol faults.</summary>

@@ -113,6 +113,39 @@
       "result": "GetEventDetailResult"
     }
   ],
+  "notifications": [
+    {
+      "method": "rois.system.notify_error",
+      "interface": "ServiceApplicationBase",
+      "operation": "notify_error",
+      "params": "NotifyErrorParams"
+    },
+    {
+      "method": "rois.command.completed",
+      "interface": "ServiceApplicationBase",
+      "operation": "completed",
+      "params": "CompletedParams"
+    },
+    {
+      "method": "rois.event.notify_event",
+      "interface": "ServiceApplicationBase",
+      "operation": "notify_event",
+      "params": "NotifyEventParams"
+    },
+    {
+      "method": "rois.system.profile_changed",
+      "interface": "OpenRoIS",
+      "operation": "profile_changed",
+      "params": "ProfileChangedParams"
+    }
+  ],
+  "standard_command_types": [
+    "start",
+    "stop",
+    "suspend",
+    "resume",
+    "set_parameter"
+  ],
   "json_rpc_error_codes": [
     {
       "name": "PARSE_ERROR",

@@ -9,7 +9,33 @@ Source: OMG RoIS Framework 2.0, XML-Profiles.xsd
 
 from __future__ import annotations
 
+from enum import StrEnum
+
 from pydantic import BaseModel, Field
+
+# ---------------------------------------------------------------------------
+# Component function (from the RoSO ontology)
+# ---------------------------------------------------------------------------
+
+
+class ComponentFunction(StrEnum):
+    """The RoSO function class of a component.
+
+    Not part of XML-Profiles.xsd. The values are the Robotic Service Function
+    Ontology classes that the spec's ontology file assigns to the basic components:
+    Navigation, Reaction and SpeechSynthesis are Actuation, the detection,
+    localization and recognition components are Sensing, and AudioStreaming is the
+    generic Function class. An engine requires a bind before commands on an
+    actuation component.
+
+    ACTUATION: The component acts on the world (moves, speaks, shows).
+    SENSING: The component observes the world.
+    FUNCTION: The component is neither, for example a stream.
+    """
+
+    ACTUATION = "actuation"
+    SENSING = "sensing"
+    FUNCTION = "function"
 
 # ---------------------------------------------------------------------------
 # RoIS Identifier type (from XSD: RoISIdentifierType)
@@ -131,11 +157,15 @@ class EventMessageProfile(MessageProfile):
 class HRIComponentProfile(BaseModel):
     """Describes a RoIS component's capabilities, messages, and parameters.
 
-    Maps to HRIComponentProfileType in XML-Profiles.xsd.
+    Maps to HRIComponentProfileType in XML-Profiles.xsd. One profile describes one
+    component instance: its messages are the ones that instance supports.
 
     Attributes:
-        identifier: The component's structured identifier (URN).
+        identifier: The component type, for example authority 'OMG' and code
+            'PersonDetection' for urn:x-rois:def:component:OMG::PersonDetection.
         name: A short human-readable name (e.g., 'person_detecter').
+        function: The RoSO function class. An OpenRoIS extension: the XSD has no
+            such element.
         sub_component_profiles: URNs of sub-component profiles (e.g., RoISCommon).
         command_profiles: Command message profiles this component supports.
         query_profiles: Query message profiles this component supports.
@@ -147,6 +177,10 @@ class HRIComponentProfile(BaseModel):
 
     identifier: RoISIdentifierType
     name: str
+    function: ComponentFunction | None = Field(
+        default=None,
+        description="RoSO function class (OpenRoIS extension)",
+    )
     sub_component_profiles: list[str] = Field(default_factory=list)
     command_profiles: list[CommandMessageProfile] = Field(default_factory=list)
     query_profiles: list[QueryMessageProfile] = Field(default_factory=list)
@@ -157,16 +191,15 @@ class HRIComponentProfile(BaseModel):
 class HRIEngineProfileType(BaseModel):
     """Describes an HRI Engine's composition of sub-engines and components.
 
-    Maps to HRIEngineProfileType in XML-Profiles.xsd.
+    Maps to HRIEngineProfileType in XML-Profiles.xsd, field for field. The profile
+    names its components by ref only, as the XSD does. The get_profile result carries
+    their HRIComponentProfiles next to it.
 
     Attributes:
         identifier: The engine's structured identifier.
-        sub_profiles: Nested sub-engine profiles.
-        component_ids: IDs of components hosted by this engine.
-        component_profiles: Full capability profiles for each component.
-            Populated from adapter registration data. Optional (default
-            empty) for backward compatibility with engines that only
-            return component_ids.
+        sub_profiles: One profile per child engine (XSD SubProfile).
+        component_ids: Fully qualified refs of every component reachable through this
+            engine, including the components of its child engines (XSD HRIComponent).
         parameter_profiles: Engine-level parameter declarations.
     """
 
@@ -175,5 +208,4 @@ class HRIEngineProfileType(BaseModel):
     identifier: RoISIdentifierType
     sub_profiles: list[HRIEngineProfileType] = Field(default_factory=list)
     component_ids: list[str] = Field(default_factory=list)
-    component_profiles: list[HRIComponentProfile] = Field(default_factory=list)
     parameter_profiles: list[ParameterProfile] = Field(default_factory=list)

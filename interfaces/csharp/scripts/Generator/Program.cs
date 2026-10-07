@@ -488,6 +488,11 @@ internal static class Program
 
         var type = schema["type"]?.GetValue<string>();
 
+        // A map: an object whose values all share one schema. JSON object keys are
+        // always strings, so the key type is string whatever propertyNames says.
+        if (type == "object" && MapValueSchema(schema) is JsonNode mapValue)
+            return $"IReadOnlyDictionary<string, {JsonSchemaToCsType(mapValue, allDefs, true, externalTypes)}>";
+
         return type switch
         {
             "string" => "string",
@@ -498,6 +503,28 @@ internal static class Program
             "null" => "object?",
             _ => "object",
         };
+    }
+
+    /// <summary>
+    /// The value schema of a map: an object with no fixed properties whose
+    /// additionalProperties is a schema. Pydantic writes a dict[str, X] field this way.
+    /// </summary>
+    private static JsonNode? MapValueSchema(JsonNode schema)
+    {
+        if (schema["properties"] is not null)
+            return null;
+        return schema["additionalProperties"] is JsonObject value ? value : null;
+    }
+
+    /// <summary>
+    /// The name to write for a top-level schema type in the module being generated:
+    /// the bare name inside its own namespace, the fully qualified name elsewhere.
+    /// </summary>
+    private static string QualifiedTypeName(string typeName)
+    {
+        return s_typeNamespaces.TryGetValue(typeName, out var ns) && ns != s_currentNamespace
+            ? $"{ns}.{typeName}"
+            : typeName;
     }
 
     /// <summary>
@@ -553,6 +580,44 @@ internal static class Program
             sb.AppendLine($"                [RoISMethods.{operation}] = (typeof({paramsType}), typeof({resultType})),");
         }
         sb.AppendLine("            };");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        var notifications = catalog["notifications"]!.AsArray();
+        sb.AppendLine("    /// <summary>JSON-RPC notification names an engine sends to a service application, keyed by operation.</summary>");
+        sb.AppendLine("    public static class RoISNotifications");
+        sb.AppendLine("    {");
+        foreach (var notification in notifications)
+        {
+            var operation = ToPascalCase(notification!["operation"]!.GetValue<string>());
+            var wireName = notification["method"]!.GetValue<string>();
+            sb.AppendLine($"        public const string {operation} = \"{wireName}\";");
+        }
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>The params type of every notification.</summary>");
+        sb.AppendLine("    public static class RoISNotificationTypes");
+        sb.AppendLine("    {");
+        sb.AppendLine("        /// <summary>Params type, keyed by JSON-RPC notification name.</summary>");
+        sb.AppendLine("        public static readonly IReadOnlyDictionary<string, Type> ByMethod =");
+        sb.AppendLine("            new Dictionary<string, Type>");
+        sb.AppendLine("            {");
+        foreach (var notification in notifications)
+        {
+            var operation = ToPascalCase(notification!["operation"]!.GetValue<string>());
+            var paramsType = QualifiedTypeName(notification["params"]!.GetValue<string>());
+            sb.AppendLine($"                [RoISNotifications.{operation}] = typeof({paramsType}),");
+        }
+        sb.AppendLine("            };");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>Standard command names every component may accept. A component may define its own as well.</summary>");
+        sb.AppendLine("    public static class RoISCommandTypes");
+        sb.AppendLine("    {");
+        foreach (var commandType in catalog["standard_command_types"]!.AsArray())
+        {
+            var wireName = commandType!.GetValue<string>();
+            sb.AppendLine($"        public const string {ToPascalCase(wireName)} = \"{wireName}\";");
+        }
         sb.AppendLine("    }");
         sb.AppendLine();
         sb.AppendLine("    /// <summary>JSON-RPC 2.0 error codes an engine returns for protocol faults.</summary>");
@@ -752,6 +817,9 @@ internal static class Program
             foreach (var (_, propSchema) in props)
                 CollectRefs(propSchema, allNames, refs, depth + 1);
         }
+
+        if (MapValueSchema(schema) is JsonNode mapValue)
+            CollectRefs(mapValue, allNames, refs, depth + 1);
     }
 
     /// <summary>

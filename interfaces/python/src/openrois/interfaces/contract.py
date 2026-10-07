@@ -25,7 +25,6 @@ from openrois.interfaces.common import ComponentStatus, StreamStatus
 from openrois.interfaces.hri import (
     ArgumentList,
     CommandId,
-    CommandType,
     CommandUnitSequence,
     ConditionT,
     DateTime,
@@ -115,8 +114,8 @@ class CommandRequest(BaseModel):
     model_config = {"frozen": True, "extra": "forbid"}
 
     component_ref: RoISIdentifier = Field(description="Target component instance ref")
-    command_type: CommandType = Field(
-        description="Command operation: start, stop, suspend, resume, set_parameter, execute",
+    command_type: str = Field(
+        description="Command name, for example start, stop or set_parameter",
     )
     command_id: CommandId = Field(description="Unique command instance identifier")
     arguments: ArgumentList = Field(default_factory=list)

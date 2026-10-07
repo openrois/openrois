@@ -37,7 +37,8 @@ interface JsonSchema {
   required?: string[];
   items?: JsonSchema;
   anyOf?: JsonSchema[];
-  additionalProperties?: boolean;
+  additionalProperties?: boolean | JsonSchema;
+  propertyNames?: JsonSchema;
   [key: string]: unknown;
 }
 
@@ -54,8 +55,17 @@ interface CatalogMethod {
   result: string;
 }
 
+interface CatalogNotification {
+  method: string;
+  interface: string;
+  operation: string;
+  params: string;
+}
+
 interface CatalogDocument {
   methods: CatalogMethod[];
+  notifications: CatalogNotification[];
+  standard_command_types: string[];
   json_rpc_error_codes: { name: string; code: number }[];
   unmodelled_method_prefixes: string[];
 }
@@ -117,6 +127,26 @@ function tsStr(s: string): string {
 function isSimpleType(schema: JsonSchema): boolean {
   if (schema.properties || schema.anyOf || schema.enum || schema.$ref) return false;
   return ["string", "integer", "number", "boolean"].includes(schema.type ?? "");
+}
+
+/**
+ * The value schema of a map: an object with no fixed properties whose
+ * `additionalProperties` is a schema. Pydantic writes a `dict[str, X]` field this way.
+ */
+function mapValueSchema(schema: JsonSchema): JsonSchema | undefined {
+  if (schema.properties) return undefined;
+  const value = schema.additionalProperties;
+  return typeof value === "object" ? value : undefined;
+}
+
+/** The schema nodes directly nested in `schema` that may carry a $ref. */
+function childSchemas(schema: JsonSchema): JsonSchema[] {
+  const children: JsonSchema[] = [...(schema.anyOf ?? [])];
+  if (schema.items) children.push(schema.items);
+  if (schema.properties) children.push(...Object.values(schema.properties));
+  const mapValue = mapValueSchema(schema);
+  if (mapValue) children.push(mapValue);
+  return children;
 }
 
 /**
@@ -199,8 +229,13 @@ function genZod(schema: JsonSchema, defs: Record<string, JsonSchema>, indent = "
 
 /** Generate a z.object from a JSON Schema object definition. */
 function genObject(schema: JsonSchema, defs: Record<string, JsonSchema>, indent: string): string {
+  // Map keys are always strings on the wire, so propertyNames adds nothing to check.
+  const mapValue = mapValueSchema(schema);
+  if (mapValue) {
+    return `z.record(z.string(), ${genZod(mapValue, defs, indent)})`;
+  }
   if (!schema.properties) {
-    return "z.record(z.unknown())";
+    return "z.record(z.string(), z.unknown())";
   }
 
   const required = new Set(schema.required ?? []);
@@ -231,6 +266,7 @@ function genObject(schema: JsonSchema, defs: Record<string, JsonSchema>, indent:
   }
 
   const strictSuffix = schema.additionalProperties === false ? ".strict()" : "";
+  if (fields.length === 0) return `z.object({})${strictSuffix}`;
   return `z.object({\n${fields.join("\n")}\n${indent}})${strictSuffix}`;
 }
 
@@ -266,8 +302,12 @@ function jsonSchemaToTsType(schema: JsonSchema, selfName?: string): string {
       return "unknown[]";
     case "null":
       return "null";
-    case "object":
-      return "Record<string, unknown>";
+    case "object": {
+      const mapValue = mapValueSchema(schema);
+      return mapValue
+        ? `Record<string, ${jsonSchemaToTsType(mapValue, selfName)}>`
+        : "Record<string, unknown>";
+    }
     default:
       return "unknown";
   }
@@ -284,20 +324,8 @@ function collectRefs(schema: JsonSchema, allDefNames: Set<string>, depth = 0): S
     return refs;
   }
 
-  if (schema.anyOf) {
-    for (const s of schema.anyOf) {
-      for (const r of collectRefs(s, allDefNames, depth + 1)) refs.add(r);
-    }
-  }
-
-  if (schema.items) {
-    for (const r of collectRefs(schema.items, allDefNames, depth + 1)) refs.add(r);
-  }
-
-  if (schema.properties) {
-    for (const prop of Object.values(schema.properties)) {
-      for (const r of collectRefs(prop, allDefNames, depth + 1)) refs.add(r);
-    }
+  for (const child of childSchemas(schema)) {
+    for (const r of collectRefs(child, allDefNames, depth + 1)) refs.add(r);
   }
 
   return refs;
@@ -398,19 +426,7 @@ function isSelfReferencing(name: string, schema: JsonSchema, depth = 0): boolean
     return refName(schema.$ref) === name;
   }
 
-  if (schema.anyOf) {
-    return schema.anyOf.some((s) => isSelfReferencing(name, s, depth + 1));
-  }
-
-  if (schema.items) {
-    return isSelfReferencing(name, schema.items, depth + 1);
-  }
-
-  if (schema.properties) {
-    return Object.values(schema.properties).some((p) => isSelfReferencing(name, p, depth + 1));
-  }
-
-  return false;
+  return childSchemas(schema).some((child) => isSelfReferencing(name, child, depth + 1));
 }
 
 // ---------------------------------------------------------------------------
@@ -501,6 +517,40 @@ function genCatalog(catalog: CatalogDocument): string {
     lines.push(
       `  ${tsStr(m.method)}: { params: ${schemaVar(m.params)}, result: ${schemaVar(m.result)} },`,
     );
+  }
+  lines.push("} as const;");
+  lines.push("");
+  lines.push("/** JSON-RPC notification names an engine sends to a service application, keyed by operation. */");
+  lines.push("export const RoISNotifications = {");
+  for (const n of catalog.notifications) {
+    lines.push(`  ${pascalCase(n.operation)}: ${tsStr(n.method)},`);
+  }
+  lines.push("} as const;");
+  lines.push("/** A JSON-RPC notification name an engine sends to a service application. */");
+  lines.push(
+    "export type RoISNotification = (typeof RoISNotifications)[keyof typeof RoISNotifications];",
+  );
+  lines.push("");
+  lines.push("/** The params type of every notification. */");
+  lines.push("export interface RoISNotificationMap {");
+  for (const n of catalog.notifications) {
+    lines.push(`  ${tsStr(n.method)}: { params: ${n.params} };`);
+  }
+  lines.push("}");
+  lines.push("");
+  lines.push("/** The params schema of every notification, for validating messages. */");
+  lines.push("export const RoISNotificationSchemas = {");
+  for (const n of catalog.notifications) {
+    lines.push(`  ${tsStr(n.method)}: { params: ${schemaVar(n.params)} },`);
+  }
+  lines.push("} as const;");
+  lines.push("");
+  lines.push(
+    "/** Standard command names every component may accept. A component may define its own as well. */",
+  );
+  lines.push("export const RoISCommandTypes = {");
+  for (const c of catalog.standard_command_types) {
+    lines.push(`  ${pascalCase(c)}: ${tsStr(c)},`);
   }
   lines.push("} as const;");
   lines.push("");
@@ -632,6 +682,18 @@ function generateModule(
   for (const { schema } of topLevelSchemas) {
     collectUsed({ ...schema, $defs: undefined }, new Set());
   }
+  // The notification table names the params models of another module by type and by
+  // schema, so they are imported as well.
+  const catalogTypes = new Set<string>();
+  if (moduleName === "catalog" && catalog) {
+    for (const n of catalog.notifications) {
+      const owner = owners.get(n.params);
+      if (owner !== undefined && owner !== moduleName) {
+        used.add(n.params);
+        catalogTypes.add(n.params);
+      }
+    }
+  }
   const importsByModule = new Map<string, string[]>();
   for (const name of [...used].sort()) {
     const owner = owners.get(name)!;
@@ -639,7 +701,7 @@ function generateModule(
   }
   // A recursive type is written as a TS interface, which names other types directly,
   // so those types are imported as well as their schemas.
-  const typesNeeded = new Set<string>();
+  const typesNeeded = new Set<string>(catalogTypes);
   for (const [name, defSchema] of Object.entries(allDefs)) {
     if (imported.has(name) || !isSelfReferencing(name, defSchema)) continue;
     for (const ref of collectRefs(defSchema, imported)) typesNeeded.add(ref);

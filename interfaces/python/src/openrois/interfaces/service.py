@@ -12,9 +12,9 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from openrois.interfaces.hri import CommandId, DateTime, EventType, SubscribeId
+from openrois.interfaces.hri import CommandId, DateTime, EventType, ResultList, SubscribeId
 
 # ---------------------------------------------------------------------------
 # Enumerations
@@ -58,51 +58,83 @@ class ErrorType(StrEnum):
 
 
 # ---------------------------------------------------------------------------
-# Callback event models — ServiceApplicationBase notifications
+# Notifications: ServiceApplicationBase operations
 # ---------------------------------------------------------------------------
+#
+# The engine calls these operations on the service application as JSON-RPC
+# notifications. The params model of each one is named after the IDL operation, like
+# the request models of the catalog, and the method table lives in the catalog.
 
 
-class NotifyErrorEvent(BaseModel):
-    """Event payload for ServiceApplicationBase::notify_error.
+class NotifyErrorParams(BaseModel):
+    """Params of the rois.system.notify_error notification.
+
+    Maps to ServiceApplicationBase::notify_error(in error_id, in error_type). The
+    details come from SystemIF::get_error_detail(error_id).
 
     Attributes:
-        error_id: Unique identifier for this error instance.
+        error_id: Identifier of this error, for get_error_detail.
         error_type: Classification of the error.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
 
-    error_id: str
+    error_id: str = Field(description="Identifier of this error, for get_error_detail")
     error_type: ErrorType
 
 
-class CompletedEvent(BaseModel):
-    """Event payload for ServiceApplicationBase::completed.
+class CompletedParams(BaseModel):
+    """Params of the rois.command.completed notification.
+
+    Maps to ServiceApplicationBase::completed(in command_id, in status). The results
+    come from CommandIF::get_command_result(command_id).
 
     Attributes:
-        command_id: The command identifier that completed.
-        status: The completion status.
+        command_id: The command that ended, as the application named it.
+        status: How the command ended.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
 
-    command_id: CommandId
+    command_id: CommandId = Field(description="The command that ended")
     status: CompletedStatus
 
 
-class NotifyEventPayload(BaseModel):
-    """Event payload for ServiceApplicationBase::notify_event.
+class NotifyEventParams(BaseModel):
+    """Params of the rois.event.notify_event notification.
+
+    Maps to ServiceApplicationBase::notify_event(in event_id, in event_type,
+    in subscribe_id, in expire). The payload also comes from
+    EventIF::get_event_detail(event_id) until the event expires.
 
     Attributes:
-        event_id: Unique identifier for this event occurrence.
-        event_type: The type of event (e.g., 'person_detected', 'face_localized').
-        subscribe_id: The subscription identifier that this event matches.
-        expire: ISO 8601 datetime when this event expires, or empty if no expiry.
+        event_id: Identifier of this event, for get_event_detail.
+        event_type: The type of event (e.g., 'person_detected').
+        subscribe_id: The subscription this event matches.
+        expire: ISO 8601 datetime after which get_event_detail no longer has the
+            event, or empty if it does not expire.
+        results: The event payload. An OpenRoIS extension that saves one
+            get_event_detail round trip per event.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
 
-    event_id: str
+    event_id: str = Field(description="Identifier of this event, for get_event_detail")
     event_type: EventType
     subscribe_id: SubscribeId
     expire: DateTime = ""
+    results: ResultList = Field(
+        default_factory=list,
+        description="The event payload (OpenRoIS extension)",
+    )
+
+
+class ProfileChangedParams(BaseModel):
+    """Params of the rois.system.profile_changed notification.
+
+    Not part of RoIS: an OpenRoIS extension. The engine sends it when its profile
+    changes, for example when a child engine connects or disconnects, so a client
+    calls get_profile again instead of polling it. It carries no params.
+    """
+
+    model_config = {"frozen": True, "extra": "forbid"}

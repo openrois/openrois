@@ -40,15 +40,17 @@ namespace OpenRoIS.Interfaces.Tests
     {
         Assert.NotNull(typeof(CompletedStatus));
         Assert.NotNull(typeof(ErrorType));
-        Assert.NotNull(typeof(CompletedEvent));
-        Assert.NotNull(typeof(NotifyErrorEvent));
-        Assert.NotNull(typeof(NotifyEventPayload));
+        Assert.NotNull(typeof(CompletedParams));
+        Assert.NotNull(typeof(NotifyErrorParams));
+        Assert.NotNull(typeof(NotifyEventParams));
+        Assert.NotNull(typeof(ProfileChangedParams));
     }
 
     [Fact]
     public void Profiles_TypesExist()
     {
         Assert.NotNull(typeof(HRIComponentProfile));
+        Assert.NotNull(typeof(ComponentFunction));
         Assert.NotNull(typeof(HRIEngineProfileType));
         Assert.NotNull(typeof(ParameterProfile));
         Assert.NotNull(typeof(RoISIdentifierType));

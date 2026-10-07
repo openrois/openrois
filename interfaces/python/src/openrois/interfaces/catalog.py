@@ -2,8 +2,10 @@
 
 This module defines what a service application exchanges with an HRI Engine. It holds
 one params model and one result model for every operation of SystemIF, CommandIF,
-QueryIF and EventIF in RoIS_HRI.idl, the four interfaces as Protocols, and the method
-table that binds each JSON-RPC method name to its models.
+QueryIF and EventIF in RoIS_HRI.idl, the four interfaces as Protocols, the method
+table that binds each JSON-RPC method name to its models, the table of notifications
+the engine sends (models in the service module), and the registry of OpenRoIS
+extensions.
 
 Mapping rules:
   - A params model has one field per IDL ``in`` parameter, with the IDL name.
@@ -35,6 +37,7 @@ from pydantic import BaseModel, Field
 
 from openrois.interfaces.hri import (
     CommandId,
+    CommandType,
     CommandUnitSequenceItem,
     ConditionT,
     EventType,
@@ -46,7 +49,13 @@ from openrois.interfaces.hri import (
     RoISIdentifierList,
     SubscribeId,
 )
-from openrois.interfaces.profiles import HRIEngineProfileType
+from openrois.interfaces.profiles import HRIComponentProfile, HRIEngineProfileType
+from openrois.interfaces.service import (
+    CompletedParams,
+    NotifyErrorParams,
+    NotifyEventParams,
+    ProfileChangedParams,
+)
 
 # Prefix of the Streaming interface methods, which the catalog does not model.
 STREAMING_METHOD_PREFIX = "rois.stream."
@@ -154,15 +163,25 @@ class GetProfileResult(BaseModel):
     profile as an XML document in a string. OpenRoIS sends the structured form of
     the same XSD type.
 
+    The XSD engine profile names its components by ref only. The UML model links an
+    engine profile to its component profiles by reference, and component_profiles
+    carries those referenced profiles once each. It is an OpenRoIS extension.
+
     Attributes:
         return_code: Outcome of the operation.
         profile: The engine profile. Null when return_code is not OK.
+        component_profiles: The profile of every component in profile.component_ids,
+            keyed by fully qualified ref.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
 
     return_code: ReturnCode
     profile: HRIEngineProfileType | None = Field(default=None, description="The engine profile")
+    component_profiles: dict[RoISIdentifier, HRIComponentProfile] = Field(
+        default_factory=dict,
+        description="Profile of every listed component, keyed by ref (OpenRoIS extension)",
+    )
 
 
 class GetErrorDetailParams(BaseModel):
@@ -801,12 +820,107 @@ METHODS: tuple[MethodSpec, ...] = (
 METHODS_BY_NAME: Mapping[str, MethodSpec] = MappingProxyType({m.method: m for m in METHODS})
 
 
+# ---------------------------------------------------------------------------
+# Notification table
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class NotificationSpec:
+    """One notification the engine sends to a service application.
+
+    Attributes:
+        method: The JSON-RPC method name.
+        interface: ServiceApplicationBase, or OpenRoIS for an extension.
+        operation: The operation name in the IDL, or the extension's name.
+        params: The params model.
+    """
+
+    method: str
+    interface: str
+    operation: str
+    params: type[BaseModel]
+
+
+NOTIFICATIONS: tuple[NotificationSpec, ...] = (
+    NotificationSpec(
+        "rois.system.notify_error", "ServiceApplicationBase", "notify_error", NotifyErrorParams
+    ),
+    NotificationSpec(
+        "rois.command.completed", "ServiceApplicationBase", "completed", CompletedParams
+    ),
+    NotificationSpec(
+        "rois.event.notify_event", "ServiceApplicationBase", "notify_event", NotifyEventParams
+    ),
+    NotificationSpec(
+        "rois.system.profile_changed", "OpenRoIS", "profile_changed", ProfileChangedParams
+    ),
+)
+
+# The notification table indexed by JSON-RPC method name.
+NOTIFICATIONS_BY_NAME: Mapping[str, NotificationSpec] = MappingProxyType(
+    {n.method: n for n in NOTIFICATIONS}
+)
+
+
+# ---------------------------------------------------------------------------
+# Extensions
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class Extension:
+    """One place where OpenRoIS adds to the RoIS specification.
+
+    Every extension passes the project's extension policy: it serves a need the
+    specification leaves out, changes nothing the specification defines, can be
+    ignored by a client, reuses specification types where it can, and is listed here.
+    The IDL and XSD cross-check tests allow exactly these additions.
+
+    Attributes:
+        model: The model the extension belongs to.
+        field: The added field, or None when the whole model is the extension.
+        reason: The need the specification leaves out.
+    """
+
+    model: str
+    field: str | None
+    reason: str
+
+
+EXTENSIONS: tuple[Extension, ...] = (
+    Extension(
+        "GetProfileResult",
+        "component_profiles",
+        "A client discovers at run time what each component instance supports, "
+        "including custom components that have no published profile.",
+    ),
+    Extension(
+        "HRIComponentProfile",
+        "function",
+        "The engine and clients know which components need a bind before commands. "
+        "The values come from the RoSO ontology shipped with the specification.",
+    ),
+    Extension(
+        "NotifyEventParams",
+        "results",
+        "Without the payload, every event costs a get_event_detail round trip.",
+    ),
+    Extension(
+        "ProfileChangedParams",
+        None,
+        "The specification gives a client no way to learn that components joined or "
+        "left, other than polling get_profile.",
+    ),
+)
+
+
 def catalog_document() -> dict[str, object]:
     """Return the method table as the language-neutral document ``catalog.json``.
 
-    The TypeScript and C# generators read this document to emit the method name
-    constants and the method to model map, so every language shares one table.
-    Models are named by their schema title.
+    The TypeScript and C# generators read this document to emit the method and
+    notification name constants, the method to model maps and the standard command
+    names, so every language shares one table. Models are named by their schema title.
     """
     return {
         "methods": [
@@ -819,6 +933,16 @@ def catalog_document() -> dict[str, object]:
             }
             for m in METHODS
         ],
+        "notifications": [
+            {
+                "method": n.method,
+                "interface": n.interface,
+                "operation": n.operation,
+                "params": n.params.__name__,
+            }
+            for n in NOTIFICATIONS
+        ],
+        "standard_command_types": [c.value for c in CommandType],
         "json_rpc_error_codes": [{"name": c.name, "code": c.value} for c in JsonRpcErrorCode],
         "unmodelled_method_prefixes": [STREAMING_METHOD_PREFIX],
     }

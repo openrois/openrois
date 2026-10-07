@@ -1,5 +1,5 @@
 // GENERATED FROM interfaces/schema — DO NOT EDIT
-// Source: CommandMessageProfile.schema.json, EventMessageProfile.schema.json, HRIComponentProfile.schema.json, HRIEngineProfileType.schema.json, MessageProfile.schema.json, ParameterProfile.schema.json, QueryMessageProfile.schema.json, RoISIdentifierType.schema.json
+// Source: CommandMessageProfile.schema.json, ComponentFunction.schema.json, EventMessageProfile.schema.json, HRIComponentProfile.schema.json, HRIEngineProfileType.schema.json, MessageProfile.schema.json, ParameterProfile.schema.json, QueryMessageProfile.schema.json, RoISIdentifierType.schema.json
 // Generator: scripts/Generator/Program.cs
 
 using System;
@@ -172,6 +172,27 @@ namespace OpenRoIS.Interfaces.Profiles
     }
 
     /// <summary>
+    /// The RoSO function class of a component.
+    /// 
+    /// Not part of XML-Profiles.xsd. The values are the Robotic Service Function
+    /// Ontology classes that the spec's ontology file assigns to the basic components:
+    /// Navigation, Reaction and SpeechSynthesis are Actuation, the detection,
+    /// localization and recognition components are Sensing, and AudioStreaming is the
+    /// generic Function class. An engine requires a bind before commands on an
+    /// actuation component.
+    /// 
+    /// ACTUATION: The component acts on the world (moves, speaks, shows).
+    /// SENSING: The component observes the world.
+    /// FUNCTION: The component is neither, for example a stream.
+    /// </summary>
+    public enum ComponentFunction
+    {
+        actuation,
+        sensing,
+        function
+    }
+
+    /// <summary>
     /// An event message profile.
     /// 
     /// Maps to EventMessageProfileType in XML-Profiles.xsd.
@@ -259,13 +280,73 @@ namespace OpenRoIS.Interfaces.Profiles
     }
 
     /// <summary>
-    /// Describes a RoIS component's capabilities, messages, and parameters.
+    /// Describes an HRI Engine's composition of sub-engines and components.
     /// 
-    /// Maps to HRIComponentProfileType in XML-Profiles.xsd.
+    /// Maps to HRIEngineProfileType in XML-Profiles.xsd, field for field. The profile
+    /// names its components by ref only, as the XSD does. The get_profile result carries
+    /// their HRIComponentProfiles next to it.
     /// 
     /// Attributes:
-    ///     identifier: The component's structured identifier (URN).
+    ///     identifier: The engine's structured identifier.
+    ///     sub_profiles: One profile per child engine (XSD SubProfile).
+    ///     component_ids: Fully qualified refs of every component reachable through this
+    ///         engine, including the components of its child engines (XSD HRIComponent).
+    ///     parameter_profiles: Engine-level parameter declarations.
+    /// </summary>
+    public sealed class HRIEngineProfileType : IEquatable<HRIEngineProfileType>
+    {
+        [JsonPropertyName("identifier")]
+        public RoISIdentifierType Identifier { get; }
+        [JsonPropertyName("sub_profiles")]
+        public IReadOnlyList<HRIEngineProfileType>? SubProfiles { get; }
+        [JsonPropertyName("component_ids")]
+        public IReadOnlyList<string>? ComponentIds { get; }
+        [JsonPropertyName("parameter_profiles")]
+        public IReadOnlyList<ParameterProfile>? ParameterProfiles { get; }
+
+        public HRIEngineProfileType(RoISIdentifierType identifier, IReadOnlyList<HRIEngineProfileType>? subProfiles = null, IReadOnlyList<string>? componentIds = null, IReadOnlyList<ParameterProfile>? parameterProfiles = null)
+        {
+            Identifier = identifier;
+            SubProfiles = subProfiles;
+            ComponentIds = componentIds;
+            ParameterProfiles = parameterProfiles;
+        }
+
+        public bool Equals(HRIEngineProfileType? other)
+        {
+            if (ReferenceEquals(other, this)) return true;
+            if (other is null) return false;
+            return Equals(Identifier, other.Identifier) && Equals(SubProfiles, other.SubProfiles) && Equals(ComponentIds, other.ComponentIds) && Equals(ParameterProfiles, other.ParameterProfiles);
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return Equals(obj as HRIEngineProfileType);
+        }
+
+        public override int GetHashCode()
+        {
+            return System.HashCode.Combine(Identifier, SubProfiles, ComponentIds, ParameterProfiles);
+        }
+
+        public static bool operator ==(HRIEngineProfileType? left, HRIEngineProfileType? right)
+            => ReferenceEquals(left, right) || (left is not null && left.Equals(right));
+        public static bool operator !=(HRIEngineProfileType? left, HRIEngineProfileType? right)
+            => !(left == right);
+    }
+
+    /// <summary>
+    /// Describes a RoIS component's capabilities, messages, and parameters.
+    /// 
+    /// Maps to HRIComponentProfileType in XML-Profiles.xsd. One profile describes one
+    /// component instance: its messages are the ones that instance supports.
+    /// 
+    /// Attributes:
+    ///     identifier: The component type, for example authority 'OMG' and code
+    ///         'PersonDetection' for urn:x-rois:def:component:OMG::PersonDetection.
     ///     name: A short human-readable name (e.g., 'person_detecter').
+    ///     function: The RoSO function class. An OpenRoIS extension: the XSD has no
+    ///         such element.
     ///     sub_component_profiles: URNs of sub-component profiles (e.g., RoISCommon).
     ///     command_profiles: Command message profiles this component supports.
     ///     query_profiles: Query message profiles this component supports.
@@ -278,6 +359,8 @@ namespace OpenRoIS.Interfaces.Profiles
         public RoISIdentifierType Identifier { get; }
         [JsonPropertyName("name")]
         public string Name { get; }
+        [JsonPropertyName("function")]
+        public ComponentFunction? Function { get; }
         [JsonPropertyName("sub_component_profiles")]
         public IReadOnlyList<string>? SubComponentProfiles { get; }
         [JsonPropertyName("command_profiles")]
@@ -289,10 +372,11 @@ namespace OpenRoIS.Interfaces.Profiles
         [JsonPropertyName("parameter_profiles")]
         public IReadOnlyList<ParameterProfile>? ParameterProfiles { get; }
 
-        public HRIComponentProfile(RoISIdentifierType identifier, string name, IReadOnlyList<string>? subComponentProfiles = null, IReadOnlyList<CommandMessageProfile>? commandProfiles = null, IReadOnlyList<QueryMessageProfile>? queryProfiles = null, IReadOnlyList<EventMessageProfile>? eventProfiles = null, IReadOnlyList<ParameterProfile>? parameterProfiles = null)
+        public HRIComponentProfile(RoISIdentifierType identifier, string name, ComponentFunction? function = null, IReadOnlyList<string>? subComponentProfiles = null, IReadOnlyList<CommandMessageProfile>? commandProfiles = null, IReadOnlyList<QueryMessageProfile>? queryProfiles = null, IReadOnlyList<EventMessageProfile>? eventProfiles = null, IReadOnlyList<ParameterProfile>? parameterProfiles = null)
         {
             Identifier = identifier;
             Name = name;
+            Function = function;
             SubComponentProfiles = subComponentProfiles;
             CommandProfiles = commandProfiles;
             QueryProfiles = queryProfiles;
@@ -304,7 +388,7 @@ namespace OpenRoIS.Interfaces.Profiles
         {
             if (ReferenceEquals(other, this)) return true;
             if (other is null) return false;
-            return Equals(Identifier, other.Identifier) && Equals(Name, other.Name) && Equals(SubComponentProfiles, other.SubComponentProfiles) && Equals(CommandProfiles, other.CommandProfiles) && Equals(QueryProfiles, other.QueryProfiles) && Equals(EventProfiles, other.EventProfiles) && Equals(ParameterProfiles, other.ParameterProfiles);
+            return Equals(Identifier, other.Identifier) && Equals(Name, other.Name) && Equals(Function, other.Function) && Equals(SubComponentProfiles, other.SubComponentProfiles) && Equals(CommandProfiles, other.CommandProfiles) && Equals(QueryProfiles, other.QueryProfiles) && Equals(EventProfiles, other.EventProfiles) && Equals(ParameterProfiles, other.ParameterProfiles);
         }
 
         public override bool Equals(object? obj)
@@ -314,72 +398,12 @@ namespace OpenRoIS.Interfaces.Profiles
 
         public override int GetHashCode()
         {
-            return System.HashCode.Combine(Identifier, Name, SubComponentProfiles, CommandProfiles, QueryProfiles, EventProfiles, ParameterProfiles);
+            return System.HashCode.Combine(Identifier, Name, Function, SubComponentProfiles, CommandProfiles, QueryProfiles, EventProfiles, ParameterProfiles);
         }
 
         public static bool operator ==(HRIComponentProfile? left, HRIComponentProfile? right)
             => ReferenceEquals(left, right) || (left is not null && left.Equals(right));
         public static bool operator !=(HRIComponentProfile? left, HRIComponentProfile? right)
-            => !(left == right);
-    }
-
-    /// <summary>
-    /// Describes an HRI Engine's composition of sub-engines and components.
-    /// 
-    /// Maps to HRIEngineProfileType in XML-Profiles.xsd.
-    /// 
-    /// Attributes:
-    ///     identifier: The engine's structured identifier.
-    ///     sub_profiles: Nested sub-engine profiles.
-    ///     component_ids: IDs of components hosted by this engine.
-    ///     component_profiles: Full capability profiles for each component.
-    ///         Populated from adapter registration data. Optional (default
-    ///         empty) for backward compatibility with engines that only
-    ///         return component_ids.
-    ///     parameter_profiles: Engine-level parameter declarations.
-    /// </summary>
-    public sealed class HRIEngineProfileType : IEquatable<HRIEngineProfileType>
-    {
-        [JsonPropertyName("identifier")]
-        public RoISIdentifierType Identifier { get; }
-        [JsonPropertyName("sub_profiles")]
-        public IReadOnlyList<HRIEngineProfileType>? SubProfiles { get; }
-        [JsonPropertyName("component_ids")]
-        public IReadOnlyList<string>? ComponentIds { get; }
-        [JsonPropertyName("component_profiles")]
-        public IReadOnlyList<HRIComponentProfile>? ComponentProfiles { get; }
-        [JsonPropertyName("parameter_profiles")]
-        public IReadOnlyList<ParameterProfile>? ParameterProfiles { get; }
-
-        public HRIEngineProfileType(RoISIdentifierType identifier, IReadOnlyList<HRIEngineProfileType>? subProfiles = null, IReadOnlyList<string>? componentIds = null, IReadOnlyList<HRIComponentProfile>? componentProfiles = null, IReadOnlyList<ParameterProfile>? parameterProfiles = null)
-        {
-            Identifier = identifier;
-            SubProfiles = subProfiles;
-            ComponentIds = componentIds;
-            ComponentProfiles = componentProfiles;
-            ParameterProfiles = parameterProfiles;
-        }
-
-        public bool Equals(HRIEngineProfileType? other)
-        {
-            if (ReferenceEquals(other, this)) return true;
-            if (other is null) return false;
-            return Equals(Identifier, other.Identifier) && Equals(SubProfiles, other.SubProfiles) && Equals(ComponentIds, other.ComponentIds) && Equals(ComponentProfiles, other.ComponentProfiles) && Equals(ParameterProfiles, other.ParameterProfiles);
-        }
-
-        public override bool Equals(object? obj)
-        {
-            return Equals(obj as HRIEngineProfileType);
-        }
-
-        public override int GetHashCode()
-        {
-            return System.HashCode.Combine(Identifier, SubProfiles, ComponentIds, ComponentProfiles, ParameterProfiles);
-        }
-
-        public static bool operator ==(HRIEngineProfileType? left, HRIEngineProfileType? right)
-            => ReferenceEquals(left, right) || (left is not null && left.Equals(right));
-        public static bool operator !=(HRIEngineProfileType? left, HRIEngineProfileType? right)
             => !(left == right);
     }
 

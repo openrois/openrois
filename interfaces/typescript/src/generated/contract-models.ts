@@ -4,7 +4,7 @@
 
 import { z } from "zod";
 import { ComponentStatusSchema, StreamStatusSchema } from "../common";
-import { ArgumentSchema, CommandTypeSchema, CommandUnitSequenceSchema, ParameterSchema, ResultSchema, ReturnCodeSchema } from "../hri";
+import { ArgumentSchema, CommandUnitSequenceSchema, ParameterSchema, ResultSchema, ReturnCodeSchema } from "../hri";
 import { CompletedStatusSchema, ErrorTypeSchema } from "../service";
 
 /**
@@ -17,7 +17,7 @@ import { CompletedStatusSchema, ErrorTypeSchema } from "../service";
 
 export const CommandRequestSchema = z.object({
   component_ref: z.string(), // Target component instance ref
-  command_type: CommandTypeSchema, // Command operation: start, stop, suspend, resume, set_parameter, execute
+  command_type: z.string(), // Command name, for example start, stop or set_parameter
   command_id: z.string(), // Unique command instance identifier
   arguments: z.array(ArgumentSchema).optional(),
   parameters: z.array(ParameterSchema).optional(), // Named parameter values for set_parameter-style commands

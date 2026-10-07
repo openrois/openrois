@@ -11,14 +11,16 @@
       "ReturnCode.schema.json"
     ],
     "service": [
-      "CompletedEvent.schema.json",
+      "CompletedParams.schema.json",
       "CompletedStatus.schema.json",
       "ErrorType.schema.json",
-      "NotifyErrorEvent.schema.json",
-      "NotifyEventPayload.schema.json"
+      "NotifyErrorParams.schema.json",
+      "NotifyEventParams.schema.json",
+      "ProfileChangedParams.schema.json"
     ],
     "profiles": [
       "CommandMessageProfile.schema.json",
+      "ComponentFunction.schema.json",
       "EventMessageProfile.schema.json",
       "HRIComponentProfile.schema.json",
       "HRIEngineProfileType.schema.json",

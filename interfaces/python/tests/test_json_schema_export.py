@@ -14,14 +14,16 @@ from openrois.interfaces.hri import (
 )
 from openrois.interfaces.common import ComponentStatus, StreamStatus
 from openrois.interfaces.service import (
-    CompletedEvent,
+    CompletedParams,
     CompletedStatus,
     ErrorType,
-    NotifyErrorEvent,
-    NotifyEventPayload,
+    NotifyErrorParams,
+    NotifyEventParams,
+    ProfileChangedParams,
 )
 from openrois.interfaces.profiles import (
     CommandMessageProfile,
+    ComponentFunction,
     EventMessageProfile,
     HRIComponentProfile,
     HRIEngineProfileType,
@@ -52,9 +54,10 @@ BASE_MODELS = [
     ConcurrentCommands,
     CommandUnitSequence,
     # service
-    NotifyErrorEvent,
-    CompletedEvent,
-    NotifyEventPayload,
+    NotifyErrorParams,
+    CompletedParams,
+    NotifyEventParams,
+    ProfileChangedParams,
     # profiles
     RoISIdentifierType,
     ParameterProfile,
@@ -82,6 +85,7 @@ STRING_ENUMS = [
     StreamStatus,
     CompletedStatus,
     ErrorType,
+    ComponentFunction,
 ]
 
 
@@ -156,9 +160,10 @@ class TestJsonSchemaExport:
     def test_frozen_models_have_no_extra(self) -> None:
         """Frozen models should forbid extra fields (model config extra='forbid')."""
         frozen_models = [
-            NotifyErrorEvent,
-            CompletedEvent,
-            NotifyEventPayload,
+            NotifyErrorParams,
+            CompletedParams,
+            NotifyEventParams,
+            ProfileChangedParams,
             PersonDetectedEvent,
             NavigationSetParameterResult,
             NavigationReachedTargetEvent,

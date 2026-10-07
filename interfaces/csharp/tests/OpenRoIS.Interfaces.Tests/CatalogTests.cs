@@ -2,7 +2,10 @@ using System;
 using System.Text.Json;
 using OpenRoIS.Interfaces.Catalog;
 using Xunit;
+using ComponentFunction = OpenRoIS.Interfaces.Profiles.ComponentFunction;
+using NotifyEventParams = OpenRoIS.Interfaces.Service.NotifyEventParams;
 using Parameter = OpenRoIS.Interfaces.Hri.Parameter;
+using ProfileChangedParams = OpenRoIS.Interfaces.Service.ProfileChangedParams;
 using ReturnCode = OpenRoIS.Interfaces.Hri.ReturnCode;
 
 namespace OpenRoIS.Interfaces.Tests
@@ -77,12 +80,62 @@ namespace OpenRoIS.Interfaces.Tests
     }
 
     [Fact]
+    public void NotificationTable_HasFourNotifications()
+    {
+        Assert.Equal(4, RoISNotificationTypes.ByMethod.Count);
+    }
+
+    [Fact]
+    public void NotificationNames_AreTheWireNames()
+    {
+        Assert.Equal("rois.system.notify_error", RoISNotifications.NotifyError);
+        Assert.Equal("rois.command.completed", RoISNotifications.Completed);
+        Assert.Equal("rois.event.notify_event", RoISNotifications.NotifyEvent);
+        Assert.Equal("rois.system.profile_changed", RoISNotifications.ProfileChanged);
+    }
+
+    [Fact]
+    public void NotificationTypes_MapParams()
+    {
+        Assert.Equal(typeof(NotifyEventParams), RoISNotificationTypes.ByMethod[RoISNotifications.NotifyEvent]);
+        Assert.Equal(typeof(ProfileChangedParams), RoISNotificationTypes.ByMethod[RoISNotifications.ProfileChanged]);
+    }
+
+    [Fact]
+    public void CommandTypes_AreTheStandardNames()
+    {
+        Assert.Equal("start", RoISCommandTypes.Start);
+        Assert.Equal("stop", RoISCommandTypes.Stop);
+        Assert.Equal("suspend", RoISCommandTypes.Suspend);
+        Assert.Equal("resume", RoISCommandTypes.Resume);
+        Assert.Equal("set_parameter", RoISCommandTypes.SetParameter);
+    }
+
+    [Fact]
+    public void GetProfileResult_CarriesComponentProfilesByRef()
+    {
+        var json = "{\"return_code\":\"OK\","
+            + "\"profile\":{\"identifier\":{\"authority\":\"OpenRoIS\",\"code\":\"reachy_real\"},"
+            + "\"component_ids\":[\"reachy_real/head\"]},"
+            + "\"component_profiles\":{\"reachy_real/head\":"
+            + "{\"identifier\":{\"authority\":\"OpenRoIS\",\"code\":\"Head\"},"
+            + "\"name\":\"head\",\"function\":\"actuation\"}}}";
+        var result = JsonSerializer.Deserialize<GetProfileResult>(json, s_jsonOpts)!;
+        Assert.Equal(new[] { "reachy_real/head" }, result.Profile!.ComponentIds);
+        var head = result.ComponentProfiles!["reachy_real/head"];
+        Assert.Equal("head", head.Name);
+        Assert.Equal("Head", head.Identifier.Code);
+        Assert.Equal(ComponentFunction.actuation, head.Function);
+    }
+
+    [Fact]
     public void FailureResult_NeedsOnlyTheReturnCode()
     {
         var result = JsonSerializer.Deserialize<GetProfileResult>(
             "{\"return_code\":\"ERROR\"}", s_jsonOpts)!;
         Assert.Equal(ReturnCode.ERROR, result.ReturnCode);
         Assert.Null(result.Profile);
+        Assert.Null(result.ComponentProfiles);
     }
     }
 }

@@ -10,11 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add the `OpenRoIS.Interfaces.Catalog` namespace with a params and a result model for each of the 16 `rois.*` methods, `RoISMethods`, `RoISMethodTypes` and `JsonRpcErrorCodes`, generated from `schema/catalog.json`.
+- Add `RoISNotifications` and `RoISNotificationTypes` for `rois.system.notify_error`, `rois.command.completed`, `rois.event.notify_event` and `rois.system.profile_changed`, and `RoISCommandTypes`, the standard command names.
+- Add `ProfileChangedParams`, `GetProfileResult.ComponentProfiles` (component profiles keyed by fully qualified ref), `HRIComponentProfile.Function` with the `ComponentFunction` enum, and `NotifyEventParams.Results`. All three properties are OpenRoIS extensions.
+- The generator writes a JSON Schema map (`additionalProperties` with a schema) as `IReadOnlyDictionary<string, T>`.
 
 ### Changed
 
 - Describe every `condition` property as the OpenRoIS subset of CQL2-Text.
 - The generator resolves the namespace of a type defined in another module from the manifest, instead of a hard-coded list.
+- **Breaking:** remove the `CommandType` enum. `CommandUnit.CommandType` and `CommandRequest.CommandType` are `string`, as in the IDL and the XSD, because a component may define commands of its own. `RoISCommandTypes` lists the standard names.
+- **Breaking:** remove `HRIEngineProfileType.ComponentProfiles`. The engine profile now matches the XSD. Read the component profiles from `GetProfileResult.ComponentProfiles`.
+- **Breaking:** rename `NotifyErrorEvent` to `NotifyErrorParams`, `CompletedEvent` to `CompletedParams` and `NotifyEventPayload` to `NotifyEventParams`. The event notification is `rois.event.notify_event` instead of `rois.event.notify`.
 - **Breaking:** rename `IBusAdapter` to `IComponentContract` and `BusAdapterError` to `ComponentContractError` (closes #5). The namespaces `OpenRoIS.Interfaces.Bus` and `OpenRoIS.Interfaces.Bus.Models` are now `OpenRoIS.Interfaces.Contract` and `OpenRoIS.Interfaces.Contract.Models`, and the generated models moved to `Generated/ContractModels.cs`.
 
 ## [0.1.0-alpha.2] - 2026-07-02

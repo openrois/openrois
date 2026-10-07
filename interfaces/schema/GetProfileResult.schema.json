@@ -42,6 +42,16 @@
       "title": "CommandMessageProfile",
       "type": "object"
     },
+    "ComponentFunction": {
+      "description": "The RoSO function class of a component.\n\nNot part of XML-Profiles.xsd. The values are the Robotic Service Function\nOntology classes that the spec's ontology file assigns to the basic components:\nNavigation, Reaction and SpeechSynthesis are Actuation, the detection,\nlocalization and recognition components are Sensing, and AudioStreaming is the\ngeneric Function class. An engine requires a bind before commands on an\nactuation component.\n\nACTUATION: The component acts on the world (moves, speaks, shows).\nSENSING: The component observes the world.\nFUNCTION: The component is neither, for example a stream.",
+      "enum": [
+        "actuation",
+        "sensing",
+        "function"
+      ],
+      "title": "ComponentFunction",
+      "type": "string"
+    },
     "EventMessageProfile": {
       "additionalProperties": false,
       "description": "An event message profile.\n\nMaps to EventMessageProfileType in XML-Profiles.xsd.\n\nEvents have results (the event payload) but no arguments.",
@@ -66,7 +76,7 @@
     },
     "HRIComponentProfile": {
       "additionalProperties": false,
-      "description": "Describes a RoIS component's capabilities, messages, and parameters.\n\nMaps to HRIComponentProfileType in XML-Profiles.xsd.\n\nAttributes:\n    identifier: The component's structured identifier (URN).\n    name: A short human-readable name (e.g., 'person_detecter').\n    sub_component_profiles: URNs of sub-component profiles (e.g., RoISCommon).\n    command_profiles: Command message profiles this component supports.\n    query_profiles: Query message profiles this component supports.\n    event_profiles: Event message profiles this component supports.\n    parameter_profiles: Parameter declarations for this component.",
+      "description": "Describes a RoIS component's capabilities, messages, and parameters.\n\nMaps to HRIComponentProfileType in XML-Profiles.xsd. One profile describes one\ncomponent instance: its messages are the ones that instance supports.\n\nAttributes:\n    identifier: The component type, for example authority 'OMG' and code\n        'PersonDetection' for urn:x-rois:def:component:OMG::PersonDetection.\n    name: A short human-readable name (e.g., 'person_detecter').\n    function: The RoSO function class. An OpenRoIS extension: the XSD has no\n        such element.\n    sub_component_profiles: URNs of sub-component profiles (e.g., RoISCommon).\n    command_profiles: Command message profiles this component supports.\n    query_profiles: Query message profiles this component supports.\n    event_profiles: Event message profiles this component supports.\n    parameter_profiles: Parameter declarations for this component.",
       "properties": {
         "identifier": {
           "$ref": "#/$defs/RoISIdentifierType"
@@ -74,6 +84,18 @@
         "name": {
           "title": "Name",
           "type": "string"
+        },
+        "function": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ComponentFunction"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "RoSO function class (OpenRoIS extension)"
         },
         "sub_component_profiles": {
           "items": {
@@ -120,7 +142,7 @@
     },
     "HRIEngineProfileType": {
       "additionalProperties": false,
-      "description": "Describes an HRI Engine's composition of sub-engines and components.\n\nMaps to HRIEngineProfileType in XML-Profiles.xsd.\n\nAttributes:\n    identifier: The engine's structured identifier.\n    sub_profiles: Nested sub-engine profiles.\n    component_ids: IDs of components hosted by this engine.\n    component_profiles: Full capability profiles for each component.\n        Populated from adapter registration data. Optional (default\n        empty) for backward compatibility with engines that only\n        return component_ids.\n    parameter_profiles: Engine-level parameter declarations.",
+      "description": "Describes an HRI Engine's composition of sub-engines and components.\n\nMaps to HRIEngineProfileType in XML-Profiles.xsd, field for field. The profile\nnames its components by ref only, as the XSD does. The get_profile result carries\ntheir HRIComponentProfiles next to it.\n\nAttributes:\n    identifier: The engine's structured identifier.\n    sub_profiles: One profile per child engine (XSD SubProfile).\n    component_ids: Fully qualified refs of every component reachable through this\n        engine, including the components of its child engines (XSD HRIComponent).\n    parameter_profiles: Engine-level parameter declarations.",
       "properties": {
         "identifier": {
           "$ref": "#/$defs/RoISIdentifierType"
@@ -137,13 +159,6 @@
             "type": "string"
           },
           "title": "Component Ids",
-          "type": "array"
-        },
-        "component_profiles": {
-          "items": {
-            "$ref": "#/$defs/HRIComponentProfile"
-          },
-          "title": "Component Profiles",
           "type": "array"
         },
         "parameter_profiles": {
@@ -224,6 +239,9 @@
       "title": "ReturnCode",
       "type": "string"
     },
+    "RoISIdentifier": {
+      "type": "string"
+    },
     "RoISIdentifierType": {
       "additionalProperties": false,
       "description": "A structured RoIS identifier with optional metadata.\n\nMaps to RoISIdentifierType in XML-Profiles.xsd.\n\nAttributes:\n    authority: Optional naming authority (e.g., 'OMG').\n    code: The identifier code (e.g., 'PersonDetection').\n    codebook_ref: Optional reference to a codebook or ontology.\n    version: Optional version string.",
@@ -256,7 +274,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Result of rois.system.get_profile.\n\nMaps to SystemIF::get_profile(in condition, out profile). The IDL carries the\nprofile as an XML document in a string. OpenRoIS sends the structured form of\nthe same XSD type.\n\nAttributes:\n    return_code: Outcome of the operation.\n    profile: The engine profile. Null when return_code is not OK.",
+  "description": "Result of rois.system.get_profile.\n\nMaps to SystemIF::get_profile(in condition, out profile). The IDL carries the\nprofile as an XML document in a string. OpenRoIS sends the structured form of\nthe same XSD type.\n\nThe XSD engine profile names its components by ref only. The UML model links an\nengine profile to its component profiles by reference, and component_profiles\ncarries those referenced profiles once each. It is an OpenRoIS extension.\n\nAttributes:\n    return_code: Outcome of the operation.\n    profile: The engine profile. Null when return_code is not OK.\n    component_profiles: The profile of every component in profile.component_ids,\n        keyed by fully qualified ref.",
   "properties": {
     "return_code": {
       "$ref": "#/$defs/ReturnCode"
@@ -272,6 +290,17 @@
       ],
       "default": null,
       "description": "The engine profile"
+    },
+    "component_profiles": {
+      "additionalProperties": {
+        "$ref": "#/$defs/HRIComponentProfile"
+      },
+      "description": "Profile of every listed component, keyed by ref (OpenRoIS extension)",
+      "propertyNames": {
+        "$ref": "#/$defs/RoISIdentifier"
+      },
+      "title": "Component Profiles",
+      "type": "object"
     }
   },
   "required": [

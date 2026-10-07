@@ -1,0 +1,11 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "description": "The RoSO function class of a component.\n\nNot part of XML-Profiles.xsd. The values are the Robotic Service Function\nOntology classes that the spec's ontology file assigns to the basic components:\nNavigation, Reaction and SpeechSynthesis are Actuation, the detection,\nlocalization and recognition components are Sensing, and AudioStreaming is the\ngeneric Function class. An engine requires a bind before commands on an\nactuation component.\n\nACTUATION: The component acts on the world (moves, speaks, shows).\nSENSING: The component observes the world.\nFUNCTION: The component is neither, for example a stream.",
+  "enum": [
+    "actuation",
+    "sensing",
+    "function"
+  ],
+  "title": "ComponentFunction",
+  "type": "string"
+}

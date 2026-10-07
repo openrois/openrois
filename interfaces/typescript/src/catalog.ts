@@ -4,7 +4,8 @@
 
 import { z } from "zod";
 import { CommandUnitSequenceItemSchema, ParameterSchema, ResultSchema, ReturnCodeSchema } from "./hri";
-import { HRIEngineProfileTypeSchema } from "./profiles";
+import { HRIComponentProfileSchema, HRIEngineProfileTypeSchema } from "./profiles";
+import { CompletedParamsSchema, type CompletedParams, NotifyErrorParamsSchema, type NotifyErrorParams, NotifyEventParamsSchema, type NotifyEventParams, ProfileChangedParamsSchema, type ProfileChangedParams } from "./service";
 
 /**
  * Params of rois.command.bind_any.
@@ -73,9 +74,7 @@ export type BindResult = z.infer<typeof BindResultSchema>;
  * Maps to SystemIF::connect(), which takes no arguments. A request may omit params.
  */
 
-export const ConnectParamsSchema = z.object({
-
-}).strict();
+export const ConnectParamsSchema = z.object({}).strict();
 export type ConnectParams = z.infer<typeof ConnectParamsSchema>;
 
 /**
@@ -98,9 +97,7 @@ export type ConnectResult = z.infer<typeof ConnectResultSchema>;
  * Maps to SystemIF::disconnect(), which takes no arguments. A request may omit params.
  */
 
-export const DisconnectParamsSchema = z.object({
-
-}).strict();
+export const DisconnectParamsSchema = z.object({}).strict();
 export type DisconnectParams = z.infer<typeof DisconnectParamsSchema>;
 
 /**
@@ -300,14 +297,21 @@ export type GetProfileParams = z.infer<typeof GetProfileParamsSchema>;
  * profile as an XML document in a string. OpenRoIS sends the structured form of
  * the same XSD type.
  * 
+ * The XSD engine profile names its components by ref only. The UML model links an
+ * engine profile to its component profiles by reference, and component_profiles
+ * carries those referenced profiles once each. It is an OpenRoIS extension.
+ * 
  * Attributes:
  *     return_code: Outcome of the operation.
  *     profile: The engine profile. Null when return_code is not OK.
+ *     component_profiles: The profile of every component in profile.component_ids,
+ *         keyed by fully qualified ref.
  */
 
 export const GetProfileResultSchema = z.object({
   return_code: ReturnCodeSchema,
   profile: HRIEngineProfileTypeSchema.nullable().default(null), // The engine profile
+  component_profiles: z.record(z.string(), HRIComponentProfileSchema).optional(), // Profile of every listed component, keyed by ref (OpenRoIS extension)
 }).strict();
 export type GetProfileResult = z.infer<typeof GetProfileResultSchema>;
 
@@ -563,6 +567,41 @@ export const RoISMethodSchemas = {
   "rois.event.subscribe": { params: SubscribeParamsSchema, result: SubscribeResultSchema },
   "rois.event.unsubscribe": { params: UnsubscribeParamsSchema, result: UnsubscribeResultSchema },
   "rois.event.get_event_detail": { params: GetEventDetailParamsSchema, result: GetEventDetailResultSchema },
+} as const;
+
+/** JSON-RPC notification names an engine sends to a service application, keyed by operation. */
+export const RoISNotifications = {
+  NotifyError: "rois.system.notify_error",
+  Completed: "rois.command.completed",
+  NotifyEvent: "rois.event.notify_event",
+  ProfileChanged: "rois.system.profile_changed",
+} as const;
+/** A JSON-RPC notification name an engine sends to a service application. */
+export type RoISNotification = (typeof RoISNotifications)[keyof typeof RoISNotifications];
+
+/** The params type of every notification. */
+export interface RoISNotificationMap {
+  "rois.system.notify_error": { params: NotifyErrorParams };
+  "rois.command.completed": { params: CompletedParams };
+  "rois.event.notify_event": { params: NotifyEventParams };
+  "rois.system.profile_changed": { params: ProfileChangedParams };
+}
+
+/** The params schema of every notification, for validating messages. */
+export const RoISNotificationSchemas = {
+  "rois.system.notify_error": { params: NotifyErrorParamsSchema },
+  "rois.command.completed": { params: CompletedParamsSchema },
+  "rois.event.notify_event": { params: NotifyEventParamsSchema },
+  "rois.system.profile_changed": { params: ProfileChangedParamsSchema },
+} as const;
+
+/** Standard command names every component may accept. A component may define its own as well. */
+export const RoISCommandTypes = {
+  Start: "start",
+  Stop: "stop",
+  Suspend: "suspend",
+  Resume: "resume",
+  SetParameter: "set_parameter",
 } as const;
 
 /** JSON-RPC 2.0 error codes an engine returns for protocol faults. */

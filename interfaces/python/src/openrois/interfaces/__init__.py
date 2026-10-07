@@ -8,7 +8,7 @@ TypeScript.
 Modules:
     hri:        Core HRI types (ReturnCode, Result, Parameter, Argument, etc.)
     common:     Common component types (ComponentStatus, StreamStatus)
-    service:    Service application callback types (CompletedStatus, ErrorType)
+    service:    Service application notifications (NotifyEventParams, CompletedParams, ...)
     profiles:   Component profile schema models (from XML-Profiles.xsd)
     contract:   ComponentContract protocol and its request, response and event models
     catalog:    Service-side method catalog: params and result models, interfaces
@@ -17,8 +17,11 @@ Modules:
 """
 
 from openrois.interfaces.catalog import (
+    EXTENSIONS,
     METHODS,
     METHODS_BY_NAME,
+    NOTIFICATIONS,
+    NOTIFICATIONS_BY_NAME,
     STREAMING_METHOD_PREFIX,
     BindAnyParams,
     BindAnyResult,
@@ -32,6 +35,7 @@ from openrois.interfaces.catalog import (
     EventIF,
     ExecuteParams,
     ExecuteResult,
+    Extension,
     GetCommandResultParams,
     GetCommandResultResult,
     GetErrorDetailParams,
@@ -44,6 +48,7 @@ from openrois.interfaces.catalog import (
     GetProfileResult,
     JsonRpcErrorCode,
     MethodSpec,
+    NotificationSpec,
     QueryIF,
     QueryParams,
     QueryResult,
@@ -116,6 +121,7 @@ from openrois.interfaces.hri import (
 )
 from openrois.interfaces.profiles import (
     CommandMessageProfile,
+    ComponentFunction,
     EventMessageProfile,
     HRIComponentProfile,
     HRIEngineProfileType,
@@ -125,11 +131,12 @@ from openrois.interfaces.profiles import (
     RoISIdentifierType,
 )
 from openrois.interfaces.service import (
-    CompletedEvent,
+    CompletedParams,
     CompletedStatus,
     ErrorType,
-    NotifyErrorEvent,
-    NotifyEventPayload,
+    NotifyErrorParams,
+    NotifyEventParams,
+    ProfileChangedParams,
 )
 
 __all__ = [
@@ -158,6 +165,7 @@ __all__ = [
     "StreamStatusT",
     # Profiles
     "CommandMessageProfile",
+    "ComponentFunction",
     "EventMessageProfile",
     "HRIComponentProfile",
     "HRIEngineProfileType",
@@ -166,11 +174,12 @@ __all__ = [
     "QueryMessageProfile",
     "RoISIdentifierType",
     # Service
-    "CompletedEvent",
+    "CompletedParams",
     "CompletedStatus",
     "ErrorType",
-    "NotifyErrorEvent",
-    "NotifyEventPayload",
+    "NotifyErrorParams",
+    "NotifyEventParams",
+    "ProfileChangedParams",
     # Method catalog
     "BindAnyParams",
     "BindAnyResult",
@@ -198,6 +207,11 @@ __all__ = [
     "METHODS",
     "METHODS_BY_NAME",
     "MethodSpec",
+    "NOTIFICATIONS",
+    "NOTIFICATIONS_BY_NAME",
+    "NotificationSpec",
+    "EXTENSIONS",
+    "Extension",
     "QueryIF",
     "QueryParams",
     "QueryResult",
