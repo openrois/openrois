@@ -544,7 +544,7 @@ function generateModule(
     parts.push("export type RoISIdentifier = string;");
     parts.push("/** Ordered list of RoIS identifiers. */");
     parts.push("export type RoISIdentifierList = RoISIdentifier[];");
-    parts.push("/** ISO 19143 filter expression used by search(), query(), subscribe(). */");
+    parts.push("/** A condition in the OpenRoIS subset of CQL2-Text. Empty means no filter. */");
     parts.push("export type ConditionT = string;");
     parts.push("/** XML profile document describing an HRI Engine's capabilities. */");
     parts.push("export type HRIEngineProfile = string;");

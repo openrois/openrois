@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Describe every `condition` property as the OpenRoIS subset of CQL2-Text.
 - The generator resolves the namespace of a type defined in another module from the manifest, instead of a hard-coded list.
 - **Breaking:** rename `IBusAdapter` to `IComponentContract` and `BusAdapterError` to `ComponentContractError` (closes #5). The namespaces `OpenRoIS.Interfaces.Bus` and `OpenRoIS.Interfaces.Bus.Models` are now `OpenRoIS.Interfaces.Contract` and `OpenRoIS.Interfaces.Contract.Models`, and the generated models moved to `Generated/ContractModels.cs`.
 

@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Describe `ConditionT` and every `condition` field as the OpenRoIS subset of CQL2-Text.
 - **Breaking:** every generated type is defined once, in the module that owns it, and other modules import it. Array aliases such as `ArgumentList` are inlined, so `ArgumentListSchema` is no longer exported. `ArgumentList` remains as a type alias.
 - **Breaking:** rename `BusAdapter` to `ComponentContract` and `BusAdapterError` to `ComponentContractError` (closes #5). The `./bus` subpath export is now `./contract`, and the generated models moved to `src/generated/contract-models.ts`.
 

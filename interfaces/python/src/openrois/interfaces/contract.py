@@ -91,7 +91,7 @@ class DiscoverRequest(BaseModel):
 
     condition: ConditionT = Field(
         default="",
-        description="ISO 19143 filter expression; empty means all components",
+        description="Selection condition (CQL2-Text); empty means all components",
     )
 
 
@@ -159,7 +159,7 @@ class QueryRequest(BaseModel):
     query_type: QueryType = Field(description="Query operation name")
     condition: ConditionT = Field(
         default="",
-        description="Optional filter expression for the query",
+        description="Condition from the client request (CQL2-Text), for the component",
     )
 
 
@@ -187,7 +187,7 @@ class SubscribeRequest(BaseModel):
     event_type: EventType = Field(description="Event type to subscribe to")
     condition: ConditionT = Field(
         default="",
-        description="Optional filter expression for the subscription",
+        description="Condition from the client request (CQL2-Text), for the component",
     )
 
 

@@ -75,9 +75,9 @@ type RoISIdentifier = str
 # Ordered list of RoIS identifiers (e.g., component_ref_list from search()).
 type RoISIdentifierList = list[RoISIdentifier]
 
-# RoIS_HRI::Condition_t → string (ISO 19143 filter expression)
-# ISO 19143 filter expression used by search(), query(), subscribe(), etc.
-# Parsed and evaluated gateway-side; stored as an opaque string in the type system.
+# RoIS_HRI::Condition_t → string
+# The IDL carries an ISO 19143 filter here. OpenRoIS writes the filter in a subset of
+# CQL2-Text, defined in openrois.interfaces.condition. Empty means no filter.
 type ConditionT = str
 
 # RoIS_HRI::HRI_Engine_Profile → string

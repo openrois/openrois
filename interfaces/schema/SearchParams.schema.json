@@ -6,12 +6,12 @@
     }
   },
   "additionalProperties": false,
-  "description": "Params of rois.command.search.\n\nMaps to CommandIF::search(in condition, out component_ref_list).\n\nAttributes:\n    condition: Filter on the components. Empty matches every component.",
+  "description": "Params of rois.command.search.\n\nMaps to CommandIF::search(in condition, out component_ref_list).\n\nAttributes:\n    condition: Selection condition on component_ref and component_type. Empty\n        matches every component.",
   "properties": {
     "condition": {
       "$ref": "#/$defs/ConditionT",
       "default": "",
-      "description": "Filter on the components"
+      "description": "Selection condition (CQL2-Text) on the components"
     }
   },
   "title": "SearchParams",

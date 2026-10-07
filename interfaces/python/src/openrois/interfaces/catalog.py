@@ -13,6 +13,10 @@ Mapping rules:
   - RoIS failures travel in ``return_code``. JSON-RPC errors are reserved for protocol
     faults, listed in JsonRpcErrorCode.
 
+Every ``condition`` is a string in the OpenRoIS subset of CQL2-Text, defined in
+openrois.interfaces.condition. Selection conditions filter on ``component_ref`` and
+``component_type``.
+
 The Streaming interface (``rois.stream.*``) is not modelled. An engine answers those
 methods with JsonRpcErrorCode.METHOD_NOT_FOUND.
 
@@ -131,12 +135,16 @@ class GetProfileParams(BaseModel):
     Maps to SystemIF::get_profile(in condition, out profile).
 
     Attributes:
-        condition: Filter on the profile. Empty means no filter.
+        condition: Selection condition on component_ref and component_type. The
+            profile lists only the matching components. Empty means every component.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
 
-    condition: ConditionT = Field(default="", description="Filter on the profile")
+    condition: ConditionT = Field(
+        default="",
+        description="Selection condition (CQL2-Text) on the components the profile lists",
+    )
 
 
 class GetProfileResult(BaseModel):
@@ -164,13 +172,17 @@ class GetErrorDetailParams(BaseModel):
 
     Attributes:
         error_id: The error_id from a notify_error notification.
-        condition: Filter on the results. Empty means no filter.
+        condition: Filter on the results. No property is defined for it yet, so it
+            must be empty.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
 
     error_id: str = Field(description="The error_id from a notify_error notification")
-    condition: ConditionT = Field(default="", description="Filter on the results")
+    condition: ConditionT = Field(
+        default="",
+        description="Filter on the results (CQL2-Text). Must be empty for now",
+    )
 
 
 class GetErrorDetailResult(BaseModel):
@@ -200,12 +212,16 @@ class SearchParams(BaseModel):
     Maps to CommandIF::search(in condition, out component_ref_list).
 
     Attributes:
-        condition: Filter on the components. Empty matches every component.
+        condition: Selection condition on component_ref and component_type. Empty
+            matches every component.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
 
-    condition: ConditionT = Field(default="", description="Filter on the components")
+    condition: ConditionT = Field(
+        default="",
+        description="Selection condition (CQL2-Text) on the components",
+    )
 
 
 class SearchResult(BaseModel):
@@ -262,14 +278,15 @@ class BindAnyParams(BaseModel):
     Maps to CommandIF::bind_any(in condition, out component_ref).
 
     Attributes:
-        condition: Filter on the components the engine may choose from.
+        condition: Selection condition on component_ref and component_type for the
+            components the engine may choose from. The engine binds a free one.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
 
     condition: ConditionT = Field(
         default="",
-        description="Filter on the components the engine may choose from",
+        description="Selection condition (CQL2-Text) on the components to choose from",
     )
 
 
@@ -429,13 +446,17 @@ class GetCommandResultParams(BaseModel):
 
     Attributes:
         command_id: The command whose results to read.
-        condition: Filter on the results. Empty means no filter.
+        condition: Filter on the results. No property is defined for it yet, so it
+            must be empty.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
 
     command_id: CommandId = Field(description="The command whose results to read")
-    condition: ConditionT = Field(default="", description="Filter on the results")
+    condition: ConditionT = Field(
+        default="",
+        description="Filter on the results (CQL2-Text). Must be empty for now",
+    )
 
 
 class GetCommandResultResult(BaseModel):
@@ -462,11 +483,14 @@ class GetCommandResultResult(BaseModel):
 class QueryParams(BaseModel):
     """Params of rois.query.query.
 
-    Maps to QueryIF::query(in query_type, in condition, out results).
+    Maps to QueryIF::query(in query_type, in condition, out results). An engine sends
+    the query to the one component that declares query_type and matches the condition.
+    When none does it returns UNSUPPORTED. When several do it returns BAD_PARAMETER,
+    and a component_ref comparison picks one.
 
     Attributes:
         query_type: Name of the query, from a component profile.
-        condition: Filter that selects the component and narrows the results.
+        condition: Selection condition on component_ref and component_type.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
@@ -474,7 +498,7 @@ class QueryParams(BaseModel):
     query_type: QueryType = Field(description="Name of the query, from a component profile")
     condition: ConditionT = Field(
         default="",
-        description="Filter that selects the component and narrows the results",
+        description="Selection condition (CQL2-Text) that picks the component",
     )
 
 
@@ -502,11 +526,14 @@ class QueryResult(BaseModel):
 class SubscribeParams(BaseModel):
     """Params of rois.event.subscribe.
 
-    Maps to EventIF::subscribe(in event_type, in condition, out subscribe_id).
+    Maps to EventIF::subscribe(in event_type, in condition, out subscribe_id). An
+    engine subscribes to the one component that declares event_type and matches the
+    condition. When none does it returns UNSUPPORTED. When several do it returns
+    BAD_PARAMETER, and a component_ref comparison picks one.
 
     Attributes:
         event_type: Name of the event, from a component profile.
-        condition: Filter that selects the component and narrows the events.
+        condition: Selection condition on component_ref and component_type.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
@@ -514,7 +541,7 @@ class SubscribeParams(BaseModel):
     event_type: EventType = Field(description="Name of the event, from a component profile")
     condition: ConditionT = Field(
         default="",
-        description="Filter that selects the component and narrows the events",
+        description="Selection condition (CQL2-Text) that picks the component",
     )
 
 
@@ -569,13 +596,17 @@ class GetEventDetailParams(BaseModel):
 
     Attributes:
         event_id: The event_id from a notify_event notification.
-        condition: Filter on the results. Empty means no filter.
+        condition: Filter on the results. No property is defined for it yet, so it
+            must be empty.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
 
     event_id: str = Field(description="The event_id from a notify_event notification")
-    condition: ConditionT = Field(default="", description="Filter on the results")
+    condition: ConditionT = Field(
+        default="",
+        description="Filter on the results (CQL2-Text). Must be empty for now",
+    )
 
 
 class GetEventDetailResult(BaseModel):

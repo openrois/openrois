@@ -11,7 +11,7 @@
     "condition": {
       "$ref": "#/$defs/ConditionT",
       "default": "",
-      "description": "ISO 19143 filter expression; empty means all components"
+      "description": "Selection condition (CQL2-Text); empty means all components"
     }
   },
   "title": "DiscoverRequest",

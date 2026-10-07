@@ -45,7 +45,8 @@ namespace OpenRoIS.Interfaces.Catalog
     /// Maps to CommandIF::bind_any(in condition, out component_ref).
     /// 
     /// Attributes:
-    ///     condition: Filter on the components the engine may choose from.
+    ///     condition: Selection condition on component_ref and component_type for the
+    ///         components the engine may choose from. The engine binds a free one.
     /// </summary>
     public sealed class BindAnyParams : IEquatable<BindAnyParams>
     {
@@ -398,7 +399,8 @@ namespace OpenRoIS.Interfaces.Catalog
     /// 
     /// Attributes:
     ///     command_id: The command whose results to read.
-    ///     condition: Filter on the results. Empty means no filter.
+    ///     condition: Filter on the results. No property is defined for it yet, so it
+    ///         must be empty.
     /// </summary>
     public sealed class GetCommandResultParams : IEquatable<GetCommandResultParams>
     {
@@ -488,7 +490,8 @@ namespace OpenRoIS.Interfaces.Catalog
     /// 
     /// Attributes:
     ///     error_id: The error_id from a notify_error notification.
-    ///     condition: Filter on the results. Empty means no filter.
+    ///     condition: Filter on the results. No property is defined for it yet, so it
+    ///         must be empty.
     /// </summary>
     public sealed class GetErrorDetailParams : IEquatable<GetErrorDetailParams>
     {
@@ -578,7 +581,8 @@ namespace OpenRoIS.Interfaces.Catalog
     /// 
     /// Attributes:
     ///     event_id: The event_id from a notify_event notification.
-    ///     condition: Filter on the results. Empty means no filter.
+    ///     condition: Filter on the results. No property is defined for it yet, so it
+    ///         must be empty.
     /// </summary>
     public sealed class GetEventDetailParams : IEquatable<GetEventDetailParams>
     {
@@ -753,7 +757,8 @@ namespace OpenRoIS.Interfaces.Catalog
     /// Maps to SystemIF::get_profile(in condition, out profile).
     /// 
     /// Attributes:
-    ///     condition: Filter on the profile. Empty means no filter.
+    ///     condition: Selection condition on component_ref and component_type. The
+    ///         profile lists only the matching components. Empty means every component.
     /// </summary>
     public sealed class GetProfileParams : IEquatable<GetProfileParams>
     {
@@ -838,11 +843,14 @@ namespace OpenRoIS.Interfaces.Catalog
     /// <summary>
     /// Params of rois.query.query.
     /// 
-    /// Maps to QueryIF::query(in query_type, in condition, out results).
+    /// Maps to QueryIF::query(in query_type, in condition, out results). An engine sends
+    /// the query to the one component that declares query_type and matches the condition.
+    /// When none does it returns UNSUPPORTED. When several do it returns BAD_PARAMETER,
+    /// and a component_ref comparison picks one.
     /// 
     /// Attributes:
     ///     query_type: Name of the query, from a component profile.
-    ///     condition: Filter that selects the component and narrows the results.
+    ///     condition: Selection condition on component_ref and component_type.
     /// </summary>
     public sealed class QueryParams : IEquatable<QueryParams>
     {
@@ -1013,7 +1021,8 @@ namespace OpenRoIS.Interfaces.Catalog
     /// Maps to CommandIF::search(in condition, out component_ref_list).
     /// 
     /// Attributes:
-    ///     condition: Filter on the components. Empty matches every component.
+    ///     condition: Selection condition on component_ref and component_type. Empty
+    ///         matches every component.
     /// </summary>
     public sealed class SearchParams : IEquatable<SearchParams>
     {
@@ -1187,11 +1196,14 @@ namespace OpenRoIS.Interfaces.Catalog
     /// <summary>
     /// Params of rois.event.subscribe.
     /// 
-    /// Maps to EventIF::subscribe(in event_type, in condition, out subscribe_id).
+    /// Maps to EventIF::subscribe(in event_type, in condition, out subscribe_id). An
+    /// engine subscribes to the one component that declares event_type and matches the
+    /// condition. When none does it returns UNSUPPORTED. When several do it returns
+    /// BAD_PARAMETER, and a component_ref comparison picks one.
     /// 
     /// Attributes:
     ///     event_type: Name of the event, from a component profile.
-    ///     condition: Filter that selects the component and narrows the events.
+    ///     condition: Selection condition on component_ref and component_type.
     /// </summary>
     public sealed class SubscribeParams : IEquatable<SubscribeParams>
     {

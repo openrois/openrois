@@ -10,7 +10,7 @@ import { z } from "zod";
 export type RoISIdentifier = string;
 /** Ordered list of RoIS identifiers. */
 export type RoISIdentifierList = RoISIdentifier[];
-/** ISO 19143 filter expression used by search(), query(), subscribe(). */
+/** A condition in the OpenRoIS subset of CQL2-Text. Empty means no filter. */
 export type ConditionT = string;
 /** XML profile document describing an HRI Engine's capabilities. */
 export type HRIEngineProfile = string;

@@ -57,6 +57,10 @@ method of SystemIF, CommandIF, QueryIF and EventIF, the method names, and the JS
 error codes, generated from one table in `schema/catalog.json`. The Streaming interface is
 not modelled.
 
+Every `condition` is a string in a subset of CQL2-Text (OGC 21-065r2), for example
+`component_ref = 'reachy_real/head'`. The Python `condition` module defines the subset and
+parses, matches and builds conditions.
+
 Typed per-component message models exist for 4 of the 17 basic RoIS HRI Components:
 
 | Component | Typed messages |

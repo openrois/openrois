@@ -12,11 +12,12 @@ import { HRIEngineProfileTypeSchema } from "./profiles";
  * Maps to CommandIF::bind_any(in condition, out component_ref).
  * 
  * Attributes:
- *     condition: Filter on the components the engine may choose from.
+ *     condition: Selection condition on component_ref and component_type for the
+ *         components the engine may choose from. The engine binds a free one.
  */
 
 export const BindAnyParamsSchema = z.object({
-  condition: z.string().default(""), // Filter on the components the engine may choose from
+  condition: z.string().default(""), // Selection condition (CQL2-Text) on the components to choose from
 }).strict();
 export type BindAnyParams = z.infer<typeof BindAnyParamsSchema>;
 
@@ -155,12 +156,13 @@ export type ExecuteResult = z.infer<typeof ExecuteResultSchema>;
  * 
  * Attributes:
  *     command_id: The command whose results to read.
- *     condition: Filter on the results. Empty means no filter.
+ *     condition: Filter on the results. No property is defined for it yet, so it
+ *         must be empty.
  */
 
 export const GetCommandResultParamsSchema = z.object({
   command_id: z.string(), // The command whose results to read
-  condition: z.string().default(""), // Filter on the results
+  condition: z.string().default(""), // Filter on the results (CQL2-Text). Must be empty for now
 }).strict();
 export type GetCommandResultParams = z.infer<typeof GetCommandResultParamsSchema>;
 
@@ -187,12 +189,13 @@ export type GetCommandResultResult = z.infer<typeof GetCommandResultResultSchema
  * 
  * Attributes:
  *     error_id: The error_id from a notify_error notification.
- *     condition: Filter on the results. Empty means no filter.
+ *     condition: Filter on the results. No property is defined for it yet, so it
+ *         must be empty.
  */
 
 export const GetErrorDetailParamsSchema = z.object({
   error_id: z.string(), // The error_id from a notify_error notification
-  condition: z.string().default(""), // Filter on the results
+  condition: z.string().default(""), // Filter on the results (CQL2-Text). Must be empty for now
 }).strict();
 export type GetErrorDetailParams = z.infer<typeof GetErrorDetailParamsSchema>;
 
@@ -219,12 +222,13 @@ export type GetErrorDetailResult = z.infer<typeof GetErrorDetailResultSchema>;
  * 
  * Attributes:
  *     event_id: The event_id from a notify_event notification.
- *     condition: Filter on the results. Empty means no filter.
+ *     condition: Filter on the results. No property is defined for it yet, so it
+ *         must be empty.
  */
 
 export const GetEventDetailParamsSchema = z.object({
   event_id: z.string(), // The event_id from a notify_event notification
-  condition: z.string().default(""), // Filter on the results
+  condition: z.string().default(""), // Filter on the results (CQL2-Text). Must be empty for now
 }).strict();
 export type GetEventDetailParams = z.infer<typeof GetEventDetailParamsSchema>;
 
@@ -280,11 +284,12 @@ export type GetParameterResult = z.infer<typeof GetParameterResultSchema>;
  * Maps to SystemIF::get_profile(in condition, out profile).
  * 
  * Attributes:
- *     condition: Filter on the profile. Empty means no filter.
+ *     condition: Selection condition on component_ref and component_type. The
+ *         profile lists only the matching components. Empty means every component.
  */
 
 export const GetProfileParamsSchema = z.object({
-  condition: z.string().default(""), // Filter on the profile
+  condition: z.string().default(""), // Selection condition (CQL2-Text) on the components the profile lists
 }).strict();
 export type GetProfileParams = z.infer<typeof GetProfileParamsSchema>;
 
@@ -309,16 +314,19 @@ export type GetProfileResult = z.infer<typeof GetProfileResultSchema>;
 /**
  * Params of rois.query.query.
  * 
- * Maps to QueryIF::query(in query_type, in condition, out results).
+ * Maps to QueryIF::query(in query_type, in condition, out results). An engine sends
+ * the query to the one component that declares query_type and matches the condition.
+ * When none does it returns UNSUPPORTED. When several do it returns BAD_PARAMETER,
+ * and a component_ref comparison picks one.
  * 
  * Attributes:
  *     query_type: Name of the query, from a component profile.
- *     condition: Filter that selects the component and narrows the results.
+ *     condition: Selection condition on component_ref and component_type.
  */
 
 export const QueryParamsSchema = z.object({
   query_type: z.string(), // Name of the query, from a component profile
-  condition: z.string().default(""), // Filter that selects the component and narrows the results
+  condition: z.string().default(""), // Selection condition (CQL2-Text) that picks the component
 }).strict();
 export type QueryParams = z.infer<typeof QueryParamsSchema>;
 
@@ -372,11 +380,12 @@ export type ReleaseResult = z.infer<typeof ReleaseResultSchema>;
  * Maps to CommandIF::search(in condition, out component_ref_list).
  * 
  * Attributes:
- *     condition: Filter on the components. Empty matches every component.
+ *     condition: Selection condition on component_ref and component_type. Empty
+ *         matches every component.
  */
 
 export const SearchParamsSchema = z.object({
-  condition: z.string().default(""), // Filter on the components
+  condition: z.string().default(""), // Selection condition (CQL2-Text) on the components
 }).strict();
 export type SearchParams = z.infer<typeof SearchParamsSchema>;
 
@@ -432,16 +441,19 @@ export type SetParameterResult = z.infer<typeof SetParameterResultSchema>;
 /**
  * Params of rois.event.subscribe.
  * 
- * Maps to EventIF::subscribe(in event_type, in condition, out subscribe_id).
+ * Maps to EventIF::subscribe(in event_type, in condition, out subscribe_id). An
+ * engine subscribes to the one component that declares event_type and matches the
+ * condition. When none does it returns UNSUPPORTED. When several do it returns
+ * BAD_PARAMETER, and a component_ref comparison picks one.
  * 
  * Attributes:
  *     event_type: Name of the event, from a component profile.
- *     condition: Filter that selects the component and narrows the events.
+ *     condition: Selection condition on component_ref and component_type.
  */
 
 export const SubscribeParamsSchema = z.object({
   event_type: z.string(), // Name of the event, from a component profile
-  condition: z.string().default(""), // Filter that selects the component and narrows the events
+  condition: z.string().default(""), // Selection condition (CQL2-Text) that picks the component
 }).strict();
 export type SubscribeParams = z.infer<typeof SubscribeParamsSchema>;
 

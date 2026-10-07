@@ -6,7 +6,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Params of rois.system.get_error_detail.\n\nMaps to SystemIF::get_error_detail(in error_id, in condition, out results).\n\nAttributes:\n    error_id: The error_id from a notify_error notification.\n    condition: Filter on the results. Empty means no filter.",
+  "description": "Params of rois.system.get_error_detail.\n\nMaps to SystemIF::get_error_detail(in error_id, in condition, out results).\n\nAttributes:\n    error_id: The error_id from a notify_error notification.\n    condition: Filter on the results. No property is defined for it yet, so it\n        must be empty.",
   "properties": {
     "error_id": {
       "description": "The error_id from a notify_error notification",
@@ -16,7 +16,7 @@
     "condition": {
       "$ref": "#/$defs/ConditionT",
       "default": "",
-      "description": "Filter on the results"
+      "description": "Filter on the results (CQL2-Text). Must be empty for now"
     }
   },
   "required": [

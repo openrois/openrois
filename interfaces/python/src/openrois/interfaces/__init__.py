@@ -12,6 +12,7 @@ Modules:
     profiles:   Component profile schema models (from XML-Profiles.xsd)
     contract:   ComponentContract protocol and its request, response and event models
     catalog:    Service-side method catalog: params and result models, interfaces
+    condition:  The CQL2-Text subset of every condition: parsing, matching, building
     components: Per-component typed message models
 """
 
@@ -63,6 +64,16 @@ from openrois.interfaces.common import (
     ComponentStatusT,
     StreamStatus,
     StreamStatusT,
+)
+from openrois.interfaces.condition import (
+    COMPONENT_REF,
+    COMPONENT_TYPE,
+    SELECTION_PROPERTIES,
+    Comparison,
+    Condition,
+    ConditionError,
+    component_type_urn,
+    parse_condition,
 )
 from openrois.interfaces.contract import (
     CommandRequest,
@@ -202,6 +213,15 @@ __all__ = [
     "SystemIF",
     "UnsubscribeParams",
     "UnsubscribeResult",
+    # Conditions
+    "COMPONENT_REF",
+    "COMPONENT_TYPE",
+    "SELECTION_PROPERTIES",
+    "Comparison",
+    "Condition",
+    "ConditionError",
+    "component_type_urn",
+    "parse_condition",
     # Component Contract
     "ComponentContractError",
     "CommandId",

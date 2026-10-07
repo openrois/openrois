@@ -9,7 +9,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Params of rois.event.subscribe.\n\nMaps to EventIF::subscribe(in event_type, in condition, out subscribe_id).\n\nAttributes:\n    event_type: Name of the event, from a component profile.\n    condition: Filter that selects the component and narrows the events.",
+  "description": "Params of rois.event.subscribe.\n\nMaps to EventIF::subscribe(in event_type, in condition, out subscribe_id). An\nengine subscribes to the one component that declares event_type and matches the\ncondition. When none does it returns UNSUPPORTED. When several do it returns\nBAD_PARAMETER, and a component_ref comparison picks one.\n\nAttributes:\n    event_type: Name of the event, from a component profile.\n    condition: Selection condition on component_ref and component_type.",
   "properties": {
     "event_type": {
       "$ref": "#/$defs/EventType",
@@ -18,7 +18,7 @@
     "condition": {
       "$ref": "#/$defs/ConditionT",
       "default": "",
-      "description": "Filter that selects the component and narrows the events"
+      "description": "Selection condition (CQL2-Text) that picks the component"
     }
   },
   "required": [

@@ -32,7 +32,7 @@ export type CommandRequest = z.infer<typeof CommandRequestSchema>;
  */
 
 export const DiscoverRequestSchema = z.object({
-  condition: z.string().default(""), // ISO 19143 filter expression; empty means all components
+  condition: z.string().default(""), // Selection condition (CQL2-Text); empty means all components
 }).strict();
 export type DiscoverRequest = z.infer<typeof DiscoverRequestSchema>;
 
@@ -86,7 +86,7 @@ export type InvokeResponse = z.infer<typeof InvokeResponseSchema>;
 export const QueryRequestSchema = z.object({
   component_ref: z.string(), // Target component instance ref
   query_type: z.string(), // Query operation name
-  condition: z.string().default(""), // Optional filter expression for the query
+  condition: z.string().default(""), // Condition from the client request (CQL2-Text), for the component
 }).strict();
 export type QueryRequest = z.infer<typeof QueryRequestSchema>;
 
@@ -107,7 +107,7 @@ export type QueryResponse = z.infer<typeof QueryResponseSchema>;
 export const SubscribeRequestSchema = z.object({
   component_ref: z.string(), // Target component instance ref
   event_type: z.string(), // Event type to subscribe to
-  condition: z.string().default(""), // Optional filter expression for the subscription
+  condition: z.string().default(""), // Condition from the client request (CQL2-Text), for the component
 }).strict();
 export type SubscribeRequest = z.infer<typeof SubscribeRequestSchema>;
 
