@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Breaking:** remove the `ComponentStatusT` type. A component status travels as its name, for example `READY`, as the XML profiles type it.
-- **Breaking:** remove the `./contract` subpath export: `ComponentContract`, its request and response schemas, `EventEnvelopeSchema` and the error classes. Clients and engines exchange the params and result schemas of `./catalog`.
+- **Breaking:** remove the `./contract` subpath export and its names from the package root: `ComponentContract`, its request and response schemas, `EventEnvelopeSchema` and the error classes. Clients and engines exchange the params and result schemas of `./catalog`.
 
 ## [0.1.0-alpha.3] - 2026-10-08
 
