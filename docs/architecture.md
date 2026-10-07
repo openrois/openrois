@@ -564,8 +564,10 @@ A component has two layers: the **interface** and the **implementation**.
 
 The **interface** is the RoIS-facing layer. It handles the RoIS protocol:
 `bind`, `execute`, `subscribe`, `notify_event`. It is the contract between the
-component and the RoIS framework. The interface is defined by decorators:
-`@component`, `@query`, `@invoke`, `@subscribe`.
+component and the RoIS framework. The interface is a subclass of `Component` from
+`openrois.components.core`: `@component(profile)` declares the component type with its
+profile, for example `NAVIGATION_PROFILE`, and `@invoke`, `@query`, `@subscribe` and
+`@on_set_parameter` mark the messages the class implements.
 
 The **implementation** is the functional implementation behind the interface (the
 spec calls this the "functional implementation"). It does the actual work in the
@@ -594,9 +596,10 @@ plug-and-play: import, configure, play.
 A component may implement a subset of the RoIS normative interface for its
 component type. The normative IDL, XML, and HPP define the full interface, but a
 robot or use case may not need all operations. For example, a robot without
-pause/resume capability implements `start()` and `stop()` but returns
-`UNSUPPORTED` for `suspend()` and `resume()`. The component's profile (returned by
-`get_profile()`) declares exactly which queries, commands, and events it supports.
+pause/resume capability implements `start()` and `stop()`, and the engine answers
+`UNSUPPORTED` for `suspend()` and `resume()`. The component declares the full profile of
+its type, and the profile the engine serves (returned by `get_profile()`) lists exactly
+the queries, commands, and events the class implements.
 
 Service applications must never assume the full canonical interface. They
 populate their UI, command set, and query set from the acquired engine and
@@ -607,7 +610,7 @@ profiles does not have a suspend button in the UI.
 
 When a component supports multiple backends (e.g., gRPC and ROS 2), the component
 package ships one class per backend: `GrpcNavigation` and `Ros2Navigation`. Both
-are decorated `@component("Navigation")`. The adapter imports the one it needs.
+are declared `@component(NAVIGATION_PROFILE)`. The adapter imports the one it needs.
 Selection happens at import time, not at runtime. No factory, no Protocol, no
 runtime selection.
 

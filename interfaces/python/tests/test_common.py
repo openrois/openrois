@@ -3,10 +3,8 @@
 import pytest
 
 from openrois.interfaces.common import (
-    COMPONENT_STATUS_MAP,
     STREAM_STATUS_MAP,
     ComponentStatus,
-    ComponentStatusT,
     StreamStatus,
     StreamStatusT,
 )
@@ -35,16 +33,6 @@ class TestComponentStatus:
     def test_is_str_enum(self) -> None:
         assert isinstance(ComponentStatus.READY, str)
 
-    def test_numeric_mapping(self) -> None:
-        assert COMPONENT_STATUS_MAP[ComponentStatus.UNINITIALIZED] == 0
-        assert COMPONENT_STATUS_MAP[ComponentStatus.READY] == 1
-        assert COMPONENT_STATUS_MAP[ComponentStatus.BUSY] == 2
-        assert COMPONENT_STATUS_MAP[ComponentStatus.WARNING] == 3
-        assert COMPONENT_STATUS_MAP[ComponentStatus.ERROR] == 4
-
-    def test_numeric_type_alias(self) -> None:
-        val: ComponentStatusT = 1
-        assert isinstance(val, int)
 
 
 class TestStreamStatus:

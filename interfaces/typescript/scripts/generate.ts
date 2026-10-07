@@ -636,8 +636,6 @@ function generateModule(
   if (moduleName === "common") {
     parts.push("// ─── Numeric type aliases (from RoIS_Common.idl) ────────────────");
     parts.push("");
-    parts.push("/** Numeric representation of ComponentStatus for wire compatibility. */");
-    parts.push("export type ComponentStatusT = number;");
     parts.push("/** Numeric representation of StreamStatus for wire compatibility. */");
     parts.push("export type StreamStatusT = number;");
     parts.push("");

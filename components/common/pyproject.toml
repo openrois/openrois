@@ -1,14 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "openrois-components-common"
 version = "0.1.0a2"
-description = "Common component helpers and reference components for OpenRoIS adapters"
+description = "Platform-independent OpenRoIS components with simulated data"
+readme = "README.md"
 license = "Apache-2.0"
+authors = [
+    { name = "OpenRoIS Community" },
+]
 requires-python = ">=3.12"
-dependencies = ["openrois-components-core>=0.1.0a2"]
+dependencies = [
+    "openrois-interfaces>=0.1.0a3",
+    "openrois-components-core>=0.1.0a2",
+]
 
-[build-system]
-requires = ["setuptools>=64"]
-build-backend = "setuptools.build_meta"
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.4",
+    "pytest-asyncio>=1.0",
+    "mypy>=1.8",
+    "ruff>=0.4",
+]
 
-[tool.setuptools.packages.find]
-include = ["openrois_components.*"]
+# openrois and openrois.components are namespace packages shared with the other OpenRoIS
+# distributions, so this one ships only openrois/components/common/.
+[tool.hatch.build.targets.wheel]
+packages = ["src/openrois"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+files = ["src", "tests"]
+mypy_path = "src"
+explicit_package_bases = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]

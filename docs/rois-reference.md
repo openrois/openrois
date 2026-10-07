@@ -598,7 +598,25 @@ comparison  = property ( "=" / "LIKE" ) literal
   XML rendering of an OpenRoIS profile would have to encode the refs and list each
   component once.
 
-### 17.6 Commands, Ids and Status
+### 17.6 Values
+
+The IDL types the value of a `Result`, a `Parameter` and an `Argument` as `any`, and names
+its type in `data_type_ref`. OpenRoIS carries every value as a string, written by its type:
+
+| `data_type_ref` | String form | Example |
+|-----------------|-------------|---------|
+| `int`, `integer`, `long`, `short` | Decimal | `42` |
+| `float`, `double` | A decimal number | `1.5` |
+| `bool`, `boolean` | `true` or `false` | `true` |
+| `Component_Status` | The enumerator name (§16, item 7) | `READY` |
+| `string`, `RoISIdentifier`, `DateTime` and any other type | The text itself, ISO 8601 for `DateTime` | `kitchen` |
+| `<type>[]` | A JSON array of the item type: numbers, `true` or `false`, or strings | `["kitchen", "hall"]` |
+
+Type names match without regard to case, so `String[]` and `string[]` are one type. An
+engine refuses a parameter value that does not fit its type with `BAD_PARAMETER`.
+`openrois.interfaces.values` writes and reads these forms.
+
+### 17.7 Commands, Ids and Status
 
 - `execute` runs its items in order. It waits each item's `delay_time` before the item
   starts, and runs the commands of a `ConcurrentCommands` item at the same time.

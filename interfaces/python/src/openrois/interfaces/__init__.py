@@ -13,6 +13,7 @@ Modules:
     contract:   ComponentContract protocol and its request, response and event models
     catalog:    Service-side method catalog: params and result models, interfaces
     condition:  The CQL2-Text subset of every condition: parsing, matching, building
+    values:     How a typed value travels as a string: encode_value, decode_value
     components: Per-component typed message models
 """
 
@@ -66,7 +67,6 @@ from openrois.interfaces.catalog import (
 )
 from openrois.interfaces.common import (
     ComponentStatus,
-    ComponentStatusT,
     StreamStatus,
     StreamStatusT,
 )
@@ -138,6 +138,7 @@ from openrois.interfaces.service import (
     NotifyEventParams,
     ProfileChangedParams,
 )
+from openrois.interfaces.values import decode_value, encode_value
 
 __all__ = [
     # HRI core
@@ -160,7 +161,6 @@ __all__ = [
     "RoISIdentifierList",
     # Common
     "ComponentStatus",
-    "ComponentStatusT",
     "StreamStatus",
     "StreamStatusT",
     # Profiles
@@ -236,6 +236,9 @@ __all__ = [
     "ConditionError",
     "component_type_urn",
     "parse_condition",
+    # Values
+    "decode_value",
+    "encode_value",
     # Component Contract
     "ComponentContractError",
     "CommandId",

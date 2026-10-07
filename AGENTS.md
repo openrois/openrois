@@ -67,7 +67,8 @@ its description. The IDL and XSD cross-check tests fail on any other addition.
 | C# types | `interfaces/csharp` | `dotnet build src/OpenRoIS.Interfaces`, `dotnet test tests/OpenRoIS.Interfaces.Tests` |
 | Engine | `engine` | `pip install -e ../interfaces/python -e ../components/core -e ".[dev]"`, `pytest`, `ruff check src/ tests/` |
 | Gateway | `gateway` | `pip install -e ../interfaces/python -e ../engine -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/ scripts/` |
-| Component framework | `components/core` | `pip install -e .` |
+| Component SDK | `components/core` | `pip install -e ../../interfaces/python -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
+| Common components | `components/common` | `pip install -e ../../interfaces/python -e ../core -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` |
 | Mock engine | `examples/mock-engine` | `npm install`, `npm test` |
 

@@ -6,7 +6,7 @@ adapter up before the robot is ready, and as templates for platform-specific pac
 
 | Component | Provides |
 |-----------|----------|
-| `MockSystemInformation` | Queries `robot_position` (fixed origin) and `engine_status` (always `READY`) |
+| `MockSystemInformation` | Queries `robot_position` (the origin, identified by the engine id) and `engine_status` (always `READY`) |
 
 More will be added with the full component library in
 [Phase 10](https://openrois.org/docs/project/roadmap).
@@ -16,29 +16,29 @@ More will be added with the full component library in
 Not published to PyPI yet. From a clone of the repository:
 
 ```bash
-pip install -e ./interfaces/python
-pip install -e ./components/core
-pip install -e ./components/common
+pip install -e ./interfaces/python -e ./components/core -e ./components/common
 ```
 
 ## Usage
 
-Register the component with the `Engine` of your adapter, exactly like one of your own:
+Register the component with the engine of your adapter, like one of your own. It reports
+the engine id of the adapter as its robot:
 
 ```python
-from openrois_components.common import MockSystemInformation
-from openrois_components_core import meta_from_decorators
-from openrois.engine import Engine
+from openrois.components.common import MockSystemInformation
 
-engine = Engine(engine_id="my_robot", platform="my_platform")
-
-meta = meta_from_decorators(MockSystemInformation)
-engine.register_component(meta.ref, MockSystemInformation(), meta)
+system_information = MockSystemInformation()
 ```
 
 See [`examples/adapter-template`](../../examples/adapter-template/README.md) for a full
-adapter, and [`components/core`](../core/README.md) for the decorators used to write your
-own components.
+adapter, and [`components/core`](../core/README.md) for writing your own components.
+
+## Test
+
+```bash
+pip install -e ./interfaces/python -e ./components/core -e "./components/common[dev]"
+cd components/common && pytest && mypy && ruff check src/ tests/
+```
 
 ## License
 

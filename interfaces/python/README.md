@@ -57,6 +57,7 @@ decorators in [`openrois-components-core`](../../components/core/README.md).
 | `openrois.interfaces.service` | Params of the engine notifications: `NotifyErrorParams`, `CompletedParams`, `NotifyEventParams`, `ProfileChangedParams`, with `CompletedStatus` and `ErrorType` |
 | `openrois.interfaces.profiles` | Component and engine profile models |
 | `openrois.interfaces.contract` | `ComponentContract` protocol, request and response models, `EventEnvelope`, error classes |
+| `openrois.interfaces.values` | `encode_value` and `decode_value`, the string form of a typed value in `Result.value`, `Parameter.value` and `Argument.value` |
 | `openrois.interfaces.condition` | The CQL2-Text subset every `condition` uses: `parse_condition`, `Condition`, the `component_ref` and `component_type` properties, and the `eq`, `like` and `all_of` builders |
 | `openrois.interfaces.catalog` | Service-side method catalog: params and result models for every `rois.*` method, the `SystemIF`, `CommandIF`, `QueryIF` and `EventIF` protocols, the method and notification tables, the `EXTENSIONS` registry, `JsonRpcErrorCode` |
 | `openrois.interfaces.components` | The profile constants of the basic components (`NAVIGATION_PROFILE`, ...) and per-component typed message models |
