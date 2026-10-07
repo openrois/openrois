@@ -58,7 +58,7 @@ namespace OpenRoIS.Sdk.JsonRpc
     /// a response. Used for server-to-client push events.
     /// </remarks>
     /// <param name="method">Namespaced push method name, e.g.
-    /// "rois.event.notify".</param>
+    /// "rois.event.notify_event".</param>
     /// <param name="params">Event payload, or null.</param>
     /// <returns>JSON string ready to send.</returns>
     public static string CreateNotification(

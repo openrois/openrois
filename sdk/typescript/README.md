@@ -44,15 +44,19 @@ const status = await client.query("component_status", target);
 client.on("reached_target", (event) => console.log(event.results));
 await client.subscribe("reached_target", target);
 
-// Reserve, configure, command, release.
+// Reserve, configure, command, wait for the command to end, release.
 await client.bind(nav);
 await client.setParameter(nav, [
   { name: "target_positions", data_type_ref: "string[]", value: '["kitchen"]' },
 ]);
-const [commandId] = await client.execute([{ component_ref: nav, command_type: "start" }]);
-client.on("rois.command.completed", ({ command_id, status }) => {
-  if (command_id === commandId) console.log("navigation ended:", status);
+const commandId = crypto.randomUUID();
+const ended = new Promise<string>((resolve) => {
+  client.on("rois.command.completed", ({ command_id, status }) => {
+    if (command_id === commandId) resolve(status);
+  });
 });
+await client.execute([{ component_ref: nav, command_type: "start", command_id: commandId }]);
+console.log("navigation ended:", await ended);
 await client.release(nav);
 
 await client.disconnect();
@@ -83,8 +87,7 @@ catalog schemas in `@openrois/interfaces`, and returns the result's out paramete
 - `query()` and `subscribe()` go to the one component that declares the query or event
   type and matches the condition.
 
-`examples/mock-engine` implements this method catalog. The Python engine is moving to it
-(in progress).
+`examples/mock-engine`, the Python engine and the gateway implement this method catalog.
 
 ### Conditions
 

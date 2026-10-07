@@ -43,8 +43,8 @@ gateway and adapter processes exist. Phase 11 is gated on adoption.
 ### Phase 0: Paradigm-Neutral Interface Types (Done)
 
 RoIS types authored as Python models, exported to JSON Schema, and generated into
-TypeScript and C#, with tests against the normative RoIS files. Definition of the
-five-method `Component Contract` that decouples the engine from any middleware.
+TypeScript and C#, with tests against the normative RoIS files, and a first contract
+between the engine and its components that decouples the engine from any middleware.
 
 ### Phase 1: Engine and Sub HRI Engine Proof of Concept (Done)
 
@@ -105,8 +105,9 @@ the RoIS method catalog. Docker Compose is the one-command quickstart.
 
 ### Phase 7: Adapter Process (Planned)
 
-A standalone adapter process composed from `Engine`, `WsClient`, and a backend bridge,
-configured by the adapter profile.
+A packaged adapter process, like the gateway process, that builds the components of a
+robot from a configuration and serves them with `Engine` and `WsClient`, so an adapter
+needs no hand-written script.
 
 ### Phase 8: Open Reference Platform and Mixed Paradigms (Planned)
 
@@ -157,7 +158,7 @@ not a shared codebase.
 
 ### Package Management Mechanism (Undecided)
 
-The component registry of an adapter needs to load component packages from somewhere.
+An adapter needs to load component packages from somewhere.
 The proposal is to start with local paths and Git URLs, then add a registry endpoint
 later as the foundation for Phase 11. Package management stays in the adapter and the
 gateway management API, never in the `Engine`.

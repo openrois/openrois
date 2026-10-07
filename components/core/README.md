@@ -123,8 +123,8 @@ cd components/core && pytest && mypy && ruff check src/ tests/
 
 ## Status
 
-Alpha, pre-1.0, unstable API. The engine that hosts components written with this SDK is
-moving to the RoIS method catalog (in progress).
+Alpha, pre-1.0, unstable API. The engine that hosts components written with this SDK,
+`openrois-engine`, answers the RoIS method catalog.
 
 ## License
 

@@ -70,13 +70,13 @@ namespace OpenRoIS.Sdk.Tests
     [Test]
     public void Parse_Notification_ClassifiesAsNotification()
     {
-      var json = @"{""jsonrpc"":""2.0"",""method"":""rois.event.notify"",""params"":{""event_id"":""evt-001"",""event_type"":""person_detected"",""subscribe_id"":""sub-1""}}";
+      var json = @"{""jsonrpc"":""2.0"",""method"":""rois.event.notify_event"",""params"":{""event_id"":""evt-001"",""event_type"":""person_detected"",""subscribe_id"":""sub-1""}}";
 
       var msg = JsonRpcParser.Parse(json);
 
       Assert.That(msg.Type, Is.EqualTo(JsonRpcMessageType.Notification));
       Assert.That(msg.Notification, Is.Not.Null);
-      Assert.That(msg.Notification!.Method, Is.EqualTo("rois.event.notify"));
+      Assert.That(msg.Notification!.Method, Is.EqualTo("rois.event.notify_event"));
       Assert.That(msg.Notification.Params, Is.Not.Null);
       Assert.That(msg.Notification.Params!.Value.GetProperty("event_id")
           .GetString(), Is.EqualTo("evt-001"));

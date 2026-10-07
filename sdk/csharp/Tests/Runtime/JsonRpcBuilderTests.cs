@@ -77,7 +77,7 @@ namespace OpenRoIS.Sdk.Tests
     [Test]
     public void CreateNotification_ProducesValidJsonRpcStructure()
     {
-      var json = JsonRpcBuilder.CreateNotification("rois.event.notify",
+      var json = JsonRpcBuilder.CreateNotification("rois.event.notify_event",
           new
           {
             event_id = "evt-001",
@@ -91,7 +91,7 @@ namespace OpenRoIS.Sdk.Tests
       Assert.That(root.GetProperty("jsonrpc").GetString(),
           Is.EqualTo("2.0"));
       Assert.That(root.GetProperty("method").GetString(),
-          Is.EqualTo("rois.event.notify"));
+          Is.EqualTo("rois.event.notify_event"));
       // Notifications must NOT have an id field.
       Assert.That(root.TryGetProperty("id", out _), Is.False);
 

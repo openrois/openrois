@@ -148,7 +148,7 @@ namespace OpenRoIS.Sdk.JsonRpc
     [JsonPropertyName("jsonrpc")]
     public string JsonRpc { get; set; } = JsonRpcConstants.Version;
 
-    /// <summary>Namespaced push method name, e.g. "rois.event.notify".</summary>
+    /// <summary>Namespaced push method name, e.g. "rois.event.notify_event".</summary>
     [JsonPropertyName("method")]
     public string Method { get; set; } = string.Empty;
 

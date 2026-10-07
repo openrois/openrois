@@ -193,10 +193,10 @@ flowchart TB
 
     subgraph L2["Gateway (hosts Engine, main)"]
         direction LR
-        Auth["Auth<br/>JWT / RBAC"]
-        Session["Session Manager"]
+        Auth["Auth<br/>JWT / RBAC (planned)"]
+        Session["Sessions"]
         WSServer["WebSocket Server<br/>JSON-RPC 2.0"]
-        Router["RoIS Router<br/>SystemIF, CommandIF, QueryIF, EventIF, StreamingIF"]
+        Router["RoIS Router<br/>SystemIF, CommandIF, QueryIF, EventIF, StreamingIF (planned)"]
     end
 
     subgraph L3["Sub HRI Engines (adapters)"]
@@ -238,10 +238,10 @@ layers align with the RoIS specification.
 | RoIS layer | What the MVP provides | What it proves |
 |-----------|----------------------|----------------|
 | Interfaces | Transport-independent types authored in Python, generated to TypeScript and C# | The single-source-of-truth type pipeline works across three languages |
-| Engine (main) | A WebSocket server that routes JSON-RPC 2.0 calls, aggregates sub HRI Engine profiles, broadcasts profile changes | The engine is a pure router with zero paradigm-specific imports when acting as the main engine without local components |
-| Client SDK | A TypeScript SDK exposing the five RoIS interfaces over WebSocket | The SDK is paradigm-neutral: it does not know what robot is behind the gateway |
+| Engine (main) | The engine behind a WebSocket server: it routes JSON-RPC 2.0 calls, aggregates sub HRI Engine profiles, broadcasts profile changes | The engine is a pure router with zero paradigm-specific imports when acting as the main engine without local components |
+| Client SDK | A TypeScript SDK with one method per operation of the RoIS method catalog, over WebSocket | The SDK is paradigm-neutral: it does not know what robot is behind the gateway |
 | Service application | A web application that connects to the gateway, fetches the profile, and renders a dynamic UI for every discovered component | Profile-driven discovery works: the same application works for any gateway without hardcoded component names |
-| Adapter SDK | A Python framework with decorators for component, query, invoke, and subscribe handlers | The adapter pattern works: a thin container that registers components and routes JSON-RPC |
+| Adapter SDK | A Python component SDK: a component is a class that declares its profile and marks its handlers with decorators | The adapter pattern works: a thin container that hosts components in an engine |
 | Sub HRI Engine (adapter) | An adapter for a real robot, connecting to the robot via gRPC and to the gateway via WebSocket | The sub HRI Engine bridges a real robot backend to the RoIS control plane |
 | Components | Packaged components (Navigation, SystemInformation) with a gRPC backend, plus a user-defined non-canonical component in the demonstration adapter (not in this repository) | The component package pattern and the non-canonical component pattern (spec section 12) both work |
 | Multiple backends | The same component package ships separate classes for gRPC and ROS 2 backends | The import-time selection pattern works: no factory, no runtime dispatch |
@@ -271,71 +271,77 @@ layers align with the RoIS specification.
 
 ## 5. Client & Service Application SDK
 
-The SDK mirrors the five RoIS interfaces (`SystemIF`, `CommandIF`, `QueryIF`,
-`EventIF`, and `StreamingIF`) defined in the normative IDL (`RoIS_HRI.idl` and
-`RoIS_Service.idl`). The Streaming Interface is layered on the others: it uses
+The SDK mirrors the RoIS interfaces `SystemIF`, `CommandIF`, `QueryIF`, and `EventIF`
+defined in the normative IDL (`RoIS_HRI.idl` and `RoIS_Service.idl`). `StreamingIF` is
+planned. The Streaming Interface is layered on the others: it uses
 `set_parameter` and `get_parameter` from the Command Interface for encoding and
 transport negotiation, and `notify_stream_status` is delivered through the Event
 Interface mechanism. But it is a first-class interface with its own operations
 (`connect_stream`, `disconnect_stream`, `suspend_stream`, `resume_stream`,
 `query_stream_status`).
 
+The TypeScript SDK (`@openrois/sdk`) is the client for web service applications.
+`RoISClient` has one method per operation of the method catalog, each taking the
+operation's IDL parameters in IDL order. The C# SDK for Unity will have the same methods
+(in progress).
+
 ```
-RoIS Client SDK
-├─ SystemClient    connect() · disconnect() · getProfile() · getErrorDetail()
-├─ CommandClient   search() · bind() · bindAny() · release()
-│                  getParameter() · setParameter() · execute() · getCommandResult()
-├─ QueryClient     query()
-├─ EventClient     subscribe() · unsubscribe() · getEventDetail()  → onNotifyEvent
-└─ StreamClient    connectStream() · disconnectStream()
-                   suspendStream() · resumeStream() · queryStreamStatus()
+RoISClient
+├─ System    connect(url) · disconnect() · getProfile() · getErrorDetail()
+├─ Command   search() · bind() · bindAny() · release()
+│            getParameter() · setParameter() · execute() · getCommandResult()
+├─ Query     query()
+├─ Event     subscribe() · unsubscribe() · getEventDetail()
+└─ Streaming planned
 ```
 
-Target developer experience (TypeScript / web, primary client):
+Developer experience (TypeScript / web, primary client):
 
 ```ts
-import { RoISClient } from "@openrois/sdk";
+import { RoISClient, componentRef, componentType } from "@openrois/sdk";
 
-const client = await RoISClient.connect("wss://gateway.example.com", {
-  // Passed to a custom WebSocket factory. The gateway does not check it yet.
-  token: await getAccessToken(),
-});
+const client = await RoISClient.connect("ws://localhost:8765");
 
-// Search for available components across all sub HRI Engines
-const components = await client.search();
+// Find a component by type, and select it by ref in later calls.
+const [nav] = await client.search(componentType({ authority: "OMG", code: "Navigation" }));
+const target = componentRef(nav);
 
-// Query a component's status (works for any paradigm behind the gateway)
-const status = await client.query("kachaka_01/Navigation", "component_status");
+// Read state.
+const status = await client.query("component_status", target);
 
-// Subscribe to events
-const subId = await client.subscribe("kachaka_01/Navigation", "reached_target");
-client.on("rois.event.notify", (event) => {
-  console.log("Navigation event:", event);
-});
+// React to events.
+client.on("reached_target", (event) => console.log(event.results));
+await client.subscribe("reached_target", target);
 
-// Bind and execute a command
-await client.bind("kachaka_01/Navigation");
-await client.setParameter("kachaka_01/Navigation", [
-  { name: "target_positions", data_type_ref: "string[]", value: '["home"]' },
+// Reserve, configure, command, wait for the command to end, release.
+await client.bind(nav);
+await client.setParameter(nav, [
+  { name: "target_positions", data_type_ref: "string[]", value: '["kitchen"]' },
 ]);
-await client.execute("kachaka_01/Navigation", {
-  command_type: "start",
-  command_id: `cmd-${Date.now()}`,
-  parameters: [],
+const commandId = crypto.randomUUID();
+const ended = new Promise<string>((resolve) => {
+  client.on("rois.command.completed", ({ command_id, status }) => {
+    if (command_id === commandId) resolve(status);
+  });
 });
+await client.execute([{ component_ref: nav, command_type: "start", command_id: commandId }]);
+console.log("navigation ended:", await ended);
+await client.release(nav);
 
 await client.disconnect();
 ```
 
-The callback surface comes directly from `ServiceApplicationBase` in the spec:
-`notify_error`, `completed`, and `notify_event`.
+The notifications come directly from `ServiceApplicationBase` in the spec:
+`notify_error`, `completed`, and `notify_event`, sent as `rois.system.notify_error`,
+`rois.command.completed`, and `rois.event.notify_event`. The SDK also delivers each
+event under its own event type, for example `reached_target`.
 
 ### Profile-Driven Service Applications
 
 A service application does not hardcode component names, query types, or command
 sets. It fetches the engine profile via `get_profile()`, which returns
-`component_ids` and `component_profiles` aggregated from all connected sub HRI Engines
-by the gateway. The application populates its UI, command set, and query set
+the engine profile, whose `component_ids` lists every component of every connected sub
+HRI Engine, and `component_profiles`, the profile of each of those components. The application populates its UI, command set, and query set
 from the profile data. A component that does not list `suspend` in its command
 profiles does not have a suspend button in the UI. This is the mechanism that
 makes the same service application work across different robots, avatars, and
@@ -484,8 +490,8 @@ before it forwarded a request, so the child does not check them again.
   condition or a ref that names exactly one component. `get_command_result` goes to the
   child that ran the command, and `get_event_detail` and `get_error_detail` to the engine
   that assigned the id.
-- The gateway runs a command sequence itself and sends the child one command at a time,
-  as a one-command `execute`, with the delay already waited. The child's
+- The gateway runs a command sequence itself and sends the child each command as its own
+  one-command `execute`, with the delay already waited. The child's
   `rois.command.completed` ends that command at the gateway.
 - Refs and the ids a child assigns keep their value on the way up, `robot_1/navigation`
   and `robot_1/sub-3` for example. A reply that assigns an id outside the child's engine
@@ -560,8 +566,8 @@ OpenRoIS defines four distinct contracts at four boundaries:
 1. **Service application to gateway** (control plane): the method catalog, JSON-RPC 2.0
    over WebSocket.
 2. **Parent engine to child engine** (control plane): the same method catalog over the
-   same transport. The parent is the child's only client, and sends it one command at a
-   time.
+   same transport. The parent is the child's only client, and sends it each command as
+   its own one-command `execute`.
 3. **Engine to component** (control plane): `LocalComponents` calls the `rois_*` methods
    of each component. A component written with `openrois-components-core` gets them from
    `Component`, and its author marks handlers with `@invoke`, `@query`, `@subscribe` and

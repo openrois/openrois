@@ -480,8 +480,8 @@ the specification text and the IDL conflict, it follows the IDL. Known divergenc
 This section describes OpenRoIS, not the specification. It records the choices
 OpenRoIS makes where the specification leaves them to the platform-specific model, and
 the few places where it adds to the specification. The interfaces packages
-(`interfaces/`) define all of it. The Python engine, the TypeScript SDK and the mock
-engine are moving to this method catalog (in progress).
+(`interfaces/`) define all of it, and the Python engine, the gateway, the TypeScript SDK
+and the mock engine implement it.
 
 ### 17.1 Wire Binding
 
