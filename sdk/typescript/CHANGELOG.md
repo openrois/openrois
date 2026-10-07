@@ -18,6 +18,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `getProfile()` returns the engine profile together with the profile of every component it lists, keyed by fully qualified ref.
 - `execute()` runs commands in order and groups of commands at the same time. Each command's `command_id` defaults to a UUID, and `execute()` returns the `command_id` of every command in order.
 - Typed events, with validated params for each catalog notification: `rois.event.notify_event`, `rois.command.completed`, `rois.system.notify_error` and `rois.system.profile_changed`. Each event also arrives under its own event type, for example `reached_target`. The `notification`, `close` and `error` events carry the JSON-RPC envelope, the close code and reason, and the error.
-- Builders for the CQL2-Text conditions: `componentRef`, `componentType`, `componentTypeUrn`, `eq`, `like`, `allOf` and `quote`, with the property names `COMPONENT_REF` and `COMPONENT_TYPE`.
+- The builders for CQL2-Text conditions from `@openrois/interfaces`: `componentRef`, `componentType`, `componentTypeUrn`, `eq`, `like`, `allOf` and `quote`, with the property names `COMPONENT_REF` and `COMPONENT_TYPE`.
 - `WebSocketTransport` (`@openrois/sdk/transport`), with request and connect timeouts, a custom WebSocket factory, and the `ConnectionError`, `RequestTimeoutError` and `RpcError` errors.
 - The JSON-RPC 2.0 envelope schemas and `JsonRpcErrorCode` (`@openrois/sdk/jsonrpc`).

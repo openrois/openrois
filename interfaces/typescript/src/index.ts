@@ -10,4 +10,6 @@ export * from "./profiles";
 export * from "./contract";
 // Method catalog (service-side params and result models, method names)
 export * from "./catalog";
+// Conditions (hand-written CQL2-Text subset parser, matcher and builders)
+export * from "./condition";
 // Components are available via the @openrois/interfaces/components subpath export.

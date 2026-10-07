@@ -60,6 +60,12 @@ describe("Export completeness", () => {
     expect(openrois.GetProfileResultSchema).toBeDefined();
   });
 
+  it("exports the condition parser and builders", () => {
+    expect(openrois.parseCondition).toBeDefined();
+    expect(openrois.ConditionError).toBeDefined();
+    expect(openrois.componentRef("r/head")).toBe("component_ref = 'r/head'");
+  });
+
   it("does NOT export Component types from root (use @openrois/interfaces/components)", () => {
     expect(openrois.PersonDetectedEventSchema).toBeUndefined();
   });

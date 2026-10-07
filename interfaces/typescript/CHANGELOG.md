@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add the `./catalog` subpath export with a params and a result schema for each of the 16 `rois.*` methods, `RoISMethods`, the `RoISMethodMap` type, `RoISMethodSchemas` and `JsonRpcErrorCode`, generated from `schema/catalog.json`.
 - Add the notification names and params to `./catalog`: `RoISNotifications`, the `RoISNotificationMap` type and `RoISNotificationSchemas`, for `rois.system.notify_error`, `rois.command.completed`, `rois.event.notify_event` and `rois.system.profile_changed`. Add `RoISCommandTypes`, the standard command names.
 - Add `ProfileChangedParamsSchema`, `GetProfileResult.component_profiles` (component profiles keyed by fully qualified ref), `HRIComponentProfile.function` with `ComponentFunctionSchema`, and `NotifyEventParams.results`. All three fields are OpenRoIS extensions.
+- Add the `./condition` subpath export, a hand-written port of the Python `openrois.interfaces.condition` module: `parseCondition`, `Condition`, `Comparison` and `ConditionError` read and match conditions in the CQL2-Text subset, and `eq`, `like`, `allOf`, `quote`, `componentRef`, `componentType` and `componentTypeUrn` build them.
 - The generator writes a JSON Schema map (`additionalProperties` with a schema) as `z.record(z.string(), ...)` and a `Record<string, ...>` type.
 
 ### Changed

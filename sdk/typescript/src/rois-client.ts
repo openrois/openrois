@@ -76,6 +76,7 @@ import {
 } from "./transport";
 import type { JsonRpcNotification } from "./jsonrpc";
 
+// The condition builders, so a client needs no second import to write conditions.
 export {
   COMPONENT_REF,
   COMPONENT_TYPE,
@@ -86,8 +87,7 @@ export {
   eq,
   like,
   quote,
-  type ComponentTypeIdentifier,
-} from "./condition";
+} from "@openrois/interfaces";
 export {
   ConnectionError,
   RequestTimeoutError,

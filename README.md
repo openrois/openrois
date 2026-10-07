@@ -124,7 +124,7 @@ cd examples/hri-client && npm install && npm run dev
 ```
 
 The inspector reads the engine profile and renders every component it finds, with its
-queries, commands, and events. Nothing in the client is specific to the components on
+queries, parameters, commands, and events. Nothing in the client is specific to the components on
 the other side.
 
 <p align="center">

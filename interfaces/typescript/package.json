@@ -53,6 +53,10 @@
       "import": "./dist/catalog.js",
       "types": "./dist/catalog.d.ts"
     },
+    "./condition": {
+      "import": "./dist/condition.js",
+      "types": "./dist/condition.d.ts"
+    },
     "./components": {
       "import": "./dist/components/index.js",
       "types": "./dist/components/index.d.ts"

@@ -35,8 +35,8 @@ Python (Pydantic) → JSON Schema → C# + TypeScript
 - **Edit:** `interfaces/python/src/openrois/interfaces/*.py`
 - **Never edit:** `interfaces/schema/`,
   `interfaces/csharp/src/OpenRoIS.Interfaces/Generated/`,
-  `interfaces/typescript/src/` (except `contract.ts` and the `index.ts` barrels, which are
-  hand-written)
+  `interfaces/typescript/src/` (except `contract.ts`, `condition.ts` and the `index.ts`
+  barrels, which are hand-written)
 
 After editing the Python models, run the full pipeline and the tests:
 

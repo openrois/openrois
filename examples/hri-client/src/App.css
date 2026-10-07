@@ -475,8 +475,7 @@ body {
 
 /* ─── Empty states ────────────────────────────────────── */
 
-.no-components,
-.no-profiles {
+.no-components {
   text-align: center;
   padding: 48px 24px;
   color: var(--text-muted);

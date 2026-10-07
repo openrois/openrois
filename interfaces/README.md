@@ -65,8 +65,8 @@ Section 17 of [docs/rois-reference.md](../docs/rois-reference.md) describes the 
 binding, the extension policy and each extension.
 
 Every `condition` is a string in a subset of CQL2-Text (OGC 21-065r2), for example
-`component_ref = 'reachy_real/head'`. The Python `condition` module defines the subset and
-parses, matches and builds conditions.
+`component_ref = 'reachy_real/head'`. The Python `condition` module and its TypeScript
+port parse, match and build conditions.
 
 Typed per-component message models exist for 4 of the 17 basic RoIS HRI Components:
 

@@ -3,9 +3,12 @@
 A browser-based component inspector for any RoIS engine, and the reference RoIS HRI Client
 in this repository.
 
-It connects over WebSocket, reads the engine profile with `rois.system.get_profile`, and
-builds a panel for every component it finds, with its queries, commands, and events. It
-knows nothing about any specific robot: everything on screen comes from the profile.
+It connects over WebSocket, reads the engine profile and the component profiles with
+`rois.system.get_profile`, and builds a panel for every component it finds, with its
+queries, parameters, commands, and events. An actuation component also gets Bind and
+Release, and each command shows the status its `rois.command.completed` notification
+reports. It knows nothing about any specific robot: everything on screen comes from the
+profiles.
 
 ![The HRI client connected to an engine](../../docs/assets/hri-client.png)
 
@@ -29,9 +32,10 @@ Open the address Vite prints, enter `ws://localhost:8765`, and click Connect.
 
 ## Run It Against a Real Engine
 
-Enter that engine's WebSocket URL instead. The engine must answer
-`rois.system.get_profile` with `component_profiles` for the client to render panels.
-Anything conformant works, including a Python gateway with adapters connected to it.
+Enter that engine's WebSocket URL instead. Any engine that implements the RoIS method
+catalog works: `rois.system.get_profile` answers with `component_profiles`, keyed by fully
+qualified ref, and the client renders a panel for each. The Python engine is moving to the
+catalog (in progress).
 
 ## Where It Fits
 
