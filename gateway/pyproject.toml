@@ -57,7 +57,7 @@ python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
-files = ["src", "tests"]
+files = ["src", "tests", "scripts"]
 # The openrois namespace package has no __init__.py at its root, so mypy resolves
 # openrois.gateway from src/ as an explicit package base.
 mypy_path = "src"

@@ -327,7 +327,7 @@ ran.
 | TypeScript SDK | `sdk/typescript` | `npm run build`, `npm test` |
 | Mock engine | `examples/mock-engine` | `npm test` |
 | Engine | `engine` | `pytest`, `ruff check src/ tests/` |
-| Gateway | `gateway` | `pytest`, `mypy`, `ruff check src/ tests/` |
+| Gateway | `gateway` | `pytest`, `mypy`, `ruff check src/ tests/ scripts/` |
 | Component packages | `components/*` | `ruff check .` |
 
 Some tests in `interfaces/python` cross-check the models against the normative RoIS

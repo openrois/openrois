@@ -1,0 +1,23 @@
+# The Docker images install Python packages from this repository. Everything else stays
+# out of the build context, and each image lists below what it copies.
+*
+
+# gateway/Dockerfile
+!interfaces/python
+!engine
+!gateway
+
+# examples/mock-adapter/Dockerfile
+!components/core
+!examples/mock-adapter
+
+# Local state inside the included directories.
+**/__pycache__
+**/*.py[cod]
+**/.venv
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/*.egg-info
+**/build
+**/dist

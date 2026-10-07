@@ -33,6 +33,30 @@ with code 0.
 The gateway does not authenticate its peers, so it binds loopback by default. Bind another
 interface only on a network you trust.
 
+## Docker
+
+```bash
+# From the repository root.
+docker build -f gateway/Dockerfile -t openrois-gateway .
+docker run --rm -p 127.0.0.1:8765:8765 openrois-gateway --log-level debug
+```
+
+Inside the container the gateway listens on every interface, so Docker can publish the port.
+Publish it on `127.0.0.1` unless the network is trusted. Settings come from
+`OPENROIS_GATEWAY_*` variables (`-e`) or flags after the image name.
+
+[`compose.yaml`](../compose.yaml) at the repository root runs the gateway with the
+[mock adapter](../examples/mock-adapter/README.md) behind it:
+
+```bash
+docker compose up --build
+python gateway/scripts/smoke.py
+```
+
+The smoke script connects as a client, waits until the adapter's components appear in the
+profile, runs a query, and waits for a relayed event. It needs only the `websockets`
+package and exits with 0 when every check passes.
+
 ## Configuration
 
 Each source overrides the one before it: the defaults, a YAML file, the environment, and the
@@ -88,15 +112,15 @@ asyncio.run(main())
 
 ```bash
 pip install -e ./interfaces/python -e ./engine -e "./gateway[dev]"
-cd gateway && pytest && mypy && ruff check src/ tests/
+cd gateway && pytest && mypy && ruff check src/ tests/ scripts/
 ```
 
 ## Status
 
-Alpha, pre-1.0, unstable API. The container image and the Docker Compose setup are in
-progress. Clients built on the RoIS method catalog, such as the TypeScript SDK and the HRI
-client, reach the gateway once the engine moves to the catalog (in progress). Health
-endpoints are planned for [Phase 5](https://openrois.org/docs/project/roadmap).
+Alpha, pre-1.0, unstable API. Clients built on the RoIS method catalog, such as the
+TypeScript SDK and the HRI client, reach the gateway once the engine moves to the catalog
+(in progress). Health endpoints and a compose healthcheck are planned for
+[Phase 5](https://openrois.org/docs/project/roadmap).
 
 ## License
 
