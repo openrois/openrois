@@ -29,17 +29,6 @@
       "QueryMessageProfile.schema.json",
       "RoISIdentifierType.schema.json"
     ],
-    "contract": [
-      "CommandRequest.schema.json",
-      "DiscoverRequest.schema.json",
-      "DiscoverResponse.schema.json",
-      "EventEnvelope.schema.json",
-      "InvokeResponse.schema.json",
-      "QueryRequest.schema.json",
-      "QueryResponse.schema.json",
-      "SubscribeRequest.schema.json",
-      "SubscribeResponse.schema.json"
-    ],
     "catalog": [
       "BindAnyParams.schema.json",
       "BindAnyResult.schema.json",

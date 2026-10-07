@@ -13,14 +13,11 @@ Public API:
     ChildEngine: The component contract for one child engine.
     WsServer: WebSocket server for a gateway.
     WsClient: WebSocket client for an adapter.
-    read_profile: Read a profile YAML file.
-    component_config: Build a per-component config dict from a profile.
 """
 
 from __future__ import annotations
 
 from openrois.engine.child import ChildEngine
-from openrois.engine.config import component_config, read_profile
 from openrois.engine.contract import ComponentContract
 from openrois.engine.engine import Engine
 from openrois.engine.local import LocalComponent, LocalComponents
@@ -37,6 +34,4 @@ __all__ = [
     "Session",
     "WsClient",
     "WsServer",
-    "component_config",
-    "read_profile",
 ]

@@ -28,17 +28,6 @@ from pathlib import Path
 from pydantic import BaseModel, TypeAdapter
 
 from openrois.interfaces.catalog import METHODS, catalog_document
-from openrois.interfaces.contract import (
-    CommandRequest,
-    DiscoverRequest,
-    DiscoverResponse,
-    EventEnvelope,
-    InvokeResponse,
-    QueryRequest,
-    QueryResponse,
-    SubscribeRequest,
-    SubscribeResponse,
-)
 from openrois.interfaces.common import ComponentStatus, StreamStatus
 from openrois.interfaces.components import profiles_document
 from openrois.interfaces.components.navigation import (
@@ -121,16 +110,6 @@ MODELS: list[type[BaseModel]] = [
     EventMessageProfile,
     HRIComponentProfile,
     HRIEngineProfileType,
-    # contract
-    DiscoverRequest,
-    DiscoverResponse,
-    CommandRequest,
-    InvokeResponse,
-    QueryRequest,
-    QueryResponse,
-    SubscribeRequest,
-    SubscribeResponse,
-    EventEnvelope,
     # catalog
     *CATALOG_MODELS,
     # components/person_detection
@@ -193,16 +172,6 @@ MODULE_MAP: dict[type, str] = {
     EventMessageProfile: "profiles",
     HRIComponentProfile: "profiles",
     HRIEngineProfileType: "profiles",
-    # contract
-    DiscoverRequest: "contract",
-    DiscoverResponse: "contract",
-    CommandRequest: "contract",
-    InvokeResponse: "contract",
-    QueryRequest: "contract",
-    QueryResponse: "contract",
-    SubscribeRequest: "contract",
-    SubscribeResponse: "contract",
-    EventEnvelope: "contract",
     # catalog
     **{cls: "catalog" for cls in CATALOG_MODELS},
     # components/person_detection

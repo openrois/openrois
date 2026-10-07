@@ -12,8 +12,8 @@ The lifecycle is:
    thread, when rclpy is installed.
 3. The client connects and answers the requests of the gateway, each in its own task,
    until the connection closes. It then reconnects with a growing delay.
-4. On cancellation, the rclpy thread stops and ``engine.stop()`` disconnects the
-   components.
+4. On cancellation, ``engine.stop()`` cancels the running commands and disconnects the
+   components, and then the rclpy thread stops.
 """
 
 from __future__ import annotations
@@ -93,8 +93,10 @@ class WsClient:
                 await asyncio.sleep(delay)
                 delay = min(delay * 1.5, _RECONNECT_MAX_DELAY)
         finally:
-            self._maybe_stop_rclpy()
+            # The engine stops first, while the rclpy nodes still spin, so a component
+            # that halts its robot over ROS 2 on cancellation gets its requests out.
             await self._engine.stop()
+            self._maybe_stop_rclpy()
             logger.info("WsClient stopped")
 
     async def _connect(self) -> ClientConnection:

@@ -39,7 +39,6 @@ pip install -e ./components/core
 | `ChildEngine` | The contract for one child engine, reached over the method catalog |
 | `WsServer` | WebSocket server, for a gateway |
 | `WsClient` | WebSocket client, for an adapter connecting out to a gateway |
-| `read_profile`, `component_config` | Load a profile YAML file and slice per-component configuration out of it |
 
 ## Usage
 

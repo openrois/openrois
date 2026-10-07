@@ -218,8 +218,3 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-
-# OpenRoIS
-# Ignore all profiles. The .example files are tracked.
-openrois-profile.yaml
-openrois-profile-*.yaml

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** remove the `OpenRoIS.Interfaces.Contract` and `OpenRoIS.Interfaces.Contract.Models` namespaces: `IComponentContract`, its request and response models, `EventEnvelope`, `EventSink` and the error classes. Every source file is generated, and the models of the method catalog are in `OpenRoIS.Interfaces.Catalog`.
+
 ## [0.1.0-alpha.3] - 2026-10-08
 
 ### Added

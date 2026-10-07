@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Breaking:** remove `ComponentStatusT` and `COMPONENT_STATUS_MAP`. A component status travels as its name, for example `READY`, as the XML profiles type it.
+- **Breaking:** remove the `openrois.interfaces.contract` module: `ComponentContract`, its request and response models, `EventEnvelope`, `EventSink` and the error classes, with their schemas and the `contract` module of `schema/manifest.json`. Engines and clients exchange the params and result models of the method catalog, and the component contract of an engine is part of `openrois-engine`.
 
 ## [0.1.0a3] - 2026-10-08
 

@@ -45,10 +45,6 @@
       "import": "./dist/profiles.js",
       "types": "./dist/profiles.d.ts"
     },
-    "./contract": {
-      "import": "./dist/contract.js",
-      "types": "./dist/contract.d.ts"
-    },
     "./catalog": {
       "import": "./dist/catalog.js",
       "types": "./dist/catalog.d.ts"

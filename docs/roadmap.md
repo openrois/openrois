@@ -79,11 +79,10 @@ catalog of `openrois-interfaces`, its `LocalComponents` and `ChildEngine` source
 the `WsServer` and `WsClient`. A gateway discovers its child engines with
 `rois.system.get_profile`, runs command sequences across them, and routes every id to the
 engine that owns it. A test suite runs the engine in process and over real sockets,
-including a gateway under a gateway. The mock adapter runs on it with the components of
-the TypeScript mock engine.
+including a gateway under a gateway. The mock adapter, the Kachaka components and the
+adapter template run on it, and the TypeScript SDK runs its sessions against it.
 
-**In progress:** the reference components and the adapter template on the new engine, and
-the first release of `openrois-engine` with `openrois-components-core`.
+**In progress:** the first release of `openrois-engine` with `openrois-components-core`.
 
 **Exit criteria:** the Python engine is the only dispatch implementation in the
 repository. The TypeScript proof of concept is removed, with its last version at tag
@@ -100,10 +99,9 @@ or a Git URL, and minimal health and status endpoints.
 `Engine` and `WsServer`, with configuration from a YAML file, the environment and flags,
 logging, and a graceful stop on SIGTERM and SIGINT. Its container image, and a Docker
 Compose file that starts it with the mock adapter, checked end to end by a smoke script on
-the RoIS method catalog.
+the RoIS method catalog. Docker Compose is the one-command quickstart.
 
-**In progress:** Docker Compose as the one-command quickstart, and the first release of
-`openrois-gateway`.
+**In progress:** the first release of `openrois-gateway`.
 
 ### Phase 7: Adapter Process (Planned)
 
@@ -166,8 +164,8 @@ gateway management API, never in the `Engine`.
 
 ### Component Registry Implementations (Recommendation)
 
-Two thin native implementations, one per language, sharing only the generated
-`Component Contract`, rather than one shared library bridged across languages.
+Two thin native implementations, one per language, sharing only the generated method
+catalog, rather than one shared library bridged across languages.
 
 ---
 

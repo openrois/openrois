@@ -196,22 +196,22 @@ describe("fixtures", () => {
 // ---------------------------------------------------------------------------
 
 describe("JsonRpcRequestSchema", () => {
-  it("accepts a search request (DiscoverRequest params)", () => {
+  it("accepts a search request (SearchParams)", () => {
     const result = JsonRpcRequestSchema.safeParse(searchRequest);
     expect(result.success).toBe(true);
   });
 
-  it("accepts a query request (QueryRequest params)", () => {
+  it("accepts a query request (QueryParams)", () => {
     const result = JsonRpcRequestSchema.safeParse(queryRequest);
     expect(result.success).toBe(true);
   });
 
-  it("accepts an execute request (CommandRequest params)", () => {
+  it("accepts an execute request (ExecuteParams)", () => {
     const result = JsonRpcRequestSchema.safeParse(executeRequest);
     expect(result.success).toBe(true);
   });
 
-  it("accepts a subscribe request (SubscribeRequest params)", () => {
+  it("accepts a subscribe request (SubscribeParams)", () => {
     const result = JsonRpcRequestSchema.safeParse(subscribeRequest);
     expect(result.success).toBe(true);
   });
@@ -287,12 +287,12 @@ describe("JsonRpcRequestSchema", () => {
 // ---------------------------------------------------------------------------
 
 describe("JsonRpcResponseSchema", () => {
-  it("accepts a search response (DiscoverResponse result)", () => {
+  it("accepts a search response (SearchResult)", () => {
     const result = JsonRpcResponseSchema.safeParse(searchResponse);
     expect(result.success).toBe(true);
   });
 
-  it("accepts a query response (QueryResponse result)", () => {
+  it("accepts a query response (QueryResult)", () => {
     const result = JsonRpcResponseSchema.safeParse(queryResponse);
     expect(result.success).toBe(true);
   });
@@ -302,7 +302,7 @@ describe("JsonRpcResponseSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts a subscribe response (SubscribeResponse result)", () => {
+  it("accepts a subscribe response (SubscribeResult)", () => {
     const result = JsonRpcResponseSchema.safeParse(subscribeResponse);
     expect(result.success).toBe(true);
   });
@@ -407,17 +407,17 @@ describe("JsonRpcErrorSchema", () => {
 // ---------------------------------------------------------------------------
 
 describe("JsonRpcNotificationSchema", () => {
-  it("accepts a person_detected event notification (EventEnvelope params)", () => {
+  it("accepts a person_detected event notification (NotifyEventParams)", () => {
     const result = JsonRpcNotificationSchema.safeParse(personDetectedNotification);
     expect(result.success).toBe(true);
   });
 
-  it("accepts a command completed notification (CompletedEvent params)", () => {
+  it("accepts a command completed notification (CompletedParams)", () => {
     const result = JsonRpcNotificationSchema.safeParse(commandCompletedNotification);
     expect(result.success).toBe(true);
   });
 
-  it("accepts a notify_error notification (NotifyErrorEvent params)", () => {
+  it("accepts a notify_error notification (NotifyErrorParams)", () => {
     const result = JsonRpcNotificationSchema.safeParse(notifyErrorNotification);
     expect(result.success).toBe(true);
   });

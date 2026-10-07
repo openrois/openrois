@@ -2,9 +2,9 @@
 
 A starting point for connecting your own robot, avatar, or service to OpenRoIS.
 
-An adapter is a sub HRI Engine: it hosts an `Engine`, registers the components it
-implements, and connects out to a gateway with `WsClient`. The gateway then presents your
-platform to every RoIS client through the same standard interfaces as any other.
+An adapter is a sub HRI Engine: it hosts an `Engine` with the components it implements,
+and connects out to a gateway with `WsClient`. The gateway then presents your platform to
+every RoIS client through the same standard interfaces as any other.
 
 ## Install
 
@@ -12,78 +12,59 @@ The Python packages are not published yet, so install them from a clone of the
 repository:
 
 ```bash
-pip install -e ./interfaces/python
-pip install -e ./components/core
-pip install -e ./engine
+pip install -e ./interfaces/python -e ./engine -e ./components/core
 ```
 
 ## Use the Template
 
-1. Copy this directory onto the machine that can reach your robot's API.
+1. Copy this directory onto a machine that can reach the API of your platform.
 
-2. Copy the profile and declare your engine and components:
+2. Edit `my_adapter.py`. Each component keeps its RoIS logic in its handlers and its calls
+   to your platform in private methods marked `IMPLEMENT YOUR CODE HERE`. Replace each
+   `NotImplementedError` with a call to the API of your platform (ROS 2 topics and
+   actions, HTTP, gRPC, serial):
 
-```bash
-cp openrois-profile.yaml.example openrois-profile.yaml
-```
+   ```python
+   async def _read_pose(self) -> tuple[float, float, float]:
+       pose = await self._api.get_pose()
+       return pose.x, pose.y, pose.theta
+   ```
 
-```yaml title="openrois-profile.yaml"
-engine:
-  id: my_robot
-  platform: my_platform
-  gateway_url: "ws://127.0.0.1:8765"
+3. Start a gateway, then run the adapter:
 
-components: {}
-```
+   ```bash
+   python my_adapter.py --robot-url http://192.168.0.10:8080 --engine-id my_robot
+   ```
 
-The `components` mapping passes per-component configuration (an API host, a topic name, a
-device path) to each component constructor. Leave it empty if there is nothing to
-configure.
+   `--gateway-url` defaults to `OPENROIS_GATEWAY_URL`, or `ws://127.0.0.1:8765`.
 
-3. Edit `my_adapter.py`. Each `@component` class has `@query`, `@invoke`, and `@subscribe`
-   methods marked `# IMPLEMENT YOUR CODE HERE #`. Replace the `NotImplementedError` with
-   calls to your platform's native API (ROS 2 topics and services, HTTP, gRPC, serial) and
-   return `Result` lists built with the `results` helpers.
+The adapter connects to the gateway, which reads its profile and lists `my_robot/navigation`,
+`my_robot/system_information` and `my_robot/battery`. Verify it with
+[`examples/hri-client`](../hri-client/README.md), which shows every component with its
+queries, commands and events.
 
-```python
-@query("robot_position")
-async def robot_position(self):
-    pose = await self._api.get_position()
-    return results.position(x=pose.x, y=pose.y, theta=pose.theta)
-```
+## The Three Components
 
-4. Start a gateway, then run the adapter:
+| Component | Type | What it shows |
+|-----------|------|---------------|
+| `MyNavigation` | `OMG::Navigation`, declared with `NAVIGATION_PROFILE` | A basic type implemented in part: `start` and `stop`, the `reached_target` event, and `CommandFailed` for a command that cannot run |
+| `MySystemInformation` | `OMG::SystemInformation`, declared with `SYSTEM_INFORMATION_PROFILE` | A basic type with queries only |
+| `Battery` | `MyOrganization::Battery`, declared with its own `BATTERY_PROFILE` | A type of your own, with a query, an event emitted by a monitor that the first subscription starts, and a parameter |
 
-```bash
-python my_adapter.py --config openrois-profile.yaml
-```
+The engine does the rest for every component: it stores the parameters from the profile
+defaults, answers `component_status`, reserves actuation components for the client that
+binds them, reports the end of each command with `rois.command.completed`, and serves the
+part of each profile the class implements. Components own their backend connections:
+open them in `connect()`, close them in `disconnect()`.
 
-The adapter connects to the gateway, registers its components, and answers RoIS calls.
-Verify it with [`examples/hri-client`](../hri-client/README.md), which lists every
-registered component and lets you run its queries, commands, and events.
-
-## How Registration Works
-
-```python
-for cls in COMPONENT_CLASSES:
-    meta = meta_from_decorators(cls)
-    engine.register_component(meta.ref, cls(component_config(profile, meta.ref)), meta)
-```
-
-`meta_from_decorators` reads the decorators and builds the component profile the gateway
-publishes, so the declaration in your code is the single source of truth. Components own
-their backend connections: open them in `connect()`, close them in `disconnect()`.
+See [`components/core`](../../components/core/README.md) for the decorators and
+[`examples/mock-adapter`](../mock-adapter/README.md) for an adapter that runs as is.
 
 ## Keep It Conformant
 
-Use the normative RoIS component names, and the message and parameter names from the RoIS
-component profiles. An adapter that invents its own names still runs, but applications
-written against the standard will not find what they expect. See
+Use the basic RoIS component types where one fits, through their profile constants in
+`openrois.interfaces.components`. A component type of your own is valid RoIS (section 12
+of the specification): give it an authority of your own and declare every message in its
+profile, so applications discover it the way they discover the basic types. See
 [components and adapters](https://openrois.org/docs/guides/components-and-adapters) and
 the [component reference](https://openrois.org/docs/reference/components).
-
-## Learn More
-
-- [Component framework](../../components/core/README.md)
-- [Engine](../../engine/README.md)
-- [Working example](../mock-adapter/README.md)

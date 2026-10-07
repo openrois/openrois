@@ -10,8 +10,8 @@ namespace OpenRoIS.Sdk.JsonRpc
   /// <remarks>
   /// Stateless static methods. The caller manages ID generation.
   /// The <c>params</c> argument is serialized as-is. The caller passes
-  /// a typed object (e.g. <c>CommandRequest</c>,
-  /// <c>DiscoverRequest</c>) or an anonymous object.
+  /// a typed object (e.g. <c>ExecuteParams</c>,
+  /// <c>SearchParams</c>) or an anonymous object.
   /// </remarks>
   public static class JsonRpcBuilder
   {

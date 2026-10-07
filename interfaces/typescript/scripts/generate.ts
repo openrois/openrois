@@ -8,10 +8,6 @@
  *   - A zod schema (e.g. `ResultSchema`)
  *   - An inferred type (e.g. `type Result = z.infer<typeof ResultSchema>`)
  *
- * The `ComponentContract` interface and error classes are NOT generated here.
- * They are hand-written in `src/contract.ts` because JSON Schema cannot represent
- * behavioral interfaces.
- *
  * It also reads `interfaces/schema/profiles.json` and emits the profile constants of
  * the basic components into `src/components/profiles.ts`.
  *
@@ -444,9 +440,6 @@ function isSelfReferencing(name: string, schema: JsonSchema, depth = 0): boolean
 
 /** The output file of a module, relative to `src/`. */
 function moduleOutFile(moduleName: string): string {
-  // The contract data models get their own file, because the ComponentContract
-  // interface itself is hand-written in src/contract.ts and re-exports them.
-  if (moduleName === "contract") return path.join("generated", "contract-models.ts");
   return `${moduleName}.ts`;
 }
 
@@ -846,7 +839,7 @@ function main(): void {
     console.log(`  components/profiles.ts (${profiles.profiles.length} profiles)`);
   }
 
-  console.log("\nDone. ComponentContract interface is hand-written in src/contract.ts.");
+  console.log("\nDone.");
 }
 
 main();

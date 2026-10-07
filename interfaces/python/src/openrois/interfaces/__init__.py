@@ -10,7 +10,6 @@ Modules:
     common:     Common component types (ComponentStatus, StreamStatus)
     service:    Service application notifications (NotifyEventParams, CompletedParams, ...)
     profiles:   Component profile schema models (from XML-Profiles.xsd)
-    contract:   ComponentContract protocol and its request, response and event models
     catalog:    Service-side method catalog: params and result models, interfaces
     condition:  The CQL2-Text subset of every condition: parsing, matching, building
     values:     How a typed value travels as a string: encode_value, decode_value
@@ -79,21 +78,6 @@ from openrois.interfaces.condition import (
     ConditionError,
     component_type_urn,
     parse_condition,
-)
-from openrois.interfaces.contract import (
-    CommandRequest,
-    ComponentContract,
-    ComponentContractError,
-    ComponentNotFoundError,
-    DiscoverRequest,
-    DiscoverResponse,
-    EventEnvelope,
-    EventSink,
-    InvokeResponse,
-    QueryRequest,
-    QueryResponse,
-    SubscribeRequest,
-    SubscribeResponse,
 )
 from openrois.interfaces.hri import (
     Argument,
@@ -239,23 +223,10 @@ __all__ = [
     # Values
     "decode_value",
     "encode_value",
-    # Component Contract
-    "ComponentContractError",
+    # Names of commands, queries, events, subscriptions and commands of a sequence
     "CommandId",
-    "CommandRequest",
     "CommandType",
-    "ComponentContract",
-    "ComponentNotFoundError",
-    "DiscoverRequest",
-    "DiscoverResponse",
-    "EventEnvelope",
-    "EventSink",
     "EventType",
-    "InvokeResponse",
-    "QueryRequest",
-    "QueryResponse",
     "QueryType",
     "SubscribeId",
-    "SubscribeRequest",
-    "SubscribeResponse",
 ]

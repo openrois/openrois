@@ -324,13 +324,13 @@ ran.
 | Python types | `interfaces/python` | `pytest`, `mypy src/`, `ruff check src/` |
 | TypeScript types | `interfaces/typescript` | `npm run build`, `npm test` |
 | C# types | `interfaces/csharp` | `dotnet build src/OpenRoIS.Interfaces`, `dotnet test tests/OpenRoIS.Interfaces.Tests` |
-| TypeScript SDK | `sdk/typescript` | `npm run build`, `npm test` |
+| TypeScript SDK | `sdk/typescript` | `npm run build`, `npm test`, and with `OPENROIS_GATEWAY_URL=ws://127.0.0.1:8765` against the Compose stack |
 | Mock engine | `examples/mock-engine` | `npm test` |
 | Engine | `engine` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Gateway | `gateway` | `pytest`, `mypy`, `ruff check src/ tests/ scripts/` |
 | Component SDK | `components/core` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Common components | `components/common` | `pytest`, `mypy`, `ruff check src/ tests/` |
-| Other component packages | `components/*` | `ruff check .` |
+| Kachaka components | `components/kachaka` | `pytest`, `mypy`, `ruff check src/ tests/` |
 
 Some tests in `interfaces/python` cross-check the models against the normative RoIS
 machine-readable files, which this repository does not redistribute: they carry OMG's

@@ -19,17 +19,6 @@ import pytest
 from pydantic import BaseModel, TypeAdapter
 
 from openrois.interfaces.catalog import METHODS, catalog_document
-from openrois.interfaces.contract import (
-    CommandRequest,
-    DiscoverRequest,
-    DiscoverResponse,
-    EventEnvelope,
-    InvokeResponse,
-    QueryRequest,
-    QueryResponse,
-    SubscribeRequest,
-    SubscribeResponse,
-)
 from openrois.interfaces.common import ComponentStatus, StreamStatus
 from openrois.interfaces.components import profiles_document
 from openrois.interfaces.components.navigation import (
@@ -108,16 +97,6 @@ MODELS: list[type[BaseModel]] = [
     EventMessageProfile,
     HRIComponentProfile,
     HRIEngineProfileType,
-    # contract
-    DiscoverRequest,
-    DiscoverResponse,
-    CommandRequest,
-    InvokeResponse,
-    QueryRequest,
-    QueryResponse,
-    SubscribeRequest,
-    SubscribeResponse,
-    EventEnvelope,
     # catalog, in method table order
     *[cls for m in METHODS for cls in (m.params, m.result)],
     # components/person_detection

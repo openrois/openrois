@@ -169,7 +169,7 @@ over WebSocket, and the gateway discovers its components by reading its profile.
 Components come from two sources:
 
 - **Community components**: shipped in component packages (e.g.,
-  `openrois_components.kachaka`). These implement commonly used functions for
+  `openrois.components.kachaka`). These implement commonly used functions for
   specific robot models to facilitate adoption.
 - **Adapter-local components**: created by adapter authors in their adapter's
   component directory. These are for custom behavior, experimental features, or
@@ -596,22 +596,22 @@ The **implementation** is the functional implementation behind the interface (th
 spec calls this the "functional implementation"). It does the actual work in the
 data plane: gRPC call to a robot, Nav2 action, Whisper transcription, YOLO inference.
 Each component owns its own connection to its backend, created in `connect()` and
-torn down in `disconnect()`. The framework calls `connect()` on each component
-after the adapter starts, and `disconnect()` before the adapter exits. Components
-that do not define `connect()`/`disconnect()` are skipped (backward compatible).
+torn down in `disconnect()`. The engine calls `connect()` on each component
+when it starts, and `disconnect()` when it stops. `Component` provides both as methods
+that do nothing, so a component overrides only what it needs.
 
 The adapter is a thin container. It hosts a sub HRI Engine (the engine with local
-components), registers component classes, and routes JSON-RPC to the right
-handler. It does not create shared backends, does not hold shared client
+components), adds the component instances with `Engine.add_component`, and serves them
+to the gateway. It does not create shared backends, does not hold shared client
 references, and does not manage connection state. This makes components truly
 plug-and-play: import, configure, play. A component can be moved between
 adapters without changes because it does not depend on adapter internals.
 
 ### Component-Owned Connections
 
-Each component owns its state in `__init__`, read from its per-component config
-dict. Each component owns its own connection to its backend, created in `connect()`
-and torn down in `disconnect()`. The adapter has no shared state. Components are
+Each component takes its configuration as arguments of its constructor and owns its
+state from there. Each component owns its own connection to its backend, created in
+`connect()` and torn down in `disconnect()`. The adapter has no shared state. Components are
 plug-and-play: import, configure, play.
 
 ### Partial Spec Implementation
@@ -1074,8 +1074,8 @@ openrois/
 | `docs/` | Documentation. |
 
 Adapters for specific robots live in separate repositories. They consume the
-SDK and component packages. The adapter repository owns the profile YAML, the
-adapter class, and any user-defined components. Packaged components live in the
+SDK and component packages. The adapter repository owns the adapter script, its
+configuration, and any user-defined components. Packaged components live in the
 monorepo under `components/` and are installed as dependencies.
 
 ---

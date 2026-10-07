@@ -33,8 +33,8 @@ Python (Pydantic) ──export_schema.py──► JSON Schema ──Generator─
 
 The schema drift test (`python/tests/test_schema_drift.py`) verifies that the committed
 schemas still match what the Pydantic models produce. The C# and TypeScript sources are
-never hand-written, except `typescript/src/contract.ts` and `csharp/src/OpenRoIS.Interfaces/Contract.cs`,
-because JSON Schema cannot express a behavioral interface.
+never hand-written, except `typescript/src/condition.ts`, the CQL2-Text parser, and the
+TypeScript `index.ts` barrels.
 
 ## Packages
 
@@ -49,8 +49,8 @@ None are published yet. Install them from a clone, as each package README descri
 ## What Is Covered
 
 The framework types are complete: return codes, results, parameters, arguments, command
-units, component and engine profiles, event envelopes, and the `ComponentContract` request
-and response models.
+units, and component and engine profiles, with the profile constants of the basic
+components the package models.
 
 The method catalog covers the service side. It has a params and a result model for every
 method of SystemIF, CommandIF, QueryIF and EventIF, the method names, the notifications an

@@ -22,7 +22,6 @@ classifiers = [
 dependencies = [
     "openrois-interfaces>=0.1.0a3",
     "websockets>=14.0",
-    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -32,7 +31,6 @@ dev = [
     "pytest>=8.4",
     "pytest-asyncio>=1.0",
     "ruff>=0.4",
-    "types-PyYAML>=6.0",
 ]
 
 [project.urls]

@@ -112,7 +112,7 @@ namespace OpenRoIS.Sdk.JsonRpc
     /// <summary>
     /// Return value of the method. Shape is method-specific. Opaque
     /// to the JSON-RPC layer. The caller deserializes to the specific
-    /// response type (e.g. <c>DiscoverResponse</c>).
+    /// result type (e.g. <c>SearchResult</c>).
     /// </summary>
     [JsonPropertyName("result")]
     public JsonElement Result { get; set; } = default;

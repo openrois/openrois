@@ -27,20 +27,6 @@ describe("Export completeness", () => {
     expect(openrois.ProfileChangedParamsSchema).toBeDefined();
   });
 
-  it("exports Component Contract types", () => {
-    expect(openrois.ComponentContractError).toBeDefined();
-    expect(openrois.ComponentNotFoundError).toBeDefined();
-    expect(openrois.DiscoverRequestSchema).toBeDefined();
-    expect(openrois.DiscoverResponseSchema).toBeDefined();
-    expect(openrois.CommandRequestSchema).toBeDefined();
-    expect(openrois.InvokeResponseSchema).toBeDefined();
-    expect(openrois.QueryRequestSchema).toBeDefined();
-    expect(openrois.QueryResponseSchema).toBeDefined();
-    expect(openrois.SubscribeRequestSchema).toBeDefined();
-    expect(openrois.SubscribeResponseSchema).toBeDefined();
-    expect(openrois.EventEnvelopeSchema).toBeDefined();
-  });
-
   it("exports Profile types", () => {
     expect(openrois.HRIComponentProfileSchema).toBeDefined();
     expect(openrois.ComponentFunctionSchema).toBeDefined();

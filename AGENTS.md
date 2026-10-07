@@ -34,10 +34,9 @@ Python (Pydantic) → JSON Schema → C# + TypeScript
 ```
 
 - **Edit:** `interfaces/python/src/openrois/interfaces/*.py`
-- **Never edit:** `interfaces/schema/`,
-  `interfaces/csharp/src/OpenRoIS.Interfaces/Generated/`,
-  `interfaces/typescript/src/` (except `contract.ts`, `condition.ts` and the `index.ts`
-  barrels, which are hand-written)
+- **Never edit:** `interfaces/schema/`, `interfaces/csharp/src/OpenRoIS.Interfaces/`,
+  `interfaces/typescript/src/` (except `condition.ts` and the `index.ts` barrels, which
+  are hand-written)
 
 After editing the Python models, run the full pipeline and the tests:
 
@@ -69,7 +68,8 @@ its description. The IDL and XSD cross-check tests fail on any other addition.
 | Gateway | `gateway` | `pip install -e ../interfaces/python -e ../engine -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/ scripts/` |
 | Component SDK | `components/core` | `pip install -e ../../interfaces/python -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | Common components | `components/common` | `pip install -e ../../interfaces/python -e ../core -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
-| TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` |
+| Kachaka components | `components/kachaka` | `pip install -e ../../interfaces/python -e ../../engine -e ../core -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
+| TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway) |
 | Mock engine | `examples/mock-engine` | `npm install`, `npm test` |
 
 Some tests in `interfaces/python` cross-check the models against the normative RoIS

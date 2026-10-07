@@ -63,9 +63,10 @@ robots and virtual agents alike.
 - **Recursive engine.** A single `Engine` class realizes both the main and the sub HRI
   Engine roles defined by RoIS. The gateway and every adapter share one dispatch
   implementation.
-- **Five-method Component Contract.** The engine depends only on `discover`, `invoke`,
-  `query`, `subscribe`, and `unsubscribe`. ROS 2, gRPC, game engines, and cloud APIs
-  stay inside adapters, so adding a paradigm never touches the core.
+- **One component contract.** The engine reaches every component through one
+  interface, whether the component runs in its own process or behind a child engine.
+  ROS 2, gRPC, game engines, and cloud APIs stay inside components, so adding a paradigm
+  never touches the core.
 - **JSON-RPC 2.0 over WebSocket.** Every operation of the five RoIS interfaces maps to
   a namespaced method (`rois.system.*`, `rois.command.*`, `rois.query.*`,
   `rois.event.*`, `rois.stream.*`). The control plane works from browsers and across
@@ -85,7 +86,7 @@ robots and virtual agents alike.
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/openrois-architecture-dark.svg">
-    <img src="docs/assets/openrois-architecture.svg" alt="OpenRoIS architecture: service applications use an SDK to reach the gateway, which hosts the main HRI Engine and forwards calls over the Component Contract to adapters hosting sub HRI Engines for robots, avatars, and services." width="860">
+    <img src="docs/assets/openrois-architecture.svg" alt="OpenRoIS architecture: service applications use an SDK to reach the gateway, which hosts the main HRI Engine and forwards calls over JSON-RPC to adapters hosting sub HRI Engines for robots, avatars, and services." width="860">
   </picture>
 </p>
 
@@ -103,29 +104,35 @@ details.
 
 ## Quickstart
 
-Run a RoIS engine with simulated components and inspect it from the browser. You need
-[Node.js](https://nodejs.org/) 22 or later.
+Run a gateway with a simulated robot behind it, and inspect it from the browser. You need
+[Docker](https://docs.docker.com/get-started/get-docker/) with Compose, and
+[Node.js](https://nodejs.org/) 22 or later for the web inspector.
 
 ```bash
 git clone https://github.com/openrois/openrois.git
 cd openrois
 
-# Build the generated TypeScript types and the TypeScript SDK.
-(cd interfaces/typescript && npm install && npm run build)
-(cd sdk/typescript && npm install && npm run build)
-
-# Terminal 1: start a RoIS engine with simulated components on ws://127.0.0.1:8765.
-cd examples/mock-engine && npm install && npm start
+# Terminal 1: the gateway on ws://127.0.0.1:8765, with the mock adapter behind it.
+docker compose up --build
 ```
 
 ```bash
-# Terminal 2: start the web inspector, then open http://localhost:5173 and click Connect.
+# Terminal 2: build the types and the SDK, start the web inspector, then open
+# http://localhost:5173 and click Connect.
+(cd interfaces/typescript && npm install && npm run build)
+(cd sdk/typescript && npm install && npm run build)
 cd examples/hri-client && npm install && npm run dev
 ```
 
 The inspector reads the engine profile and renders every component it finds, with its
-queries, parameters, commands, and events. Nothing in the client is specific to the components on
-the other side.
+queries, parameters, commands, and events: `mock/navigation`, `mock/person_detection`
+and `mock/system_information`, served by the mock adapter, an engine of its own below the
+gateway. Nothing in the client is specific to the components on the other side.
+`python gateway/scripts/smoke.py` checks the same stack from the command line.
+
+To develop a client without Docker, the [mock engine](examples/mock-engine/README.md)
+serves the same components from one Node.js process:
+`cd examples/mock-engine && npm install && npm start`.
 
 <p align="center">
   <img src="docs/assets/hri-client-demo.gif" alt="Screen recording of the OpenRoIS HRI Client connecting to the mock engine, querying components, binding, subscribing to events, and executing a command." width="760">

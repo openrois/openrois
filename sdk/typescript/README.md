@@ -146,6 +146,15 @@ npm run typecheck
 npm run lint
 ```
 
+`tests/gateway.test.ts` runs full client sessions against a live gateway with the mock
+adapter behind it, such as the Docker Compose stack at the repository root. It runs when
+`OPENROIS_GATEWAY_URL` names the gateway, and is skipped otherwise:
+
+```bash
+docker compose up --build -d   # from the repository root
+OPENROIS_GATEWAY_URL=ws://127.0.0.1:8765 npm test
+```
+
 ## License
 
 Apache-2.0. See [LICENSE](./LICENSE).
