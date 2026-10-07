@@ -7,13 +7,20 @@
  *   - Round-trip: serialize to JSON, parse back, schema still accepts it.
  *   - Edge cases from the JSON-RPC 2.0 spec (null id, missing params, etc.)
  *
- * All test fixtures use field names from the canonical JSON Schema files in
- * interfaces/schema/ so the tests validate real RoIS payloads, not made-up ones.
+ * The fixtures carry params and results that the method catalog accepts, so the
+ * envelopes are checked with real RoIS payloads.
  *
  * Run with: npx vitest run
  */
 
 import { describe, it, expect } from "vitest";
+import {
+  JsonRpcErrorCode as CatalogJsonRpcErrorCode,
+  RoISMethodSchemas,
+  RoISNotificationSchemas,
+  type RoISMethod,
+  type RoISNotification,
+} from "@openrois/interfaces";
 import {
   JsonRpcRequestSchema,
   JsonRpcResponseSchema,
@@ -22,20 +29,16 @@ import {
   JsonRpcErrorObjectSchema,
   JsonRpcErrorCode,
   JSONRPC_VERSION,
-  RoISNamespace,
   type JsonRpcRequest,
   type JsonRpcResponse,
   type JsonRpcError,
   type JsonRpcNotification,
-  type RoISMethod,
 } from "../src/jsonrpc";
 
 // ---------------------------------------------------------------------------
-// Fixtures -- minimal valid objects using real schema field names
+// Fixtures: envelopes whose params and results are real catalog payloads
 // ---------------------------------------------------------------------------
 
-// Request: rois.command.search -> params matches DiscoverRequest.schema.json
-// DiscoverRequest has: { condition: string (default "") }
 const searchRequest: JsonRpcRequest = {
   jsonrpc: "2.0",
   id: "req-001",
@@ -43,88 +46,68 @@ const searchRequest: JsonRpcRequest = {
   params: { condition: "" },
 };
 
-// Request: rois.query.query -> params matches QueryRequest.schema.json
-// QueryRequest has: { component_ref, query_type, condition? }
 const queryRequest: JsonRpcRequest = {
   jsonrpc: "2.0",
   id: "req-002",
   method: "rois.query.query",
   params: {
-    component_ref: "PersonDetection_0",
     query_type: "component_status",
+    condition: "component_ref = 'reachy_real/head'",
   },
 };
 
-// Request: rois.command.execute -> params matches CommandRequest.schema.json
-// CommandRequest has: { component_ref, command_type, command_id, arguments?, parameters?, command_unit_sequence? }
 const executeRequest: JsonRpcRequest = {
   jsonrpc: "2.0",
   id: "req-003",
   method: "rois.command.execute",
   params: {
-    component_ref: "Navigation_0",
-    command_type: "set_parameter",
-    command_id: "cmd-nav-001",
-    parameters: [
-      { name: "target_positions", data_type_ref: "string[]", value: '["3.0,1.5,0.0"]' },
-      { name: "time_limit", data_type_ref: "int", value: "30" },
-      { name: "routing_policy", data_type_ref: "string", value: "time" },
+    command_unit_list: [
+      { component_ref: "reachy_real/head", command_type: "start", command_id: "nod-1" },
+      {
+        command_list: [
+          { component_ref: "reachy_real/head", command_type: "stop", command_id: "nod-2" },
+          { component_ref: "reachy_sim/head", command_type: "stop", command_id: "nod-3" },
+        ],
+        delay_time: 500,
+      },
     ],
   },
 };
 
-// Request: rois.event.subscribe -> params matches SubscribeRequest.schema.json
-// SubscribeRequest has: { component_ref, event_type, condition? }
 const subscribeRequest: JsonRpcRequest = {
   jsonrpc: "2.0",
   id: "req-004",
   method: "rois.event.subscribe",
   params: {
-    component_ref: "PersonDetection_0",
     event_type: "person_detected",
-    condition: "",
+    condition: "component_ref = 'reachy_real/camera'",
   },
 };
 
-// Response: result matches DiscoverResponse.schema.json
-// DiscoverResponse has: { return_code (default "OK"), component_ref_list }
 const searchResponse: JsonRpcResponse = {
   jsonrpc: "2.0",
   id: "req-001",
   result: {
     return_code: "OK",
-    component_ref_list: ["PersonDetection_0", "Navigation_0", "SystemInformation_0"],
+    component_ref_list: ["reachy_real/head", "reachy_sim/head", "reachy_real/camera"],
   },
 };
 
-// Response: result matches QueryResponse.schema.json
-// QueryResponse has: { return_code, results: Result[] }
-// where Result is: { name, data_type_ref, value }
 const queryResponse: JsonRpcResponse = {
   jsonrpc: "2.0",
   id: "req-002",
   result: {
     return_code: "OK",
-    results: [
-      { name: "status", data_type_ref: "ComponentStatus", value: "READY" },
-    ],
+    results: [{ name: "status", data_type_ref: "ComponentStatus", value: "READY" }],
   },
 };
 
-// Response: result matches InvokeResponse.schema.json
-// InvokeResponse has: { return_code, command_id, results? }
-const invokeResponse: JsonRpcResponse = {
+const executeResponse: JsonRpcResponse = {
   jsonrpc: "2.0",
   id: "req-003",
-  result: {
-    return_code: "OK",
-    command_id: "cmd-nav-001",
-    results: [],
-  },
+  result: { return_code: "OK" },
 };
 
-// Response: result matches SubscribeResponse.schema.json
-// SubscribeResponse has: { return_code, subscribe_id }
 const subscribeResponse: JsonRpcResponse = {
   jsonrpc: "2.0",
   id: "req-004",
@@ -139,53 +122,46 @@ const methodNotFoundError: JsonRpcError = {
   jsonrpc: "2.0",
   id: "req-099",
   error: {
-    code: JsonRpcErrorCode.MethodNotFound,
-    message: "Method not found: rois.command.fly",
+    code: JsonRpcErrorCode.METHOD_NOT_FOUND,
+    message: "Method not found: rois.stream.connect_stream",
   },
 };
 
-// Error response: RoIS-level bad parameter (carried in data)
-const badParameterError: JsonRpcError = {
+// Error response: params that fail validation, with engine-defined data
+const invalidParamsError: JsonRpcError = {
   jsonrpc: "2.0",
   id: "req-005",
   error: {
-    code: JsonRpcErrorCode.InvalidParams,
-    message: "Invalid component_ref",
-    data: { return_code: "BAD_PARAMETER" },
+    code: JsonRpcErrorCode.INVALID_PARAMS,
+    message: "Invalid params for rois.command.bind",
+    data: { field: "component_ref", issue: "required" },
   },
 };
 
-// Notification: rois.event.notify -> params matches EventEnvelope.schema.json
-// EventEnvelope has: { event_id, event_type, subscribe_id?, component_ref?, expire?,
-//                      payload: Result[], error_type?, completed_status?, stream_status?, component_status? }
 const personDetectedNotification: JsonRpcNotification = {
   jsonrpc: "2.0",
-  method: "rois.event.notify",
+  method: "rois.event.notify_event",
   params: {
     event_id: "evt-001",
     event_type: "person_detected",
     subscribe_id: "sub-pd-001",
-    component_ref: "PersonDetection_0",
-    payload: [
+    expire: "",
+    results: [
       { name: "timestamp", data_type_ref: "DateTime", value: "2026-06-25T10:30:00Z" },
       { name: "number", data_type_ref: "int", value: "2" },
     ],
   },
 };
 
-// Notification: rois.command.completed -> params matches CompletedEvent.schema.json
-// CompletedEvent has: { command_id, status: CompletedStatus }
 const commandCompletedNotification: JsonRpcNotification = {
   jsonrpc: "2.0",
   method: "rois.command.completed",
   params: {
-    command_id: "cmd-nav-001",
+    command_id: "nod-1",
     status: "OK",
   },
 };
 
-// Notification: rois.system.notify_error -> params matches NotifyErrorEvent.schema.json
-// NotifyErrorEvent has: { error_id, error_type: ErrorType }
 const notifyErrorNotification: JsonRpcNotification = {
   jsonrpc: "2.0",
   method: "rois.system.notify_error",
@@ -194,6 +170,26 @@ const notifyErrorNotification: JsonRpcNotification = {
     error_type: "COMPONENT_NOT_RESPONDING",
   },
 };
+
+describe("fixtures", () => {
+  it("carry params and results that the catalog accepts", () => {
+    const requests = [searchRequest, queryRequest, executeRequest, subscribeRequest];
+    const responses = [searchResponse, queryResponse, executeResponse, subscribeResponse];
+    requests.forEach((request, index) => {
+      const schemas = RoISMethodSchemas[request.method as RoISMethod];
+      expect(schemas.params.safeParse(request.params).success).toBe(true);
+      expect(schemas.result.safeParse(responses[index].result).success).toBe(true);
+    });
+    for (const notification of [
+      personDetectedNotification,
+      commandCompletedNotification,
+      notifyErrorNotification,
+    ]) {
+      const schemas = RoISNotificationSchemas[notification.method as RoISNotification];
+      expect(schemas.params.safeParse(notification.params).success).toBe(true);
+    }
+  });
+});
 
 // ---------------------------------------------------------------------------
 // JsonRpcRequest
@@ -301,8 +297,8 @@ describe("JsonRpcResponseSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts an invoke response (InvokeResponse result)", () => {
-    const result = JsonRpcResponseSchema.safeParse(invokeResponse);
+  it("accepts an execute response", () => {
+    const result = JsonRpcResponseSchema.safeParse(executeResponse);
     expect(result.success).toBe(true);
   });
 
@@ -356,8 +352,8 @@ describe("JsonRpcErrorSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts an error carrying RoIS return_code in data field", () => {
-    const result = JsonRpcErrorSchema.safeParse(badParameterError);
+  it("accepts an error carrying engine-defined data", () => {
+    const result = JsonRpcErrorSchema.safeParse(invalidParamsError);
     expect(result.success).toBe(true);
   });
 
@@ -366,7 +362,7 @@ describe("JsonRpcErrorSchema", () => {
       jsonrpc: "2.0",
       id: null,
       error: {
-        code: JsonRpcErrorCode.ParseError,
+        code: JsonRpcErrorCode.PARSE_ERROR,
         message: "Invalid JSON",
       },
     };
@@ -385,18 +381,18 @@ describe("JsonRpcErrorSchema", () => {
   it("rejects an error with missing error.message", () => {
     const result = JsonRpcErrorSchema.safeParse({
       ...methodNotFoundError,
-      error: { code: JsonRpcErrorCode.InternalError },
+      error: { code: JsonRpcErrorCode.INTERNAL_ERROR },
     });
     expect(result.success).toBe(false);
   });
 
   it("round-trips through JSON.stringify / JSON.parse", () => {
-    const json = JSON.stringify(badParameterError);
+    const json = JSON.stringify(invalidParamsError);
     const parsed = JSON.parse(json);
     const result = JsonRpcErrorSchema.safeParse(parsed);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.error.code).toBe(JsonRpcErrorCode.InvalidParams);
+      expect(result.data.error.code).toBe(JsonRpcErrorCode.INVALID_PARAMS);
     }
   });
 
@@ -454,7 +450,7 @@ describe("JsonRpcNotificationSchema", () => {
     const result = JsonRpcNotificationSchema.safeParse(parsed);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.method).toBe("rois.event.notify");
+      expect(result.data.method).toBe("rois.event.notify_event");
     }
   });
 
@@ -477,11 +473,11 @@ describe("JsonRpcNotificationSchema", () => {
 describe("JsonRpcErrorObjectSchema", () => {
   it("accepts all standard error codes defined in JsonRpcErrorCode", () => {
     const standardCodes = [
-      JsonRpcErrorCode.ParseError,
-      JsonRpcErrorCode.InvalidRequest,
-      JsonRpcErrorCode.MethodNotFound,
-      JsonRpcErrorCode.InvalidParams,
-      JsonRpcErrorCode.InternalError,
+      JsonRpcErrorCode.PARSE_ERROR,
+      JsonRpcErrorCode.INVALID_REQUEST,
+      JsonRpcErrorCode.METHOD_NOT_FOUND,
+      JsonRpcErrorCode.INVALID_PARAMS,
+      JsonRpcErrorCode.INTERNAL_ERROR,
     ];
     for (const code of standardCodes) {
       const result = JsonRpcErrorObjectSchema.safeParse({ code, message: "test" });
@@ -499,63 +495,28 @@ describe("JsonRpcErrorObjectSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts a data field carrying RoIS ReturnCode", () => {
+  it("accepts an engine-defined data field", () => {
     const result = JsonRpcErrorObjectSchema.safeParse({
-      code: JsonRpcErrorCode.InvalidParams,
-      message: "Component not found",
-      data: { return_code: "UNSUPPORTED", component_ref: "UnknownComponent_0" },
+      code: JsonRpcErrorCode.INVALID_PARAMS,
+      message: "Invalid params for rois.query.query",
+      data: { field: "query_type", issue: "required" },
     });
     expect(result.success).toBe(true);
   });
 });
 
 // ---------------------------------------------------------------------------
-// RoIS namespace constants and method type
+// JSON-RPC error codes
 // ---------------------------------------------------------------------------
 
-describe("RoISNamespace", () => {
-  it('has the five interface namespaces matching the architecture', () => {
-    expect(RoISNamespace.System).toBe("rois.system");
-    expect(RoISNamespace.Command).toBe("rois.command");
-    expect(RoISNamespace.Query).toBe("rois.query");
-    expect(RoISNamespace.Event).toBe("rois.event");
-    expect(RoISNamespace.Stream).toBe("rois.stream");
-  });
-});
-
-describe("RoISMethod type", () => {
-  // Compile-time check: assigning known method strings to the union type
-  // should not cause a type error. This test verifies that the constant
-  // literals are assignable.
-  it("accepts known RoIS method strings at compile time", () => {
-    const methods: RoISMethod[] = [
-      "rois.system.connect",
-      "rois.system.disconnect",
-      "rois.system.get_profile",
-      "rois.system.get_error_detail",
-      "rois.system.notify_error",
-      "rois.command.search",
-      "rois.command.bind",
-      "rois.command.bind_any",
-      "rois.command.release",
-      "rois.command.get_parameter",
-      "rois.command.set_parameter",
-      "rois.command.execute",
-      "rois.command.get_command_result",
-      "rois.command.completed",
-      "rois.query.query",
-      "rois.event.subscribe",
-      "rois.event.unsubscribe",
-      "rois.event.get_event_detail",
-      "rois.event.notify",
-      "rois.stream.connect_stream",
-      "rois.stream.disconnect_stream",
-      "rois.stream.suspend_stream",
-      "rois.stream.resume_stream",
-      "rois.stream.query_stream_status",
-      "rois.stream.notify_status",
-    ];
-    expect(methods.length).toBe(25);
+describe("JsonRpcErrorCode", () => {
+  it("is the catalog's table of JSON-RPC 2.0 codes", () => {
+    expect(JsonRpcErrorCode).toBe(CatalogJsonRpcErrorCode);
+    expect(JsonRpcErrorCode.PARSE_ERROR).toBe(-32700);
+    expect(JsonRpcErrorCode.INVALID_REQUEST).toBe(-32600);
+    expect(JsonRpcErrorCode.METHOD_NOT_FOUND).toBe(-32601);
+    expect(JsonRpcErrorCode.INVALID_PARAMS).toBe(-32602);
+    expect(JsonRpcErrorCode.INTERNAL_ERROR).toBe(-32603);
   });
 });
 

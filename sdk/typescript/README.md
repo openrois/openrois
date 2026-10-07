@@ -3,7 +3,7 @@
 TypeScript client SDK for [OpenRoIS](https://openrois.org/), an open-source middleware
 implementing the [OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0).
 
-Connect to an OpenRoIS gateway, discover the components of every connected robot, avatar,
+Connect to an OpenRoIS engine, discover the components of every connected robot, avatar,
 or service, and drive them through the standard RoIS interfaces. Runs in browsers and in
 Node.js.
 
@@ -29,53 +29,91 @@ Node.js.
 ## Quickstart
 
 ```ts
-import { RoISClient } from "@openrois/sdk";
+import { RoISClient, componentRef, componentType } from "@openrois/sdk";
 
 const client = await RoISClient.connect("ws://localhost:8765");
 
-// Discover what is connected, then pick a component by type.
-const refs = await client.search();
-const nav = refs.find((ref) => ref.includes("Navigation"))!;
+// Find a component by type, and select it by ref in later calls.
+const [nav] = await client.search(componentType({ authority: "OMG", code: "Navigation" }));
+const target = componentRef(nav);
 
 // Read state.
-const status = await client.query(nav, "component_status");
+const status = await client.query("component_status", target);
 
 // React to events.
-client.on("reached_target", (n) => console.log(n.params));
-await client.subscribe(nav, "reached_target");
+client.on("reached_target", (event) => console.log(event.results));
+await client.subscribe("reached_target", target);
 
-// Reserve, command, release.
+// Reserve, configure, command, release.
 await client.bind(nav);
-await client.execute(nav, { command_type: "start" });
+await client.setParameter(nav, [
+  { name: "target_positions", data_type_ref: "string[]", value: '["kitchen"]' },
+]);
+const [commandId] = await client.execute([{ component_ref: nav, command_type: "start" }]);
+client.on("rois.command.completed", ({ command_id, status }) => {
+  if (command_id === commandId) console.log("navigation ended:", status);
+});
 await client.release(nav);
 
 await client.disconnect();
 ```
 
-Run it against `examples/mock-engine` for a gateway with simulated components.
+Run it against `examples/mock-engine` for an engine with simulated components.
 
 ## API
 
+`RoISClient` has one method per operation of the RoIS method catalog. Each takes the
+operation's IDL parameters in IDL order, validates them and the result against the
+catalog schemas in `@openrois/interfaces`, and returns the result's out parameters.
+
 | RoIS interface | Methods |
 |----------------|---------|
-| System | `RoISClient.connect()`, `disconnect()`, `getProfile()`, `getErrorDetail()` |
-| Command | `search()`, `bind()`, `bindAny()`, `release()`, `getParameter()`, `setParameter()`, `execute()`, `getCommandResult()` |
-| Query | `query()` |
-| Event | `subscribe()`, `unsubscribe()`, `getEventDetail()` |
+| System | `RoISClient.connect(url)`, `disconnect()`, `getProfile(condition?)`, `getErrorDetail(errorId, condition?)` |
+| Command | `search(condition?)`, `bind(ref)`, `bindAny(condition?)`, `release(ref)`, `getParameter(ref)`, `setParameter(ref, parameters)`, `execute(commandUnitList)`, `getCommandResult(commandId, condition?)` |
+| Query | `query(queryType, condition?)` |
+| Event | `subscribe(eventType, condition?)`, `unsubscribe(subscribeId)`, `getEventDetail(eventId, condition?)` |
 | Streaming | Planned |
 
-| Event | Emitted for |
-|-------|-------------|
-| `<event_type>` | Each RoIS event under its own type, for example `reached_target` |
-| `rois.event.notify` | Every RoIS event |
-| `rois.command.completed` | Command completion |
-| `rois.system.notify_error` | Engine errors |
-| `notification` | Every JSON-RPC notification, including `rois.system.profile_changed` |
-| `close` | The connection closed |
+- `getProfile()` returns `{ profile, component_profiles }`: the engine profile and the
+  profile of every component it lists, keyed by fully qualified ref.
+- `execute()` takes a `command_unit_list`: commands that run in order, and
+  `{ command_list, delay_time }` groups whose commands run at the same time. A command
+  without a `command_id` gets a UUID. `execute()` returns every `command_id` in order, and
+  each command ends with a `rois.command.completed` notification.
+- `query()` and `subscribe()` go to the one component that declares the query or event
+  type and matches the condition.
 
-Some RoIS operations are not implemented by the engine yet. The
-[wire protocol reference](https://openrois.org/docs/reference/wire-protocol) lists the
-status of each one.
+`examples/mock-engine` implements this method catalog. The Python engine is moving to it
+(in progress).
+
+### Conditions
+
+Every `condition` is a string in the OpenRoIS subset of CQL2-Text: `=` and `LIKE`
+comparisons, joined by `AND`, over `component_ref` and `component_type`. An empty string
+is no filter. The builders quote values for you:
+
+| Builder | Writes |
+|---------|--------|
+| `componentRef("reachy_real/head")` | `component_ref = 'reachy_real/head'` |
+| `componentType({ authority: "OMG", code: "Navigation" })` | `component_type = 'urn:x-rois:def:component:OMG::Navigation'` |
+| `like(COMPONENT_REF, "reachy_real/%")` | `component_ref LIKE 'reachy_real/%'` |
+| `allOf(a, b)` | `a AND b` |
+
+### Events
+
+Listeners of catalog notifications receive the validated params, typed from
+`RoISNotificationMap`.
+
+| Event | Listener receives |
+|-------|-------------------|
+| `rois.event.notify_event` | `NotifyEventParams`, for every event of a subscription |
+| `<event_type>` | The same `NotifyEventParams`, under the event's type, for example `reached_target` |
+| `rois.command.completed` | `CompletedParams`, when a command ends |
+| `rois.system.notify_error` | `NotifyErrorParams`, when the engine reports an error |
+| `rois.system.profile_changed` | `ProfileChangedParams`, when components join or leave |
+| `notification` | The JSON-RPC envelope of every notification |
+| `close` | `(code, reason)` when the connection closes |
+| `error` | Transport faults, and notifications whose params fail validation |
 
 ## Error Handling
 
@@ -83,7 +121,7 @@ status of each one.
 import { RoISClient, RoISError } from "@openrois/sdk";
 
 try {
-  await client.bind("robot_1/Navigation");
+  await client.bind("robot_1/navigation");
 } catch (err) {
   if (err instanceof RoISError && err.returnCode === "OUT_OF_RESOURCES") {
     // Another application holds the reservation.
@@ -96,7 +134,8 @@ try {
 | `RoISError` | A RoIS operation returns a code other than `OK` |
 | `ConnectionError` | The WebSocket cannot be opened, or closes unexpectedly |
 | `RequestTimeoutError` | No response within the request timeout (30 seconds by default) |
-| `RpcError` | The gateway returns a JSON-RPC error object |
+| `RpcError` | The engine returns a JSON-RPC error: a protocol fault, such as an unknown method |
+| `ZodError` | Params fail validation before they are sent, or a result does not match the catalog |
 
 ## Development
 

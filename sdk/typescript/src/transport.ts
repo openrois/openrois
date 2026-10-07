@@ -1,9 +1,8 @@
 /**
  * WebSocket transport layer for the OpenRoIS SDK.
  *
- * Provides the communication bridge between the SDK's client classes
- * (SystemClient, CommandClient, QueryClient, EventClient) and the
- * gateway. Responsibilities:
+ * Carries the JSON-RPC messages between RoISClient and an engine.
+ * Responsibilities:
  *
  *   - Establish and manage a WebSocket connection (browser or Node.js).
  *   - Serialize outgoing JSON-RPC requests and deserialize incoming messages.
@@ -12,8 +11,8 @@
  *   - Handle connection errors, timeouts, and unexpected disconnects.
  *
  * The transport does NOT validate the inner payload of `params` or `result`.
- * That is the responsibility of the caller, using the schemas from
- * @openrois/interfaces (e.g. DiscoverResponseSchema.parse(result)).
+ * RoISClient does that with the catalog schemas from @openrois/interfaces
+ * (RoISMethodSchemas and RoISNotificationSchemas).
  *
  * Usage (both Node.js and Browser):
  *   const transport = new WebSocketTransport();
@@ -31,22 +30,13 @@
 // 1. Node.js built-ins
 import { EventEmitter } from "events";
 
-// 2. External packages
-import { z } from "zod";
-
-// 3. Local modules
+// 2. Local modules
 import {
-  JsonRpcRequestSchema,
   JsonRpcResponseSchema,
   JsonRpcErrorSchema,
   JsonRpcNotificationSchema,
   JSONRPC_VERSION,
   type JsonRpcRequest,
-  type JsonRpcResponse,
-  type JsonRpcError,
-  type JsonRpcNotification,
-  type JsonRpcId,
-  type JsonRpcParams,
   type JsonRpcErrorObject,
 } from "./jsonrpc";
 
@@ -135,8 +125,8 @@ export interface TransportOptions {
    * this if you need custom WebSocket configuration (headers, protocols,
    * proxy settings, etc.).
    *
-   * Example:
-   *   webSocketFactory: (url) => new WebSocket(url, { headers: { "X-Token": "..." } })
+   * Example (Node.js, `ws` package):
+   *   webSocketFactory: (url) => new WebSocket(url, { perMessageDeflate: false })
    */
   webSocketFactory?: (url: string) => WebSocketLike;
 }
@@ -207,11 +197,12 @@ export class RequestTimeoutError extends TransportError {
 }
 
 /**
- * Raised when the gateway responds with a JSON-RPC error object.
+ * Raised when the engine responds with a JSON-RPC error object.
  *
- * This means the gateway understood the request but could not fulfill it.
- * The error carries the structured JSON-RPC error fields so callers can
- * inspect the code and any RoIS-level ReturnCode in the data field.
+ * This reports a protocol fault: unparseable JSON, an invalid request, an
+ * unknown method, params that fail validation, or an internal error. A RoIS
+ * failure is not an RpcError: it is a normal result with a return_code other
+ * than OK, which RoISClient raises as a RoISError.
  */
 export class RpcError extends TransportError {
   /** The numeric JSON-RPC error code (e.g. -32601 for MethodNotFound). */
@@ -267,10 +258,9 @@ interface PendingRequest {
  *
  * Notification convenience events:
  *   The transport also emits the notification's method name as a separate
- *   event. For example, a "rois.event.notify" notification triggers both
- *   the generic "notification" event and a "rois.event.notify" event.
- *   This lets higher-level clients subscribe to specific push channels:
- *     transport.on("rois.event.notify", (notification) => { ... });
+ *   event. For example, a "rois.command.completed" notification triggers both
+ *   the generic "notification" event and a "rois.command.completed" event,
+ *   each with the full JsonRpcNotification:
  *     transport.on("rois.command.completed", (notification) => { ... });
  */
 
@@ -283,8 +273,8 @@ interface PendingRequest {
  *
  * The transport handles the JSON-RPC 2.0 wire protocol: serialization,
  * deserialization, request/response correlation, notification routing,
- * and error handling. Higher-level SDK clients (SystemClient, CommandClient,
- * etc.) call transport.send() and subscribe to transport events.
+ * and error handling. RoISClient calls transport.send() and listens to the
+ * transport events.
  *
  * One transport instance manages one connection. To reconnect, close the
  * existing connection and call connect() again.
@@ -434,9 +424,9 @@ export class WebSocketTransport extends EventEmitter {
    *   - TransportError: the transport is not connected.
    *
    * The caller is responsible for validating the returned result with the
-   * appropriate schema from @openrois/interfaces:
+   * catalog schema for the method:
    *   const result = await transport.send("rois.command.search", { condition: "" });
-   *   const parsed = DiscoverResponseSchema.parse(result);
+   *   const parsed = RoISMethodSchemas["rois.command.search"].result.parse(result);
    *
    * @param method - The JSON-RPC method name, e.g. "rois.command.search".
    * @param params - Optional named parameters for the method.
@@ -636,7 +626,7 @@ export class WebSocketTransport extends EventEmitter {
    *
    * Emits two events:
    *   1. "notification" with the full notification object (generic catch-all).
-   *   2. The method name (e.g. "rois.event.notify") for targeted listeners.
+   *   2. The method name (e.g. "rois.command.completed") for targeted listeners.
    */
   private handleNotification(msg: Record<string, unknown>): void {
     // Validate the envelope structure.
@@ -654,7 +644,7 @@ export class WebSocketTransport extends EventEmitter {
     this.emit("notification", notification);
 
     // Emit a method-specific event for convenience.
-    // This lets callers do: transport.on("rois.event.notify", handler)
+    // This lets callers do: transport.on("rois.command.completed", handler)
     this.emit(notification.method, notification);
   }
 
@@ -694,7 +684,7 @@ export class WebSocketTransport extends EventEmitter {
    * hanging forever.
    */
   private rejectAllPending(error: Error): void {
-    for (const [id, pending] of this.pending) {
+    for (const pending of this.pending.values()) {
       clearTimeout(pending.timer);
       pending.reject(error);
     }
@@ -735,9 +725,6 @@ export class WebSocketTransport extends EventEmitter {
   }
 
   /**
-   * NEW CHANGE
-   */
-  /**
    * Default WebSocket factory that auto-detects the environment.
    *
    * Tries in order:
@@ -757,8 +744,9 @@ export class WebSocketTransport extends EventEmitter {
 
     // 2. Try the 'ws' package for Node.js.
     try {
-      // Dynamic require so browser bundlers can ignore or externalize this.
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // A require inside try/catch, not an import, so browser bundlers can leave
+      // 'ws' out and the browser path above never loads it.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const WS = require("ws");
       return new WS(url) as unknown as WebSocketLike;
     } catch {
