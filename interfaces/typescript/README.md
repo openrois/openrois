@@ -68,11 +68,12 @@ class MyComponents implements ComponentContract {
 | `@openrois/interfaces/service` | `CompletedStatus`, `ErrorType`, `CompletedEvent`, `NotifyErrorEvent`, `NotifyEventPayload` |
 | `@openrois/interfaces/profiles` | Component profile schema models |
 | `@openrois/interfaces/contract` | `ComponentContract` interface, request/response models, `EventEnvelope`, error classes |
+| `@openrois/interfaces/catalog` | Service-side method catalog: params and result schemas for every `rois.*` method, `RoISMethods`, `RoISMethodMap`, `RoISMethodSchemas`, `JsonRpcErrorCode` |
 | `@openrois/interfaces/components` | Per-component typed message models |
 
 ## Generation
 
-The source files in `src/` (except `contract.ts` and the `index.ts` barrels) are generated from `interfaces/schema/*.schema.json`:
+The source files in `src/` (except `contract.ts` and the `index.ts` barrels) are generated from `interfaces/schema/*.schema.json` and the method table in `interfaces/schema/catalog.json`:
 
 ```bash
 npm run generate   # reads ../schema/*.json → writes src/*.ts

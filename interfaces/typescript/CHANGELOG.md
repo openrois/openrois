@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add the `./catalog` subpath export with a params and a result schema for each of the 16 `rois.*` methods, `RoISMethods`, the `RoISMethodMap` type, `RoISMethodSchemas` and `JsonRpcErrorCode`, generated from `schema/catalog.json`.
+
 ### Changed
 
+- **Breaking:** every generated type is defined once, in the module that owns it, and other modules import it. Array aliases such as `ArgumentList` are inlined, so `ArgumentListSchema` is no longer exported. `ArgumentList` remains as a type alias.
 - **Breaking:** rename `BusAdapter` to `ComponentContract` and `BusAdapterError` to `ComponentContractError` (closes #5). The `./bus` subpath export is now `./contract`, and the generated models moved to `src/generated/contract-models.ts`.
 
 ## [0.1.0-alpha.2] - 2026-07-02

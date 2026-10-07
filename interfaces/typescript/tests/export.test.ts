@@ -47,6 +47,14 @@ describe("Export completeness", () => {
     expect(openrois.RoISIdentifierTypeSchema).toBeDefined();
   });
 
+  it("exports the method catalog", () => {
+    expect(openrois.RoISMethods).toBeDefined();
+    expect(openrois.RoISMethodSchemas).toBeDefined();
+    expect(openrois.JsonRpcErrorCode).toBeDefined();
+    expect(openrois.ExecuteParamsSchema).toBeDefined();
+    expect(openrois.GetProfileResultSchema).toBeDefined();
+  });
+
   it("does NOT export Component types from root (use @openrois/interfaces/components)", () => {
     expect(openrois.PersonDetectedEventSchema).toBeUndefined();
   });

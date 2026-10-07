@@ -49,6 +49,10 @@
       "import": "./dist/contract.js",
       "types": "./dist/contract.d.ts"
     },
+    "./catalog": {
+      "import": "./dist/catalog.js",
+      "types": "./dist/catalog.d.ts"
+    },
     "./components": {
       "import": "./dist/components/index.js",
       "types": "./dist/components/index.d.ts"

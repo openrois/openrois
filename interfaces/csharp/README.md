@@ -79,11 +79,12 @@ class MyComponents : IComponentContract
 | `OpenRoIS.Interfaces.Service` | `CompletedStatus`, `ErrorType`, `CompletedEvent`, `NotifyErrorEvent`, `NotifyEventPayload` |
 | `OpenRoIS.Interfaces.Profiles` | Component profile schema models |
 | `OpenRoIS.Interfaces.Contract` | `IComponentContract` interface, `ComponentContractError`, `EventSink`. Request/response models and `EventEnvelope` are in `OpenRoIS.Interfaces.Contract.Models` |
+| `OpenRoIS.Interfaces.Catalog` | Service-side method catalog: params and result models for every `rois.*` method, `RoISMethods`, `RoISMethodTypes`, `JsonRpcErrorCodes` |
 | `OpenRoIS.Interfaces.Components` | Per-component typed message models |
 
 ## Generation
 
-The source files (except `Contract.cs`) are generated from `interfaces/schema/*.schema.json`:
+The source files (except `Contract.cs`) are generated from `interfaces/schema/*.schema.json` and the method table in `interfaces/schema/catalog.json`:
 
 ```bash
 # Reads ../schema by default (or the directory in OPENROIS_SCHEMA_DIR).

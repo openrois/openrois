@@ -1,0 +1,282 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "CommandMessageProfile": {
+      "additionalProperties": false,
+      "description": "A command message profile with arguments and optional timeout.\n\nMaps to CommandMessageProfileType in XML-Profiles.xsd.\n\nAttributes:\n    arguments: The input arguments for this command.\n    timeout: Optional timeout in milliseconds.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/$defs/ParameterProfile"
+          },
+          "title": "Results",
+          "type": "array"
+        },
+        "arguments": {
+          "items": {
+            "$ref": "#/$defs/ParameterProfile"
+          },
+          "title": "Arguments",
+          "type": "array"
+        },
+        "timeout": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeout"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "CommandMessageProfile",
+      "type": "object"
+    },
+    "EventMessageProfile": {
+      "additionalProperties": false,
+      "description": "An event message profile.\n\nMaps to EventMessageProfileType in XML-Profiles.xsd.\n\nEvents have results (the event payload) but no arguments.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/$defs/ParameterProfile"
+          },
+          "title": "Results",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "EventMessageProfile",
+      "type": "object"
+    },
+    "HRIComponentProfile": {
+      "additionalProperties": false,
+      "description": "Describes a RoIS component's capabilities, messages, and parameters.\n\nMaps to HRIComponentProfileType in XML-Profiles.xsd.\n\nAttributes:\n    identifier: The component's structured identifier (URN).\n    name: A short human-readable name (e.g., 'person_detecter').\n    sub_component_profiles: URNs of sub-component profiles (e.g., RoISCommon).\n    command_profiles: Command message profiles this component supports.\n    query_profiles: Query message profiles this component supports.\n    event_profiles: Event message profiles this component supports.\n    parameter_profiles: Parameter declarations for this component.",
+      "properties": {
+        "identifier": {
+          "$ref": "#/$defs/RoISIdentifierType"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "sub_component_profiles": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Sub Component Profiles",
+          "type": "array"
+        },
+        "command_profiles": {
+          "items": {
+            "$ref": "#/$defs/CommandMessageProfile"
+          },
+          "title": "Command Profiles",
+          "type": "array"
+        },
+        "query_profiles": {
+          "items": {
+            "$ref": "#/$defs/QueryMessageProfile"
+          },
+          "title": "Query Profiles",
+          "type": "array"
+        },
+        "event_profiles": {
+          "items": {
+            "$ref": "#/$defs/EventMessageProfile"
+          },
+          "title": "Event Profiles",
+          "type": "array"
+        },
+        "parameter_profiles": {
+          "items": {
+            "$ref": "#/$defs/ParameterProfile"
+          },
+          "title": "Parameter Profiles",
+          "type": "array"
+        }
+      },
+      "required": [
+        "identifier",
+        "name"
+      ],
+      "title": "HRIComponentProfile",
+      "type": "object"
+    },
+    "HRIEngineProfileType": {
+      "additionalProperties": false,
+      "description": "Describes an HRI Engine's composition of sub-engines and components.\n\nMaps to HRIEngineProfileType in XML-Profiles.xsd.\n\nAttributes:\n    identifier: The engine's structured identifier.\n    sub_profiles: Nested sub-engine profiles.\n    component_ids: IDs of components hosted by this engine.\n    component_profiles: Full capability profiles for each component.\n        Populated from adapter registration data. Optional (default\n        empty) for backward compatibility with engines that only\n        return component_ids.\n    parameter_profiles: Engine-level parameter declarations.",
+      "properties": {
+        "identifier": {
+          "$ref": "#/$defs/RoISIdentifierType"
+        },
+        "sub_profiles": {
+          "items": {
+            "$ref": "#/$defs/HRIEngineProfileType"
+          },
+          "title": "Sub Profiles",
+          "type": "array"
+        },
+        "component_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Component Ids",
+          "type": "array"
+        },
+        "component_profiles": {
+          "items": {
+            "$ref": "#/$defs/HRIComponentProfile"
+          },
+          "title": "Component Profiles",
+          "type": "array"
+        },
+        "parameter_profiles": {
+          "items": {
+            "$ref": "#/$defs/ParameterProfile"
+          },
+          "title": "Parameter Profiles",
+          "type": "array"
+        }
+      },
+      "required": [
+        "identifier"
+      ],
+      "title": "HRIEngineProfileType",
+      "type": "object"
+    },
+    "ParameterProfile": {
+      "additionalProperties": false,
+      "description": "Describes a parameter's data type and metadata.\n\nMaps to ParameterProfileType in XML-Profiles.xsd.\n\nUsed in both message profiles (Arguments/Results) and component-level\nparameter declarations.\n\nAttributes:\n    name: The parameter name.\n    data_type_ref: Reference to the data type (e.g., 'int', 'DateTime',\n        'RoISIdentifier[]').\n    default_value: Optional default value as a string.\n    description: Optional human-readable description.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "data_type_ref": {
+          "$ref": "#/$defs/RoISIdentifierType"
+        },
+        "default_value": {
+          "default": "",
+          "title": "Default Value",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "data_type_ref"
+      ],
+      "title": "ParameterProfile",
+      "type": "object"
+    },
+    "QueryMessageProfile": {
+      "additionalProperties": false,
+      "description": "A query message profile.\n\nMaps to QueryMessageProfileType in XML-Profiles.xsd.\n\nQueries have results but no arguments (the query_type and condition\nare passed separately, not as message arguments).",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/$defs/ParameterProfile"
+          },
+          "title": "Results",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "QueryMessageProfile",
+      "type": "object"
+    },
+    "ReturnCode": {
+      "description": "Return code for all RoIS operations.\n\nMaps to RoIS_HRI::ReturnCode_t in the IDL.",
+      "enum": [
+        "OK",
+        "ERROR",
+        "BAD_PARAMETER",
+        "UNSUPPORTED",
+        "OUT_OF_RESOURCES",
+        "TIMEOUT"
+      ],
+      "title": "ReturnCode",
+      "type": "string"
+    },
+    "RoISIdentifierType": {
+      "additionalProperties": false,
+      "description": "A structured RoIS identifier with optional metadata.\n\nMaps to RoISIdentifierType in XML-Profiles.xsd.\n\nAttributes:\n    authority: Optional naming authority (e.g., 'OMG').\n    code: The identifier code (e.g., 'PersonDetection').\n    codebook_ref: Optional reference to a codebook or ontology.\n    version: Optional version string.",
+      "properties": {
+        "authority": {
+          "default": "",
+          "title": "Authority",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "codebook_ref": {
+          "default": "",
+          "title": "Codebook Ref",
+          "type": "string"
+        },
+        "version": {
+          "default": "",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "RoISIdentifierType",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Result of rois.system.get_profile.\n\nMaps to SystemIF::get_profile(in condition, out profile). The IDL carries the\nprofile as an XML document in a string. OpenRoIS sends the structured form of\nthe same XSD type.\n\nAttributes:\n    return_code: Outcome of the operation.\n    profile: The engine profile. Null when return_code is not OK.",
+  "properties": {
+    "return_code": {
+      "$ref": "#/$defs/ReturnCode"
+    },
+    "profile": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HRIEngineProfileType"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The engine profile"
+    }
+  },
+  "required": [
+    "return_code"
+  ],
+  "title": "GetProfileResult",
+  "type": "object"
+}

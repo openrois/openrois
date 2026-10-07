@@ -31,6 +31,8 @@ export type RoLoData = string;
 export type ResultList = Result[];
 /** Ordered list of Parameter values. */
 export type ParameterList = Parameter[];
+/** Ordered list of Argument values. */
+export type ArgumentList = Argument[];
 
 // ─── Shared type definitions ($defs) ─────────────────────────────
 
@@ -51,9 +53,6 @@ export const ArgumentSchema = z.object({
   value: z.string(),
 }).strict();
 export type Argument = z.infer<typeof ArgumentSchema>;
-
-export const ArgumentListSchema = z.array(ArgumentSchema);
-export type ArgumentList = z.infer<typeof ArgumentListSchema>;
 
 /**
  * Command operation type for RoIS commands.
@@ -84,7 +83,7 @@ export const CommandUnitSchema = z.object({
   component_ref: z.string(),
   command_type: CommandTypeSchema, // Command operation: start, stop, suspend, resume, set_parameter, execute
   command_id: z.string(), // Unique command instance identifier
-  arguments: ArgumentListSchema.optional(),
+  arguments: z.array(ArgumentSchema).optional(),
   delay_time: z.number().int().nullable().default(null), // Delay in ms before execution
 }).strict();
 export type CommandUnit = z.infer<typeof CommandUnitSchema>;

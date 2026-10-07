@@ -19,6 +19,13 @@ internal static class Program
     private static string s_schemaDir = "";
     private static string s_outputDir = "";
 
+    // Namespace of every top-level schema type, built from the manifest, so a type
+    // used outside its own module is written with its fully qualified name.
+    private static readonly Dictionary<string, string> s_typeNamespaces = new();
+
+    // Namespace of the module being generated.
+    private static string s_currentNamespace = "";
+
     private static int Main(string[] args)
     {
         // Resolve schema directory
@@ -42,6 +49,15 @@ internal static class Program
         var manifestJson = File.ReadAllText(manifestPath);
         var manifest = JsonNode.Parse(manifestJson)!;
         var modules = manifest["modules"]!.AsObject();
+
+        foreach (var (moduleName, moduleNode) in modules)
+        {
+            var moduleNs = moduleName == "contract"
+                ? "OpenRoIS.Interfaces.Contract.Models"
+                : ModuleToNamespace(moduleName);
+            foreach (var file in moduleNode!.AsArray())
+                s_typeNamespaces[file!.GetValue<string>().Replace(".schema.json", "")] = moduleNs;
+        }
 
         foreach (var (moduleName, moduleNode) in modules)
         {
@@ -99,6 +115,7 @@ internal static class Program
 
     private static string GenerateModule(string ns, List<string> schemaFiles, JsonObject modules, string moduleName)
     {
+        s_currentNamespace = ns;
         var sb = new StringBuilder();
 
         // Header
@@ -194,6 +211,10 @@ internal static class Program
             EmitType(sb, name, schemaCopy, allDefs, externalTypes);
             sb.AppendLine();
         }
+
+        // The catalog module also carries the method table from catalog.json.
+        if (moduleName == "catalog")
+            EmitCatalogTable(sb);
 
         // Close block-scoped namespace
         sb.AppendLine("}");
@@ -447,7 +468,10 @@ internal static class Program
                 var refNames = anyOf.Select(n => n!["$ref"]!.GetValue<string>().Replace("#/$defs/", "")).ToList();
                 if (refNames.Contains("CommandUnit") && refNames.Contains("ConcurrentCommands"))
                 {
-                    return "ICommandUnitSequenceItem";
+                    // The marker interface lives in the Hri namespace.
+                    return s_currentNamespace == "OpenRoIS.Interfaces.Hri"
+                        ? "ICommandUnitSequenceItem"
+                        : "OpenRoIS.Interfaces.Hri.ICommandUnitSequenceItem";
                 }
                 return "object"; // Fallback for unknown unions
             }
@@ -477,28 +501,80 @@ internal static class Program
     }
 
     /// <summary>
-    /// Resolve an external type name to its fully qualified C# namespace.
+    /// Resolve an external type name to its fully qualified C# name, using the
+    /// namespace of the module whose manifest entry defines it.
     /// </summary>
     private static string ResolveExternalType(string typeName)
     {
-        // Map type names to their canonical namespace
-        return typeName switch
+        return s_typeNamespaces.TryGetValue(typeName, out var ns)
+            ? $"{ns}.{typeName}"
+            : typeName;
+    }
+
+    // -----------------------------------------------------------------------
+    // Method catalog
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// Emit the method name constants, the method to type map and the JSON-RPC
+    /// error codes from catalog.json, the table every language shares.
+    /// </summary>
+    private static void EmitCatalogTable(StringBuilder sb)
+    {
+        var catalogPath = Path.Combine(s_schemaDir, "catalog.json");
+        var catalog = JsonNode.Parse(File.ReadAllText(catalogPath))!;
+        var methods = catalog["methods"]!.AsArray();
+
+        sb.AppendLine("    // ─── Method catalog (from catalog.json) ──────────────────────────");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>JSON-RPC method names of the RoIS method catalog, keyed by operation.</summary>");
+        sb.AppendLine("    public static class RoISMethods");
+        sb.AppendLine("    {");
+        foreach (var method in methods)
         {
-            "ReturnCode" or "Result" or "Parameter" or "Argument"
-                or "CommandUnit" or "ConcurrentCommands" or "CommandUnitSequence"
-                or "RoISIdentifier" or "ConditionT" or "DateTime" or "Integer"
-                or "RoISIdentifierList" or "ResultList" or "ParameterList" or "ArgumentList"
-                => $"OpenRoIS.Interfaces.Hri.{typeName}",
-
-            "ComponentStatus" or "StreamStatus"
-                => $"OpenRoIS.Interfaces.Common.{typeName}",
-
-            "CompletedStatus" or "ErrorType" or "CompletedEvent"
-                or "NotifyErrorEvent" or "NotifyEventPayload"
-                => $"OpenRoIS.Interfaces.Service.{typeName}",
-
-            _ => typeName, // Same namespace
-        };
+            var operation = ToPascalCase(method!["operation"]!.GetValue<string>());
+            var wireName = method["method"]!.GetValue<string>();
+            sb.AppendLine($"        public const string {operation} = \"{wireName}\";");
+        }
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>The params and result type of every catalog method.</summary>");
+        sb.AppendLine("    public static class RoISMethodTypes");
+        sb.AppendLine("    {");
+        sb.AppendLine("        /// <summary>Params and result type, keyed by JSON-RPC method name.</summary>");
+        sb.AppendLine("        public static readonly IReadOnlyDictionary<string, (Type Params, Type Result)> ByMethod =");
+        sb.AppendLine("            new Dictionary<string, (Type Params, Type Result)>");
+        sb.AppendLine("            {");
+        foreach (var method in methods)
+        {
+            var operation = ToPascalCase(method!["operation"]!.GetValue<string>());
+            var paramsType = method["params"]!.GetValue<string>();
+            var resultType = method["result"]!.GetValue<string>();
+            sb.AppendLine($"                [RoISMethods.{operation}] = (typeof({paramsType}), typeof({resultType})),");
+        }
+        sb.AppendLine("            };");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>JSON-RPC 2.0 error codes an engine returns for protocol faults.</summary>");
+        sb.AppendLine("    public static class JsonRpcErrorCodes");
+        sb.AppendLine("    {");
+        foreach (var code in catalog["json_rpc_error_codes"]!.AsArray())
+        {
+            var name = EnumValueToPascalCase(code!["name"]!.GetValue<string>());
+            var value = code["code"]!.GetValue<int>();
+            sb.AppendLine($"        public const int {name} = {value};");
+        }
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>Method name prefixes the catalog does not model. Engines answer them with METHOD_NOT_FOUND.</summary>");
+        sb.AppendLine("    public static class UnmodelledMethodPrefixes");
+        sb.AppendLine("    {");
+        var prefixes = catalog["unmodelled_method_prefixes"]!.AsArray()
+            .Select(p => $"\"{p!.GetValue<string>()}\"");
+        sb.AppendLine("        /// <summary>Every unmodelled prefix.</summary>");
+        sb.AppendLine($"        public static readonly IReadOnlyList<string> All = new[] {{ {string.Join(", ", prefixes)} }};");
+        sb.AppendLine("    }");
+        sb.AppendLine();
     }
 
     // -----------------------------------------------------------------------

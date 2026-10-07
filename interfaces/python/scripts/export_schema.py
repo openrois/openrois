@@ -27,6 +27,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, TypeAdapter
 
+from openrois.interfaces.catalog import METHODS, catalog_document
 from openrois.interfaces.contract import (
     CommandRequest,
     DiscoverRequest,
@@ -91,6 +92,9 @@ from openrois.interfaces.service import (
 # Inventory: every exportable type
 # ---------------------------------------------------------------------------
 
+# The catalog's params and result models, in method table order.
+CATALOG_MODELS: list[type[BaseModel]] = [cls for m in METHODS for cls in (m.params, m.result)]
+
 # BaseModel subclasses → model_json_schema()
 MODELS: list[type[BaseModel]] = [
     # hri
@@ -123,6 +127,8 @@ MODELS: list[type[BaseModel]] = [
     SubscribeRequest,
     SubscribeResponse,
     EventEnvelope,
+    # catalog
+    *CATALOG_MODELS,
     # components/person_detection
     PersonDetectedEvent,
     PersonDetectionStatusResult,
@@ -190,6 +196,8 @@ MODULE_MAP: dict[type, str] = {
     SubscribeRequest: "contract",
     SubscribeResponse: "contract",
     EventEnvelope: "contract",
+    # catalog
+    **{cls: "catalog" for cls in CATALOG_MODELS},
     # components/person_detection
     PersonDetectedEvent: "components/person-detection",
     PersonDetectionStatusResult: "components/person-detection",
@@ -276,6 +284,13 @@ def write_manifest() -> Path:
     return path
 
 
+def write_catalog() -> Path:
+    """Write catalog.json, the method table the TypeScript and C# generators read."""
+    path = SCHEMA_DIR / "catalog.json"
+    path.write_text(json.dumps(catalog_document(), indent=2, ensure_ascii=False))
+    return path
+
+
 def main() -> None:
     """Export all models and enums to interfaces/schema/."""
     written: list[str] = []
@@ -292,6 +307,9 @@ def main() -> None:
 
     manifest_path = write_manifest()
     written.append(manifest_path.name)
+
+    catalog_path = write_catalog()
+    written.append(catalog_path.name)
 
     print(f"Exported {len(written)} files to {SCHEMA_DIR}:")
     for name in sorted(written):

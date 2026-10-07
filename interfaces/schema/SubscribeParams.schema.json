@@ -1,0 +1,29 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "ConditionT": {
+      "type": "string"
+    },
+    "EventType": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Params of rois.event.subscribe.\n\nMaps to EventIF::subscribe(in event_type, in condition, out subscribe_id).\n\nAttributes:\n    event_type: Name of the event, from a component profile.\n    condition: Filter that selects the component and narrows the events.",
+  "properties": {
+    "event_type": {
+      "$ref": "#/$defs/EventType",
+      "description": "Name of the event, from a component profile"
+    },
+    "condition": {
+      "$ref": "#/$defs/ConditionT",
+      "default": "",
+      "description": "Filter that selects the component and narrows the events"
+    }
+  },
+  "required": [
+    "event_type"
+  ],
+  "title": "SubscribeParams",
+  "type": "object"
+}

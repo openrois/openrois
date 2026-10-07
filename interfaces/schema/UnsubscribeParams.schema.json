@@ -1,0 +1,21 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "SubscribeId": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Params of rois.event.unsubscribe.\n\nMaps to EventIF::unsubscribe(in subscribe_id). Unsubscribing twice is not an error.\n\nAttributes:\n    subscribe_id: The subscription to cancel.",
+  "properties": {
+    "subscribe_id": {
+      "$ref": "#/$defs/SubscribeId",
+      "description": "The subscription to cancel"
+    }
+  },
+  "required": [
+    "subscribe_id"
+  ],
+  "title": "UnsubscribeParams",
+  "type": "object"
+}

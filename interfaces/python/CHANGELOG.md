@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add the `openrois.interfaces.catalog` module, the service-side method catalog. It has a params and a result model for each of the 16 methods of SystemIF, CommandIF, QueryIF and EventIF, named after the IDL parameters, the `SystemIF`, `CommandIF`, `QueryIF` and `EventIF` protocols, the `METHODS` table and `JsonRpcErrorCode`. `rois.stream.*` is not modelled.
+- Export the method table to `schema/catalog.json`, which the TypeScript and C# generators read.
+- Cross-check every catalog model against `RoIS_HRI.idl` when the normative files are available.
+
 ### Changed
 
 - **Breaking:** rename the `openrois.interfaces.bus` module to `openrois.interfaces.contract`, and `BusAdapterError` to `ComponentContractError`. The JSON Schema manifest module is now `contract`.

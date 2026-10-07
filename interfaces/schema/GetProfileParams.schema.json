@@ -1,0 +1,19 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "ConditionT": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Params of rois.system.get_profile.\n\nMaps to SystemIF::get_profile(in condition, out profile).\n\nAttributes:\n    condition: Filter on the profile. Empty means no filter.",
+  "properties": {
+    "condition": {
+      "$ref": "#/$defs/ConditionT",
+      "default": "",
+      "description": "Filter on the profile"
+    }
+  },
+  "title": "GetProfileParams",
+  "type": "object"
+}

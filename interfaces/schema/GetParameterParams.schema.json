@@ -1,0 +1,21 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "RoISIdentifier": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Params of rois.command.get_parameter.\n\nMaps to CommandIF::get_parameter(in component_ref, out parameters).\n\nAttributes:\n    component_ref: The component whose parameters to read.",
+  "properties": {
+    "component_ref": {
+      "$ref": "#/$defs/RoISIdentifier",
+      "description": "The component whose parameters to read"
+    }
+  },
+  "required": [
+    "component_ref"
+  ],
+  "title": "GetParameterParams",
+  "type": "object"
+}

@@ -57,6 +57,7 @@ decorators in [`openrois-components-core`](../../components/core/README.md).
 | `openrois.interfaces.service` | `CompletedStatus`, `ErrorType`, `CompletedEvent`, `NotifyErrorEvent`, `NotifyEventPayload` |
 | `openrois.interfaces.profiles` | Component and engine profile models |
 | `openrois.interfaces.contract` | `ComponentContract` protocol, request and response models, `EventEnvelope`, error classes |
+| `openrois.interfaces.catalog` | Service-side method catalog: params and result models for every `rois.*` method, the `SystemIF`, `CommandIF`, `QueryIF` and `EventIF` protocols, the method table, `JsonRpcErrorCode` |
 | `openrois.interfaces.components` | Per-component typed message models |
 
 ## Development

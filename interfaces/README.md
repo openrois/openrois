@@ -52,6 +52,11 @@ The framework types are complete: return codes, results, parameters, arguments, 
 units, component and engine profiles, event envelopes, and the `ComponentContract` request
 and response models.
 
+The method catalog covers the service side. It has a params and a result model for every
+method of SystemIF, CommandIF, QueryIF and EventIF, the method names, and the JSON-RPC
+error codes, generated from one table in `schema/catalog.json`. The Streaming interface is
+not modelled.
+
 Typed per-component message models exist for 4 of the 17 basic RoIS HRI Components:
 
 | Component | Typed messages |

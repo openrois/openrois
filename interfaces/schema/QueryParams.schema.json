@@ -1,0 +1,29 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "ConditionT": {
+      "type": "string"
+    },
+    "QueryType": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Params of rois.query.query.\n\nMaps to QueryIF::query(in query_type, in condition, out results).\n\nAttributes:\n    query_type: Name of the query, from a component profile.\n    condition: Filter that selects the component and narrows the results.",
+  "properties": {
+    "query_type": {
+      "$ref": "#/$defs/QueryType",
+      "description": "Name of the query, from a component profile"
+    },
+    "condition": {
+      "$ref": "#/$defs/ConditionT",
+      "default": "",
+      "description": "Filter that selects the component and narrows the results"
+    }
+  },
+  "required": [
+    "query_type"
+  ],
+  "title": "QueryParams",
+  "type": "object"
+}
