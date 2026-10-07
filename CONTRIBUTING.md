@@ -62,9 +62,9 @@ apply to all documentation, code comments, commit messages, and PR descriptions.
 
 ## 4. Changelog
 
-The `interfaces/*`, `sdk/*`, and `gateway` packages have a `CHANGELOG.md` file. Update
-it when you change one of them. The Python packages under `engine/` and `components/` will
-get one with their first tagged release.
+The `interfaces/*`, `sdk/*`, `engine`, and `gateway` packages have a `CHANGELOG.md` file.
+Update it when you change one of them. The packages under `components/` will get one with
+their first tagged release.
 
 - Format: [Keep a Changelog](https://keepachangelog.com/en/2.0.0/)
 - Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)

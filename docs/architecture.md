@@ -1034,6 +1034,7 @@ product component, not an example or a demo.
 openrois/
 ├── interfaces/    # Shared types: single source of truth (Python to JSON Schema to C#/TS)
 ├── engine/        # Engine library: recursive Engine, ComponentRegistry, WsServer, WsClient (openrois-engine)
+├── gateway/       # Gateway process and container image (openrois-gateway)
 ├── components/    # Component framework and reference components (per robot platform)
 ├── sdk/           # Client SDKs (TypeScript, C#)
 ├── examples/      # Mock engine, mock adapter, web client, adapter template
@@ -1045,6 +1046,7 @@ openrois/
 |-----------|------|
 | `interfaces/` | Type pipeline. Pydantic models are the source of truth. JSON Schema is the canonical wire contract. C# and TypeScript types are generated. |
 | `engine/` | Engine library (`openrois-engine`). Recursive RoIS dispatch logic: one `Engine` class used by both the gateway and adapters, plus `WsServer` and `WsClient`. Zero media and zero paradigm-specific imports. |
+| `gateway/` | Gateway process (`openrois-gateway`). Composes `Engine` and `WsServer` into the process that hosts the Main HRI Engine, with configuration, logging, a graceful stop, and a container image. |
 | `components/` | The component framework (`openrois-components-core`) and reference components per robot platform. |
 | `sdk/` | Client SDKs: TypeScript for web and Node.js, C# for Unity (in progress). |
 | `examples/` | Reference implementations and templates for testing and onboarding. |

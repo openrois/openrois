@@ -225,6 +225,7 @@ open.
 |------|--------|
 | RoIS interface types (Python, JSON Schema, TypeScript, C#) | Available |
 | Recursive engine, WebSocket server and client, and adapter SDK (Python) | Available, hardening |
+| Gateway process, container image, and Docker Compose with a mock adapter | In progress |
 | TypeScript client SDK and web inspector | Available |
 | Reference components for the Preferred Robotics Kachaka (gRPC and ROS 2) | Available |
 | C# client SDK for Unity | In progress |
@@ -242,6 +243,7 @@ The [roadmap](docs/roadmap.md) describes each phase and its exit criteria.
 openrois/
 ├── interfaces/          RoIS types: Python models, JSON Schema, generated TypeScript and C#
 ├── engine/              Recursive Engine, WebSocket server and client (openrois-engine)
+├── gateway/             Gateway process and container image (openrois-gateway)
 ├── components/
 │   ├── core/            Component decorators and result helpers (openrois-components-core)
 │   ├── common/          Platform-independent components
@@ -255,7 +257,8 @@ openrois/
 │   ├── mock-adapter/    Adapter with simulated components
 │   └── adapter-template/  Starting point for a new robot adapter
 ├── apps/hub/            Management dashboard (planned)
-└── docs/                White paper, architecture, roadmap, RoIS reference
+├── docs/                White paper, architecture, roadmap, RoIS reference
+└── compose.yaml         The gateway with the mock adapter, in Docker Compose
 ```
 
 ## Documentation
@@ -281,6 +284,8 @@ generated files by hand.
 | C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
 | TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` |
 | Mock engine | `examples/mock-engine` | `npm install`, `npm test` |
+| Engine | `engine` | `pytest`, `ruff check src/ tests/` |
+| Gateway | `gateway` | `pytest`, `mypy`, `ruff check src/ tests/ scripts/` |
 
 [`AGENTS.md`](AGENTS.md) documents the conventions and the generation pipeline in
 detail.

@@ -1,0 +1,133 @@
+name: Engine and Gateway
+
+# The Python engine and gateway, and the gateway with the mock adapter in Docker
+# Compose. The interfaces workflow covers the types they build on.
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - "interfaces/python/**"
+      - "components/core/**"
+      - "engine/**"
+      - "gateway/**"
+      - "examples/mock-adapter/**"
+      - "compose.yaml"
+      - ".dockerignore"
+      - ".github/workflows/python.yml"
+  pull_request:
+    paths:
+      - "interfaces/python/**"
+      - "components/core/**"
+      - "engine/**"
+      - "gateway/**"
+      - "examples/mock-adapter/**"
+      - "compose.yaml"
+      - ".dockerignore"
+      - ".github/workflows/python.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: python-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  engine:
+    name: Engine, Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: engine/pyproject.toml
+
+      - name: Install
+        # The OpenRoIS packages are not on PyPI yet, so they install from the tree.
+        run: python -m pip install -e interfaces/python -e components/core -e "engine[dev]"
+
+      - name: Lint
+        working-directory: engine
+        run: ruff check src/ tests/
+
+      - name: Test
+        working-directory: engine
+        run: pytest
+
+  gateway:
+    name: Gateway, Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: gateway/pyproject.toml
+
+      - name: Install
+        run: python -m pip install -e interfaces/python -e engine -e "gateway[dev]"
+
+      - name: Lint
+        working-directory: gateway
+        run: ruff check src/ tests/ scripts/
+
+      - name: Type check
+        working-directory: gateway
+        run: mypy
+
+      - name: Test
+        working-directory: gateway
+        run: pytest
+
+  compose:
+    name: Docker Compose
+    runs-on: ubuntu-latest
+    needs: [engine, gateway]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Start the gateway and the mock adapter
+        run: docker compose up --build --detach
+
+      - name: Smoke test
+        run: |
+          python -m pip install websockets
+          python gateway/scripts/smoke.py --timeout 120
+
+      - name: Stop gracefully
+        # The gateway runs as the container's main process and must handle SIGTERM
+        # itself, so a clean stop shows as exit code 0.
+        run: |
+          docker compose stop --timeout 10
+          code="$(docker compose ps --all --format '{{.ExitCode}}' gateway)"
+          if [ "$code" != "0" ]; then
+            echo "::error::The gateway exited with code $code after SIGTERM."
+            exit 1
+          fi
+
+      - name: Logs
+        if: always()
+        run: docker compose logs --no-color
+
+      - name: Remove the stack
+        if: always()
+        run: docker compose down --volumes

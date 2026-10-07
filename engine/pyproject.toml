@@ -4,10 +4,21 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openrois-engine"
-version = "0.1.0a2"
+version = "0.1.0a1"
 description = "OpenRoIS engine: the recursive RoIS HRI Engine, with its WebSocket server and client"
+readme = "README.md"
 license = "Apache-2.0"
+authors = [
+    { name = "OpenRoIS Community" },
+]
 requires-python = ">=3.12"
+keywords = ["rois", "omg", "robotics", "hri", "middleware"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+]
 dependencies = [
     "openrois-interfaces>=0.1.0a3",
     "websockets>=14.0",
@@ -21,6 +32,11 @@ dev = [
     "pytest-asyncio>=1.0",
     "ruff>=0.4",
 ]
+
+[project.urls]
+Homepage = "https://openrois.org/"
+Repository = "https://github.com/openrois/openrois"
+"Bug-Tracker" = "https://github.com/openrois/openrois/issues"
 
 # openrois is a namespace package shared with openrois-interfaces, so there is no
 # src/openrois/__init__.py and this distribution ships only openrois/engine/.
