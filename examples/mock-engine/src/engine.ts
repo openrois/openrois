@@ -14,11 +14,15 @@
  *   - An actuation component takes commands and parameters only from the client
  *     that bound it. Another client gets OUT_OF_RESOURCES.
  *   - The command table holds every command_id. A command_id already in it is
- *     answered with BAD_PARAMETER. Each command ends with a
+ *     answered with BAD_PARAMETER. Each command ends exactly once with a
  *     rois.command.completed notification, and get_command_result reads its
  *     results.
  *   - execute runs its items in order, waits each item's delay_time, and runs
- *     the commands of a ConcurrentCommands item at the same time.
+ *     the commands of a ConcurrentCommands item at the same time. When a
+ *     command ends with a status other than OK, the sequence stops: the
+ *     commands of the items after it complete with ABORT and never run.
+ *   - The ids the engine assigns, for subscriptions, events and set_parameter
+ *     commands, start with the engine id, like refs: mock/sub-1.
  *   - Navigation start ends after a while with the reached_target event, and
  *     a stop or a second start aborts it. person_detected events arrive on a
  *     timer for every subscription. get_event_detail keeps each event until it
@@ -146,6 +150,11 @@ function failed(returnCode: ReturnCode): { return_code: ReturnCode } {
 
 function names(messages: readonly { name: string }[] | undefined): string[] {
   return (messages ?? []).map((message) => message.name);
+}
+
+/** The commands of one item of an execute: a command, or the commands of a group. */
+function unitsOf(item: CommandUnitSequenceItem): readonly CommandUnit[] {
+  return "command_list" in item ? item.command_list : [item];
 }
 
 // ---------------------------------------------------------------------------
@@ -303,7 +312,7 @@ export class MockEngineCore {
       if (!this.knowsParameters(component, parameters)) {
         return failed("BAD_PARAMETER");
       }
-      const commandId = `param-${this.nextId++}`;
+      const commandId = this.assignId("param");
       this.commands.set(commandId, { status: null, results: [] });
       this.store(component, parameters);
       this.after(this.timing.commandMs, () => this.complete(session, commandId, "OK"));
@@ -311,9 +320,7 @@ export class MockEngineCore {
     },
 
     "rois.command.execute": (session, { command_unit_list }) => {
-      const units = command_unit_list.flatMap((item) =>
-        "command_list" in item ? item.command_list : [item],
-      );
+      const units = command_unit_list.flatMap(unitsOf);
       if (units.length === 0) {
         return failed("BAD_PARAMETER");
       }
@@ -367,7 +374,7 @@ export class MockEngineCore {
         return failed(picked);
       }
       const subscription: Subscription = {
-        id: `sub-${this.nextId++}`,
+        id: this.assignId("sub"),
         session,
         ref: picked.ref,
         eventType: event_type,
@@ -504,21 +511,32 @@ export class MockEngineCore {
   // Commands
   // -------------------------------------------------------------------------
 
-  /** Run the items of an execute in order, the commands of one item at the same time. */
+  /**
+   * Run the items of an execute in order, the commands of one item at the same time.
+   * A command that ends other than OK stops the sequence, and the commands of the
+   * later items complete with ABORT.
+   */
   private async runSequence(session: Session, items: readonly CommandUnitSequenceItem[]): Promise<void> {
-    for (const item of items) {
+    for (const [index, item] of items.entries()) {
       if (item.delay_time) {
         await this.wait(item.delay_time);
       }
-      const units = "command_list" in item ? item.command_list : [item];
-      await Promise.all(units.map((unit) => this.runCommand(session, unit)));
+      const statuses = await Promise.all(unitsOf(item).map((unit) => this.runCommand(session, unit)));
+      if (statuses.some((status) => status !== "OK")) {
+        for (const unit of items.slice(index + 1).flatMap(unitsOf)) {
+          this.complete(session, unit.command_id, "ABORT");
+        }
+        return;
+      }
     }
   }
 
-  private runCommand(session: Session, unit: CommandUnit): Promise<void> {
+  /** Run one command until it completes, and resolve with its status. */
+  private runCommand(session: Session, unit: CommandUnit): Promise<CompletedStatus> {
     const component = this.components.get(unit.component_ref);
     if (!component) {
-      return Promise.resolve();
+      this.complete(session, unit.command_id, "ERROR");
+      return Promise.resolve("ERROR");
     }
     if (unit.command_type === "start" && component.profile.identifier.code === "Navigation") {
       return this.navigate(session, component, unit.command_id);
@@ -529,11 +547,14 @@ export class MockEngineCore {
     if (unit.command_type === "set_parameter") {
       this.store(component, unit.arguments ?? []);
     }
-    return this.wait(this.timing.commandMs).then(() => this.complete(session, unit.command_id, "OK"));
+    return this.wait(this.timing.commandMs).then(() => {
+      this.complete(session, unit.command_id, "OK");
+      return "OK";
+    });
   }
 
   /** Drive to the first target position. A stop or a new start aborts the drive. */
-  private navigate(session: Session, component: ComponentState, commandId: string): Promise<void> {
+  private navigate(session: Session, component: ComponentState, commandId: string): Promise<CompletedStatus> {
     component.running?.finish("ABORT");
     const target = this.firstTarget(component);
     component.status = "BUSY";
@@ -558,7 +579,7 @@ export class MockEngineCore {
             { name: "is_final_target", data_type_ref: "bool", value: "true" },
           ]);
         }
-        resolve();
+        resolve(status);
       };
       component.running = { commandId, finish };
       const arrival = this.after(this.timing.navigationMs, () => finish("OK"));
@@ -599,7 +620,7 @@ export class MockEngineCore {
     if (subscriptions.length === 0) {
       return;
     }
-    const eventId = `evt-${this.nextId++}`;
+    const eventId = this.assignId("evt");
     const expiresAt = Date.now() + this.timing.eventLifetimeMs;
     this.events.set(eventId, { results, expiresAt });
     for (const subscription of subscriptions) {
@@ -643,6 +664,15 @@ export class MockEngineCore {
       default:
         return [];
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Ids
+  // -------------------------------------------------------------------------
+
+  /** A new id the engine assigns, prefixed with the engine id like a ref: mock/sub-1. */
+  private assignId(kind: "param" | "sub" | "evt"): string {
+    return `${ENGINE_ID}/${kind}-${this.nextId++}`;
   }
 
   // -------------------------------------------------------------------------

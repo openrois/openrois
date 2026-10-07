@@ -70,11 +70,11 @@ class MyComponents implements ComponentContract {
 | `@openrois/interfaces/contract` | `ComponentContract` interface, request/response models, `EventEnvelope`, error classes |
 | `@openrois/interfaces/condition` | The CQL2-Text subset every `condition` uses: `parseCondition`, `Condition`, `Comparison`, `ConditionError`, the `component_ref` and `component_type` properties, and the `eq`, `like`, `allOf`, `quote`, `componentRef` and `componentType` builders |
 | `@openrois/interfaces/catalog` | Service-side method catalog: params and result schemas for every `rois.*` method, `RoISMethods`, `RoISMethodMap`, `RoISMethodSchemas`, the notification names and schemas (`RoISNotifications`, `RoISNotificationMap`, `RoISNotificationSchemas`), `RoISCommandTypes`, `JsonRpcErrorCode` |
-| `@openrois/interfaces/components` | Per-component typed message models |
+| `@openrois/interfaces/components` | The profile constants of the basic components (`NAVIGATION_PROFILE`, ...), generated from `schema/profiles.json`, and per-component typed message models |
 
 ## Generation
 
-The source files in `src/` (except `contract.ts`, `condition.ts` and the `index.ts` barrels) are generated from `interfaces/schema/*.schema.json` and the method table in `interfaces/schema/catalog.json`:
+The source files in `src/` (except `contract.ts`, `condition.ts` and the `index.ts` barrels) are generated from `interfaces/schema/*.schema.json`, the method table in `interfaces/schema/catalog.json` and the profile constants in `interfaces/schema/profiles.json`:
 
 ```bash
 npm run generate   # reads ../schema/*.json → writes src/*.ts

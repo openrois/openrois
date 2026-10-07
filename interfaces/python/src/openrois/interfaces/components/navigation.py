@@ -22,9 +22,20 @@ from enum import StrEnum
 from pydantic import BaseModel, Field
 
 from openrois.interfaces.common import ComponentStatus
+from openrois.interfaces.components.rois_common import (
+    ROIS_COMMON_PROFILE,
+    ROIS_COMMON_URN,
+    omg_identifier,
+    parameter,
+)
 from openrois.interfaces.hri import (
     CommandId,
     Integer,
+)
+from openrois.interfaces.profiles import (
+    ComponentFunction,
+    EventMessageProfile,
+    HRIComponentProfile,
 )
 
 # ---------------------------------------------------------------------------
@@ -33,6 +44,45 @@ from openrois.interfaces.hri import (
 
 NAVIGATION_URN = "urn:x-rois:def:component:OMG::Navigation"
 """Canonical URN for the Navigation component profile."""
+
+
+# ---------------------------------------------------------------------------
+# Profile
+# ---------------------------------------------------------------------------
+
+NAVIGATION_PROFILE = HRIComponentProfile(
+    identifier=omg_identifier("Navigation"),
+    name="navigation",
+    function=ComponentFunction.ACTUATION,
+    sub_component_profiles=[ROIS_COMMON_URN],
+    command_profiles=[*ROIS_COMMON_PROFILE.command_profiles],
+    query_profiles=[*ROIS_COMMON_PROFILE.query_profiles],
+    event_profiles=[
+        EventMessageProfile(
+            name="reached_target",
+            results=[
+                parameter("target", "string", "reached target destination"),
+                parameter("is_final_target", "bool", "if it is final destination point"),
+            ],
+        ),
+    ],
+    parameter_profiles=[
+        parameter("target_positions", "string[]", "navigation target positions"),
+        parameter("time_limit", "int", "intended time limit to complete navigation", "0"),
+        parameter(
+            "routing_policy",
+            "string",
+            "routing policy: 'time' priority or 'distance' priority",
+            "time",
+        ),
+    ],
+)
+"""The full Navigation profile.
+
+Navigation.xml with the RoIS_Common messages it includes, and the RoSO function
+``actuation``. A component declares this profile and implements a part of it. The
+engine serves the part the component implements.
+"""
 
 
 # ---------------------------------------------------------------------------

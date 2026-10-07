@@ -70,6 +70,14 @@ describe("Export completeness", () => {
     expect(openrois.PersonDetectedEventSchema).toBeUndefined();
   });
 
+  it("exports the profile constants via components subpath", () => {
+    expect(components.ROIS_COMMON_PROFILE).toBeDefined();
+    expect(components.NAVIGATION_PROFILE).toBeDefined();
+    expect(components.PERSON_DETECTION_PROFILE).toBeDefined();
+    expect(components.REACTION_PROFILE).toBeDefined();
+    expect(components.SYSTEM_INFORMATION_PROFILE).toBeDefined();
+  });
+
   it("exports Component types via components subpath", () => {
     expect(components.PersonDetectedEventSchema).toBeDefined();
     expect(components.PersonDetectionStatusResultSchema).toBeDefined();

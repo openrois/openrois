@@ -1,17 +1,27 @@
 """Cross-check Pydantic models against normative XML profile files.
 
 This test module parses the XML profile files (PersonDetection.xml, Navigation.xml,
-SystemInformation.xml) using lxml and validates that the Pydantic models agree with
-the XML definitions — field names, data types, and default values must match.
-
-This is step 9 of the M0 Task 0.1 plan.
+SystemInformation.xml, Reaction.xml, RoISCommon.xml) using lxml and validates that
+the Pydantic models and the profile constants agree with the XML definitions: field
+names, data types, descriptions and default values must match.
 """
+
+import re
 
 import pytest
 from lxml import etree
 
+from openrois.interfaces.components import (
+    NAVIGATION_PROFILE,
+    PERSON_DETECTION_PROFILE,
+    REACTION_PROFILE,
+    ROIS_COMMON_PROFILE,
+    ROIS_COMMON_URN,
+    SYSTEM_INFORMATION_PROFILE,
+)
 from openrois.interfaces.profiles import (
     CommandMessageProfile,
+    ComponentFunction,
     EventMessageProfile,
     HRIComponentProfile,
     ParameterProfile,
@@ -414,3 +424,64 @@ class TestSystemInformationXMLCrossCheck:
         """SystemInformation has no command profiles in the XML."""
         profile = _build_component_profile_from_xml("SystemInformation.xml")
         assert len(profile.command_profiles) == 0
+
+# ---------------------------------------------------------------------------
+# Tests: the profile constants
+# ---------------------------------------------------------------------------
+
+_ONTOLOGY_COMPONENT = "https://www.omg.org/spec/RoIS/Ontology/RoboticInteractionServiceComponentOntology/"
+_ONTOLOGY_FUNCTION = "https://www.omg.org/spec/RoSO/RoboticServiceFunctionOntology/"
+
+
+def _ontology_function(code: str) -> ComponentFunction | None:
+    """The RoSO class that OWL.ttl assigns to a component type, or None."""
+    text = (NORMATIVE_DIR / "OWL.ttl").read_text()
+    block = re.search(
+        rf"<{re.escape(_ONTOLOGY_COMPONENT + code)}>(.*?)\s\.\s*$",
+        text,
+        re.DOTALL | re.MULTILINE,
+    )
+    if block is None:
+        return None
+    parent = re.search(rf"rdfs:subClassOf <{re.escape(_ONTOLOGY_FUNCTION)}(\w+)>", block.group(1))
+    return ComponentFunction(parent.group(1).lower()) if parent else None
+
+
+def _full_profile(filename: str) -> HRIComponentProfile:
+    """The full profile of a type, built from the normative files alone.
+
+    The XML profile, with the messages of the RoIS_Common profile it includes listed
+    before its own, and the RoSO function the ontology assigns to the type.
+    """
+    profile = _build_component_profile_from_xml(filename)
+    update: dict[str, object] = {"function": _ontology_function(profile.identifier.code)}
+    if ROIS_COMMON_URN in profile.sub_component_profiles:
+        common = _build_component_profile_from_xml("RoISCommon.xml")
+        update["command_profiles"] = [*common.command_profiles, *profile.command_profiles]
+        update["query_profiles"] = [*common.query_profiles, *profile.query_profiles]
+        update["event_profiles"] = [*common.event_profiles, *profile.event_profiles]
+    return profile.model_copy(update=update)
+
+
+@pytest.mark.parametrize(
+    ("constant", "filename"),
+    [
+        (ROIS_COMMON_PROFILE, "RoISCommon.xml"),
+        (NAVIGATION_PROFILE, "Navigation.xml"),
+        (PERSON_DETECTION_PROFILE, "PersonDetection.xml"),
+        (REACTION_PROFILE, "Reaction.xml"),
+        (SYSTEM_INFORMATION_PROFILE, "SystemInformation.xml"),
+    ],
+    ids=["RoISCommon", "Navigation", "PersonDetection", "Reaction", "SystemInformation"],
+)
+def test_profile_constant_matches_xml(constant: HRIComponentProfile, filename: str) -> None:
+    """Each profile constant equals the full profile built from the normative files."""
+    assert constant == _full_profile(filename)
+
+
+def test_rois_common_urn_matches_xml() -> None:
+    """ROIS_COMMON_URN is the identifier of RoISCommon.xml and the SubComponentProfile text."""
+    root = _parse_xml("RoISCommon.xml")
+    assert root.find(f"{{{GML_NS}}}identifier").text == ROIS_COMMON_URN
+    for filename in ("Navigation.xml", "PersonDetection.xml", "Reaction.xml"):
+        assert ROIS_COMMON_URN in _build_component_profile_from_xml(filename).sub_component_profiles

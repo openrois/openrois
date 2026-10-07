@@ -31,6 +31,7 @@ from openrois.interfaces.contract import (
     SubscribeResponse,
 )
 from openrois.interfaces.common import ComponentStatus, StreamStatus
+from openrois.interfaces.components import profiles_document
 from openrois.interfaces.components.navigation import (
     NavigationGetParameterResult,
     NavigationReachedTargetEvent,
@@ -262,5 +263,17 @@ class TestSchemaDrift:
         expected = json.dumps(catalog_document(), indent=2, ensure_ascii=False)
         assert path.read_text() == expected, (
             "catalog.json drift detected. "
+            "Run: cd interfaces/python && python scripts/export_schema.py"
+        )
+
+    def test_profiles_document_matches_file(self) -> None:
+        """The committed profiles.json must match the profile constants."""
+        path = SCHEMA_DIR / "profiles.json"
+        assert path.exists(), (
+            "profiles.json missing. Run: cd interfaces/python && python scripts/export_schema.py"
+        )
+        expected = json.dumps(profiles_document(), indent=2, ensure_ascii=False)
+        assert path.read_text() == expected, (
+            "profiles.json drift detected. "
             "Run: cd interfaces/python && python scripts/export_schema.py"
         )

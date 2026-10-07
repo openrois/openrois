@@ -40,6 +40,7 @@ from openrois.interfaces.contract import (
     SubscribeResponse,
 )
 from openrois.interfaces.common import ComponentStatus, StreamStatus
+from openrois.interfaces.components import profiles_document
 from openrois.interfaces.components.navigation import (
     NavigationGetParameterResult,
     NavigationReachedTargetEvent,
@@ -297,6 +298,13 @@ def write_catalog() -> Path:
     return path
 
 
+def write_profiles() -> Path:
+    """Write profiles.json, the profile constants the TypeScript generator reads."""
+    path = SCHEMA_DIR / "profiles.json"
+    path.write_text(json.dumps(profiles_document(), indent=2, ensure_ascii=False))
+    return path
+
+
 def main() -> None:
     """Export all models and enums to interfaces/schema/."""
     written: list[str] = []
@@ -316,6 +324,9 @@ def main() -> None:
 
     catalog_path = write_catalog()
     written.append(catalog_path.name)
+
+    profiles_path = write_profiles()
+    written.append(profiles_path.name)
 
     print(f"Exported {len(written)} files to {SCHEMA_DIR}:")
     for name in sorted(written):

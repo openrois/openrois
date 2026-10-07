@@ -68,14 +68,22 @@ Every `condition` is a string in a subset of CQL2-Text (OGC 21-065r2), for examp
 `component_ref = 'reachy_real/head'`. The Python `condition` module and its TypeScript
 port parse, match and build conditions.
 
-Typed per-component message models exist for 4 of the 17 basic RoIS HRI Components:
+Profile constants and typed per-component message models exist for 4 of the 17 basic
+RoIS HRI Components, and for the RoIS_Common profile they include:
 
-| Component | Typed messages |
-|-----------|----------------|
-| `PersonDetection` | Event `person_detected`, `component_status` |
-| `Navigation` | Command `set_parameter`, Query `get_parameter`, Event `reached_target`, `component_status` |
-| `Reaction` | Command `set_parameter`, Query `get_parameter`, `component_status` |
-| `SystemInformation` | Queries `robot_position`, `engine_status` |
+| Component | Profile constant | Typed messages |
+|-----------|------------------|----------------|
+| RoIS_Common | `ROIS_COMMON_PROFILE` | |
+| `PersonDetection` | `PERSON_DETECTION_PROFILE` | Event `person_detected`, `component_status` |
+| `Navigation` | `NAVIGATION_PROFILE` | Command `set_parameter`, Query `get_parameter`, Event `reached_target`, `component_status` |
+| `Reaction` | `REACTION_PROFILE` | Command `set_parameter`, Query `get_parameter`, `component_status` |
+| `SystemInformation` | `SYSTEM_INFORMATION_PROFILE` | Queries `robot_position`, `engine_status` |
+
+A profile constant is the full profile of the type: its XML profile with the RoIS_Common
+messages it includes, and its RoSO function. A component declares the constant of its type
+and implements a part of it, and the engine serves the part it implements. The Python
+package defines the constants and exports them to `schema/profiles.json`, from which the
+TypeScript constants are generated.
 
 Components without a typed model still work: they carry generic `Result` lists validated
 against their declared profile. The remaining components arrive with the full component

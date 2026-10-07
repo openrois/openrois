@@ -23,7 +23,18 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from openrois.interfaces.common import ComponentStatus
+from openrois.interfaces.components.rois_common import (
+    ROIS_COMMON_PROFILE,
+    ROIS_COMMON_URN,
+    omg_identifier,
+    parameter,
+)
 from openrois.interfaces.hri import CommandId, RoISIdentifier, RoISIdentifierList
+from openrois.interfaces.profiles import (
+    ComponentFunction,
+    HRIComponentProfile,
+    QueryMessageProfile,
+)
 
 # ---------------------------------------------------------------------------
 # Component identifier
@@ -31,6 +42,42 @@ from openrois.interfaces.hri import CommandId, RoISIdentifier, RoISIdentifierLis
 
 REACTION_URN = "urn:x-rois:def:component:OMG::Reaction"
 """Canonical URN for the Reaction component profile."""
+
+
+# ---------------------------------------------------------------------------
+# Profile
+# ---------------------------------------------------------------------------
+
+REACTION_PROFILE = HRIComponentProfile(
+    identifier=omg_identifier("Reaction"),
+    name="reaction",
+    function=ComponentFunction.ACTUATION,
+    sub_component_profiles=[ROIS_COMMON_URN],
+    command_profiles=[*ROIS_COMMON_PROFILE.command_profiles],
+    query_profiles=[
+        *ROIS_COMMON_PROFILE.query_profiles,
+        QueryMessageProfile(
+            name="available_reactions",
+            results=[
+                parameter(
+                    "available_reactions",
+                    "RoISIdentifier[]",
+                    "list of available reaction IDs, this robot can perform",
+                ),
+            ],
+        ),
+    ],
+    parameter_profiles=[
+        parameter("reaction_ref", "RoISIdentifier", "Reaction type as ID"),
+    ],
+)
+"""The full Reaction profile.
+
+Reaction.xml with the RoIS_Common messages it includes, and the RoSO function
+``actuation``. The profile follows the XML: ``reaction_ref`` is one ``RoISIdentifier``
+and ``available_reactions`` is a query. The set_parameter and get_parameter models
+below follow the IDL operations instead (docs/rois-reference.md, section 16, item 4).
+"""
 
 
 # ---------------------------------------------------------------------------

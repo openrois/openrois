@@ -555,8 +555,8 @@ A **host** is anything that provides components: a robot, an avatar process, or 
 bank of services. Each host exposes one **sub HRI Engine** plus its components. Most
 components inherit the `Command` / `Query` / `Event` interfaces from
 `RoIS_Common.idl` (`start` / `stop` / `suspend` / `resume`, `component_status`).
-SystemInformation is an exception: it inherits `Query` (component_status) but not
-`Command` (no start/stop/suspend/resume).
+SystemInformation is an exception: its XML profile includes no RoIS_Common, so it has
+neither those commands nor `component_status` (rois-reference §16).
 
 ### Component Interface and Implementation
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add the profile constants of the basic components to `./components`: `ROIS_COMMON_PROFILE`, `NAVIGATION_PROFILE`, `PERSON_DETECTION_PROFILE`, `REACTION_PROFILE` and `SYSTEM_INFORMATION_PROFILE`, generated from `schema/profiles.json`. Each constant is the full profile of its type: the XML profile with the RoIS_Common messages listed first, and the RoSO function.
+
 ## [0.1.0-alpha.3] - 2026-10-08
 
 ### Added

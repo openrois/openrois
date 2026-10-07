@@ -21,7 +21,18 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from openrois.interfaces.common import ComponentStatus
+from openrois.interfaces.components.rois_common import (
+    ROIS_COMMON_PROFILE,
+    ROIS_COMMON_URN,
+    omg_identifier,
+    parameter,
+)
 from openrois.interfaces.hri import DateTime, Integer
+from openrois.interfaces.profiles import (
+    ComponentFunction,
+    EventMessageProfile,
+    HRIComponentProfile,
+)
 
 # ---------------------------------------------------------------------------
 # Component identifier
@@ -29,6 +40,34 @@ from openrois.interfaces.hri import DateTime, Integer
 
 PERSON_DETECTION_URN = "urn:x-rois:def:component:OMG::PersonDetection"
 """Canonical URN for the PersonDetection component profile."""
+
+
+# ---------------------------------------------------------------------------
+# Profile
+# ---------------------------------------------------------------------------
+
+PERSON_DETECTION_PROFILE = HRIComponentProfile(
+    identifier=omg_identifier("PersonDetection"),
+    name="person_detecter",
+    function=ComponentFunction.SENSING,
+    sub_component_profiles=[ROIS_COMMON_URN],
+    command_profiles=[*ROIS_COMMON_PROFILE.command_profiles],
+    query_profiles=[*ROIS_COMMON_PROFILE.query_profiles],
+    event_profiles=[
+        EventMessageProfile(
+            name="person_detected",
+            results=[
+                parameter("number", "int", "number of detected persons"),
+                parameter("timestamp", "DateTime", "time when measuered"),
+            ],
+        ),
+    ],
+)
+"""The full PersonDetection profile.
+
+PersonDetection.xml with the RoIS_Common messages it includes, and the RoSO function
+``sensing``. The names and descriptions are those of the XML profile, word for word.
+"""
 
 
 # ---------------------------------------------------------------------------

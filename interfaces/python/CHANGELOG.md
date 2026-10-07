@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add a profile constant for each basic component type the package models: `NAVIGATION_PROFILE`, `PERSON_DETECTION_PROFILE`, `REACTION_PROFILE` and `SYSTEM_INFORMATION_PROFILE` in `openrois.interfaces.components`, and `ROIS_COMMON_PROFILE` with `ROIS_COMMON_URN` for the RoIS_Common profile they include. Each constant is the full profile of its type: the XML profile with the RoIS_Common messages listed first, and the RoSO function. A component declares the constant of its type and implements a part of it.
+- Export the profile constants to `schema/profiles.json` with `profiles_document()`, for the TypeScript generator.
+- Cross-check every profile constant against its XML profile and `OWL.ttl` when the normative files are available.
+
 ## [0.1.0a3] - 2026-10-08
 
 ### Added

@@ -8,6 +8,11 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 import { componentRef, componentType } from "@openrois/interfaces";
+import {
+  NAVIGATION_PROFILE,
+  PERSON_DETECTION_PROFILE,
+  SYSTEM_INFORMATION_PROFILE,
+} from "@openrois/interfaces/components";
 import type { HRIEngineProfileType as EngineProfile, RoISNotification } from "@openrois/interfaces";
 import { MockEngineCore, type Session } from "../src/engine";
 
@@ -69,6 +74,14 @@ describe("get_profile", () => {
     expect(result.return_code).toBe("OK");
     expect((result.profile as EngineProfile).component_ids).toEqual([PERSON, NAV, SYSTEM]);
     expect(Object.keys(result.component_profiles ?? {})).toEqual([PERSON, NAV, SYSTEM]);
+  });
+
+  it("serves the profile constant of each type under the component's name", () => {
+    const profiles = start().handle(client("a"), "rois.system.get_profile", { condition: "" }).component_profiles;
+    expect(profiles?.[PERSON]).toEqual({ ...PERSON_DETECTION_PROFILE, name: "person_detection" });
+    expect(profiles?.[SYSTEM]).toEqual({ ...SYSTEM_INFORMATION_PROFILE, name: "system_information" });
+    expect(profiles?.[NAV]?.identifier).toEqual(NAVIGATION_PROFILE.identifier);
+    expect(profiles?.[NAV]?.event_profiles).toEqual(NAVIGATION_PROFILE.event_profiles);
   });
 
   it("includes the RoIS_Common messages in each basic component profile", () => {
@@ -200,6 +213,7 @@ describe("parameters", () => {
       parameters: [target],
     });
     expect(result.return_code).toBe("OK");
+    expect(result.command_id).toMatch(/^mock\/param-/);
     await until(() => paramsOf(a, "rois.command.completed").length === 1);
     expect(paramsOf(a, "rois.command.completed")[0]).toEqual({ command_id: result.command_id, status: "OK" });
     const read = engine.handle(a, "rois.command.get_parameter", { component_ref: NAV });
@@ -323,6 +337,24 @@ describe("execute", () => {
     ]);
   });
 
+  it("stops a sequence at a command that does not end OK", async () => {
+    const engine = start();
+    const a = client("a");
+    engine.handle(a, "rois.command.bind", { component_ref: NAV });
+    engine.handle(a, "rois.command.execute", {
+      command_unit_list: [unit(NAV, "start", "n1"), unit(PERSON, "start", "c2")],
+    });
+    engine.handle(a, "rois.command.execute", { command_unit_list: [unit(NAV, "stop", "n3")] });
+
+    await until(() => paramsOf(a, "rois.command.completed").length === 3);
+    const statuses = Object.fromEntries(
+      paramsOf(a, "rois.command.completed").map((p) => [p.command_id, p.status]),
+    );
+    expect(statuses).toEqual({ n1: "ABORT", c2: "ABORT", n3: "OK" });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(paramsOf(a, "rois.command.completed")).toHaveLength(3);
+  });
+
   it("stores the arguments of a set_parameter command", async () => {
     const engine = start();
     const a = client("a");
@@ -373,11 +405,13 @@ describe("events", () => {
     const a = client("a");
     const subscribed = engine.handle(a, "rois.event.subscribe", { event_type: "person_detected", condition: "" });
     expect(subscribed.return_code).toBe("OK");
+    expect(subscribed.subscribe_id).toMatch(/^mock\/sub-/);
 
     await until(() => paramsOf(a, "rois.event.notify_event").length >= 2);
     const event = paramsOf(a, "rois.event.notify_event")[0];
     expect(event.subscribe_id).toBe(subscribed.subscribe_id);
     expect(event.event_type).toBe("person_detected");
+    expect(event.event_id).toMatch(/^mock\/evt-/);
 
     const detail = engine.handle(a, "rois.event.get_event_detail", {
       event_id: String(event.event_id),
@@ -397,7 +431,7 @@ describe("events", () => {
   });
 
   it("answers BAD_PARAMETER for an unknown event_id", () => {
-    const result = start().handle(client("a"), "rois.event.get_event_detail", { event_id: "evt-0", condition: "" });
+    const result = start().handle(client("a"), "rois.event.get_event_detail", { event_id: "mock/evt-0", condition: "" });
     expect(result.return_code).toBe("BAD_PARAMETER");
   });
 });
