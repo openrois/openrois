@@ -13,8 +13,7 @@ implementation.
 Not published to PyPI yet. From a clone of the repository:
 
 ```bash
-pip install -e ./interfaces/python
-pip install -e ./engine
+pip install -e ./interfaces/python -e ./engine
 ```
 
 ## Public API
@@ -40,14 +39,20 @@ from openrois.engine import Engine, WsServer
 
 
 async def main() -> None:
-    server = WsServer(Engine(engine_id="gateway", platform="", enforce_bindings=True))
-    await server.start("0.0.0.0", 8765)
-    # start() returns once the server is listening, so keep the loop alive.
-    await asyncio.Event().wait()
+    server = WsServer(Engine(engine_id="gateway", enforce_bindings=True))
+    # Loopback only by default: the server does not authenticate its peers.
+    await server.start("127.0.0.1", 8765)
+    try:
+        # start() returns once the server is listening, so keep the loop alive.
+        await asyncio.Event().wait()
+    finally:
+        await server.stop()
 
 
 asyncio.run(main())
 ```
+
+A standalone gateway process, `openrois-gateway`, is in progress in `gateway/`.
 
 As an adapter:
 
@@ -64,6 +69,27 @@ engine.register_component(meta.ref, Navigation(component_config(profile, meta.re
 WsClient(engine, profile["engine"]["gateway_url"]).run()
 ```
 
+## Transport
+
+`WsServer` serves child engines and clients on one port:
+
+- A connection on the path `/adapter` is a child engine. The server asks it for its
+  components with `rois.command.search` and registers it under the engine id it reports.
+  An empty engine id, one with a slash, or one already connected closes the connection with
+  code 1008 and the reason.
+- A connection on any other path is a client. Each request runs in its own task, so a slow
+  command does not hold up the others, and replies are matched to requests by id.
+- Events from a child engine go to the client that subscribed. When a client disconnects,
+  its bindings and subscriptions are released.
+- A message that is not JSON gets PARSE_ERROR, one that is not a JSON-RPC request gets
+  INVALID_REQUEST, positional params get INVALID_PARAMS, and an engine failure gets
+  INTERNAL_ERROR. A notification gets no reply.
+- `child_timeout` sets how long the server waits for a child engine's reply, 10 seconds by
+  default. `stop()` closes every connection with code 1001.
+
+`WsClient` appends `/adapter` to the gateway URL, answers each request in its own task, and
+reconnects with exponential backoff.
+
 ## Design Constraints
 
 - The engine is transport-neutral and paradigm-neutral. It reaches everything through the
@@ -75,10 +101,21 @@ See [architecture](https://openrois.org/docs/concepts/architecture) and
 [the recursive engine](https://openrois.org/docs/concepts/recursive-engine) for the
 rationale.
 
+## Test
+
+```bash
+pip install -e ./interfaces/python -e ./components/core -e "./engine[dev]"
+cd engine && pytest && ruff check src/ tests/
+```
+
+The tests run a real `WsServer` on an ephemeral loopback port, with adapters and clients
+connected over WebSockets.
+
 ## Status
 
-Alpha, pre-1.0, unstable API. Hardening, graceful shutdown, reconnection, and a regression
-test suite are [Phases 4 and 5](https://openrois.org/docs/project/roadmap).
+Alpha, pre-1.0, unstable API. The move to the RoIS method catalog of
+`openrois-interfaces` is in progress. Re-subscription after an adapter reconnects and health
+endpoints are planned for [Phase 5](https://openrois.org/docs/project/roadmap).
 
 ## License
 

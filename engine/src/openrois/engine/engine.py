@@ -17,6 +17,7 @@ for pushing event notifications to subscribed clients.
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import json
 import logging
 import uuid
@@ -128,11 +129,28 @@ class EventEmitter:
         event_type: str,
         results: list[Result],
     ) -> None:
-        """Emit an event to all subscribed operators.
+        """Emit an event to all subscribed operators, from any thread.
 
-        Thread-safe: can be called from a rclpy callback in a background
-        thread. Uses asyncio.run_coroutine_threadsafe() to schedule the
-        WS send on the main asyncio loop.
+        Components call this from callbacks that run outside the event loop,
+        such as an rclpy executor thread. The subscription table belongs to
+        the loop, so the whole emission, including the lookup of matching
+        subscriptions, is scheduled onto the loop instead of running here.
+
+        If nobody is subscribed, this is a no-op.
+        """
+        future = asyncio.run_coroutine_threadsafe(
+            self.emit_async(component_ref, event_type, results),
+            self._loop,
+        )
+        future.add_done_callback(_log_emit_failure)
+
+    async def emit_async(
+        self,
+        component_ref: str,
+        event_type: str,
+        results: list[Result],
+    ) -> None:
+        """Emit an event to all subscribed operators, from the event loop.
 
         If nobody is subscribed, this is a no-op.
         """
@@ -141,9 +159,7 @@ class EventEmitter:
             for sid, (cref, etype) in self._subscriptions.items()
             if cref == component_ref and etype == event_type
         ]
-        if not matching:
-            return
-
+        payload = [r.model_dump() for r in results]
         for subscribe_id in matching:
             notification = {
                 "jsonrpc": "2.0",
@@ -154,53 +170,23 @@ class EventEmitter:
                     "component_ref": component_ref,
                     "event_type": event_type,
                     "expire": "",
-                    "results": [r.model_dump() for r in results],
+                    "results": payload,
                 },
             }
-            msg = json.dumps(notification)
-            asyncio.run_coroutine_threadsafe(
-                self._ws_send(msg),
-                self._loop,
-            )
-
-    def emit_async(
-        self,
-        component_ref: str,
-        event_type: str,
-        results: list[Result],
-    ) -> Awaitable[None]:
-        """Async version of emit for use within the asyncio loop."""
-        matching = [
-            sid
-            for sid, (cref, etype) in self._subscriptions.items()
-            if cref == component_ref and etype == event_type
-        ]
-        if not matching:
-            return _noop()
-
-        async def _send_all() -> None:
-            for subscribe_id in matching:
-                notification = {
-                    "jsonrpc": "2.0",
-                    "method": "rois.event.notify",
-                    "params": {
-                        "event_id": str(uuid.uuid4()),
-                        "subscribe_id": subscribe_id,
-                        "component_ref": component_ref,
-                        "event_type": event_type,
-                        "expire": "",
-                        "results": [r.model_dump() for r in results],
-                    },
-                }
-                msg = json.dumps(notification)
-                await self._ws_send(msg)
-
-        return _send_all()
+            await self._ws_send(json.dumps(notification))
 
 
-async def _noop() -> None:
-    """No-op coroutine for emit_async when there are no subscribers."""
-    pass
+def _log_emit_failure(future: concurrent.futures.Future[None]) -> None:
+    """Log an emission that failed after it left the component's thread.
+
+    Without this callback the exception would stay inside the future, which
+    nobody awaits, and the event would vanish silently.
+    """
+    if future.cancelled():
+        return
+    exc = future.exception()
+    if exc is not None:
+        logger.error("Event emission failed: %s", exc)
 
 
 # ---------------------------------------------------------------------------
@@ -490,9 +476,19 @@ class ChildEngineProxy:
         self,
         ws_send: Callable[[str], Awaitable[None]],
         loop: asyncio.AbstractEventLoop,
+        request_timeout: float = 10.0,
     ) -> None:
-        self._ws_send = ws_send
+        """Initialize the proxy.
+
+        Args:
+            ws_send: Async callable that sends a raw JSON string to the child.
+            loop: The event loop that owns the connection.
+            request_timeout: Seconds to wait for the child's reply to a
+                forwarded request before answering TIMEOUT.
+        """
+        self._ws_send: Callable[[str], Awaitable[None]] | None = ws_send
         self._loop = loop
+        self._request_timeout = request_timeout
         self._pending: dict[str, asyncio.Future[dict]] = {}
         self._event_sinks: dict[str, Callable[[dict], Awaitable[None]]] = {}
         self._next_id = 0
@@ -580,7 +576,7 @@ class ChildEngineProxy:
         params: dict[str, Any],
     ) -> dict[str, Any]:
         """Forward a JSON-RPC request to the child engine and await response."""
-        if not self.is_connected:
+        if self._ws_send is None:
             return {"return_code": ReturnCode.ERROR.value}
 
         self._next_id += 1
@@ -603,8 +599,8 @@ class ChildEngineProxy:
             return {"return_code": ReturnCode.ERROR.value}
 
         try:
-            return await asyncio.wait_for(future, timeout=10.0)
-        except asyncio.TimeoutError:
+            return await asyncio.wait_for(future, timeout=self._request_timeout)
+        except TimeoutError:
             self._pending.pop(request_id, None)
             return {"return_code": ReturnCode.TIMEOUT.value}
         finally:
@@ -756,7 +752,23 @@ class Engine:
         sub_engine: ChildEngineProxy,
         platform: str = "",
     ) -> None:
-        """Register a sub-engine and its components."""
+        """Register a sub-engine and its components.
+
+        Every component ref on the wire is ``engine_id/ref``, so the engine id
+        must be non-empty, free of slashes, and not taken by another connected
+        sub-engine. Otherwise two engines would answer for the same refs.
+
+        Raises:
+            ValueError: If the engine id is empty, contains a slash, or is
+                already registered by another sub-engine.
+        """
+        if not engine_id:
+            raise ValueError("The engine id is empty.")
+        if "/" in engine_id:
+            raise ValueError(f"The engine id {engine_id!r} contains a slash.")
+        current = self._sub_engines.get(engine_id)
+        if current is not None and current["sub_engine"] is not sub_engine:
+            raise ValueError(f"The engine id {engine_id!r} is already connected.")
         self._sub_engines[engine_id] = {
             "engine_id": engine_id,
             "platform": platform,
@@ -765,9 +777,19 @@ class Engine:
         }
         self._rebuild_index()
 
-    def unregister_sub_engine(self, engine_id: str) -> None:
-        """Remove a sub-engine (when its WebSocket disconnects)."""
-        self._sub_engines.pop(engine_id, None)
+    def unregister_sub_engine(self, sub_engine: ChildEngineProxy) -> None:
+        """Remove a sub-engine when its WebSocket disconnects.
+
+        The lookup goes by proxy, not by engine id, so a connection that was
+        refused for a duplicate id cannot remove the engine that holds the id.
+        """
+        engine_id = next(
+            (eid for eid, entry in self._sub_engines.items() if entry["sub_engine"] is sub_engine),
+            None,
+        )
+        if engine_id is None:
+            return
+        del self._sub_engines[engine_id]
         self._rebuild_index()
         # Release all bindings for this sub-engine's components.
         to_remove = [
@@ -922,9 +944,15 @@ class Engine:
                     },
                     "name": c["ref"],
                     "function": c.get("function"),
-                    "command_profiles": [{"name": name, "results": []} for name in c.get("commands", [])],
-                    "query_profiles": [{"name": name, "results": []} for name in c.get("queries", [])],
-                    "event_profiles": [{"name": name, "results": []} for name in c.get("events", [])],
+                    "command_profiles": [
+                        {"name": name, "results": []} for name in c.get("commands", [])
+                    ],
+                    "query_profiles": [
+                        {"name": name, "results": []} for name in c.get("queries", [])
+                    ],
+                    "event_profiles": [
+                        {"name": name, "results": []} for name in c.get("events", [])
+                    ],
                     "parameter_profiles": c.get("parameters", []),
                 })
 

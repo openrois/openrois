@@ -9,12 +9,32 @@ description = "OpenRoIS engine: the recursive RoIS HRI Engine, with its WebSocke
 license = "Apache-2.0"
 requires-python = ">=3.12"
 dependencies = [
-    "openrois-interfaces>=0.1.0a2",
-    "websockets>=12.0",
+    "openrois-interfaces>=0.1.0a3",
+    "websockets>=14.0",
     "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "openrois-components-core>=0.1.0a2",
+    "pytest>=8.4",
+    "pytest-asyncio>=1.0",
+    "ruff>=0.4",
 ]
 
 # openrois is a namespace package shared with openrois-interfaces, so there is no
 # src/openrois/__init__.py and this distribution ships only openrois/engine/.
 [tool.hatch.build.targets.wheel]
 packages = ["src/openrois"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
