@@ -71,10 +71,10 @@ describe("CommandUnitSchema", () => {
     expect(cmd.delay_time).toBeNull();
   });
 
-  it("parses a command with arguments and delay", () => {
+  it("parses a command the component defines, with arguments and delay", () => {
     const cmd = CommandUnitSchema.parse({
       component_ref: "robot/nav",
-      command_type: "execute",
+      command_type: "go_to",
       command_id: "cmd-2",
       arguments: [{ name: "x", data_type_ref: "int", value: "1" }],
       delay_time: 100,

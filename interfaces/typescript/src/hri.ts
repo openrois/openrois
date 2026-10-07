@@ -10,7 +10,7 @@ import { z } from "zod";
 export type RoISIdentifier = string;
 /** Ordered list of RoIS identifiers. */
 export type RoISIdentifierList = RoISIdentifier[];
-/** ISO 19143 filter expression used by search(), query(), subscribe(). */
+/** A condition in the OpenRoIS subset of CQL2-Text. Empty means no filter. */
 export type ConditionT = string;
 /** XML profile document describing an HRI Engine's capabilities. */
 export type HRIEngineProfile = string;
@@ -31,6 +31,8 @@ export type RoLoData = string;
 export type ResultList = Result[];
 /** Ordered list of Parameter values. */
 export type ParameterList = Parameter[];
+/** Ordered list of Argument values. */
+export type ArgumentList = Argument[];
 
 // ─── Shared type definitions ($defs) ─────────────────────────────
 
@@ -52,20 +54,6 @@ export const ArgumentSchema = z.object({
 }).strict();
 export type Argument = z.infer<typeof ArgumentSchema>;
 
-export const ArgumentListSchema = z.array(ArgumentSchema);
-export type ArgumentList = z.infer<typeof ArgumentListSchema>;
-
-/**
- * Command operation type for RoIS commands.
- * 
- * Not an IDL enum — the IDL uses plain `string` for command_type. OpenRoIS
- * defines this enum for compile-time safety. The wire values match the
- * RoIS_Common::Command method names plus `set_parameter` and `execute`.
- */
-
-export const CommandTypeSchema = z.enum(["start", "stop", "suspend", "resume", "set_parameter", "execute"]);
-export type CommandType = z.infer<typeof CommandTypeSchema>;
-
 /**
  * A single command within a CommandUnitSequence.
  * 
@@ -73,8 +61,8 @@ export type CommandType = z.infer<typeof CommandTypeSchema>;
  * 
  * Attributes:
  *     component_ref: The component to send the command to.
- *     command_type: The command operation (e.g., 'start', 'stop',
- *         'set_parameter', 'execute').
+ *     command_type: The command name: a standard one (start, stop, suspend, resume,
+ *         set_parameter) or one the component profile defines.
  *     command_id: Unique identifier for this command instance.
  *     arguments: Optional list of arguments for the command.
  *     delay_time: Optional delay in milliseconds before executing this command.
@@ -82,9 +70,9 @@ export type CommandType = z.infer<typeof CommandTypeSchema>;
 
 export const CommandUnitSchema = z.object({
   component_ref: z.string(),
-  command_type: CommandTypeSchema, // Command operation: start, stop, suspend, resume, set_parameter, execute
+  command_type: z.string(), // Command name, for example start, stop or set_parameter
   command_id: z.string(), // Unique command instance identifier
-  arguments: ArgumentListSchema.optional(),
+  arguments: z.array(ArgumentSchema).optional(),
   delay_time: z.number().int().nullable().default(null), // Delay in ms before execution
 }).strict();
 export type CommandUnit = z.infer<typeof CommandUnitSchema>;

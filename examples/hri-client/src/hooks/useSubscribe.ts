@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import type { RoISClient } from "@openrois/sdk";
-import type { Result } from "@openrois/interfaces";
+import { componentRef as selectRef, type RoISClient } from "@openrois/sdk";
+import type { NotifyEventParams, Result } from "@openrois/interfaces";
 
 interface UseSubscribeResult {
   subscribed: boolean;
@@ -9,11 +9,10 @@ interface UseSubscribeResult {
 }
 
 /**
- * Generic subscribe hook. Calls rois.event.subscribe on mount,
- * unsubscribes on unmount.
+ * Subscribe to one event type of one component while the hook is mounted.
  *
- * The caller provides the componentRef and eventType from the
- * profile. Notifications are accumulated as they arrive.
+ * The component is selected by its ref. The payload of every event of this
+ * subscription is kept, up to the last 50 results.
  */
 export function useSubscribe(
   client: RoISClient | null,
@@ -25,54 +24,40 @@ export function useSubscribe(
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!client) return;
-    let subId: string | null = null;
-    // Set when the effect is cleaned up before the subscribe call resolves, so
-    // the late subscription is released instead of leaking on the engine.
+    if (!client || !eventType) return;
+    let subscribeId: string | null = null;
+    // Set when the effect is cleaned up before subscribe resolves, so the late
+    // subscription is released instead of left open on the engine.
     let cancelled = false;
 
+    const handler = (params: NotifyEventParams) => {
+      if (params.subscribe_id !== subscribeId) return;
+      setNotifications((prev) => [...prev, ...(params.results ?? [])].slice(-50));
+    };
+    client.on("rois.event.notify_event", handler);
+
     client
-      .subscribe(componentRef, eventType)
+      .subscribe(eventType, selectRef(componentRef))
       .then((id) => {
         if (cancelled) {
           client.unsubscribe(id).catch(() => {});
           return;
         }
-        subId = id;
+        subscribeId = id;
         setSubscribed(true);
         setError(null);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        const message = err instanceof Error ? err.message : String(err);
-        setError(message);
+        setError(err instanceof Error ? err.message : String(err));
         setSubscribed(false);
       });
 
-    // Listen for event notifications, keeping only those for this subscription.
-    const handler = (notification: {
-      params?: {
-        subscribe_id?: string;
-        component_ref?: string;
-        event_type?: string;
-        results?: Result[];
-      };
-    }) => {
-      const params = notification.params ?? {};
-      if (params.subscribe_id && subId && params.subscribe_id !== subId) return;
-      if (params.event_type && params.event_type !== eventType) return;
-      if (params.component_ref && params.component_ref !== componentRef) return;
-      const results = params.results ?? [];
-      setNotifications((prev) => [...prev, ...results].slice(-50));
-    };
-
-    client.on("rois.event.notify", handler);
-
     return () => {
       cancelled = true;
-      client.off("rois.event.notify", handler);
-      if (subId) {
-        client.unsubscribe(subId).catch(() => {});
+      client.off("rois.event.notify_event", handler);
+      if (subscribeId) {
+        client.unsubscribe(subscribeId).catch(() => {});
       }
       setSubscribed(false);
     };

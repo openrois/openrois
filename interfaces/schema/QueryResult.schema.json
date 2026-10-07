@@ -1,0 +1,67 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "Result": {
+      "additionalProperties": false,
+      "description": "A named result value returned by query or event operations.\n\nMaps to RoIS_HRI::Result in the IDL.\n\nAttributes:\n    name: The result parameter name (e.g., 'number', 'timestamp').\n    data_type_ref: Reference to the data type (e.g., 'int', 'DateTime').\n    value: The result value as a string. Component-specific typed models\n        provide structured access.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "data_type_ref": {
+          "$ref": "#/$defs/RoISIdentifier"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "data_type_ref",
+        "value"
+      ],
+      "title": "Result",
+      "type": "object"
+    },
+    "ResultList": {
+      "items": {
+        "$ref": "#/$defs/Result"
+      },
+      "type": "array"
+    },
+    "ReturnCode": {
+      "description": "Return code for all RoIS operations.\n\nMaps to RoIS_HRI::ReturnCode_t in the IDL.",
+      "enum": [
+        "OK",
+        "ERROR",
+        "BAD_PARAMETER",
+        "UNSUPPORTED",
+        "OUT_OF_RESOURCES",
+        "TIMEOUT"
+      ],
+      "title": "ReturnCode",
+      "type": "string"
+    },
+    "RoISIdentifier": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Result of rois.query.query.\n\nMaps to QueryIF::query(in query_type, in condition, out results).\n\nAttributes:\n    return_code: Outcome of the operation.\n    results: Results of the query.",
+  "properties": {
+    "return_code": {
+      "$ref": "#/$defs/ReturnCode"
+    },
+    "results": {
+      "$ref": "#/$defs/ResultList",
+      "description": "Results of the query"
+    }
+  },
+  "required": [
+    "return_code"
+  ],
+  "title": "QueryResult",
+  "type": "object"
+}

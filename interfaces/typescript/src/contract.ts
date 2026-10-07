@@ -22,7 +22,7 @@
  * Mirrors interfaces/python/src/openrois/interfaces/contract.py.
  */
 
-import type { ReturnCode, RoISIdentifier, CommandType } from "./hri";
+import type { ReturnCode, RoISIdentifier } from "./hri";
 
 // Import the generated contract data models, so they are in scope for the interface below.
 import type {
@@ -69,8 +69,11 @@ export type {
 /** Async callback that receives event envelopes from a ComponentContract. */
 export type EventSink = (envelope: EventEnvelope) => Promise<void>;
 
-// Re-export CommandType from hri (now an enum, not a type alias)
-export type { CommandType } from "./hri";
+/**
+ * Command name: a standard one from RoISCommandTypes, or one the component profile
+ * defines. The IDL and the XSD type it as a plain string.
+ */
+export type CommandType = string;
 
 /** Query operation name, e.g. 'component_status', 'robot_position'. */
 export type QueryType = string;

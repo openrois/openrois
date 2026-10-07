@@ -1,14 +1,16 @@
-"""Tests for openrois.interfaces.service — Service callback types."""
+"""Tests for openrois.interfaces.service: the params of engine notifications."""
 
 import pytest
 from pydantic import ValidationError
 
+from openrois.interfaces.hri import Result
 from openrois.interfaces.service import (
-    CompletedEvent,
+    CompletedParams,
     CompletedStatus,
     ErrorType,
-    NotifyErrorEvent,
-    NotifyEventPayload,
+    NotifyErrorParams,
+    NotifyEventParams,
+    ProfileChangedParams,
 )
 
 
@@ -50,9 +52,9 @@ class TestErrorType:
         assert ErrorType("COMPONENT_INTERNAL_ERROR") is ErrorType.COMPONENT_INTERNAL_ERROR
 
 
-class TestNotifyErrorEvent:
+class TestNotifyErrorParams:
     def test_construction(self) -> None:
-        event = NotifyErrorEvent(
+        event = NotifyErrorParams(
             error_id="err-001",
             error_type=ErrorType.COMPONENT_INTERNAL_ERROR,
         )
@@ -60,7 +62,7 @@ class TestNotifyErrorEvent:
         assert event.error_type == ErrorType.COMPONENT_INTERNAL_ERROR
 
     def test_serialization(self) -> None:
-        event = NotifyErrorEvent(
+        event = NotifyErrorParams(
             error_id="err-001",
             error_type=ErrorType.COMPONENT_NOT_RESPONDING,
         )
@@ -69,23 +71,23 @@ class TestNotifyErrorEvent:
         assert d["error_type"] == "COMPONENT_NOT_RESPONDING"
 
     def test_json_round_trip(self) -> None:
-        event = NotifyErrorEvent(
+        event = NotifyErrorParams(
             error_id="err-002",
             error_type=ErrorType.ENGINE_INTERNAL_ERROR,
         )
         j = event.model_dump_json()
-        event2 = NotifyErrorEvent.model_validate_json(j)
+        event2 = NotifyErrorParams.model_validate_json(j)
         assert event == event2
 
     def test_frozen(self) -> None:
-        event = NotifyErrorEvent(error_id="err-001", error_type=ErrorType.USER_DEFINED_ERROR)
+        event = NotifyErrorParams(error_id="err-001", error_type=ErrorType.USER_DEFINED_ERROR)
         with pytest.raises(ValidationError):
             event.error_id = "changed"  # type: ignore[misc]
 
 
-class TestCompletedEvent:
+class TestCompletedParams:
     def test_construction(self) -> None:
-        event = CompletedEvent(
+        event = CompletedParams(
             command_id="cmd-001",
             status=CompletedStatus.OK,
         )
@@ -93,21 +95,21 @@ class TestCompletedEvent:
         assert event.status == CompletedStatus.OK
 
     def test_serialization(self) -> None:
-        event = CompletedEvent(command_id="cmd-001", status=CompletedStatus.ABORT)
+        event = CompletedParams(command_id="cmd-001", status=CompletedStatus.ABORT)
         d = event.model_dump()
         assert d["command_id"] == "cmd-001"
         assert d["status"] == "ABORT"
 
     def test_json_round_trip(self) -> None:
-        event = CompletedEvent(command_id="cmd-001", status=CompletedStatus.TIMEOUT)
+        event = CompletedParams(command_id="cmd-001", status=CompletedStatus.TIMEOUT)
         j = event.model_dump_json()
-        event2 = CompletedEvent.model_validate_json(j)
+        event2 = CompletedParams.model_validate_json(j)
         assert event == event2
 
 
-class TestNotifyEventPayload:
+class TestNotifyEventParams:
     def test_construction(self) -> None:
-        payload = NotifyEventPayload(
+        payload = NotifyEventParams(
             event_id="evt-001",
             event_type="person_detected",
             subscribe_id="sub-001",
@@ -119,7 +121,7 @@ class TestNotifyEventPayload:
         assert payload.expire == "2025-01-15T11:00:00Z"
 
     def test_default_expire(self) -> None:
-        payload = NotifyEventPayload(
+        payload = NotifyEventParams(
             event_id="evt-001",
             event_type="face_detected",
             subscribe_id="sub-001",
@@ -127,12 +129,34 @@ class TestNotifyEventPayload:
         assert payload.expire == ""
 
     def test_json_round_trip(self) -> None:
-        payload = NotifyEventPayload(
+        payload = NotifyEventParams(
             event_id="evt-001",
             event_type="person_detected",
             subscribe_id="sub-001",
             expire="2025-01-15T11:00:00Z",
         )
         j = payload.model_dump_json()
-        payload2 = NotifyEventPayload.model_validate_json(j)
+        payload2 = NotifyEventParams.model_validate_json(j)
         assert payload == payload2
+
+    def test_results_round_trip(self) -> None:
+        payload = NotifyEventParams(
+            event_id="evt-001",
+            event_type="person_detected",
+            subscribe_id="sub-001",
+            results=[Result(name="number", data_type_ref="int", value="2")],
+        )
+        assert NotifyEventParams.model_validate_json(payload.model_dump_json()) == payload
+
+    def test_results_default_to_empty(self) -> None:
+        payload = NotifyEventParams(event_id="e", event_type="t", subscribe_id="s")
+        assert payload.results == []
+
+
+class TestProfileChangedParams:
+    def test_empty(self) -> None:
+        assert ProfileChangedParams().model_dump() == {}
+
+    def test_rejects_fields(self) -> None:
+        with pytest.raises(ValidationError):
+            ProfileChangedParams.model_validate({"engine_id": "main"})

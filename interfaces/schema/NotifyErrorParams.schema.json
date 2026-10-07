@@ -14,9 +14,10 @@
     }
   },
   "additionalProperties": false,
-  "description": "Event payload for ServiceApplicationBase::notify_error.\n\nAttributes:\n    error_id: Unique identifier for this error instance.\n    error_type: Classification of the error.",
+  "description": "Params of the rois.system.notify_error notification.\n\nMaps to ServiceApplicationBase::notify_error(in error_id, in error_type). The\ndetails come from SystemIF::get_error_detail(error_id).\n\nAttributes:\n    error_id: Identifier of this error, for get_error_detail.\n    error_type: Classification of the error.",
   "properties": {
     "error_id": {
+      "description": "Identifier of this error, for get_error_detail",
       "title": "Error Id",
       "type": "string"
     },
@@ -28,6 +29,6 @@
     "error_id",
     "error_type"
   ],
-  "title": "NotifyErrorEvent",
+  "title": "NotifyErrorParams",
   "type": "object"
 }

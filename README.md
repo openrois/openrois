@@ -124,7 +124,7 @@ cd examples/hri-client && npm install && npm run dev
 ```
 
 The inspector reads the engine profile and renders every component it finds, with its
-queries, commands, and events. Nothing in the client is specific to the components on
+queries, parameters, commands, and events. Nothing in the client is specific to the components on
 the other side.
 
 <p align="center">
@@ -141,27 +141,27 @@ The TypeScript SDK exposes the RoIS interfaces with typed responses and runtime
 validation.
 
 ```ts
-import { RoISClient } from "@openrois/sdk";
+import { RoISClient, componentRef, componentType } from "@openrois/sdk";
 
 const client = await RoISClient.connect("ws://localhost:8765");
 
-// Discover the components offered by every connected robot, then pick one by type.
-const refs = await client.search();
-const nav = refs.find((ref) => ref.includes("Navigation"))!;
+// Find a navigation component on any connected robot, then select it by ref.
+const [nav] = await client.search(componentType({ authority: "OMG", code: "Navigation" }));
+const target = componentRef(nav);
 
 // Query state synchronously.
-const status = await client.query(nav, "component_status");
+const status = await client.query("component_status", target);
 
 // Subscribe to events.
-client.on("reached_target", (notification) => console.log(notification.params));
-await client.subscribe(nav, "reached_target");
+client.on("reached_target", (event) => console.log(event.results));
+await client.subscribe("reached_target", target);
 
 // Reserve an actuation component, command it, then release it.
 await client.bind(nav);
 await client.setParameter(nav, [
   { name: "target_positions", data_type_ref: "string[]", value: '["kitchen"]' },
 ]);
-await client.execute(nav, { command_type: "start" });
+await client.execute([{ component_ref: nav, command_type: "start" }]);
 await client.release(nav);
 
 await client.disconnect();

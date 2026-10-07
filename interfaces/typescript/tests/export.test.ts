@@ -21,9 +21,10 @@ describe("Export completeness", () => {
   it("exports Service types", () => {
     expect(openrois.CompletedStatusSchema).toBeDefined();
     expect(openrois.ErrorTypeSchema).toBeDefined();
-    expect(openrois.CompletedEventSchema).toBeDefined();
-    expect(openrois.NotifyErrorEventSchema).toBeDefined();
-    expect(openrois.NotifyEventPayloadSchema).toBeDefined();
+    expect(openrois.CompletedParamsSchema).toBeDefined();
+    expect(openrois.NotifyErrorParamsSchema).toBeDefined();
+    expect(openrois.NotifyEventParamsSchema).toBeDefined();
+    expect(openrois.ProfileChangedParamsSchema).toBeDefined();
   });
 
   it("exports Component Contract types", () => {
@@ -42,9 +43,27 @@ describe("Export completeness", () => {
 
   it("exports Profile types", () => {
     expect(openrois.HRIComponentProfileSchema).toBeDefined();
+    expect(openrois.ComponentFunctionSchema).toBeDefined();
     expect(openrois.HRIEngineProfileTypeSchema).toBeDefined();
     expect(openrois.ParameterProfileSchema).toBeDefined();
     expect(openrois.RoISIdentifierTypeSchema).toBeDefined();
+  });
+
+  it("exports the method catalog", () => {
+    expect(openrois.RoISMethods).toBeDefined();
+    expect(openrois.RoISMethodSchemas).toBeDefined();
+    expect(openrois.RoISNotifications).toBeDefined();
+    expect(openrois.RoISNotificationSchemas).toBeDefined();
+    expect(openrois.RoISCommandTypes).toBeDefined();
+    expect(openrois.JsonRpcErrorCode).toBeDefined();
+    expect(openrois.ExecuteParamsSchema).toBeDefined();
+    expect(openrois.GetProfileResultSchema).toBeDefined();
+  });
+
+  it("exports the condition parser and builders", () => {
+    expect(openrois.parseCondition).toBeDefined();
+    expect(openrois.ConditionError).toBeDefined();
+    expect(openrois.componentRef("r/head")).toBe("component_ref = 'r/head'");
   });
 
   it("does NOT export Component types from root (use @openrois/interfaces/components)", () => {

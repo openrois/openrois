@@ -1,0 +1,174 @@
+{
+  "methods": [
+    {
+      "method": "rois.system.connect",
+      "interface": "SystemIF",
+      "operation": "connect",
+      "params": "ConnectParams",
+      "result": "ConnectResult"
+    },
+    {
+      "method": "rois.system.disconnect",
+      "interface": "SystemIF",
+      "operation": "disconnect",
+      "params": "DisconnectParams",
+      "result": "DisconnectResult"
+    },
+    {
+      "method": "rois.system.get_profile",
+      "interface": "SystemIF",
+      "operation": "get_profile",
+      "params": "GetProfileParams",
+      "result": "GetProfileResult"
+    },
+    {
+      "method": "rois.system.get_error_detail",
+      "interface": "SystemIF",
+      "operation": "get_error_detail",
+      "params": "GetErrorDetailParams",
+      "result": "GetErrorDetailResult"
+    },
+    {
+      "method": "rois.command.search",
+      "interface": "CommandIF",
+      "operation": "search",
+      "params": "SearchParams",
+      "result": "SearchResult"
+    },
+    {
+      "method": "rois.command.bind",
+      "interface": "CommandIF",
+      "operation": "bind",
+      "params": "BindParams",
+      "result": "BindResult"
+    },
+    {
+      "method": "rois.command.bind_any",
+      "interface": "CommandIF",
+      "operation": "bind_any",
+      "params": "BindAnyParams",
+      "result": "BindAnyResult"
+    },
+    {
+      "method": "rois.command.release",
+      "interface": "CommandIF",
+      "operation": "release",
+      "params": "ReleaseParams",
+      "result": "ReleaseResult"
+    },
+    {
+      "method": "rois.command.get_parameter",
+      "interface": "CommandIF",
+      "operation": "get_parameter",
+      "params": "GetParameterParams",
+      "result": "GetParameterResult"
+    },
+    {
+      "method": "rois.command.set_parameter",
+      "interface": "CommandIF",
+      "operation": "set_parameter",
+      "params": "SetParameterParams",
+      "result": "SetParameterResult"
+    },
+    {
+      "method": "rois.command.execute",
+      "interface": "CommandIF",
+      "operation": "execute",
+      "params": "ExecuteParams",
+      "result": "ExecuteResult"
+    },
+    {
+      "method": "rois.command.get_command_result",
+      "interface": "CommandIF",
+      "operation": "get_command_result",
+      "params": "GetCommandResultParams",
+      "result": "GetCommandResultResult"
+    },
+    {
+      "method": "rois.query.query",
+      "interface": "QueryIF",
+      "operation": "query",
+      "params": "QueryParams",
+      "result": "QueryResult"
+    },
+    {
+      "method": "rois.event.subscribe",
+      "interface": "EventIF",
+      "operation": "subscribe",
+      "params": "SubscribeParams",
+      "result": "SubscribeResult"
+    },
+    {
+      "method": "rois.event.unsubscribe",
+      "interface": "EventIF",
+      "operation": "unsubscribe",
+      "params": "UnsubscribeParams",
+      "result": "UnsubscribeResult"
+    },
+    {
+      "method": "rois.event.get_event_detail",
+      "interface": "EventIF",
+      "operation": "get_event_detail",
+      "params": "GetEventDetailParams",
+      "result": "GetEventDetailResult"
+    }
+  ],
+  "notifications": [
+    {
+      "method": "rois.system.notify_error",
+      "interface": "ServiceApplicationBase",
+      "operation": "notify_error",
+      "params": "NotifyErrorParams"
+    },
+    {
+      "method": "rois.command.completed",
+      "interface": "ServiceApplicationBase",
+      "operation": "completed",
+      "params": "CompletedParams"
+    },
+    {
+      "method": "rois.event.notify_event",
+      "interface": "ServiceApplicationBase",
+      "operation": "notify_event",
+      "params": "NotifyEventParams"
+    },
+    {
+      "method": "rois.system.profile_changed",
+      "interface": "OpenRoIS",
+      "operation": "profile_changed",
+      "params": "ProfileChangedParams"
+    }
+  ],
+  "standard_command_types": [
+    "start",
+    "stop",
+    "suspend",
+    "resume",
+    "set_parameter"
+  ],
+  "json_rpc_error_codes": [
+    {
+      "name": "PARSE_ERROR",
+      "code": -32700
+    },
+    {
+      "name": "INVALID_REQUEST",
+      "code": -32600
+    },
+    {
+      "name": "METHOD_NOT_FOUND",
+      "code": -32601
+    },
+    {
+      "name": "INVALID_PARAMS",
+      "code": -32602
+    },
+    {
+      "name": "INTERNAL_ERROR",
+      "code": -32603
+    }
+  ],
+  "unmodelled_method_prefixes": [
+    "rois.stream."
+  ]
+}

@@ -18,10 +18,11 @@
     }
   },
   "additionalProperties": false,
-  "description": "Event payload for ServiceApplicationBase::completed.\n\nAttributes:\n    command_id: The command identifier that completed.\n    status: The completion status.",
+  "description": "Params of the rois.command.completed notification.\n\nMaps to ServiceApplicationBase::completed(in command_id, in status). The results\ncome from CommandIF::get_command_result(command_id).\n\nAttributes:\n    command_id: The command that ended, as the application named it.\n    status: How the command ended.",
   "properties": {
     "command_id": {
-      "$ref": "#/$defs/CommandId"
+      "$ref": "#/$defs/CommandId",
+      "description": "The command that ended"
     },
     "status": {
       "$ref": "#/$defs/CompletedStatus"
@@ -31,6 +32,6 @@
     "command_id",
     "status"
   ],
-  "title": "CompletedEvent",
+  "title": "CompletedParams",
   "type": "object"
 }

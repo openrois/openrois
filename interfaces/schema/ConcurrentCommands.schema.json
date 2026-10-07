@@ -34,29 +34,17 @@
     "CommandId": {
       "type": "string"
     },
-    "CommandType": {
-      "description": "Command operation type for RoIS commands.\n\nNot an IDL enum — the IDL uses plain `string` for command_type. OpenRoIS\ndefines this enum for compile-time safety. The wire values match the\nRoIS_Common::Command method names plus `set_parameter` and `execute`.",
-      "enum": [
-        "start",
-        "stop",
-        "suspend",
-        "resume",
-        "set_parameter",
-        "execute"
-      ],
-      "title": "CommandType",
-      "type": "string"
-    },
     "CommandUnit": {
       "additionalProperties": false,
-      "description": "A single command within a CommandUnitSequence.\n\nMaps to CommandMessageType in XML-Profiles.xsd (CommandBaseType subtype).\n\nAttributes:\n    component_ref: The component to send the command to.\n    command_type: The command operation (e.g., 'start', 'stop',\n        'set_parameter', 'execute').\n    command_id: Unique identifier for this command instance.\n    arguments: Optional list of arguments for the command.\n    delay_time: Optional delay in milliseconds before executing this command.",
+      "description": "A single command within a CommandUnitSequence.\n\nMaps to CommandMessageType in XML-Profiles.xsd (CommandBaseType subtype).\n\nAttributes:\n    component_ref: The component to send the command to.\n    command_type: The command name: a standard one (start, stop, suspend, resume,\n        set_parameter) or one the component profile defines.\n    command_id: Unique identifier for this command instance.\n    arguments: Optional list of arguments for the command.\n    delay_time: Optional delay in milliseconds before executing this command.",
       "properties": {
         "component_ref": {
           "$ref": "#/$defs/RoISIdentifier"
         },
         "command_type": {
-          "$ref": "#/$defs/CommandType",
-          "description": "Command operation: start, stop, suspend, resume, set_parameter, execute"
+          "description": "Command name, for example start, stop or set_parameter",
+          "title": "Command Type",
+          "type": "string"
         },
         "command_id": {
           "$ref": "#/$defs/CommandId",

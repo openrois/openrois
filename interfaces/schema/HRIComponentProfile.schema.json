@@ -42,6 +42,16 @@
       "title": "CommandMessageProfile",
       "type": "object"
     },
+    "ComponentFunction": {
+      "description": "The RoSO function class of a component.\n\nNot part of XML-Profiles.xsd. The values are the Robotic Service Function\nOntology classes that the spec's ontology file assigns to the basic components:\nNavigation, Reaction and SpeechSynthesis are Actuation, the detection,\nlocalization and recognition components are Sensing, and AudioStreaming is the\ngeneric Function class. An engine requires a bind before commands on an\nactuation component.\n\nACTUATION: The component acts on the world (moves, speaks, shows).\nSENSING: The component observes the world.\nFUNCTION: The component is neither, for example a stream.",
+      "enum": [
+        "actuation",
+        "sensing",
+        "function"
+      ],
+      "title": "ComponentFunction",
+      "type": "string"
+    },
     "EventMessageProfile": {
       "additionalProperties": false,
       "description": "An event message profile.\n\nMaps to EventMessageProfileType in XML-Profiles.xsd.\n\nEvents have results (the event payload) but no arguments.",
@@ -147,7 +157,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Describes a RoIS component's capabilities, messages, and parameters.\n\nMaps to HRIComponentProfileType in XML-Profiles.xsd.\n\nAttributes:\n    identifier: The component's structured identifier (URN).\n    name: A short human-readable name (e.g., 'person_detecter').\n    sub_component_profiles: URNs of sub-component profiles (e.g., RoISCommon).\n    command_profiles: Command message profiles this component supports.\n    query_profiles: Query message profiles this component supports.\n    event_profiles: Event message profiles this component supports.\n    parameter_profiles: Parameter declarations for this component.",
+  "description": "Describes a RoIS component's capabilities, messages, and parameters.\n\nMaps to HRIComponentProfileType in XML-Profiles.xsd. One profile describes one\ncomponent instance: its messages are the ones that instance supports.\n\nAttributes:\n    identifier: The component type, for example authority 'OMG' and code\n        'PersonDetection' for urn:x-rois:def:component:OMG::PersonDetection.\n    name: A short human-readable name (e.g., 'person_detecter').\n    function: The RoSO function class. An OpenRoIS extension: the XSD has no\n        such element.\n    sub_component_profiles: URNs of sub-component profiles (e.g., RoISCommon).\n    command_profiles: Command message profiles this component supports.\n    query_profiles: Query message profiles this component supports.\n    event_profiles: Event message profiles this component supports.\n    parameter_profiles: Parameter declarations for this component.",
   "properties": {
     "identifier": {
       "$ref": "#/$defs/RoISIdentifierType"
@@ -155,6 +165,18 @@
     "name": {
       "title": "Name",
       "type": "string"
+    },
+    "function": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ComponentFunction"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "RoSO function class (OpenRoIS extension)"
     },
     "sub_component_profiles": {
       "items": {

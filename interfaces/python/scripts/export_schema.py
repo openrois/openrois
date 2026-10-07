@@ -27,6 +27,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, TypeAdapter
 
+from openrois.interfaces.catalog import METHODS, catalog_document
 from openrois.interfaces.contract import (
     CommandRequest,
     DiscoverRequest,
@@ -71,6 +72,7 @@ from openrois.interfaces.hri import (
 )
 from openrois.interfaces.profiles import (
     CommandMessageProfile,
+    ComponentFunction,
     EventMessageProfile,
     HRIComponentProfile,
     HRIEngineProfileType,
@@ -80,16 +82,20 @@ from openrois.interfaces.profiles import (
     RoISIdentifierType,
 )
 from openrois.interfaces.service import (
-    CompletedEvent,
+    CompletedParams,
     CompletedStatus,
     ErrorType,
-    NotifyErrorEvent,
-    NotifyEventPayload,
+    NotifyErrorParams,
+    NotifyEventParams,
+    ProfileChangedParams,
 )
 
 # ---------------------------------------------------------------------------
 # Inventory: every exportable type
 # ---------------------------------------------------------------------------
+
+# The catalog's params and result models, in method table order.
+CATALOG_MODELS: list[type[BaseModel]] = [cls for m in METHODS for cls in (m.params, m.result)]
 
 # BaseModel subclasses → model_json_schema()
 MODELS: list[type[BaseModel]] = [
@@ -101,9 +107,10 @@ MODELS: list[type[BaseModel]] = [
     ConcurrentCommands,
     CommandUnitSequence,
     # service
-    NotifyErrorEvent,
-    CompletedEvent,
-    NotifyEventPayload,
+    NotifyErrorParams,
+    CompletedParams,
+    NotifyEventParams,
+    ProfileChangedParams,
     # profiles
     RoISIdentifierType,
     ParameterProfile,
@@ -123,6 +130,8 @@ MODELS: list[type[BaseModel]] = [
     SubscribeRequest,
     SubscribeResponse,
     EventEnvelope,
+    # catalog
+    *CATALOG_MODELS,
     # components/person_detection
     PersonDetectedEvent,
     PersonDetectionStatusResult,
@@ -147,6 +156,7 @@ ENUMS: list[type] = [
     StreamStatus,
     CompletedStatus,
     ErrorType,
+    ComponentFunction,
 ]
 
 # ---------------------------------------------------------------------------
@@ -168,10 +178,12 @@ MODULE_MAP: dict[type, str] = {
     # service
     CompletedStatus: "service",
     ErrorType: "service",
-    NotifyErrorEvent: "service",
-    CompletedEvent: "service",
-    NotifyEventPayload: "service",
+    NotifyErrorParams: "service",
+    CompletedParams: "service",
+    NotifyEventParams: "service",
+    ProfileChangedParams: "service",
     # profiles
+    ComponentFunction: "profiles",
     RoISIdentifierType: "profiles",
     ParameterProfile: "profiles",
     MessageProfile: "profiles",
@@ -190,6 +202,8 @@ MODULE_MAP: dict[type, str] = {
     SubscribeRequest: "contract",
     SubscribeResponse: "contract",
     EventEnvelope: "contract",
+    # catalog
+    **{cls: "catalog" for cls in CATALOG_MODELS},
     # components/person_detection
     PersonDetectedEvent: "components/person-detection",
     PersonDetectionStatusResult: "components/person-detection",
@@ -276,6 +290,13 @@ def write_manifest() -> Path:
     return path
 
 
+def write_catalog() -> Path:
+    """Write catalog.json, the method table the TypeScript and C# generators read."""
+    path = SCHEMA_DIR / "catalog.json"
+    path.write_text(json.dumps(catalog_document(), indent=2, ensure_ascii=False))
+    return path
+
+
 def main() -> None:
     """Export all models and enums to interfaces/schema/."""
     written: list[str] = []
@@ -292,6 +313,9 @@ def main() -> None:
 
     manifest_path = write_manifest()
     written.append(manifest_path.name)
+
+    catalog_path = write_catalog()
+    written.append(catalog_path.name)
 
     print(f"Exported {len(written)} files to {SCHEMA_DIR}:")
     for name in sorted(written):

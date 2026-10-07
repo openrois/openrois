@@ -313,7 +313,7 @@ describe("WebSocketTransport", () => {
 
       mock.simulateMessage(errorResponse(
         "req-1",
-        JsonRpcErrorCode.MethodNotFound,
+        JsonRpcErrorCode.METHOD_NOT_FOUND,
         "Method not found: rois.command.fly",
       ));
 
@@ -321,19 +321,17 @@ describe("WebSocketTransport", () => {
       await expect(resultPromise).rejects.toThrow("Method not found");
     });
 
-    it("includes RoIS ReturnCode in RpcError data for domain errors", async () => {
+    it("carries the code and engine-defined data in RpcError", async () => {
       const { transport, connectAndOpen } = createTestTransport();
       const mock = await connectAndOpen();
 
-      const resultPromise = transport.send("rois.command.bind", {
-        component_ref: "UnknownComponent_0",
-      });
+      const resultPromise = transport.send("rois.command.bind", {});
 
       mock.simulateMessage(errorResponse(
         "req-1",
-        JsonRpcErrorCode.InvalidParams,
-        "Component not found",
-        { return_code: "UNSUPPORTED" },
+        JsonRpcErrorCode.INVALID_PARAMS,
+        "Invalid params for rois.command.bind",
+        { field: "component_ref", issue: "required" },
       ));
 
       try {
@@ -342,8 +340,8 @@ describe("WebSocketTransport", () => {
       } catch (err) {
         expect(err).toBeInstanceOf(RpcError);
         const rpcErr = err as RpcError;
-        expect(rpcErr.code).toBe(JsonRpcErrorCode.InvalidParams);
-        expect(rpcErr.data).toEqual({ return_code: "UNSUPPORTED" });
+        expect(rpcErr.code).toBe(JsonRpcErrorCode.INVALID_PARAMS);
+        expect(rpcErr.data).toEqual({ field: "component_ref", issue: "required" });
       }
     });
 
@@ -442,7 +440,7 @@ describe("WebSocketTransport", () => {
       const handler = vi.fn();
       transport.on("notification", handler);
 
-      mock.simulateMessage(notification("rois.event.notify", {
+      mock.simulateMessage(notification("rois.event.notify_event", {
         event_id: "evt-001",
         event_type: "person_detected",
         subscribe_id: "sub-1",
@@ -450,7 +448,7 @@ describe("WebSocketTransport", () => {
 
       expect(handler).toHaveBeenCalledOnce();
       expect(handler.mock.calls[0][0]).toMatchObject({
-        method: "rois.event.notify",
+        method: "rois.event.notify_event",
       });
     });
 
@@ -459,11 +457,11 @@ describe("WebSocketTransport", () => {
       const mock = await connectAndOpen();
       const eventHandler = vi.fn();
       const completedHandler = vi.fn();
-      transport.on("rois.event.notify", eventHandler);
+      transport.on("rois.event.notify_event", eventHandler);
       transport.on("rois.command.completed", completedHandler);
 
       // Send a person_detected notification.
-      mock.simulateMessage(notification("rois.event.notify", {
+      mock.simulateMessage(notification("rois.event.notify_event", {
         event_id: "evt-001",
         event_type: "person_detected",
       }));
@@ -519,7 +517,7 @@ describe("WebSocketTransport", () => {
 
     it("rejects all pending requests with ConnectionError", async () => {
       const { transport, connectAndOpen } = createTestTransport();
-      const mock = await connectAndOpen();
+      await connectAndOpen();
 
       const pendingPromise = transport.send("rois.command.search", { condition: "" });
 

@@ -1,45 +1,41 @@
 /**
- * Mock RoIS gateway: a JSON-RPC 2.0 WebSocket test double.
+ * The mock RoIS engine's WebSocket server: JSON-RPC 2.0 over WebSocket.
  *
- * Accepts WebSocket connections, parses incoming JSON-RPC 2.0 messages, and
- * answers the System interface methods: connect, disconnect (canned OK),
- * get_profile (canned HRI_Engine_Profile), and get_error_detail (canned
- * Result[] keyed by error_id). Any other method returns a JSON-RPC "method
- * not found" error, and malformed input returns the appropriate parse or
- * invalid-request error.
+ * Each message goes through the same checks a catalog engine runs:
  *
- * The message schemas are reused from the SDK (@openrois/sdk/jsonrpc) so the
- * mock and the real client stay on a single wire contract. Later milestones
- * add a component registry, mock components, events, queries, and async command
- * completion (see project-outline.md Weeks 2 and 3).
+ *   - JSON that does not parse          → PARSE_ERROR, with a null id
+ *   - an object that is not a request   → INVALID_REQUEST
+ *   - a method outside the catalog      → METHOD_NOT_FOUND (rois.stream.* included)
+ *   - params that fail the catalog model → INVALID_PARAMS, with the issues as data
  *
- * Architecture: docs/architecture.md section 4 (Client SDK layer)
- * Protocol surface: project-outline.md section 6
+ * A valid request goes to MockEngineCore (engine.ts), and its result is
+ * validated against the catalog's result model before it is sent. A RoIS
+ * failure travels as a normal result whose return_code is not OK. A message
+ * without an id is a notification from the client and gets no reply, as
+ * JSON-RPC 2.0 requires.
+ *
+ * The JSON-RPC envelope schemas come from the SDK (@openrois/sdk/jsonrpc) and
+ * the method catalog from @openrois/interfaces, so the mock and the clients
+ * share one wire contract.
  */
 
 import { WebSocketServer } from "ws";
 import type { RawData, WebSocket } from "ws";
+import { RoISMethodSchemas } from "@openrois/interfaces";
+import type { RoISMethod } from "@openrois/interfaces";
 import {
   JSONRPC_VERSION,
   JsonRpcErrorCode,
   JsonRpcRequestSchema,
 } from "@openrois/sdk/jsonrpc";
-
-import type {
-  JsonRpcError,
-  JsonRpcId,
-  JsonRpcRequest,
-  JsonRpcResponse,
-} from "@openrois/sdk/jsonrpc";
-import { ComponentRegistry } from "./registry";
-
-/** Shared component registry for all connections (global bind state). */
-const registry = new ComponentRegistry();
-
-import type {
-  Result,
-  Parameter,
-} from "@openrois/interfaces";
+import type { JsonRpcError, JsonRpcId, JsonRpcResponse } from "@openrois/sdk/jsonrpc";
+import {
+  DEFAULT_TIMING,
+  MockEngineCore,
+  type MethodParams,
+  type MockEngineTiming,
+  type Session,
+} from "./engine";
 
 /** Default listening port when none is supplied. */
 const DEFAULT_PORT = 8765;
@@ -55,6 +51,8 @@ export interface MockEngineOptions {
   port?: number;
   /** Host interface to bind. Defaults to 127.0.0.1 (loopback only). */
   host?: string;
+  /** How long simulated work takes. Tests shorten it. */
+  timing?: Partial<MockEngineTiming>;
 }
 
 /** A running mock engine handle. */
@@ -63,30 +61,36 @@ export interface MockEngine {
   readonly wss: WebSocketServer;
   /** The actual bound port, resolved even when port 0 was requested. */
   readonly port: number;
-  /** Stop the server and close all connections. Resolves once closed. */
+  /** Stop the engine and close every connection. Resolves once closed. */
   close(): Promise<void>;
 }
 
 /**
  * Start a mock engine and resolve once it is listening.
  *
- * The returned promise resolves after the "listening" event so the caller can
- * read the actual bound port, which matters when port 0 is used to request an
- * ephemeral port.
+ * Every engine has its own components, bindings, commands and subscriptions,
+ * so several engines can run in one process.
  */
-export function createMockEngine(
-  options: MockEngineOptions = {},
-): Promise<MockEngine> {
+export function createMockEngine(options: MockEngineOptions = {}): Promise<MockEngine> {
   const port = options.port ?? DEFAULT_PORT;
   const host = options.host ?? DEFAULT_HOST;
+  const core = new MockEngineCore({ ...DEFAULT_TIMING, ...options.timing });
+  let nextSession = 1;
 
   return new Promise((resolve, reject) => {
     const wss = new WebSocketServer({ port, host });
 
     wss.on("connection", (socket: WebSocket) => {
-      socket.on("message", (data: RawData) => {
-        handleMessage(socket, data);
-      });
+      const session: Session = {
+        id: `session-${nextSession++}`,
+        notify: (method, params) => {
+          if (socket.readyState === socket.OPEN) {
+            socket.send(JSON.stringify({ jsonrpc: JSONRPC_VERSION, method, params }));
+          }
+        },
+      };
+      socket.on("message", (data: RawData) => handleMessage(core, session, socket, data));
+      socket.on("close", () => core.closeSession(session));
     });
 
     // Reject only for startup failures, before the server is listening.
@@ -95,13 +99,16 @@ export function createMockEngine(
     wss.once("listening", () => {
       wss.off("error", reject);
       const address = wss.address();
-      const boundPort =
-        typeof address === "object" && address !== null ? address.port : port;
+      const boundPort = typeof address === "object" && address !== null ? address.port : port;
       resolve({
         wss,
         port: boundPort,
         close: () =>
           new Promise<void>((resolveClose, rejectClose) => {
+            core.close();
+            for (const client of wss.clients) {
+              client.terminate();
+            }
             wss.close((err) => (err ? rejectClose(err) : resolveClose()));
           }),
       });
@@ -109,208 +116,78 @@ export function createMockEngine(
   });
 }
 
-/**
- * Handle one incoming message: parse, validate, dispatch, respond.
- */
-function handleMessage(socket: WebSocket, data: RawData): void {
-  let parsed: unknown;
+/** Parse, validate, dispatch and answer one message. */
+function handleMessage(core: MockEngineCore, session: Session, socket: WebSocket, data: RawData): void {
+  let payload: unknown;
   try {
-    parsed = JSON.parse(data.toString());
+    payload = JSON.parse(data.toString());
   } catch {
-    // The payload was not valid JSON. Per JSON-RPC 2.0, the id cannot be
-    // recovered, so the error response carries a null id.
-    send(
-      socket,
-      errorMessage(null, JsonRpcErrorCode.ParseError, "Parse error: invalid JSON"),
-    );
+    send(socket, errorMessage(null, JsonRpcErrorCode.PARSE_ERROR, "Parse error: invalid JSON"));
     return;
   }
 
-  const request = JsonRpcRequestSchema.safeParse(parsed);
+  if (isNotification(payload)) {
+    return;
+  }
+
+  const request = JsonRpcRequestSchema.safeParse(payload);
   if (!request.success) {
-    // The JSON parsed but is not a well-formed JSON-RPC request. Echo back the
-    // original id if the payload carried a usable one.
     send(
       socket,
       errorMessage(
-        extractId(parsed),
-        JsonRpcErrorCode.InvalidRequest,
+        extractId(payload),
+        JsonRpcErrorCode.INVALID_REQUEST,
         "Invalid Request: not a valid JSON-RPC 2.0 request",
       ),
     );
     return;
   }
+  const { id, method, params } = request.data;
 
-  dispatch(socket, request.data);
+  if (!isCatalogMethod(method)) {
+    send(socket, errorMessage(id, JsonRpcErrorCode.METHOD_NOT_FOUND, `Method not found: ${method}`));
+    return;
+  }
+
+  const schemas = RoISMethodSchemas[method];
+  const parsed = schemas.params.safeParse(params ?? {});
+  if (!parsed.success) {
+    const issues = parsed.error.issues.map((issue) => ({
+      path: issue.path.join("."),
+      message: issue.message,
+    }));
+    send(
+      socket,
+      errorMessage(id, JsonRpcErrorCode.INVALID_PARAMS, `Invalid params for ${method}`, issues),
+    );
+    return;
+  }
+
+  let result: unknown;
+  try {
+    const reply = core.handle(session, method, parsed.data as MethodParams<RoISMethod>);
+    result = schemas.result.parse(reply);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    send(socket, errorMessage(id, JsonRpcErrorCode.INTERNAL_ERROR, `Internal error: ${detail}`));
+    return;
+  }
+  send(socket, resultMessage(id, result));
 }
 
-/**
- * Route a validated request to its handler.
- *
- * Answers the System interface lifecycle methods (connect, disconnect) and
- * the two System query operations (get_profile, get_error_detail) with canned
- * data. Handles the full Command interface (search, bind, bind_any, release,
- * get_parameter, set_parameter, execute, get_command_result), the Query
- * interface (query), and the Event interface (subscribe, unsubscribe,
- * get_event_detail) against an in-memory component registry. Every other
- * method is reported as not found.
- */
-function dispatch(socket: WebSocket, request: JsonRpcRequest): void {
-  switch (request.method) {
-    case "rois.system.connect":
-      case "rois.system.disconnect":
-        send(socket, okResponse(request.id));
-        return;
+function isCatalogMethod(method: string): method is RoISMethod {
+  return Object.prototype.hasOwnProperty.call(RoISMethodSchemas, method);
+}
 
-    case "rois.system.get_profile":
-      send(socket, resultResponse(request.id, {
-        return_code: "OK",
-        profile: registry.getProfile(),
-      }));
-      return;
-    case "rois.system.get_error_detail":
-      send(socket, errorDetailResponse(request.id, request.params));
-      return;
-
-    // Command interface
-
-    case "rois.command.bind_any": {
-      const result = registry.bindAny();
-      send(socket, resultResponse(request.id, {
-        return_code: result.returnCode,
-        component_ref: result.componentRef,
-      }));
-      return;
-    }
-    case "rois.command.execute": {
-      const params = namedParams(request);
-      const ref = asString(params.component_ref);
-      const result = registry.execute(ref);
-      send(socket, resultResponse(request.id, {
-        return_code: result.returnCode,
-        command_id: result.commandId,
-        results: [],
-      }));
-      return;
-    }
-    case "rois.command.get_command_result":
-      send(socket, getCommandResultResponse(request.id, request.params));
-      return;
-
-    // Query interface
-    case "rois.query.query": {
-      // The Navigation profile advertises get_parameter as a query, so answer it
-      // from the registry rather than the canned table, and keep it consistent
-      // with what set_parameter stored.
-      if (paramStr(request.params, "query_type") === "get_parameter") {
-        const ref = paramStr(request.params, "component_ref");
-        const { returnCode, parameters } = registry.getParameter(ref);
-        send(socket, resultResponse(request.id, {
-          return_code: returnCode,
-          results: parameters.map((p) => ({
-            name: p.name,
-            data_type_ref: p.data_type_ref,
-            value: p.value,
-          })),
-        }));
-        return;
-      }
-      send(socket, queryResponse(request.id, request.params));
-      return;
-    }
-
-    // Event interface
-    case "rois.event.subscribe":
-      send(socket, subscribeResponse(socket, request.id, request.params));
-      return;
-    case "rois.event.unsubscribe":
-      send(socket, unsubscribeResponse(request.id, request.params));
-      return;
-    case "rois.event.get_event_detail":
-      send(socket, getEventDetailResponse(request.id, request.params));
-      return;
-
-    case "rois.command.search": {
-      const params = namedParams(request);
-      send(socket, resultResponse(request.id, {
-        return_code: "OK",
-        component_ref_list: registry.search(typeof params.condition === "string" ? params.condition : ""),
-      }));
-      return;
-    }
-
-    case "rois.command.bind": {
-      const params = namedParams(request);
-      const ref = asString(params.component_ref);
-      send(socket, resultResponse(request.id, {
-        return_code: registry.bind(ref),
-      }));
-      return;
-    }
-
-    case "rois.command.release": {
-      const params = namedParams(request);
-      const ref = asString(params.component_ref);
-      send(socket, resultResponse(request.id, {
-        return_code: registry.release(ref),
-      }));
-      return;
-    }
-
-    case "rois.command.set_parameter": {
-      const params = namedParams(request);
-      const ref = asString(params.component_ref);
-      // Reject non-array parameters with BAD_PARAMETER before the
-      // registry coerces them to an empty array (which would mask
-      // the error as a successful no-op).
-      if (!Array.isArray(params.parameters)) {
-        send(socket, resultResponse(request.id, {
-          return_code: "BAD_PARAMETER",
-          command_id: "",
-        }));
-        return;
-      }
-      const parameters = asParameterArray(params.parameters);
-      send(socket, resultResponse(request.id, {
-        return_code: registry.setParameter(ref, parameters),
-        command_id: "",
-      }));
-      return;
-    }
-
-    case "rois.command.get_parameter": {
-      const params = namedParams(request);
-      const ref = asString(params.component_ref);
-      const names = paramStrArray(request.params, "names");
-      const { returnCode, parameters } = registry.getParameter(ref);
-      // Filter by names if provided. Otherwise return all parameters.
-      const filtered = names.length > 0
-        ? parameters.filter((p) => names.includes(p.name))
-        : parameters;
-      // Convert Parameter[] to Result[] (same shape: name, data_type_ref,
-      // value) so the response matches the RoIS spec Result format.
-      const results = filtered.map((p) => ({
-        name: p.name,
-        data_type_ref: p.data_type_ref,
-        value: p.value,
-      }));
-      send(socket, resultResponse(request.id, {
-        return_code: returnCode,
-        results,
-      }));
-      return;
-    }
-
-    default:
-      send(
-        socket,
-        errorMessage(
-          request.id,
-          JsonRpcErrorCode.MethodNotFound,
-          `Method not found: ${request.method}`,
-        ),
-      );
-  }
+/** A JSON-RPC notification: an object with a method and no id. */
+function isNotification(payload: unknown): boolean {
+  return (
+    typeof payload === "object" &&
+    payload !== null &&
+    !Array.isArray(payload) &&
+    "method" in payload &&
+    !("id" in payload)
+  );
 }
 
 /**
@@ -327,436 +204,18 @@ function extractId(payload: unknown): JsonRpcId {
   return null;
 }
 
-// ---------------------------------------------------------------------------
-// Canned HRI Engine Profile
-// ---------------------------------------------------------------------------
+function resultMessage(id: JsonRpcId, result: unknown): JsonRpcResponse {
+  return { jsonrpc: JSONRPC_VERSION, id, result };
+}
 
-/**
- * Canned error details keyed by error_id.
- *
- * The mock engine recognizes a small set of known error IDs and returns
- * descriptive Result arrays. Unknown error IDs return an empty result list
- * with return_code OK (the error was found but has no extra detail).
- */
-const CANNED_ERROR_DETAILS: Record<string, Result[]> = {
-  "err-001": [
-    {
-      name: "component_ref",
-      data_type_ref: "string",
-      value: "robot-a1/Navigation",
-    },
-    {
-      name: "description",
-      data_type_ref: "string",
-      value: "Navigation action timed out after 30s",
-    },
-  ],
-  "err-002": [
-    {
-      name: "component_ref",
-      data_type_ref: "string",
-      value: "PersonDetection_0",
-    },
-    {
-      name: "description",
-      data_type_ref: "string",
-      value: "Component internal error: model failed to load",
-    },
-  ],
-};
-
-// ---------------------------------------------------------------------------
-// Response builders for System query operations
-// ---------------------------------------------------------------------------
-
-/**
- * Build a get_error_detail success response.
- *
- * Looks up the error_id in the canned details table. Unknown IDs return an
- * empty results array with return_code OK.
- */
-function errorDetailResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
-  const errorId =
-    typeof params === "object" && params !== null && "error_id" in params
-      ? String((params as { error_id: unknown }).error_id)
-      : "";
-
-  const results = CANNED_ERROR_DETAILS[errorId] ?? [];
-
+function errorMessage(id: JsonRpcId, code: number, message: string, data?: unknown): JsonRpcError {
   return {
     jsonrpc: JSONRPC_VERSION,
     id,
-    result: {
-      return_code: "OK",
-      results,
-    },
+    error: { code, message, ...(data !== undefined ? { data } : {}) },
   };
 }
 
-// ---------------------------------------------------------------------------
-// Helper functions
-// ---------------------------------------------------------------------------
-
-/**
- * Extract a string param from the JSON-RPC params object.
- */
-function paramStr(params: unknown, key: string): string {
-  if (typeof params === "object" && params !== null && key in params) {
-    return String((params as Record<string, unknown>)[key]);
-  }
-  return "";
-}
-
-/**
- * Extract an array-of-strings param from the JSON-RPC params object.
- */
-function paramStrArray(params: unknown, key: string): string[] {
-  if (typeof params === "object" && params !== null && key in params) {
-    const val = (params as Record<string, unknown>)[key];
-    if (Array.isArray(val)) {
-      return val.map((v) => String(v));
-    }
-  }
-  return [];
-}
-
-/**
- * Build a get_command_result response.
- *
- * The mock does not track command execution, so it returns an empty results
- * array with return_code OK for any command_id.
- */
-function getCommandResultResponse(id: JsonRpcId, _params: unknown): JsonRpcResponse {
-  return {
-    jsonrpc: JSONRPC_VERSION,
-    id,
-    result: {
-      return_code: "OK",
-      results: [],
-    },
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Response builders for Query operations
-// ---------------------------------------------------------------------------
-
-/**
- * Canned query results for SystemInformation_0.
- *
- * The mock gateway answers "robot_position" and "engine_status" queries for
- * the SystemInformation component. Other query types on SystemInformation
- * return UNSUPPORTED. Queries on unknown components return UNSUPPORTED.
- */
-const CANNED_QUERY_RESULTS: Record<string, Record<string, Result[]>> = {
-  SystemInformation_0: {
-    robot_position: [
-      { name: "position", data_type_ref: "string", value: "1.5,2.0,0.0" },
-      { name: "orientation", data_type_ref: "string", value: "0.0,0.0,0.0,1.0" },
-      { name: "timestamp", data_type_ref: "DateTime", value: "2026-07-08T12:00:00Z" },
-    ],
-    engine_status: [
-      { name: "status", data_type_ref: "ComponentStatus", value: "READY" },
-      { name: "uptime", data_type_ref: "int", value: "3600" },
-    ],
-    component_status: [
-      { name: "status", data_type_ref: "ComponentStatus", value: "READY" },
-    ],
-  },
-  PersonDetection_0: {
-    component_status: [
-      { name: "status", data_type_ref: "ComponentStatus", value: "READY" },
-    ],
-  },
-  Navigation_0: {
-    component_status: [
-      { name: "status", data_type_ref: "ComponentStatus", value: "BUSY" },
-    ],
-  },
-};
-
-/**
- * Build a query response.
- *
- * Looks up the component_ref and query_type in the canned query results table.
- * Returns UNSUPPORTED if the component or query type is not recognized.
- */
-function queryResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
-  const componentRef = paramStr(params, "component_ref");
-  const queryType = paramStr(params, "query_type");
-
-  const componentQueries = CANNED_QUERY_RESULTS[componentRef];
-  if (!componentQueries) {
-    return {
-      jsonrpc: JSONRPC_VERSION,
-      id,
-      result: { return_code: "UNSUPPORTED", results: [] },
-    };
-  }
-
-  const results = componentQueries[queryType];
-  if (!results) {
-    return {
-      jsonrpc: JSONRPC_VERSION,
-      id,
-      result: { return_code: "UNSUPPORTED", results: [] },
-    };
-  }
-
-  return {
-    jsonrpc: JSONRPC_VERSION,
-    id,
-    result: {
-      return_code: "OK",
-      results,
-    },
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Response builders for Event operations
-// ---------------------------------------------------------------------------
-
-/**
- * In-memory subscription registry.
- *
- * Maps subscribe_id to the subscription details (component_ref, event_type).
- * Used to track active subscriptions and support unsubscribe.
- */
-const SUBSCRIPTION_REGISTRY: Map<string, { componentRef: string; eventType: string }> =
-  new Map();
-
-/** Counter for generating unique subscribe_ids. */
-let subscriptionCounter = 0;
-
-/**
- * Build a subscribe response.
- *
- * Registers the subscription in the in-memory registry and returns a unique
- * subscribe_id. Returns UNSUPPORTED if the component does not exist.
- */
-function subscribeResponse(socket: WebSocket, id: JsonRpcId, params: unknown): JsonRpcResponse {
-  const componentRef = paramStr(params, "component_ref");
-  const eventType = paramStr(params, "event_type");
-
-  if (!registry.has(componentRef)) {
-    return {
-      jsonrpc: JSONRPC_VERSION,
-      id,
-      result: { return_code: "UNSUPPORTED", subscribe_id: "" },
-    };
-  }
-
-  const subscribeId = `sub-${++subscriptionCounter}`;
-  SUBSCRIPTION_REGISTRY.set(subscribeId, { componentRef, eventType });
-
-  // Start firing events for this subscription. The mock engine fires
-  // person_detected events every 5 seconds for PersonDetection_0
-  // subscriptions, simulating periodic detections. Other event types
-  // are accepted but do not fire (the mock has no data for them).
-  if (eventType === "person_detected") {
-    startEventTimer(socket, subscribeId, componentRef, eventType);
-  }
-
-  return {
-    jsonrpc: JSONRPC_VERSION,
-    id,
-    result: {
-      return_code: "OK",
-      subscribe_id: subscribeId,
-    },
-  };
-}
-
-/**
- * Fire periodic event notifications for a subscription.
- *
- * Sends a rois.event.notify notification every 5 seconds with a canned
- * person_detected result. The timer is cleared on unsubscribe or socket
- * close. Each subscription gets its own timer keyed by subscribe_id.
- */
-const EVENT_TIMERS: Map<string, NodeJS.Timeout> = new Map();
-
-function startEventTimer(
-  socket: WebSocket,
-  subscribeId: string,
-  componentRef: string,
-  eventType: string,
-): void {
-  // Clear any existing timer for this subscription.
-  const existing = EVENT_TIMERS.get(subscribeId);
-  if (existing) {
-    clearInterval(existing);
-  }
-
-  const timer = setInterval(() => {
-    // Stop if the socket is no longer open.
-    if (socket.readyState !== socket.OPEN) {
-      clearInterval(timer);
-      EVENT_TIMERS.delete(subscribeId);
-      return;
-    }
-    const event_id = `evt-${Date.now()}`;
-    const notification = {
-      jsonrpc: JSONRPC_VERSION,
-      method: "rois.event.notify",
-      params: {
-        event_id,
-        subscribe_id: subscribeId,
-        component_ref: componentRef,
-        event_type: eventType,
-        expire: "",
-        results: [
-          { name: "number", data_type_ref: "int", value: "1" },
-          { name: "timestamp", data_type_ref: "DateTime", value: new Date().toISOString() },
-        ],
-      },
-    };
-    socket.send(JSON.stringify(notification));
-  }, 5000);
-
-  EVENT_TIMERS.set(subscribeId, timer);
-}
-
-/**
- * Build an unsubscribe response.
- *
- * Removes the subscription from the registry. Per the RoIS spec, duplicate
- * unsubscribe requests are silently ignored (return OK).
- */
-function unsubscribeResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
-  const subscribeId = paramStr(params, "subscribe_id");
-  SUBSCRIPTION_REGISTRY.delete(subscribeId);
-
-  // Clear the event timer if one was running for this subscription.
-  const timer = EVENT_TIMERS.get(subscribeId);
-  if (timer) {
-    clearInterval(timer);
-    EVENT_TIMERS.delete(subscribeId);
-  }
-
-  return {
-    jsonrpc: JSONRPC_VERSION,
-    id,
-    result: { return_code: "OK" },
-  };
-}
-
-/**
- * Canned event details keyed by event_id.
- *
- * The mock gateway recognizes a small set of known event IDs and returns
- * descriptive Result arrays. Unknown event IDs return an empty result list
- * with return_code OK.
- */
-const CANNED_EVENT_DETAILS: Record<string, Result[]> = {
-  "evt-001": [
-    { name: "number", data_type_ref: "int", value: "3" },
-    { name: "timestamp", data_type_ref: "DateTime", value: "2026-07-08T12:00:00Z" },
-  ],
-  "evt-002": [
-    { name: "number", data_type_ref: "int", value: "1" },
-    { name: "timestamp", data_type_ref: "DateTime", value: "2026-07-08T12:01:00Z" },
-  ],
-};
-
-/**
- * Build a get_event_detail response.
- *
- * Looks up the event_id in the canned details table. Unknown IDs return an
- * empty results array with return_code OK.
- */
-function getEventDetailResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
-  const eventId = paramStr(params, "event_id");
-  const results = CANNED_EVENT_DETAILS[eventId] ?? [];
-
-  return {
-    jsonrpc: JSONRPC_VERSION,
-    id,
-    result: {
-      return_code: "OK",
-      results,
-    },
-  };
-}
-
-/** Build a success response carrying a RoIS return_code of OK. */
-function okResponse(id: JsonRpcId): JsonRpcResponse {
-  return {
-    jsonrpc: JSONRPC_VERSION,
-    id,
-    result: { return_code: "OK" },
-  };
-}
-
-/** Build a success response with an arbitrary result object. */
-function resultResponse(id: JsonRpcId, result: Record<string, unknown>): JsonRpcResponse {
-  return {
-    jsonrpc: JSONRPC_VERSION,
-    id,
-    result,
-  };
-}
-
-/**
- * Extract the named-params object from a validated request.
- *
- * The JSON-RPC spec allows array (positional) params, but OpenRoIS always uses
- * objects. If params is missing or an array, return an empty record so callers
- * get undefined for every key (which they handle via asString/asParameterArray).
- */
-function namedParams(request: JsonRpcRequest): Record<string, unknown> {
-  if (request.params && !Array.isArray(request.params)) {
-    return request.params as Record<string, unknown>;
-  }
-  return {};
-}
-
-/** Safely coerce an unknown value to string, defaulting to empty string. */
-function asString(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
-
-/**
- * Safely coerce an unknown value to a Parameter array.
- *
- * Performs a shallow shape check (name, data_type_ref, value must be strings).
- * Values that do not match are dropped. This keeps the mock lenient: it does
- * not reject malformed params with a JSON-RPC error, it just ignores bad
- * entries. The real gateway would validate strictly.
- */
-function asParameterArray(value: unknown): Parameter[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.filter(isParameter) as Parameter[];
-}
-
-/** Runtime guard for the Parameter shape: { name, data_type_ref, value }. */
-function isParameter(v: unknown): v is Parameter {
-  if (typeof v !== "object" || v === null) return false;
-  const obj = v as Record<string, unknown>;
-  return (
-    typeof obj.name === "string" &&
-    typeof obj.data_type_ref === "string" &&
-    typeof obj.value === "string"
-  );
-}
-
-/** Build a JSON-RPC error response. */
-function errorMessage(
-  id: JsonRpcId,
-  code: number,
-  message: string,
-): JsonRpcError {
-  return {
-    jsonrpc: JSONRPC_VERSION,
-    id,
-    error: { code, message },
-  };
-}
-
-/** Serialize and send a JSON-RPC message over the socket. */
 function send(socket: WebSocket, message: JsonRpcResponse | JsonRpcError): void {
   socket.send(JSON.stringify(message));
 }

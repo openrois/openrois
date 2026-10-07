@@ -12,23 +12,6 @@ namespace OpenRoIS.Interfaces.Contract.Models
 
 
 
-    /// <summary>
-    /// Command operation type for RoIS commands.
-    /// 
-    /// Not an IDL enum — the IDL uses plain `string` for command_type. OpenRoIS
-    /// defines this enum for compile-time safety. The wire values match the
-    /// RoIS_Common::Command method names plus `set_parameter` and `execute`.
-    /// </summary>
-    public enum CommandType
-    {
-        start,
-        stop,
-        suspend,
-        resume,
-        set_parameter,
-        execute
-    }
-
 
 
 
@@ -52,7 +35,7 @@ namespace OpenRoIS.Interfaces.Contract.Models
         [JsonPropertyName("component_ref")]
         public string ComponentRef { get; }
         [JsonPropertyName("command_type")]
-        public CommandType CommandType { get; }
+        public string CommandType { get; }
         [JsonPropertyName("command_id")]
         public string CommandId { get; }
         [JsonPropertyName("arguments")]
@@ -62,7 +45,7 @@ namespace OpenRoIS.Interfaces.Contract.Models
         [JsonPropertyName("command_unit_sequence")]
         public OpenRoIS.Interfaces.Hri.CommandUnitSequence? CommandUnitSequence { get; }
 
-        public CommandRequest(string componentRef, CommandType commandType, string commandId, IReadOnlyList<OpenRoIS.Interfaces.Hri.Argument>? arguments = null, IReadOnlyList<OpenRoIS.Interfaces.Hri.Parameter>? parameters = null, OpenRoIS.Interfaces.Hri.CommandUnitSequence? commandUnitSequence = null)
+        public CommandRequest(string componentRef, string commandType, string commandId, IReadOnlyList<OpenRoIS.Interfaces.Hri.Argument>? arguments = null, IReadOnlyList<OpenRoIS.Interfaces.Hri.Parameter>? parameters = null, OpenRoIS.Interfaces.Hri.CommandUnitSequence? commandUnitSequence = null)
         {
             ComponentRef = componentRef;
             CommandType = commandType;

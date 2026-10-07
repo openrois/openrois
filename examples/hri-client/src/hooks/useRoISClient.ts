@@ -24,7 +24,7 @@ export function useRoISClient(url: string): UseRoISClientResult {
     RoISClient.connect(url)
       .then((c) => {
         if (cancelled) {
-          c.disconnect();
+          c.disconnect().catch(() => {});
           return;
         }
         clientRef.current = c;
@@ -41,7 +41,7 @@ export function useRoISClient(url: string): UseRoISClientResult {
     return () => {
       cancelled = true;
       if (clientRef.current) {
-        clientRef.current.disconnect();
+        clientRef.current.disconnect().catch(() => {});
         clientRef.current = null;
       }
       setClient(null);

@@ -48,11 +48,12 @@ class ReturnCode(StrEnum):
 
 
 class CommandType(StrEnum):
-    """Command operation type for RoIS commands.
+    """The standard command names.
 
-    Not an IDL enum — the IDL uses plain `string` for command_type. OpenRoIS
-    defines this enum for compile-time safety. The wire values match the
-    RoIS_Common::Command method names plus `set_parameter` and `execute`.
+    The IDL and the XSD type command_type as a plain string, and so does every model
+    here, because a component may define commands of its own. These are the names the
+    spec defines for every component: the RoIS_Common::Command operations, and the
+    set_parameter command of the component Command interfaces.
     """
 
     START = "start"
@@ -60,7 +61,6 @@ class CommandType(StrEnum):
     SUSPEND = "suspend"
     RESUME = "resume"
     SET_PARAMETER = "set_parameter"
-    EXECUTE = "execute"
 
 
 # ---------------------------------------------------------------------------
@@ -75,9 +75,9 @@ type RoISIdentifier = str
 # Ordered list of RoIS identifiers (e.g., component_ref_list from search()).
 type RoISIdentifierList = list[RoISIdentifier]
 
-# RoIS_HRI::Condition_t → string (ISO 19143 filter expression)
-# ISO 19143 filter expression used by search(), query(), subscribe(), etc.
-# Parsed and evaluated gateway-side; stored as an opaque string in the type system.
+# RoIS_HRI::Condition_t → string
+# The IDL carries an ISO 19143 filter here. OpenRoIS writes the filter in a subset of
+# CQL2-Text, defined in openrois.interfaces.condition. Empty means no filter.
 type ConditionT = str
 
 # RoIS_HRI::HRI_Engine_Profile → string
@@ -202,8 +202,8 @@ class CommandUnit(BaseModel):
 
     Attributes:
         component_ref: The component to send the command to.
-        command_type: The command operation (e.g., 'start', 'stop',
-            'set_parameter', 'execute').
+        command_type: The command name: a standard one (start, stop, suspend, resume,
+            set_parameter) or one the component profile defines.
         command_id: Unique identifier for this command instance.
         arguments: Optional list of arguments for the command.
         delay_time: Optional delay in milliseconds before executing this command.
@@ -212,8 +212,8 @@ class CommandUnit(BaseModel):
     model_config = {"frozen": True, "extra": "forbid"}
 
     component_ref: RoISIdentifier
-    command_type: CommandType = Field(
-        description="Command operation: start, stop, suspend, resume, set_parameter, execute"
+    command_type: str = Field(
+        description="Command name, for example start, stop or set_parameter",
     )
     command_id: CommandId = Field(description="Unique command instance identifier")
     arguments: ArgumentList = Field(default_factory=list)

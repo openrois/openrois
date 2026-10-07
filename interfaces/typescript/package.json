@@ -1,6 +1,6 @@
 {
   "name": "@openrois/interfaces",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "description": "RoIS Framework 2.0 interface types for the OpenRoIS middleware",
   "license": "Apache-2.0",
   "author": "OpenRoIS Community",
@@ -48,6 +48,14 @@
     "./contract": {
       "import": "./dist/contract.js",
       "types": "./dist/contract.d.ts"
+    },
+    "./catalog": {
+      "import": "./dist/catalog.js",
+      "types": "./dist/catalog.d.ts"
+    },
+    "./condition": {
+      "import": "./dist/condition.js",
+      "types": "./dist/condition.d.ts"
     },
     "./components": {
       "import": "./dist/components/index.js",

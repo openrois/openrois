@@ -3,6 +3,7 @@
 // Generator: scripts/generate.ts
 
 import { z } from "zod";
+import { ComponentStatusSchema } from "../common";
 
 // ─── Shared type definitions ($defs) ─────────────────────────────
 
@@ -15,21 +16,6 @@ import { z } from "zod";
 
 export const RoutingPolicySchema = z.enum(["time", "distance"]);
 export type RoutingPolicy = z.infer<typeof RoutingPolicySchema>;
-
-/**
- * Status of a RoIS component.
- * 
- * Maps to RoIS_Common::Component_Status in the IDL.
- * 
- * UNINITIALIZED: Component has not been initialized.
- * READY: Component is ready to operate.
- * BUSY: Component is currently processing.
- * WARNING: Component is operational but has a warning condition.
- * ERROR: Component has encountered an error.
- */
-
-export const ComponentStatusSchema = z.enum(["UNINITIALIZED", "READY", "BUSY", "WARNING", "ERROR"]);
-export type ComponentStatus = z.infer<typeof ComponentStatusSchema>;
 
 
 /**

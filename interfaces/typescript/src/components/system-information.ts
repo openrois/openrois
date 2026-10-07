@@ -3,27 +3,7 @@
 // Generator: scripts/generate.ts
 
 import { z } from "zod";
-
-// ─── Shared type definitions ($defs) ─────────────────────────────
-
-/**
- * Status of a RoIS component.
- * 
- * Maps to RoIS_Common::Component_Status in the IDL.
- * 
- * UNINITIALIZED: Component has not been initialized.
- * READY: Component is ready to operate.
- * BUSY: Component is currently processing.
- * WARNING: Component is operational but has a warning condition.
- * ERROR: Component has encountered an error.
- */
-
-export const ComponentStatusSchema = z.enum(["UNINITIALIZED", "READY", "BUSY", "WARNING", "ERROR"]);
-export type ComponentStatus = z.infer<typeof ComponentStatusSchema>;
-
-export const RoISIdentifierListSchema = z.array(z.string());
-export type RoISIdentifierList = z.infer<typeof RoISIdentifierListSchema>;
-
+import { ComponentStatusSchema } from "../common";
 
 /**
  * Result payload for System_Information::Query::engine_status.
@@ -54,7 +34,7 @@ export type SystemInformationEngineStatusResult = z.infer<typeof SystemInformati
 
 export const SystemInformationRobotPositionResultSchema = z.object({
   timestamp: z.string(), // Time when measured
-  robot_ref: RoISIdentifierListSchema, // List of robot IDs
+  robot_ref: z.array(z.string()), // List of robot IDs
   position_data: z.array(z.string()), // Position data (RoLo Data sequence)
 }).strict();
 export type SystemInformationRobotPositionResult = z.infer<typeof SystemInformationRobotPositionResultSchema>;

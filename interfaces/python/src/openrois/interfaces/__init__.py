@@ -8,17 +8,77 @@ TypeScript.
 Modules:
     hri:        Core HRI types (ReturnCode, Result, Parameter, Argument, etc.)
     common:     Common component types (ComponentStatus, StreamStatus)
-    service:    Service application callback types (CompletedStatus, ErrorType)
+    service:    Service application notifications (NotifyEventParams, CompletedParams, ...)
     profiles:   Component profile schema models (from XML-Profiles.xsd)
     contract:   ComponentContract protocol and its request, response and event models
+    catalog:    Service-side method catalog: params and result models, interfaces
+    condition:  The CQL2-Text subset of every condition: parsing, matching, building
     components: Per-component typed message models
 """
 
+from openrois.interfaces.catalog import (
+    EXTENSIONS,
+    METHODS,
+    METHODS_BY_NAME,
+    NOTIFICATIONS,
+    NOTIFICATIONS_BY_NAME,
+    STREAMING_METHOD_PREFIX,
+    BindAnyParams,
+    BindAnyResult,
+    BindParams,
+    BindResult,
+    CommandIF,
+    ConnectParams,
+    ConnectResult,
+    DisconnectParams,
+    DisconnectResult,
+    EventIF,
+    ExecuteParams,
+    ExecuteResult,
+    Extension,
+    GetCommandResultParams,
+    GetCommandResultResult,
+    GetErrorDetailParams,
+    GetErrorDetailResult,
+    GetEventDetailParams,
+    GetEventDetailResult,
+    GetParameterParams,
+    GetParameterResult,
+    GetProfileParams,
+    GetProfileResult,
+    JsonRpcErrorCode,
+    MethodSpec,
+    NotificationSpec,
+    QueryIF,
+    QueryParams,
+    QueryResult,
+    ReleaseParams,
+    ReleaseResult,
+    SearchParams,
+    SearchResult,
+    SetParameterParams,
+    SetParameterResult,
+    SubscribeParams,
+    SubscribeResult,
+    SystemIF,
+    UnsubscribeParams,
+    UnsubscribeResult,
+)
 from openrois.interfaces.common import (
     ComponentStatus,
     ComponentStatusT,
     StreamStatus,
     StreamStatusT,
+)
+from openrois.interfaces.condition import (
+    COMPONENT_REF,
+    COMPONENT_TYPE,
+    SELECTION_PROPERTIES,
+    Comparison,
+    Condition,
+    ConditionError,
+    component_type_urn,
+    parse_condition,
 )
 from openrois.interfaces.contract import (
     CommandRequest,
@@ -61,6 +121,7 @@ from openrois.interfaces.hri import (
 )
 from openrois.interfaces.profiles import (
     CommandMessageProfile,
+    ComponentFunction,
     EventMessageProfile,
     HRIComponentProfile,
     HRIEngineProfileType,
@@ -70,11 +131,12 @@ from openrois.interfaces.profiles import (
     RoISIdentifierType,
 )
 from openrois.interfaces.service import (
-    CompletedEvent,
+    CompletedParams,
     CompletedStatus,
     ErrorType,
-    NotifyErrorEvent,
-    NotifyEventPayload,
+    NotifyErrorParams,
+    NotifyEventParams,
+    ProfileChangedParams,
 )
 
 __all__ = [
@@ -103,6 +165,7 @@ __all__ = [
     "StreamStatusT",
     # Profiles
     "CommandMessageProfile",
+    "ComponentFunction",
     "EventMessageProfile",
     "HRIComponentProfile",
     "HRIEngineProfileType",
@@ -111,11 +174,68 @@ __all__ = [
     "QueryMessageProfile",
     "RoISIdentifierType",
     # Service
-    "CompletedEvent",
+    "CompletedParams",
     "CompletedStatus",
     "ErrorType",
-    "NotifyErrorEvent",
-    "NotifyEventPayload",
+    "NotifyErrorParams",
+    "NotifyEventParams",
+    "ProfileChangedParams",
+    # Method catalog
+    "BindAnyParams",
+    "BindAnyResult",
+    "BindParams",
+    "BindResult",
+    "CommandIF",
+    "ConnectParams",
+    "ConnectResult",
+    "DisconnectParams",
+    "DisconnectResult",
+    "EventIF",
+    "ExecuteParams",
+    "ExecuteResult",
+    "GetCommandResultParams",
+    "GetCommandResultResult",
+    "GetErrorDetailParams",
+    "GetErrorDetailResult",
+    "GetEventDetailParams",
+    "GetEventDetailResult",
+    "GetParameterParams",
+    "GetParameterResult",
+    "GetProfileParams",
+    "GetProfileResult",
+    "JsonRpcErrorCode",
+    "METHODS",
+    "METHODS_BY_NAME",
+    "MethodSpec",
+    "NOTIFICATIONS",
+    "NOTIFICATIONS_BY_NAME",
+    "NotificationSpec",
+    "EXTENSIONS",
+    "Extension",
+    "QueryIF",
+    "QueryParams",
+    "QueryResult",
+    "ReleaseParams",
+    "ReleaseResult",
+    "STREAMING_METHOD_PREFIX",
+    "SearchParams",
+    "SearchResult",
+    "SetParameterParams",
+    "SetParameterResult",
+    "SubscribeParams",
+    "SubscribeResult",
+    "SystemIF",
+    "UnsubscribeParams",
+    "UnsubscribeResult",
+    # Conditions
+    "COMPONENT_REF",
+    "COMPONENT_TYPE",
+    "SELECTION_PROPERTIES",
+    "Comparison",
+    "Condition",
+    "ConditionError",
+    "component_type_urn",
+    "parse_condition",
     # Component Contract
     "ComponentContractError",
     "CommandId",

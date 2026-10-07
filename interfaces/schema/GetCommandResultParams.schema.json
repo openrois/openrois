@@ -1,0 +1,29 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "CommandId": {
+      "type": "string"
+    },
+    "ConditionT": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Params of rois.command.get_command_result.\n\nMaps to CommandIF::get_command_result(in command_id, in condition, out results).\n\nAttributes:\n    command_id: The command whose results to read.\n    condition: Filter on the results. No property is defined for it yet, so it\n        must be empty.",
+  "properties": {
+    "command_id": {
+      "$ref": "#/$defs/CommandId",
+      "description": "The command whose results to read"
+    },
+    "condition": {
+      "$ref": "#/$defs/ConditionT",
+      "default": "",
+      "description": "Filter on the results (CQL2-Text). Must be empty for now"
+    }
+  },
+  "required": [
+    "command_id"
+  ],
+  "title": "GetCommandResultParams",
+  "type": "object"
+}

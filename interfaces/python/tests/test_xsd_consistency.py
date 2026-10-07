@@ -9,13 +9,16 @@ matches the structural expectations defined in the XSD schema. We check:
 4. CommandMessageProfile has Arguments and timeout
 5. HRIComponentProfile structure matches XSD HRIComponentProfileType
 6. HRIEngineProfileType supports recursive sub-profiles
+7. The two profile models add no field beyond the XSD except registered extensions
 
 This is step 10 of the M0 Task 0.1 plan.
 """
 
 import pytest
 from lxml import etree
+from pydantic import BaseModel
 
+from openrois.interfaces.catalog import EXTENSIONS
 from openrois.interfaces.profiles import (
     CommandMessageProfile,
     EventMessageProfile,
@@ -282,6 +285,51 @@ class TestXSDHRIEngineProfileType:
         )
         assert len(engine.sub_profiles) == 1
         assert engine.sub_profiles[0].identifier.code == "SubEngine"
+
+
+# ---------------------------------------------------------------------------
+# Tests: the profile models add only registered extensions
+# ---------------------------------------------------------------------------
+
+# Field to XSD element. "gml:" marks an element of the gml:IdentifiedObjectType base.
+_ENGINE_PROFILE_ELEMENTS = {
+    "identifier": "gml:identifier",
+    "sub_profiles": "SubProfile",
+    "component_ids": "HRIComponent",
+    "parameter_profiles": "ParameterProfile",
+}
+_COMPONENT_PROFILE_ELEMENTS = {
+    "identifier": "gml:identifier",
+    "name": "gml:name",
+    "sub_component_profiles": "SubComponentProfile",
+    "command_profiles": "MessageProfile",
+    "query_profiles": "MessageProfile",
+    "event_profiles": "MessageProfile",
+    "parameter_profiles": "ParameterProfile",
+}
+
+
+@requires_normative
+class TestXSDProfileFields:
+    """Each profile field maps to an XSD element, or is a registered extension."""
+
+    @pytest.mark.parametrize(
+        ("model", "xsd_type", "elements"),
+        [
+            (HRIEngineProfileType, "HRIEngineProfileType", _ENGINE_PROFILE_ELEMENTS),
+            (HRIComponentProfile, "HRIComponentProfileType", _COMPONENT_PROFILE_ELEMENTS),
+        ],
+        ids=["HRIEngineProfileType", "HRIComponentProfile"],
+    )
+    def test_fields_are_xsd_elements_or_extensions(
+        self, model: type[BaseModel], xsd_type: str, elements: dict[str, str]
+    ) -> None:
+        extensions = {
+            e.field for e in EXTENSIONS if e.model == model.__name__ and e.field is not None
+        }
+        assert set(model.model_fields) - extensions == set(elements)
+        sequence = {e for e in elements.values() if not e.startswith("gml:")}
+        assert sequence == _get_xsd_element_names_in_sequence(xsd_type)
 
 
 # ---------------------------------------------------------------------------

@@ -58,7 +58,7 @@ namespace OpenRoIS.Interfaces.Tests
     [Fact]
     public void CommandUnit_Defaults()
     {
-        var cmd = new CommandUnit("robot/nav", CommandType.start, "cmd-1");
+        var cmd = new CommandUnit("robot/nav", "start", "cmd-1");
         Assert.Equal("robot/nav", cmd.ComponentRef);
         Assert.Null(cmd.DelayTime);
     }
@@ -67,7 +67,7 @@ namespace OpenRoIS.Interfaces.Tests
     public void CommandUnit_WithArguments()
     {
         var cmd = new CommandUnit(
-            "robot/nav", CommandType.execute, "cmd-2",
+            "robot/nav", "set_parameter", "cmd-2",
             new List<Argument> { new("x", "int", "1") },
             100);
         Assert.Single(cmd.Arguments!);

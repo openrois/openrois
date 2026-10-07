@@ -1,0 +1,142 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "Argument": {
+      "additionalProperties": false,
+      "description": "A named argument for command execution.\n\nMaps to RoIS_HRI::Argument in the IDL.\n\nAttributes:\n    name: The argument name.\n    data_type_ref: Reference to the data type.\n    value: The argument value as a string.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "data_type_ref": {
+          "$ref": "#/$defs/RoISIdentifier"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "data_type_ref",
+        "value"
+      ],
+      "title": "Argument",
+      "type": "object"
+    },
+    "ArgumentList": {
+      "items": {
+        "$ref": "#/$defs/Argument"
+      },
+      "type": "array"
+    },
+    "CommandId": {
+      "type": "string"
+    },
+    "CommandUnit": {
+      "additionalProperties": false,
+      "description": "A single command within a CommandUnitSequence.\n\nMaps to CommandMessageType in XML-Profiles.xsd (CommandBaseType subtype).\n\nAttributes:\n    component_ref: The component to send the command to.\n    command_type: The command name: a standard one (start, stop, suspend, resume,\n        set_parameter) or one the component profile defines.\n    command_id: Unique identifier for this command instance.\n    arguments: Optional list of arguments for the command.\n    delay_time: Optional delay in milliseconds before executing this command.",
+      "properties": {
+        "component_ref": {
+          "$ref": "#/$defs/RoISIdentifier"
+        },
+        "command_type": {
+          "description": "Command name, for example start, stop or set_parameter",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "command_id": {
+          "$ref": "#/$defs/CommandId",
+          "description": "Unique command instance identifier"
+        },
+        "arguments": {
+          "$ref": "#/$defs/ArgumentList"
+        },
+        "delay_time": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Delay in ms before execution"
+        }
+      },
+      "required": [
+        "component_ref",
+        "command_type",
+        "command_id"
+      ],
+      "title": "CommandUnit",
+      "type": "object"
+    },
+    "CommandUnitSequenceItem": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CommandUnit"
+        },
+        {
+          "$ref": "#/$defs/ConcurrentCommands"
+        }
+      ]
+    },
+    "ConcurrentCommands": {
+      "additionalProperties": false,
+      "description": "A group of commands to be executed concurrently.\n\nMaps to ConcurrentCommandsType in XML-Profiles.xsd.\n\nAttributes:\n    command_list: The commands to execute in parallel.\n    delay_time: Optional delay in milliseconds before executing this group.",
+      "properties": {
+        "command_list": {
+          "items": {
+            "$ref": "#/$defs/CommandUnit"
+          },
+          "title": "Command List",
+          "type": "array"
+        },
+        "delay_time": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Delay in ms before execution"
+        }
+      },
+      "required": [
+        "command_list"
+      ],
+      "title": "ConcurrentCommands",
+      "type": "object"
+    },
+    "Integer": {
+      "type": "integer"
+    },
+    "RoISIdentifier": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Params of rois.command.execute.\n\nMaps to CommandIF::execute(in command_unit_list). The application names every\ncommand with its own command_id, and completed notifications report each one.\nThe engine rejects a command_id it already tracks with BAD_PARAMETER.\n\nAttributes:\n    command_unit_list: Commands to run in order. A ConcurrentCommands item runs\n        its commands at the same time.",
+  "properties": {
+    "command_unit_list": {
+      "description": "Commands to run in order",
+      "items": {
+        "$ref": "#/$defs/CommandUnitSequenceItem"
+      },
+      "minItems": 1,
+      "title": "Command Unit List",
+      "type": "array"
+    }
+  },
+  "required": [
+    "command_unit_list"
+  ],
+  "title": "ExecuteParams",
+  "type": "object"
+}

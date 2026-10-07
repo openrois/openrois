@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openrois-interfaces"
-version = "0.1.0a2"
+version = "0.1.0a3"
 description = "RoIS Framework 2.0 interface types for the OpenRoIS middleware"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -51,6 +51,10 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 files = ["src"]
+# The openrois namespace package has no __init__.py at its root, so mypy resolves
+# openrois.interfaces from src/ as an explicit package base.
+mypy_path = "src"
+explicit_package_bases = true
 
 [tool.ruff]
 target-version = "py312"

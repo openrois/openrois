@@ -25,7 +25,6 @@ from openrois.interfaces.common import ComponentStatus, StreamStatus
 from openrois.interfaces.hri import (
     ArgumentList,
     CommandId,
-    CommandType,
     CommandUnitSequence,
     ConditionT,
     DateTime,
@@ -91,7 +90,7 @@ class DiscoverRequest(BaseModel):
 
     condition: ConditionT = Field(
         default="",
-        description="ISO 19143 filter expression; empty means all components",
+        description="Selection condition (CQL2-Text); empty means all components",
     )
 
 
@@ -115,8 +114,8 @@ class CommandRequest(BaseModel):
     model_config = {"frozen": True, "extra": "forbid"}
 
     component_ref: RoISIdentifier = Field(description="Target component instance ref")
-    command_type: CommandType = Field(
-        description="Command operation: start, stop, suspend, resume, set_parameter, execute",
+    command_type: str = Field(
+        description="Command name, for example start, stop or set_parameter",
     )
     command_id: CommandId = Field(description="Unique command instance identifier")
     arguments: ArgumentList = Field(default_factory=list)
@@ -159,7 +158,7 @@ class QueryRequest(BaseModel):
     query_type: QueryType = Field(description="Query operation name")
     condition: ConditionT = Field(
         default="",
-        description="Optional filter expression for the query",
+        description="Condition from the client request (CQL2-Text), for the component",
     )
 
 
@@ -187,7 +186,7 @@ class SubscribeRequest(BaseModel):
     event_type: EventType = Field(description="Event type to subscribe to")
     condition: ConditionT = Field(
         default="",
-        description="Optional filter expression for the subscription",
+        description="Condition from the client request (CQL2-Text), for the component",
     )
 
 

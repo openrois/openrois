@@ -3,27 +3,7 @@
 // Generator: scripts/generate.ts
 
 import { z } from "zod";
-
-// ─── Shared type definitions ($defs) ─────────────────────────────
-
-export const RoISIdentifierListSchema = z.array(z.string());
-export type RoISIdentifierList = z.infer<typeof RoISIdentifierListSchema>;
-
-/**
- * Status of a RoIS component.
- * 
- * Maps to RoIS_Common::Component_Status in the IDL.
- * 
- * UNINITIALIZED: Component has not been initialized.
- * READY: Component is ready to operate.
- * BUSY: Component is currently processing.
- * WARNING: Component is operational but has a warning condition.
- * ERROR: Component has encountered an error.
- */
-
-export const ComponentStatusSchema = z.enum(["UNINITIALIZED", "READY", "BUSY", "WARNING", "ERROR"]);
-export type ComponentStatus = z.infer<typeof ComponentStatusSchema>;
-
+import { ComponentStatusSchema } from "../common";
 
 /**
  * Result payload for Reaction::Query::get_parameter.
@@ -37,7 +17,7 @@ export type ComponentStatus = z.infer<typeof ComponentStatusSchema>;
  */
 
 export const ReactionGetParameterResultSchema = z.object({
-  available_reactions: RoISIdentifierListSchema, // List of available reaction identifiers this host can perform
+  available_reactions: z.array(z.string()), // List of available reaction identifiers this host can perform
   reaction_ref: z.string(), // Currently selected reaction identifier
 }).strict();
 export type ReactionGetParameterResult = z.infer<typeof ReactionGetParameterResultSchema>;
@@ -59,7 +39,7 @@ export type ReactionGetParameterResult = z.infer<typeof ReactionGetParameterResu
  */
 
 export const ReactionSetParameterSchema = z.object({
-  reaction_ref: RoISIdentifierListSchema, // Reaction identifiers to trigger
+  reaction_ref: z.array(z.string()), // Reaction identifiers to trigger
 }).strict();
 export type ReactionSetParameter = z.infer<typeof ReactionSetParameterSchema>;
 

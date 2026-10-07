@@ -25,7 +25,7 @@
     "condition": {
       "$ref": "#/$defs/ConditionT",
       "default": "",
-      "description": "Optional filter expression for the query"
+      "description": "Condition from the client request (CQL2-Text), for the component"
     }
   },
   "required": [

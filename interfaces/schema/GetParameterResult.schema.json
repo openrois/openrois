@@ -1,0 +1,67 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "Parameter": {
+      "additionalProperties": false,
+      "description": "A named parameter for command operations (set_parameter, execute).\n\nMaps to RoIS_HRI::Parameter in the IDL.\n\nAttributes:\n    name: The parameter name (e.g., 'target_position', 'time_limit').\n    data_type_ref: Reference to the data type.\n    value: The parameter value as a string.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "data_type_ref": {
+          "$ref": "#/$defs/RoISIdentifier"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "data_type_ref",
+        "value"
+      ],
+      "title": "Parameter",
+      "type": "object"
+    },
+    "ParameterList": {
+      "items": {
+        "$ref": "#/$defs/Parameter"
+      },
+      "type": "array"
+    },
+    "ReturnCode": {
+      "description": "Return code for all RoIS operations.\n\nMaps to RoIS_HRI::ReturnCode_t in the IDL.",
+      "enum": [
+        "OK",
+        "ERROR",
+        "BAD_PARAMETER",
+        "UNSUPPORTED",
+        "OUT_OF_RESOURCES",
+        "TIMEOUT"
+      ],
+      "title": "ReturnCode",
+      "type": "string"
+    },
+    "RoISIdentifier": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Result of rois.command.get_parameter.\n\nMaps to CommandIF::get_parameter(in component_ref, out parameters).\n\nAttributes:\n    return_code: Outcome of the operation.\n    parameters: The current value of every parameter of the component.",
+  "properties": {
+    "return_code": {
+      "$ref": "#/$defs/ReturnCode"
+    },
+    "parameters": {
+      "$ref": "#/$defs/ParameterList",
+      "description": "The current value of every parameter of the component"
+    }
+  },
+  "required": [
+    "return_code"
+  ],
+  "title": "GetParameterResult",
+  "type": "object"
+}
