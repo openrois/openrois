@@ -33,24 +33,24 @@ Python (Pydantic) ──export_schema.py──► JSON Schema ──Generator─
 
 The schema drift test (`python/tests/test_schema_drift.py`) verifies that the committed
 schemas still match what the Pydantic models produce. The C# and TypeScript sources are
-never hand-written, except `typescript/src/contract.ts` and `csharp/src/OpenRoIS.Interfaces/Contract.cs`,
-because JSON Schema cannot express a behavioral interface.
+never hand-written, except `typescript/src/condition.ts`, the CQL2-Text parser, and the
+TypeScript `index.ts` barrels.
 
 ## Packages
 
 | Package | Language | Version | Role |
 |---------|----------|---------|------|
-| `openrois-interfaces` | Python 3.12+ | 0.1.0a3 | Source of truth |
-| `@openrois/interfaces` | TypeScript (ESM) | 0.1.0-alpha.3 | Generated |
-| `OpenRoIS.Interfaces` | C# (netstandard2.1) | 0.1.0-alpha.3 | Generated |
+| `openrois-interfaces` | Python 3.12+ | 0.1.0a4 | Source of truth |
+| `@openrois/interfaces` | TypeScript (ESM) | 0.1.0-alpha.4 | Generated |
+| `OpenRoIS.Interfaces` | C# (netstandard2.1) | 0.1.0-alpha.4 | Generated |
 
 None are published yet. Install them from a clone, as each package README describes.
 
 ## What Is Covered
 
 The framework types are complete: return codes, results, parameters, arguments, command
-units, component and engine profiles, event envelopes, and the `ComponentContract` request
-and response models.
+units, and component and engine profiles, with the profile constants of the basic
+components the package models.
 
 The method catalog covers the service side. It has a params and a result model for every
 method of SystemIF, CommandIF, QueryIF and EventIF, the method names, the notifications an
@@ -68,14 +68,22 @@ Every `condition` is a string in a subset of CQL2-Text (OGC 21-065r2), for examp
 `component_ref = 'reachy_real/head'`. The Python `condition` module and its TypeScript
 port parse, match and build conditions.
 
-Typed per-component message models exist for 4 of the 17 basic RoIS HRI Components:
+Profile constants and typed per-component message models exist for 4 of the 17 basic
+RoIS HRI Components, and for the RoIS_Common profile they include:
 
-| Component | Typed messages |
-|-----------|----------------|
-| `PersonDetection` | Event `person_detected`, `component_status` |
-| `Navigation` | Command `set_parameter`, Query `get_parameter`, Event `reached_target`, `component_status` |
-| `Reaction` | Command `set_parameter`, Query `get_parameter`, `component_status` |
-| `SystemInformation` | Queries `robot_position`, `engine_status` |
+| Component | Profile constant | Typed messages |
+|-----------|------------------|----------------|
+| RoIS_Common | `ROIS_COMMON_PROFILE` | |
+| `PersonDetection` | `PERSON_DETECTION_PROFILE` | Event `person_detected`, `component_status` |
+| `Navigation` | `NAVIGATION_PROFILE` | Command `set_parameter`, Query `get_parameter`, Event `reached_target`, `component_status` |
+| `Reaction` | `REACTION_PROFILE` | Command `set_parameter`, Query `get_parameter`, `component_status` |
+| `SystemInformation` | `SYSTEM_INFORMATION_PROFILE` | Queries `robot_position`, `engine_status` |
+
+A profile constant is the full profile of the type: its XML profile with the RoIS_Common
+messages it includes, and its RoSO function. A component declares the constant of its type
+and implements a part of it, and the engine serves the part it implements. The Python
+package defines the constants and exports them to `schema/profiles.json`, from which the
+TypeScript constants are generated.
 
 Components without a typed model still work: they carry generic `Result` lists validated
 against their declared profile. The remaining components arrive with the full component

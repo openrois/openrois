@@ -4,8 +4,9 @@ A RoIS engine test double: a WebSocket server that speaks JSON-RPC 2.0 and answe
 method of the RoIS method catalog, so clients and SDKs can be developed and tested without
 a robot.
 
-It simulates three components of the engine `mock`, with profiles built from the
-specification's XML component profiles:
+It simulates three components of the engine `mock`. Each serves the profile constant of
+its type from [`@openrois/interfaces/components`](../../interfaces/typescript/README.md),
+the specification's XML component profile with the RoIS_Common messages it includes:
 
 | Ref | Profile | Function | Behavior |
 |-----|---------|----------|----------|
@@ -14,7 +15,9 @@ specification's XML component profiles:
 | `mock/system_information` | `OMG::SystemInformation` | | Answers the `robot_position` and `engine_status` queries |
 
 The person detection and navigation components also take the RoIS_Common commands
-(`start`, `stop`, `suspend`, `resume`) and answer the `component_status` query.
+(`start`, `stop`, `suspend`, `resume`) and answer the `component_status` query. Navigation
+starts with `target_positions` set to `["home"]`, a default that `Navigation.xml` leaves
+empty, so a client can start it before setting any parameter.
 
 ## Behavior
 
@@ -28,10 +31,15 @@ The mock follows the method catalog the way an engine does:
 - `query` and `subscribe` go to the one component that declares the query or event type
   and matches the condition.
 - The navigation component takes commands and parameters from the client that bound it.
-- The command table holds every `command_id`. Each command ends with a
+- The command table holds every `command_id`. Each command ends exactly once with a
   `rois.command.completed` notification, and `get_command_result` reads its results.
 - `execute` runs its items in order, waits each item's `delay_time`, and runs the commands
-  of a group at the same time.
+  of a group at the same time, each after its own `delay_time`. A command that ends with a
+  status other than `OK` stops the sequence: the commands of the later items complete with
+  `ABORT` and never run.
+- The ids the engine assigns start with its engine id, like refs: `mock/sub-1` for a
+  subscription, `mock/evt-2` for an event and `mock/param-3` for a `set_parameter`
+  command. A client's `command_id` that starts with `mock/` gets `BAD_PARAMETER`.
 - Events arrive as `rois.event.notify_event`, and `get_event_detail` reads each one for a
   minute after its notification.
 

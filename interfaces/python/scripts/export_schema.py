@@ -28,18 +28,8 @@ from pathlib import Path
 from pydantic import BaseModel, TypeAdapter
 
 from openrois.interfaces.catalog import METHODS, catalog_document
-from openrois.interfaces.contract import (
-    CommandRequest,
-    DiscoverRequest,
-    DiscoverResponse,
-    EventEnvelope,
-    InvokeResponse,
-    QueryRequest,
-    QueryResponse,
-    SubscribeRequest,
-    SubscribeResponse,
-)
 from openrois.interfaces.common import ComponentStatus, StreamStatus
+from openrois.interfaces.components import profiles_document
 from openrois.interfaces.components.navigation import (
     NavigationGetParameterResult,
     NavigationReachedTargetEvent,
@@ -120,16 +110,6 @@ MODELS: list[type[BaseModel]] = [
     EventMessageProfile,
     HRIComponentProfile,
     HRIEngineProfileType,
-    # contract
-    DiscoverRequest,
-    DiscoverResponse,
-    CommandRequest,
-    InvokeResponse,
-    QueryRequest,
-    QueryResponse,
-    SubscribeRequest,
-    SubscribeResponse,
-    EventEnvelope,
     # catalog
     *CATALOG_MODELS,
     # components/person_detection
@@ -192,16 +172,6 @@ MODULE_MAP: dict[type, str] = {
     EventMessageProfile: "profiles",
     HRIComponentProfile: "profiles",
     HRIEngineProfileType: "profiles",
-    # contract
-    DiscoverRequest: "contract",
-    DiscoverResponse: "contract",
-    CommandRequest: "contract",
-    InvokeResponse: "contract",
-    QueryRequest: "contract",
-    QueryResponse: "contract",
-    SubscribeRequest: "contract",
-    SubscribeResponse: "contract",
-    EventEnvelope: "contract",
     # catalog
     **{cls: "catalog" for cls in CATALOG_MODELS},
     # components/person_detection
@@ -297,6 +267,13 @@ def write_catalog() -> Path:
     return path
 
 
+def write_profiles() -> Path:
+    """Write profiles.json, the profile constants the TypeScript generator reads."""
+    path = SCHEMA_DIR / "profiles.json"
+    path.write_text(json.dumps(profiles_document(), indent=2, ensure_ascii=False))
+    return path
+
+
 def main() -> None:
     """Export all models and enums to interfaces/schema/."""
     written: list[str] = []
@@ -316,6 +293,9 @@ def main() -> None:
 
     catalog_path = write_catalog()
     written.append(catalog_path.name)
+
+    profiles_path = write_profiles()
+    written.append(profiles_path.name)
 
     print(f"Exported {len(written)} files to {SCHEMA_DIR}:")
     for name in sorted(written):

@@ -52,9 +52,7 @@ internal static class Program
 
         foreach (var (moduleName, moduleNode) in modules)
         {
-            var moduleNs = moduleName == "contract"
-                ? "OpenRoIS.Interfaces.Contract.Models"
-                : ModuleToNamespace(moduleName);
+            var moduleNs = ModuleToNamespace(moduleName);
             foreach (var file in moduleNode!.AsArray())
                 s_typeNamespaces[file!.GetValue<string>().Replace(".schema.json", "")] = moduleNs;
         }
@@ -64,16 +62,6 @@ internal static class Program
             var schemaFiles = moduleNode!.AsArray()
                 .Select(n => n!.GetValue<string>())
                 .ToList();
-
-            if (moduleName == "contract")
-            {
-                // Contract data models go to Generated/ContractModels.cs
-                var output = GenerateModule("OpenRoIS.Interfaces.Contract.Models", schemaFiles, modules, moduleName);
-                var outPath = Path.Combine(s_outputDir, "Generated", "ContractModels.cs");
-                WriteFile(outPath, output);
-                Console.WriteLine($"  Generated/ContractModels.cs ({schemaFiles.Count} schemas)");
-                continue;
-            }
 
             // Map module name to namespace and file path
             var ns = ModuleToNamespace(moduleName);
@@ -85,7 +73,7 @@ internal static class Program
             Console.WriteLine($"  {relativePath} ({schemaFiles.Count} schemas)");
         }
 
-        Console.WriteLine("\nDone. IComponentContract interface is hand-written in Contract.cs.");
+        Console.WriteLine("\nDone.");
         return 0;
     }
 

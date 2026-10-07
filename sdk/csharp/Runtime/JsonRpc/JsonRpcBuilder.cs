@@ -10,8 +10,8 @@ namespace OpenRoIS.Sdk.JsonRpc
   /// <remarks>
   /// Stateless static methods. The caller manages ID generation.
   /// The <c>params</c> argument is serialized as-is. The caller passes
-  /// a typed object (e.g. <c>CommandRequest</c>,
-  /// <c>DiscoverRequest</c>) or an anonymous object.
+  /// a typed object (e.g. <c>ExecuteParams</c>,
+  /// <c>SearchParams</c>) or an anonymous object.
   /// </remarks>
   public static class JsonRpcBuilder
   {
@@ -58,7 +58,7 @@ namespace OpenRoIS.Sdk.JsonRpc
     /// a response. Used for server-to-client push events.
     /// </remarks>
     /// <param name="method">Namespaced push method name, e.g.
-    /// "rois.event.notify".</param>
+    /// "rois.event.notify_event".</param>
     /// <param name="params">Event payload, or null.</param>
     /// <returns>JSON string ready to send.</returns>
     public static string CreateNotification(

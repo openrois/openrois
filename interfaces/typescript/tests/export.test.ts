@@ -27,20 +27,6 @@ describe("Export completeness", () => {
     expect(openrois.ProfileChangedParamsSchema).toBeDefined();
   });
 
-  it("exports Component Contract types", () => {
-    expect(openrois.ComponentContractError).toBeDefined();
-    expect(openrois.ComponentNotFoundError).toBeDefined();
-    expect(openrois.DiscoverRequestSchema).toBeDefined();
-    expect(openrois.DiscoverResponseSchema).toBeDefined();
-    expect(openrois.CommandRequestSchema).toBeDefined();
-    expect(openrois.InvokeResponseSchema).toBeDefined();
-    expect(openrois.QueryRequestSchema).toBeDefined();
-    expect(openrois.QueryResponseSchema).toBeDefined();
-    expect(openrois.SubscribeRequestSchema).toBeDefined();
-    expect(openrois.SubscribeResponseSchema).toBeDefined();
-    expect(openrois.EventEnvelopeSchema).toBeDefined();
-  });
-
   it("exports Profile types", () => {
     expect(openrois.HRIComponentProfileSchema).toBeDefined();
     expect(openrois.ComponentFunctionSchema).toBeDefined();
@@ -68,6 +54,14 @@ describe("Export completeness", () => {
 
   it("does NOT export Component types from root (use @openrois/interfaces/components)", () => {
     expect(openrois.PersonDetectedEventSchema).toBeUndefined();
+  });
+
+  it("exports the profile constants via components subpath", () => {
+    expect(components.ROIS_COMMON_PROFILE).toBeDefined();
+    expect(components.NAVIGATION_PROFILE).toBeDefined();
+    expect(components.PERSON_DETECTION_PROFILE).toBeDefined();
+    expect(components.REACTION_PROFILE).toBeDefined();
+    expect(components.SYSTEM_INFORMATION_PROFILE).toBeDefined();
   });
 
   it("exports Component types via components subpath", () => {

@@ -4,6 +4,10 @@ This module maps the OMG RoIS Framework 2.0 Common IDL types to Python Pydantic
 models. These types define the base interfaces that every RoIS component inherits:
 Command (start/stop/suspend/resume), Query (component_status), and Event.
 
+A status travels as its name, for example ``READY``, because the XML profiles type it as
+the Component_Status enumeration. The IDL operation returns ``Component_Status_t``, a
+number, and docs/rois-reference.md records the divergence (section 16, item 7).
+
 Source: OMG RoIS Framework 2.0, RoIS_Common.idl
 """
 
@@ -58,10 +62,6 @@ class StreamStatus(StrEnum):
 # Numeric type aliases
 # ---------------------------------------------------------------------------
 
-# RoIS_Common::Component_Status_t → long (numeric representation)
-# Numeric representation of ComponentStatus for wire compatibility.
-type ComponentStatusT = int
-
 # RoIS_Common::Stream_Status_t → long (numeric representation)
 # Numeric representation of StreamStatus for wire compatibility.
 type StreamStatusT = int
@@ -70,15 +70,6 @@ type StreamStatusT = int
 # ---------------------------------------------------------------------------
 # Convenience mappings
 # ---------------------------------------------------------------------------
-
-COMPONENT_STATUS_MAP: dict[ComponentStatus, ComponentStatusT] = {
-    ComponentStatus.UNINITIALIZED: 0,
-    ComponentStatus.READY: 1,
-    ComponentStatus.BUSY: 2,
-    ComponentStatus.WARNING: 3,
-    ComponentStatus.ERROR: 4,
-}
-"""Mapping from ComponentStatus enum to numeric ComponentStatusT values."""
 
 STREAM_STATUS_MAP: dict[StreamStatus, StreamStatusT] = {
     StreamStatus.NOT_CONNECTED: 0,

@@ -1,5 +1,13 @@
 // Re-export component modules. We explicitly list exports to avoid
 // conflicts with types re-exported from $defs (e.g. ComponentStatus from common).
+
+export {
+  ROIS_COMMON_PROFILE,
+  NAVIGATION_PROFILE,
+  PERSON_DETECTION_PROFILE,
+  REACTION_PROFILE,
+  SYSTEM_INFORMATION_PROFILE,
+} from "./profiles";
 export {
   PersonDetectedEventSchema,
   PersonDetectionStatusResultSchema,

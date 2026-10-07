@@ -1,13 +1,20 @@
-"""Mock adapter for testing the OpenRoIS middleware without a real robot.
+"""A mock adapter: the components of the TypeScript mock engine, on the Python engine.
 
-Connects to the gateway, registers 4 components, and responds with
-hardcoded data. Fires events on a timer to simulate robot activity.
+It hosts three simulated components under the engine id ``mock``, each declared with
+the profile constant of its type, and serves them to a gateway:
+
+- ``mock/person_detection`` reports zero to three persons every five seconds.
+- ``mock/navigation`` drives to the first of its ``target_positions`` in three seconds
+  and reports ``reached_target``.
+- ``mock/system_information`` answers ``robot_position`` and ``engine_status``.
 
 Usage:
-    python mock_adapter.py --config openrois-profile.yaml
+    python mock_adapter.py [--gateway-url URL] [--engine-id ID] [--log-level LEVEL]
 
-OPENROIS_GATEWAY_URL, when set, overrides the profile's engine.gateway_url,
-so the same profile works on a host and inside Docker Compose.
+The flags fall back to the environment: ``OPENROIS_GATEWAY_URL`` (default
+``ws://127.0.0.1:8765``) and ``OPENROIS_MOCK_ENGINE_ID`` (default ``mock``).
+``OPENROIS_MOCK_TIME_SCALE`` multiplies every delay, for example ``0.1`` for tests that
+should not wait.
 """
 
 from __future__ import annotations
@@ -16,255 +23,191 @@ import argparse
 import asyncio
 import logging
 import os
-from collections.abc import Coroutine
+from collections.abc import Mapping
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 
-from openrois.engine import Engine, WsClient, component_config, read_profile
-from openrois.interfaces.contract import InvokeResponse
-from openrois.interfaces.hri import ReturnCode
-from openrois_components_core import (
+from openrois.components.common import MockSystemInformation
+from openrois.components.core import (
+    CommandFailed,
+    Component,
     component,
     invoke,
-    meta_from_decorators,
-    query,
-    results,
+    on_set_parameter,
     subscribe,
 )
+from openrois.engine import Engine, WsClient
+from openrois.interfaces.components import NAVIGATION_PROFILE, PERSON_DETECTION_PROFILE
+from openrois.interfaces.service import CompletedStatus
 
-logger = logging.getLogger(__name__)
-
-# Timer tasks that fire events. asyncio keeps only weak references to tasks,
-# so a task nobody holds could be collected before it fires.
-_background_tasks: set[asyncio.Task[None]] = set()
-
-
-def _in_background(coroutine: Coroutine[Any, Any, None]) -> None:
-    """Run a coroutine as a task that lives until it finishes."""
-    task = asyncio.create_task(coroutine)
-    _background_tasks.add(task)
-    task.add_done_callback(_background_tasks.discard)
+logger = logging.getLogger("mock_adapter")
 
 
-def _first_value(parameters: list[Any], default: str = "unknown") -> str:
-    """The value of the first parameter, which arrives as a JSON object."""
-    if not parameters:
-        return default
-    first = parameters[0]
-    if isinstance(first, dict):
-        return str(first.get("value", default))
-    return str(first)
+@dataclass(frozen=True)
+class Timing:
+    """How long the simulated work takes, in seconds. The TypeScript mock engine's values.
+
+    Attributes:
+        command: A command or a parameter change, other than a navigation.
+        navigation: A navigation, from start to reached_target.
+        detection: The interval between two person_detected events.
+    """
+
+    command: float = 0.2
+    navigation: float = 3.0
+    detection: float = 5.0
+
+    def scaled(self, factor: float) -> Timing:
+        """The same timing with every delay multiplied by ``factor``."""
+        return Timing(self.command * factor, self.navigation * factor, self.detection * factor)
 
 
-# ─── SystemInformation ───────────────────────────────────────
-
-@component("SystemInformation")
-class SystemInformation:
-
-    def __init__(self, config: dict) -> None:
-        pass
-
-    @query("robot_position")
-    async def robot_position(self):
-        return results.position(x=3.2, y=1.8, theta=0.5)
-
-    @query("battery_level")
-    async def battery_level(self):
-        return results.battery_level(percentage=85.5)
-
-    @query("component_status")
-    async def status(self):
-        return results.status("READY")
+#: Navigation with ``["home"]`` as the default of target_positions. Navigation.xml gives
+#: none, and the default lets a client start a navigation before setting any parameter.
+NAVIGATION_WITH_HOME = NAVIGATION_PROFILE.model_copy(
+    update={
+        "parameter_profiles": [
+            p.model_copy(update={"default_value": '["home"]'})
+            if p.name == "target_positions"
+            else p
+            for p in NAVIGATION_PROFILE.parameter_profiles
+        ]
+    }
+)
 
 
-# ─── Navigation ──────────────────────────────────────────────
+@component(PERSON_DETECTION_PROFILE)
+class MockPersonDetection(Component):
+    """Counts zero to three persons in turn, and reports the count while connected."""
 
-@component("Navigation", function="actuation")
-class Navigation:
+    def __init__(self, timing: Timing) -> None:
+        self._timing = timing
+        self._detector: asyncio.Task[None] | None = None
 
-    def __init__(self, config: dict) -> None:
-        self._busy = False
-        self._target = ""
+    async def connect(self) -> None:
+        self._detector = asyncio.create_task(self._detect())
 
-    @query("waypoints")
-    async def get_waypoints(self):
-        return results.waypoints([
-            {"id": "desk", "name": "desk", "x": 2.0, "y": 1.5, "theta": 0.0},
-            {"id": "kitchen", "name": "kitchen", "x": 5.0, "y": 3.0, "theta": 1.57},
-        ])
+    async def disconnect(self) -> None:
+        if self._detector is not None:
+            self._detector.cancel()
+            await asyncio.gather(self._detector, return_exceptions=True)
 
-    @query("component_status")
-    async def status(self):
-        return results.status("BUSY" if self._busy else "READY")
+    async def _detect(self) -> None:
+        count = 0
+        while True:
+            await asyncio.sleep(self._timing.detection)
+            count = (count + 1) % 4
+            # The engine sends the event to every subscription, and drops it when there
+            # is none.
+            self.emit("person_detected", number=count, timestamp=datetime.now(UTC))
 
-    @invoke("execute")
-    async def navigate(self, parameters):
-        if self._busy:
-            return InvokeResponse(return_code=ReturnCode.ERROR, command_id="")
-        target = _first_value(parameters)
-        logger.info("Navigate to: %s", target)
-        self._busy = True
-        self._target = target
-        return InvokeResponse(return_code=ReturnCode.OK, command_id="cmd-nav")
+    @invoke("start")
+    async def start(self) -> None:
+        await asyncio.sleep(self._timing.command)
 
     @invoke("stop")
-    async def stop(self, parameters):
-        self._busy = False
-        return InvokeResponse(return_code=ReturnCode.OK, command_id="")
+    async def stop(self) -> None:
+        await asyncio.sleep(self._timing.command)
+
+    @invoke("suspend")
+    async def suspend(self) -> None:
+        await asyncio.sleep(self._timing.command)
+
+    @invoke("resume")
+    async def resume(self) -> None:
+        await asyncio.sleep(self._timing.command)
+
+    @subscribe("person_detected")
+    async def person_detected(self) -> None:
+        pass  # The detector emits the event on its own.
+
+
+@component(NAVIGATION_WITH_HOME)
+class MockNavigation(Component):
+    """Drives to the first target position, which takes a few seconds and moves nothing."""
+
+    def __init__(self, timing: Timing) -> None:
+        self._timing = timing
+
+    @invoke("start")
+    async def start(self) -> None:
+        targets = self.parameters.get("target_positions", [])
+        if not targets:
+            raise CommandFailed(CompletedStatus.ERROR, "target_positions is empty")
+        target = targets[0]
+        logger.info("Driving to %s", target)
+        # A stop, or a new start, cancels the drive here, and it ends with ABORT.
+        await asyncio.sleep(self._timing.navigation)
+        self.emit("reached_target", target=target, is_final_target=True)
+        logger.info("Reached %s", target)
+
+    @invoke("stop")
+    async def stop(self) -> None:
+        pass  # Nothing moves, so there is nothing to halt.
+
+    @invoke("suspend")
+    async def suspend(self) -> None:
+        await asyncio.sleep(self._timing.command)
+
+    @invoke("resume")
+    async def resume(self) -> None:
+        await asyncio.sleep(self._timing.command)
 
     @subscribe("reached_target")
-    async def on_reached(self):
-        # Fire a reached_target event after 5 seconds.
-        _in_background(self._fire_reached())
+    async def reached_target(self) -> None:
+        pass  # start emits the event when the drive ends.
 
-    async def _fire_reached(self):
-        await asyncio.sleep(5.0)
-        self._busy = False
-        await self.parent.emit_async(  # type: ignore[attr-defined]
-            "Navigation",
-            "reached_target",
-            results.reached_target(
-                target=self._target, is_final_target=True,
-            ),
-        )
-        logger.info("Fired reached_target event")
+    @on_set_parameter
+    async def apply(self, values: Mapping[str, Any]) -> None:
+        logger.info("New parameters: %s", dict(values))
+        await asyncio.sleep(self._timing.command)
 
 
-# ─── ObjectDetection ────────────────────────────────────────
-
-@component("ObjectDetection", function="sensing")
-class ObjectDetection:
-
-    def __init__(self, config: dict) -> None:
-        pass
-
-    @query("list_objects")
-    async def list_objects(self):
-        return [
-            *results.detection(
-                object_id="0",
-                object_class="person",
-                bounding_box=[[0.1, 0.2], [0.3, 0.2], [0.3, 0.4], [0.1, 0.4]],
-            ),
-            *results.detection(
-                object_id="1",
-                object_class="cup",
-                bounding_box=[[0.5, 0.5], [0.6, 0.5], [0.6, 0.6], [0.5, 0.6]],
-            ),
-        ]
-
-    @query("component_status")
-    async def status(self):
-        return results.status("READY")
-
-    @subscribe("object_detected")
-    async def on_object_detected(self):
-        # Fire an object_detected event after 3 seconds.
-        _in_background(self._fire_detected())
-
-    async def _fire_detected(self):
-        await asyncio.sleep(3.0)
-        await self.parent.emit_async(  # type: ignore[attr-defined]
-            "ObjectDetection",
-            "object_detected",
-            results.detection(
-                object_id="2",
-                object_class="bottle",
-                bounding_box=[[0.2, 0.3], [0.4, 0.3], [0.4, 0.5], [0.2, 0.5]],
-            ),
-        )
-        logger.info("Fired object_detected event")
-
-
-# ─── ObjectManipulation ─────────────────────────────────────
-
-@component("ObjectManipulation", function="actuation")
-class ObjectManipulation:
-
-    def __init__(self, config: dict) -> None:
-        self._busy = False
-
-    @query("component_status")
-    async def status(self):
-        return results.status("BUSY" if self._busy else "READY")
-
-    @query("gripper_state")
-    async def gripper_state(self):
-        return results.gripper_state("open")
-
-    @query("current_grasped_object")
-    async def current_grasped_object(self):
-        return results.current_grasped_object("")
-
-    @invoke("execute")
-    async def execute(self, parameters):
-        if self._busy:
-            return InvokeResponse(return_code=ReturnCode.ERROR, command_id="")
-        command = _first_value(parameters)
-        logger.info("Manipulation: %s", command)
-        self._busy = True
-        return InvokeResponse(return_code=ReturnCode.OK, command_id="cmd-manip")
-
-    @invoke("stop")
-    async def stop(self, parameters):
-        self._busy = False
-        return InvokeResponse(return_code=ReturnCode.OK, command_id="")
-
-    @subscribe("manipulation_complete")
-    async def on_complete(self):
-        # Fire a manipulation_complete event after 4 seconds.
-        _in_background(self._fire_complete())
-
-    async def _fire_complete(self):
-        await asyncio.sleep(4.0)
-        self._busy = False
-        await self.parent.emit_async(  # type: ignore[attr-defined]
-            "ObjectManipulation",
-            "manipulation_complete",
-            results.manipulation_complete(success=True, detail="grasp succeeded"),
-        )
-        logger.info("Fired manipulation_complete event")
-
-
-# ─── Registration ────────────────────────────────────────────
-
-COMPONENT_CLASSES = [
-    SystemInformation,
-    Navigation,
-    ObjectDetection,
-    ObjectManipulation,
-]
+def build_engine(engine_id: str = "mock", timing: Timing | None = None) -> Engine:
+    """The engine of the mock adapter, with its three components."""
+    timing = timing or Timing()
+    engine = Engine(engine_id)
+    engine.add_component("person_detection", MockPersonDetection(timing))
+    engine.add_component("navigation", MockNavigation(timing))
+    engine.add_component("system_information", MockSystemInformation())
+    return engine
 
 
 def main() -> None:
-    """Entry point: load profile, create engine, register components, run."""
-    logging.basicConfig(level=logging.INFO)
-
-    parser = argparse.ArgumentParser(description="Mock OpenRoIS adapter")
+    """Parse the flags and serve the gateway until Ctrl+C."""
+    parser = argparse.ArgumentParser(description="The OpenRoIS mock adapter.")
     parser.add_argument(
-        "--config",
-        default="openrois-profile.yaml",
-        help="Path to the profile YAML file (default: openrois-profile.yaml)",
+        "--gateway-url",
+        default=os.environ.get("OPENROIS_GATEWAY_URL", "ws://127.0.0.1:8765"),
+        help="the gateway to connect to (env OPENROIS_GATEWAY_URL)",
+    )
+    parser.add_argument(
+        "--engine-id",
+        default=os.environ.get("OPENROIS_MOCK_ENGINE_ID", "mock"),
+        help="the engine id, the first part of every ref (env OPENROIS_MOCK_ENGINE_ID)",
+    )
+    parser.add_argument(
+        "--log-level",
+        default="info",
+        choices=["debug", "info", "warning", "error"],
+        help="how much to log",
     )
     args = parser.parse_args()
 
-    profile = read_profile(args.config)
+    scale_text = os.environ.get("OPENROIS_MOCK_TIME_SCALE", "1")
+    try:
+        scale = float(scale_text)
+    except ValueError:
+        scale = -1.0
+    if scale <= 0:
+        parser.error(f"OPENROIS_MOCK_TIME_SCALE must be a positive number, not {scale_text!r}")
 
-    engine = Engine(
-        engine_id=profile["engine"]["id"],
-        platform=profile["engine"].get("platform", ""),
+    logging.basicConfig(
+        level=args.log_level.upper(), format="%(asctime)s %(levelname)s %(name)s: %(message)s"
     )
-
-    for cls in COMPONENT_CLASSES:
-        meta = meta_from_decorators(cls)
-        engine.register_component(
-            meta.ref,
-            cls(component_config(profile, meta.ref)),
-            meta,
-        )
-
-    gateway_url = os.environ.get("OPENROIS_GATEWAY_URL") or profile["engine"]["gateway_url"]
-    ws_client = WsClient(engine, gateway_url)
-    ws_client.run()
+    engine = build_engine(args.engine_id, Timing().scaled(scale))
+    WsClient(engine, args.gateway_url).run()
 
 
 if __name__ == "__main__":

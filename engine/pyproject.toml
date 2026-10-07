@@ -20,14 +20,14 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "openrois-interfaces>=0.1.0a3",
+    "openrois-interfaces>=0.1.0a4",
     "websockets>=14.0",
-    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "openrois-components-core>=0.1.0a2",
+    "openrois-components-core>=0.1.0a1",
+    "mypy>=1.8",
     "pytest>=8.4",
     "pytest-asyncio>=1.0",
     "ruff>=0.4",
@@ -47,6 +47,23 @@ packages = ["src/openrois"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+files = ["src", "tests"]
+# The openrois namespace package has no __init__.py at its root, so mypy resolves
+# openrois.engine from src/ as an explicit package base.
+mypy_path = "src"
+explicit_package_bases = true
+
+# The WebSocket client spins the rclpy nodes of components when rclpy is installed,
+# which happens only in a ROS 2 environment.
+[[tool.mypy.overrides]]
+module = ["rclpy.*"]
+ignore_missing_imports = true
 
 [tool.ruff]
 target-version = "py312"

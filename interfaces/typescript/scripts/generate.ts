@@ -8,9 +8,8 @@
  *   - A zod schema (e.g. `ResultSchema`)
  *   - An inferred type (e.g. `type Result = z.infer<typeof ResultSchema>`)
  *
- * The `ComponentContract` interface and error classes are NOT generated here.
- * They are hand-written in `src/contract.ts` because JSON Schema cannot represent
- * behavioral interfaces.
+ * It also reads `interfaces/schema/profiles.json` and emits the profile constants of
+ * the basic components into `src/components/profiles.ts`.
  *
  * Usage:
  *   npx tsx scripts/generate.ts
@@ -62,6 +61,10 @@ interface CatalogNotification {
   params: string;
 }
 
+interface ProfilesDocument {
+  profiles: { name: string; profile: Record<string, unknown> }[];
+}
+
 interface CatalogDocument {
   methods: CatalogMethod[];
   notifications: CatalogNotification[];
@@ -82,6 +85,8 @@ const SCHEMA_DIR = process.env.OPENROIS_SCHEMA_DIR
 const SRC_DIR = path.resolve(TS_ROOT, "src");
 const MANIFEST_PATH = path.resolve(SCHEMA_DIR, "manifest.json");
 const CATALOG_PATH = path.resolve(SCHEMA_DIR, "catalog.json");
+const PROFILES_PATH = path.resolve(SCHEMA_DIR, "profiles.json");
+const PROFILES_OUT_FILE = path.join("components", "profiles.ts");
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -435,9 +440,6 @@ function isSelfReferencing(name: string, schema: JsonSchema, depth = 0): boolean
 
 /** The output file of a module, relative to `src/`. */
 function moduleOutFile(moduleName: string): string {
-  // The contract data models get their own file, because the ComponentContract
-  // interface itself is hand-written in src/contract.ts and re-exports them.
-  if (moduleName === "contract") return path.join("generated", "contract-models.ts");
   return `${moduleName}.ts`;
 }
 
@@ -627,8 +629,6 @@ function generateModule(
   if (moduleName === "common") {
     parts.push("// ─── Numeric type aliases (from RoIS_Common.idl) ────────────────");
     parts.push("");
-    parts.push("/** Numeric representation of ComponentStatus for wire compatibility. */");
-    parts.push("export type ComponentStatusT = number;");
     parts.push("/** Numeric representation of StreamStatus for wire compatibility. */");
     parts.push("export type StreamStatusT = number;");
     parts.push("");
@@ -755,6 +755,51 @@ function generateModule(
   return parts.join("\n");
 }
 
+/**
+ * Write a JSON value as a TS literal, with object keys unquoted where they are
+ * identifiers, indented to sit at `indent`.
+ */
+function tsLiteral(value: unknown, indent: string): string {
+  const inner = `${indent}  `;
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "[]";
+    return `[\n${value.map((item) => `${inner}${tsLiteral(item, inner)},`).join("\n")}\n${indent}]`;
+  }
+  if (value !== null && typeof value === "object") {
+    const entries = Object.entries(value);
+    if (entries.length === 0) return "{}";
+    const lines = entries.map(([key, item]) => {
+      const name = /^[A-Za-z_$][\w$]*$/.test(key) ? key : tsStr(key);
+      return `${inner}${name}: ${tsLiteral(item, inner)},`;
+    });
+    return `{\n${lines.join("\n")}\n${indent}}`;
+  }
+  return typeof value === "string" ? tsStr(value) : JSON.stringify(value);
+}
+
+/** Generate the profile constants of the basic components from profiles.json. */
+function genProfiles(document: ProfilesDocument): string {
+  const lines: string[] = [];
+  lines.push("// GENERATED FROM interfaces/schema — DO NOT EDIT");
+  lines.push("// Source: profiles.json");
+  lines.push("// Generator: scripts/generate.ts");
+  lines.push("//");
+  lines.push("// The full profile of each basic component type: its XML profile with the");
+  lines.push("// RoIS_Common messages it includes, and its RoSO function. A component declares");
+  lines.push("// the profile of its type and implements a part of it, and the engine serves");
+  lines.push("// the part the component implements.");
+  lines.push("");
+  lines.push('import type { HRIComponentProfile } from "../profiles";');
+  for (const { name, profile } of document.profiles) {
+    const identifier = profile.identifier as { authority: string; code: string };
+    lines.push("");
+    lines.push(`/** The ${identifier.authority} ${identifier.code} profile. */`);
+    lines.push(`export const ${name}: HRIComponentProfile = ${tsLiteral(profile, "")};`);
+  }
+  lines.push("");
+  return lines.join("\n");
+}
+
 /** Write a file, creating parent directories as needed. */
 function writeFile(filePath: string, content: string): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -788,7 +833,13 @@ function main(): void {
     console.log(`  ${outFile.split(path.sep).join("/")} (${schemaFiles.length} schemas)`);
   }
 
-  console.log("\nDone. ComponentContract interface is hand-written in src/contract.ts.");
+  if (fs.existsSync(PROFILES_PATH)) {
+    const profiles = JSON.parse(fs.readFileSync(PROFILES_PATH, "utf-8")) as ProfilesDocument;
+    writeFile(path.resolve(SRC_DIR, PROFILES_OUT_FILE), genProfiles(profiles));
+    console.log(`  components/profiles.ts (${profiles.profiles.length} profiles)`);
+  }
+
+  console.log("\nDone.");
 }
 
 main();

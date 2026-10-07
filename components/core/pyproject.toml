@@ -1,16 +1,66 @@
 [build-system]
-requires = ["setuptools>=68.0"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "openrois-components-core"
-version = "0.1.0a2"
-description = "OpenRoIS component framework: decorators, metadata, result builders"
+version = "0.1.0a1"
+description = "OpenRoIS component SDK: write a RoIS HRI Component as a Python class"
+readme = "README.md"
 license = "Apache-2.0"
+authors = [
+    { name = "OpenRoIS Community" },
+]
 requires-python = ">=3.12"
+keywords = ["rois", "omg", "robotics", "hri", "middleware"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+]
 dependencies = [
-    "openrois-interfaces>=0.1.0a2",
+    "openrois-interfaces>=0.1.0a4",
 ]
 
-[tool.setuptools.packages.find]
-include = ["openrois_components_core*"]
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.4",
+    "pytest-asyncio>=1.0",
+    "mypy>=1.8",
+    "ruff>=0.4",
+]
+
+[project.urls]
+Homepage = "https://openrois.org/"
+Repository = "https://github.com/openrois/openrois"
+"Bug-Tracker" = "https://github.com/openrois/openrois/issues"
+
+# openrois and openrois.components are namespace packages shared with the other OpenRoIS
+# distributions, so neither has an __init__.py and this one ships only
+# openrois/components/core/.
+[tool.hatch.build.targets.wheel]
+packages = ["src/openrois"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+files = ["src", "tests"]
+# The openrois namespace package has no __init__.py at its root, so mypy resolves
+# openrois.components.core from src/ as an explicit package base.
+mypy_path = "src"
+explicit_package_bases = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]

@@ -9,6 +9,7 @@
 
 # examples/mock-adapter/Dockerfile
 !components/core
+!components/common
 !examples/mock-adapter
 
 # Local state inside the included directories.

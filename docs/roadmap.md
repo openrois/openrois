@@ -24,16 +24,16 @@ Until version 1.0, all releases are **alpha, with an unstable API**.
 | **1** | Engine and sub HRI Engine proof of concept | done |
 | **2** | Adapter framework and reference components | done |
 | **3** | Client SDKs and first end-to-end demonstration | in progress |
-| **4** | Recursive engine in Python | in progress |
+| **4** | Recursive engine in Python | done |
 | **5** | Hardening the engine | planned |
-| **6** | Gateway process | in progress |
+| **6** | Gateway process | done |
 | **7** | Adapter process | planned |
 | **8** | Open reference platform and mixed paradigms | planned |
 | **9** | Authentication, security, and media | planned |
 | **10** | Full component library (`v1.0`) | planned |
 | **11** | Component registry and Hub | after 1.0 |
 
-Phase 3 continues alongside Phase 4. Phases 8 and 9 can proceed in parallel once the
+Phase 3 continues alongside the later phases. Phases 8 and 9 can proceed in parallel once the
 gateway and adapter processes exist. Phase 11 is gated on adoption.
 
 ---
@@ -43,8 +43,8 @@ gateway and adapter processes exist. Phase 11 is gated on adoption.
 ### Phase 0: Paradigm-Neutral Interface Types (Done)
 
 RoIS types authored as Python models, exported to JSON Schema, and generated into
-TypeScript and C#, with tests against the normative RoIS files. Definition of the
-five-method `Component Contract` that decouples the engine from any middleware.
+TypeScript and C#, with tests against the normative RoIS files, and a first contract
+between the engine and its components that decouples the engine from any middleware.
 
 ### Phase 1: Engine and Sub HRI Engine Proof of Concept (Done)
 
@@ -72,15 +72,17 @@ high-level client does not yet.
 
 **Exit criteria:** tagged release `v0.1.0`.
 
-### Phase 4: Recursive Engine in Python (In Progress)
+### Phase 4: Recursive Engine in Python (Done)
 
-**Done:** the `openrois-engine` package with the recursive `Engine`, the
-`ComponentRegistry`, the `ChildEngineProxy`, and the `WsServer` and `WsClient` that
-existing adapters run on. Adapter discovery and event delivery through the gateway work,
-each request runs in its own task, and a test suite runs the engine over real sockets.
+**Done:** the `openrois-engine` package with the recursive `Engine` on the RoIS method
+catalog of `openrois-interfaces`, its `LocalComponents` and `ChildEngine` sources, and
+the `WsServer` and `WsClient`. A gateway discovers its child engines with
+`rois.system.get_profile`, runs command sequences across them, and routes every id to the
+engine that owns it. A test suite runs the engine in process and over real sockets,
+including a gateway under a gateway. The mock adapter, the Kachaka components and the
+adapter template run on it, and the TypeScript SDK runs its sessions against it.
 
-**In progress:** the move to the RoIS method catalog of `openrois-interfaces`, and the
-first release of `openrois-engine`.
+Released as `openrois-engine` 0.1.0a1, together with `openrois-components-core` 0.1.0a1.
 
 **Exit criteria:** the Python engine is the only dispatch implementation in the
 repository. The TypeScript proof of concept is removed, with its last version at tag
@@ -91,20 +93,21 @@ repository. The TypeScript proof of concept is removed, with its last version at
 Graceful shutdown, reconnection behavior, loading component packages from a local path
 or a Git URL, and minimal health and status endpoints.
 
-### Phase 6: Gateway Process (In Progress)
+### Phase 6: Gateway Process (Done)
 
 **Done:** the `openrois-gateway` package, a standalone gateway process composed from
 `Engine` and `WsServer`, with configuration from a YAML file, the environment and flags,
 logging, and a graceful stop on SIGTERM and SIGINT. Its container image, and a Docker
-Compose file that starts it with the mock adapter.
+Compose file that starts it with the mock adapter, checked end to end by a smoke script on
+the RoIS method catalog. Docker Compose is the one-command quickstart.
 
-**In progress:** Docker Compose as the one-command quickstart, once the engine speaks the
-RoIS method catalog, and the first release of `openrois-gateway`.
+Released as `openrois-gateway` 0.1.0a1.
 
 ### Phase 7: Adapter Process (Planned)
 
-A standalone adapter process composed from `Engine`, `WsClient`, and a backend bridge,
-configured by the adapter profile.
+A packaged adapter process, like the gateway process, that builds the components of a
+robot from a configuration and serves them with `Engine` and `WsClient`, so an adapter
+needs no hand-written script.
 
 ### Phase 8: Open Reference Platform and Mixed Paradigms (Planned)
 
@@ -149,21 +152,21 @@ Recorded as architecture decision records when settled.
 ### Adapter Language (Decided)
 
 Adapters stay in Python for ROS 2 ergonomics through `rclpy`. An adapter hosts an
-`Engine` (a sub HRI Engine) with components registered in its `ComponentRegistry`, and
-connects to the gateway with `WsClient`. The shared contract is the generated
-`Component Contract`, not a shared codebase.
+`Engine` (a sub HRI Engine) with components written with `openrois-components-core`, and
+connects to the gateway with `WsClient`. The shared contract is the RoIS method catalog,
+not a shared codebase.
 
 ### Package Management Mechanism (Undecided)
 
-The component registry of an adapter needs to load component packages from somewhere.
+An adapter needs to load component packages from somewhere.
 The proposal is to start with local paths and Git URLs, then add a registry endpoint
 later as the foundation for Phase 11. Package management stays in the adapter and the
 gateway management API, never in the `Engine`.
 
 ### Component Registry Implementations (Recommendation)
 
-Two thin native implementations, one per language, sharing only the generated
-`Component Contract`, rather than one shared library bridged across languages.
+Two thin native implementations, one per language, sharing only the generated method
+catalog, rather than one shared library bridged across languages.
 
 ---
 

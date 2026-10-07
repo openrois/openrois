@@ -1,1195 +1,715 @@
-"""Recursive Engine, ComponentRegistry, ChildEngineProxy, and EventEmitter.
+"""The recursive RoIS HRI Engine.
 
-The Engine class is the recursive HRI engine. One class serves both the
-gateway (main engine, child engines reached through ChildEngineProxy instances) and
-the adapter (local components populated via ComponentRegistry). Both
-registries can be populated simultaneously.
+``Engine`` answers the RoIS method catalog for the sessions connected to it: clients of
+a gateway, or the parent engine of an adapter. It reaches its components through the
+component contract (``openrois.engine.contract``): the components it hosts in its own
+process, and the components of its child engines. One class serves an adapter (local
+components), a gateway (child engines) and a middle tier (both).
 
-ComponentRegistry manages local component handlers. ChildEngineProxy is a proxy
-for a remote child engine connected via WebSocket. Both implement the
-ComponentContract protocol (discover, invoke, query, subscribe,
-unsubscribe).
+The engine does what is the same for every component:
 
-EventEmitter manages event subscriptions and provides thread-safe emit
-for pushing event notifications to subscribed clients.
+- It selects components by condition, in the OpenRoIS subset of CQL2-Text.
+- It holds the bindings of actuation components for the sessions connected to it.
+  Requests from a parent engine skip the check, since the parent made it.
+- It runs ``execute``: the items in order, each ``delay_time`` waited, the commands of
+  a ``ConcurrentCommands`` item at the same time, each after its own ``delay_time``. A
+  command that ends other than OK stops the sequence, and the commands after it
+  complete with ABORT.
+- It keeps the command table, refuses a command id it already tracks or one in the
+  namespace of an engine, and sends every ``rois.command.completed`` once, to the
+  session that started the command.
+- It routes subscriptions, results, events and errors to the source that owns them.
+
+Clients connect to the top engine of a hierarchy, which holds the bindings for every
+engine below it. A middle tier serves its parent through a trusted session, so it does
+not check the bindings of its parent's clients against those of its own clients.
 """
 
 from __future__ import annotations
 
 import asyncio
-import concurrent.futures
-import json
 import logging
-import uuid
-from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, Any
+from collections.abc import Awaitable, Callable, Coroutine, Sequence
+from dataclasses import dataclass
+from typing import Any
 
-from openrois.interfaces.hri import Result, ReturnCode
+from openrois.interfaces.catalog import (
+    BindAnyParams,
+    BindAnyResult,
+    BindParams,
+    BindResult,
+    ConnectParams,
+    ConnectResult,
+    DisconnectParams,
+    DisconnectResult,
+    ExecuteParams,
+    ExecuteResult,
+    GetCommandResultParams,
+    GetCommandResultResult,
+    GetErrorDetailParams,
+    GetErrorDetailResult,
+    GetEventDetailParams,
+    GetEventDetailResult,
+    GetParameterParams,
+    GetParameterResult,
+    GetProfileParams,
+    GetProfileResult,
+    QueryParams,
+    QueryResult,
+    ReleaseParams,
+    ReleaseResult,
+    SearchParams,
+    SearchResult,
+    SetParameterParams,
+    SetParameterResult,
+    SubscribeParams,
+    SubscribeResult,
+    UnsubscribeParams,
+    UnsubscribeResult,
+)
+from openrois.interfaces.condition import (
+    COMPONENT_REF,
+    COMPONENT_TYPE,
+    ConditionError,
+    component_type_urn,
+    parse_condition,
+)
+from openrois.interfaces.hri import (
+    CommandUnit,
+    CommandUnitSequenceItem,
+    Parameter,
+    ReturnCode,
+)
+from openrois.interfaces.profiles import (
+    ComponentFunction,
+    HRIComponentProfile,
+    HRIEngineProfileType,
+    RoISIdentifierType,
+)
+from openrois.interfaces.service import (
+    CompletedParams,
+    CompletedStatus,
+    NotifyEventParams,
+    ProfileChangedParams,
+)
+from openrois.interfaces.values import decode_value
+from pydantic import BaseModel
 
-if TYPE_CHECKING:
-    from openrois_components_core.meta import ComponentMeta
-
-
-# ---------------------------------------------------------------------------
-# Binding enforcement helper
-# ---------------------------------------------------------------------------
-
-_COMMAND_TYPES_REQUIRING_BIND = frozenset({"start", "stop", "suspend", "resume", "execute"})
-
-
-def _requires_bind(function: str | None, commands: list[str]) -> bool:
-    """Derive binding requirement from function classification and commands.
-
-    Actuation components with command methods (start, stop, suspend,
-    resume, execute) require exclusive binding. Sensing, streaming, and
-    unclassified components do not. set_parameter is excluded: it is
-    pre-execute setup per RoIS spec section 7.3.
-    """
-    if function != "actuation":
-        return False
-    return bool({c.lower() for c in commands} & _COMMAND_TYPES_REQUIRING_BIND)
+from openrois.engine.contract import ComponentContract, Deliver
+from openrois.engine.local import LocalComponent, LocalComponents
+from openrois.engine.session import Notify, Session
 
 logger = logging.getLogger(__name__)
 
+# How many finished commands the table keeps, for get_command_result and duplicate ids.
+_COMMANDS_KEPT = 4096
 
-# ---------------------------------------------------------------------------
-# EventEmitter
-# ---------------------------------------------------------------------------
+#: The authority of the engine profile identifier.
+ENGINE_AUTHORITY = "OpenRoIS"
+
+type _Handler = Callable[[Session, Any], Awaitable[BaseModel]]
 
 
-class EventEmitter:
-    """Manages event subscriptions and thread-safe event emission.
+@dataclass(eq=False)
+class _Command:
+    """An entry of the command table.
 
-    The framework creates one EventEmitter and injects emit/emit_async onto
-    each component at registration time. Components call
-    self.parent.emit_async(event_type, results) to push events to all
-    subscribed operators.
-
-    If nobody is subscribed to an event type, emit is a no-op.
+    ``source`` ran the command and keeps its results. It is None for a command that
+    never ran, which has no results.
     """
 
-    def __init__(
-        self,
-        ws_send: Callable[[str], Awaitable[None]],
-        loop: asyncio.AbstractEventLoop,
-    ) -> None:
-        """Initialize the EventEmitter.
-
-        Args:
-            ws_send: Async callable that sends a raw JSON string over the WS.
-            loop: The asyncio event loop (for thread-safe emit from rclpy).
-        """
-        self._ws_send = ws_send
-        self._loop = loop
-        # subscribe_id -> (component_ref, event_type)
-        self._subscriptions: dict[str, tuple[str, str]] = {}
-
-    def set_send_fn(self, send_fn: Callable[[str], Awaitable[None]]) -> None:
-        """Rebind the send function after reconnect."""
-        self._ws_send = send_fn
-
-    def add_subscription(self, component_ref: str, event_type: str) -> str:
-        """Register a new subscription and return the subscribe_id."""
-        subscribe_id = f"sub-{uuid.uuid4().hex[:8]}"
-        self._subscriptions[subscribe_id] = (component_ref, event_type)
-        logger.debug(
-            "Subscribed %s for %s/%s (%d total)",
-            subscribe_id,
-            component_ref,
-            event_type,
-            len(self._subscriptions),
-        )
-        return subscribe_id
-
-    def remove_subscription(self, subscribe_id: str) -> bool:
-        """Remove a subscription by subscribe_id."""
-        removed = self._subscriptions.pop(subscribe_id, None)
-        if removed:
-            logger.debug(
-                "Unsubscribed %s (%d remaining)",
-                subscribe_id,
-                len(self._subscriptions),
-            )
-        return removed is not None
-
-    def remove_all_subscriptions(self) -> None:
-        """Remove all subscriptions. Called on WS disconnect."""
-        self._subscriptions.clear()
-
-    def has_subscribers(self, component_ref: str, event_type: str) -> bool:
-        """Check if there are active subscribers for a component/event pair."""
-        return any(
-            (cref, etype) == (component_ref, event_type)
-            for cref, etype in self._subscriptions.values()
-        )
-
-    def emit(
-        self,
-        component_ref: str,
-        event_type: str,
-        results: list[Result],
-    ) -> None:
-        """Emit an event to all subscribed operators, from any thread.
-
-        Components call this from callbacks that run outside the event loop,
-        such as an rclpy executor thread. The subscription table belongs to
-        the loop, so the whole emission, including the lookup of matching
-        subscriptions, is scheduled onto the loop instead of running here.
-
-        If nobody is subscribed, this is a no-op.
-        """
-        future = asyncio.run_coroutine_threadsafe(
-            self.emit_async(component_ref, event_type, results),
-            self._loop,
-        )
-        future.add_done_callback(_log_emit_failure)
-
-    async def emit_async(
-        self,
-        component_ref: str,
-        event_type: str,
-        results: list[Result],
-    ) -> None:
-        """Emit an event to all subscribed operators, from the event loop.
-
-        If nobody is subscribed, this is a no-op.
-        """
-        matching = [
-            sid
-            for sid, (cref, etype) in self._subscriptions.items()
-            if cref == component_ref and etype == event_type
-        ]
-        payload = [r.model_dump() for r in results]
-        for subscribe_id in matching:
-            notification = {
-                "jsonrpc": "2.0",
-                "method": "rois.event.notify",
-                "params": {
-                    "event_id": str(uuid.uuid4()),
-                    "subscribe_id": subscribe_id,
-                    "component_ref": component_ref,
-                    "event_type": event_type,
-                    "expire": "",
-                    "results": payload,
-                },
-            }
-            await self._ws_send(json.dumps(notification))
-
-
-def _log_emit_failure(future: concurrent.futures.Future[None]) -> None:
-    """Log an emission that failed after it left the component's thread.
-
-    Without this callback the exception would stay inside the future, which
-    nobody awaits, and the event would vanish silently.
-    """
-    if future.cancelled():
-        return
-    exc = future.exception()
-    if exc is not None:
-        logger.error("Event emission failed: %s", exc)
-
-
-# ---------------------------------------------------------------------------
-# ComponentRegistry
-# ---------------------------------------------------------------------------
-
-
-class ComponentRegistry:
-    """Manages local component handlers.
-
-    Implements the ComponentContract protocol (discover, invoke, query,
-    subscribe, unsubscribe) for in-process components. Each component is
-    registered with a ref, a handler instance, and a ComponentMeta.
-
-    The registry injects emit/emit_async onto each component at registration
-    time and sets parent to itself so components can call
-    self.parent.emit_async(...).
-    """
-
-    def __init__(self, emitter: EventEmitter | None = None) -> None:
-        self._handlers: dict[str, Any] = {}
-        self._metadata: dict[str, ComponentMeta] = {}
-        self._emitter = emitter
-
-    @property
-    def emit(self) -> Callable[..., None]:
-        """Synchronous emit, delegates to EventEmitter."""
-        if self._emitter:
-            return self._emitter.emit
-        raise RuntimeError("No emitter set")
-
-    @property
-    def emit_async(self) -> Callable[..., Awaitable[None]]:
-        """Async emit, delegates to EventEmitter."""
-        if self._emitter:
-            return self._emitter.emit_async
-        raise RuntimeError("No emitter set")
-
-    def set_emitter(self, emitter: EventEmitter) -> None:
-        """Set or replace the emitter. Re-injects onto all registered components."""
-        self._emitter = emitter
-        for handler in self._handlers.values():
-            handler.emit = emitter.emit
-            handler.emit_async = emitter.emit_async
-
-    def register(self, ref: str, handler: Any, meta: ComponentMeta) -> None:
-        """Register a component handler with its metadata.
-
-        Injects emit/emit_async onto the handler and sets parent to this
-        registry so the handler can call self.parent.emit_async(...).
-        """
-        self._handlers[ref] = handler
-        self._metadata[ref] = meta
-        if self._emitter:
-            handler.emit = self._emitter.emit
-            handler.emit_async = self._emitter.emit_async
-        # Set parent to registry so self.parent.emit_async works.
-        handler.parent = self
-
-    def unregister(self, ref: str) -> None:
-        """Remove a component handler."""
-        self._handlers.pop(ref, None)
-        self._metadata.pop(ref, None)
-
-    def get_handler(self, ref: str) -> Any | None:
-        """Get a component handler by ref."""
-        return self._handlers.get(ref)
-
-    def get_metadata(self, ref: str) -> ComponentMeta | None:
-        """Get component metadata by ref."""
-        return self._metadata.get(ref)
-
-    def get_component_list(self) -> list[dict[str, Any]]:
-        """Return the component list for registration with the engine."""
-        components: list[dict[str, Any]] = []
-        for ref, meta in self._metadata.items():
-            components.append({
-                "ref": ref,
-                "function": meta.function.value if meta.function else None,
-                "queries": list(meta.queries.keys()),
-                "commands": list(meta.invokes.keys()),
-                "events": list(meta.subscribes.keys()),
-                "parameters": meta.parameters,
-            })
-        return components
-
-    def get_profile(self) -> dict[str, Any]:
-        """Return a profile dict for this registry's components."""
-        component_ids: list[str] = []
-        component_profiles: list[dict[str, Any]] = []
-        for ref, meta in self._metadata.items():
-            component_ids.append(ref)
-            component_profiles.append({
-                "identifier": {
-                    "authority": "OpenRoIS",
-                    "code": ref,
-                    "codebook_ref": "",
-                    "version": "",
-                },
-                "function": meta.function.value if meta.function else None,
-                "query_profiles": [{"name": q} for q in meta.queries],
-                "command_profiles": [{"name": c} for c in meta.invokes],
-                "event_profiles": [{"name": e} for e in meta.subscribes],
-                "parameter_profiles": meta.parameters,
-            })
-        return {
-            "component_ids": component_ids,
-            "component_profiles": component_profiles,
-        }
-
-    async def connect_all(self) -> None:
-        """Call connect() on all components that define it.
-
-        Logs and continues on per-component errors so one failing
-        component does not block the rest.
-        """
-        for ref, handler in self._handlers.items():
-            connect = getattr(handler, "connect", None)
-            if connect and asyncio.iscoroutinefunction(connect):
-                try:
-                    await connect()
-                except Exception as exc:
-                    logger.warning("Connect error for %s: %s", ref, exc)
-
-    async def disconnect_all(self) -> None:
-        """Call disconnect() on all components that define it.
-
-        Logs and continues on per-component errors so one failing
-        disconnect does not block the rest.
-        """
-        for ref, handler in self._handlers.items():
-            disconnect = getattr(handler, "disconnect", None)
-            if disconnect and asyncio.iscoroutinefunction(disconnect):
-                try:
-                    await disconnect()
-                except Exception as exc:
-                    logger.warning("Disconnect error for %s: %s", ref, exc)
-
-    def get_rclpy_nodes(self) -> list:
-        """Collect all rclpy.Node instances from registered components."""
-        nodes = []
-        for handler in self._handlers.values():
-            node = getattr(handler, "_node", None)
-            if node is not None:
-                nodes.append(node)
-        return nodes
-
-    # -- ComponentContract implementation (for local dispatch) --
-
-    async def discover(self, condition: str = "") -> dict[str, Any]:
-        """Return all local component refs."""
-        return {
-            "return_code": ReturnCode.OK.value,
-            "component_ref_list": list(self._handlers.keys()),
-        }
-
-    async def invoke(
-        self,
-        bare_ref: str,
-        command_type: str,
-        command_id: str,
-        parameters: list[Any],
-    ) -> dict[str, Any]:
-        """Dispatch an invoke (command) to a local component handler."""
-        handler = self._handlers.get(bare_ref)
-        if not handler:
-            return {"return_code": ReturnCode.UNSUPPORTED.value, "command_id": ""}
-
-        meta = self._metadata.get(bare_ref)
-        if not meta:
-            return {"return_code": ReturnCode.UNSUPPORTED.value, "command_id": ""}
-
-        method_name = meta.invokes.get(command_type)
-        if not method_name:
-            return {"return_code": ReturnCode.UNSUPPORTED.value, "command_id": ""}
-
-        method = getattr(handler, method_name)
-        try:
-            response = await method(parameters)
-            return {
-                "return_code": response.return_code.value,
-                "command_id": response.command_id,
-            }
-        except Exception as exc:
-            logger.error("Invoke error for %s/%s: %s", bare_ref, command_type, exc)
-            return {"return_code": ReturnCode.ERROR.value, "command_id": ""}
-
-    async def query(
-        self,
-        bare_ref: str,
-        query_type: str,
-        condition: str = "",
-    ) -> dict[str, Any]:
-        """Dispatch a query to a local component handler."""
-        handler = self._handlers.get(bare_ref)
-        if not handler:
-            return {"return_code": ReturnCode.UNSUPPORTED.value, "results": []}
-
-        meta = self._metadata.get(bare_ref)
-        if not meta:
-            return {"return_code": ReturnCode.UNSUPPORTED.value, "results": []}
-
-        method_name = meta.queries.get(query_type)
-        if not method_name:
-            return {"return_code": ReturnCode.UNSUPPORTED.value, "results": []}
-
-        method = getattr(handler, method_name)
-        try:
-            result_list = await method()
-            return {
-                "return_code": ReturnCode.OK.value,
-                "results": [r.model_dump() for r in result_list],
-            }
-        except Exception as exc:
-            logger.error("Query error for %s/%s: %s", bare_ref, query_type, exc)
-            return {"return_code": ReturnCode.ERROR.value, "results": []}
-
-    async def subscribe(
-        self,
-        bare_ref: str,
-        event_type: str,
-        condition: str = "",
-    ) -> dict[str, Any]:
-        """Register a subscription and call the component's subscribe handler."""
-        if not self._emitter:
-            logger.warning("[registry.sub] no emitter set")
-            return {"return_code": ReturnCode.ERROR.value, "subscribe_id": ""}
-
-        handler = self._handlers.get(bare_ref)
-        if not handler:
-            logger.warning("[registry.sub] no handler for %s (available: %s)",
-                           bare_ref, list(self._handlers.keys()))
-            return {"return_code": ReturnCode.UNSUPPORTED.value, "subscribe_id": ""}
-
-        meta = self._metadata.get(bare_ref)
-        if not meta:
-            logger.warning("[registry.sub] no metadata for %s", bare_ref)
-            return {"return_code": ReturnCode.UNSUPPORTED.value, "subscribe_id": ""}
-
-        method_name = meta.subscribes.get(event_type)
-        if not method_name:
-            logger.warning("[registry.sub] no @subscribe for %s/%s (available: %s)",
-                           bare_ref, event_type, list(meta.subscribes.keys()))
-            return {"return_code": ReturnCode.UNSUPPORTED.value, "subscribe_id": ""}
-
-        subscribe_id = self._emitter.add_subscription(bare_ref, event_type)
-        logger.info("[registry.sub] created %s for %s/%s", subscribe_id, bare_ref, event_type)
-        method = getattr(handler, method_name)
-        try:
-            await method()
-        except Exception as exc:
-            logger.error("[registry.sub] handler error for %s/%s: %s", bare_ref, event_type, exc)
-            self._emitter.remove_subscription(subscribe_id)
-            return {"return_code": ReturnCode.ERROR.value, "subscribe_id": ""}
-
-        return {
-            "return_code": ReturnCode.OK.value,
-            "subscribe_id": subscribe_id,
-        }
-
-    async def unsubscribe(self, subscribe_id: str) -> dict[str, Any]:
-        """Remove a subscription."""
-        if not self._emitter:
-            return {"return_code": ReturnCode.ERROR.value}
-        self._emitter.remove_subscription(subscribe_id)
-        return {"return_code": ReturnCode.OK.value}
-
-
-# ---------------------------------------------------------------------------
-# ChildEngineProxy
-# ---------------------------------------------------------------------------
-
-
-class ChildEngineProxy:
-    """Proxy for a remote child engine connected via WebSocket.
-
-    Implements the ComponentContract protocol by forwarding JSON-RPC
-    requests over WebSocket and awaiting matching responses. Event
-    notifications from the adapter are routed to the EventSink associated
-    with the subscribe_id.
-
-    Multiple ChildEngineProxy instances can exist simultaneously, one per
-    connected adapter.
-    """
-
-    def __init__(
-        self,
-        ws_send: Callable[[str], Awaitable[None]],
-        loop: asyncio.AbstractEventLoop,
-        request_timeout: float = 10.0,
-    ) -> None:
-        """Initialize the proxy.
-
-        Args:
-            ws_send: Async callable that sends a raw JSON string to the child.
-            loop: The event loop that owns the connection.
-            request_timeout: Seconds to wait for the child's reply to a
-                forwarded request before answering TIMEOUT.
-        """
-        self._ws_send: Callable[[str], Awaitable[None]] | None = ws_send
-        self._loop = loop
-        self._request_timeout = request_timeout
-        self._pending: dict[str, asyncio.Future[dict]] = {}
-        self._event_sinks: dict[str, Callable[[dict], Awaitable[None]]] = {}
-        self._next_id = 0
-
-        self.engine_id = ""
-        self.platform = ""
-        self.components: list[dict[str, Any]] = []
-
-    @property
-    def is_connected(self) -> bool:
-        """Whether the WebSocket is open."""
-        return self._ws_send is not None
-
-    def attach_websocket(
-        self,
-        ws_send: Callable[[str], Awaitable[None]],
-    ) -> None:
-        """Attach a WebSocket send function."""
-        self._ws_send = ws_send
-
-    def detach_websocket(self) -> None:
-        """Detach the WebSocket and reject all pending requests."""
-        self._ws_send = None
-        for future in self._pending.values():
-            if not future.done():
-                future.set_result({"return_code": ReturnCode.ERROR.value})
-        self._pending.clear()
-        self._event_sinks.clear()
-
-    async def discover(self, condition: str = "") -> dict[str, Any]:
-        """Pull the sub-engine profile via rois.command.search.
-
-        Sends a search request over the WebSocket, parses the response
-        to cache engine_id, platform, and full component metadata.
-        """
-        result = await self.send_request("rois.command.search", {
-            "condition": condition,
-        })
-        profile = result.get("profile", {})
-        identifier = profile.get("identifier", {})
-        self.engine_id = str(identifier.get("code", ""))
-        self.platform = str(profile.get("platform", ""))
-
-        raw_components = result.get("components", [])
-        self.components = [
-            {
-                "ref": str(c.get("ref", "")),
-                "function": c.get("function"),
-                "queries": c.get("queries", []),
-                "commands": c.get("commands", []),
-                "events": c.get("events", []),
-                "parameters": c.get("parameters", []),
-            }
-            for c in raw_components
-        ]
-        logger.info(
-            "Discovered sub-engine %s (platform: %s) with %d components",
-            self.engine_id,
-            self.platform or "unknown",
-            len(self.components),
-        )
-        return result
-
-    def handle_response(self, msg: dict) -> None:
-        """Called by WsServer when a response arrives from the child engine."""
-        request_id = str(msg.get("id", ""))
-        future = self._pending.get(request_id)
-        if future and not future.done():
-            future.set_result(msg.get("result", {}))
-
-    async def handle_notification(self, msg: dict) -> None:
-        """Called by WsServer when an event notify arrives from the child engine."""
-        params = msg.get("params", {})
-        subscribe_id = str(params.get("subscribe_id", ""))
-        sink = self._event_sinks.get(subscribe_id)
-        if sink:
-            try:
-                await sink(params)
-            except Exception as exc:
-                logger.error("Event sink error: %s", exc)
-
-    async def send_request(
-        self,
-        method: str,
-        params: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Forward a JSON-RPC request to the child engine and await response."""
-        if self._ws_send is None:
-            return {"return_code": ReturnCode.ERROR.value}
-
-        self._next_id += 1
-        request_id = f"req-{self._next_id}"
-        message = {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "method": method,
-            "params": params,
-        }
-
-        future: asyncio.Future[dict] = self._loop.create_future()
-        self._pending[request_id] = future
-
-        try:
-            await self._ws_send(json.dumps(message))
-        except Exception as exc:
-            self._pending.pop(request_id, None)
-            logger.error("WS send error: %s", exc)
-            return {"return_code": ReturnCode.ERROR.value}
-
-        try:
-            return await asyncio.wait_for(future, timeout=self._request_timeout)
-        except TimeoutError:
-            self._pending.pop(request_id, None)
-            return {"return_code": ReturnCode.TIMEOUT.value}
-        finally:
-            self._pending.pop(request_id, None)
-
-    # -- ComponentContract implementation (for remote dispatch) --
-
-    async def invoke(
-        self,
-        component_ref: str,
-        command_type: str,
-        command_id: str,
-        parameters: list[Any],
-    ) -> dict[str, Any]:
-        """Forward an invoke request to the child engine."""
-        result = await self.send_request("rois.command.execute", {
-            "component_ref": component_ref,
-            "command_type": command_type,
-            "parameters": parameters,
-        })
-        return {
-            "return_code": result.get("return_code", ReturnCode.ERROR.value),
-            "command_id": result.get("command_id", ""),
-        }
-
-    async def query(
-        self,
-        component_ref: str,
-        query_type: str,
-        condition: str = "",
-    ) -> dict[str, Any]:
-        """Forward a query request to the child engine."""
-        result = await self.send_request("rois.query.query", {
-            "component_ref": component_ref,
-            "query_type": query_type,
-            "condition": condition,
-        })
-        return {
-            "return_code": result.get("return_code", ReturnCode.ERROR.value),
-            "results": result.get("results", []),
-        }
-
-    async def subscribe(
-        self,
-        component_ref: str,
-        event_type: str,
-        condition: str,
-        sink: Callable[[dict], Awaitable[None]],
-    ) -> dict[str, Any]:
-        """Forward a subscribe request to the child engine."""
-        result = await self.send_request("rois.event.subscribe", {
-            "component_ref": component_ref,
-            "event_type": event_type,
-            "condition": condition,
-        })
-        subscribe_id = result.get("subscribe_id", "")
-        if subscribe_id:
-            self._event_sinks[subscribe_id] = sink
-        return {
-            "return_code": result.get("return_code", ReturnCode.ERROR.value),
-            "subscribe_id": subscribe_id,
-        }
-
-    async def unsubscribe(self, subscribe_id: str) -> dict[str, Any]:
-        """Forward an unsubscribe request to the child engine."""
-        result = await self.send_request("rois.event.unsubscribe", {
-            "subscribe_id": subscribe_id,
-        })
-        self._event_sinks.pop(subscribe_id, None)
-        return {"return_code": result.get("return_code", ReturnCode.ERROR.value)}
-
-
-# ---------------------------------------------------------------------------
-# Engine
-# ---------------------------------------------------------------------------
+    session_id: str
+    source: ComponentContract | None = None
+    status: CompletedStatus | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class _Subscription:
+    session_id: str
+    source: ComponentContract
 
 
 class Engine:
-    """The recursive HRI engine.
+    """The recursive RoIS HRI Engine.
 
-    Manages HRI components. Routes RoIS JSON-RPC calls to child engines
-    (sub-engines) or local components based on component ref. Implements
-    the five RoIS interfaces: System, Command, Query, Event, Streaming.
+    Typical use in an adapter::
 
-    When hosted by the gateway: has child engines (ChildEngineProxy instances),
-    optionally local components. Aggregates profiles from all sources.
+        engine = Engine("robot_1")
+        engine.add_component("navigation", Navigation(config))
+        await WsClient(engine, "ws://gateway:8765").run_async()
 
-    When hosted by an adapter: has local components (ComponentRegistry),
-    no child engines. Registers with the parent engine over WebSocket.
+    and in a gateway, where WsServer adds each child engine that connects::
 
-    Multi-client resource allocation:
-    - bind/release: tracks which client has reserved which component.
-      Only the bound client can execute() on actuation components.
+        engine = Engine("gateway")
+        server = WsServer(engine)
+        await engine.start()
+        await server.start()
     """
 
-    def __init__(
-        self,
-        engine_id: str = "",
-        platform: str = "",
-        enforce_bindings: bool = False,
-    ) -> None:
-        """Initialize the engine.
+    def __init__(self, engine_id: str, *, event_lifetime: float = 60.0) -> None:
+        """Initialize an engine with no components.
 
         Args:
-            engine_id: The engine ID for this engine. Empty for the gateway.
-            platform: The platform identifier (e.g., "kachaka").
-            enforce_bindings: Whether to enforce bind/release on execute.
-                Defaults to False (adapter mode). The main HRI Engine
-                (gateway) sets this to True: only the client that called
-                bind() can call execute() on actuation components.
-                Adapters leave it False: the gateway already authorized
-                the command, so the adapter trusts it and skips the
-                redundant check. Per the RoIS spec, resource ownership
-                is consolidated in the HRI Engine, not distributed
-                across sub-engines.
-        """
-        self._engine_id = engine_id
-        self._platform = platform
-        self._enforce_bindings = enforce_bindings
-
-        # Sub-engine registry: engine_id -> sub-engine entry
-        self._sub_engines: dict[str, dict[str, Any]] = {}
-        # Bare component ref -> engine_id that owns it
-        self._component_index: dict[str, str] = {}
-        # Full component ref (engineId/ref) -> client id
-        self._bindings: dict[str, str] = {}
-
-        # Local component registry
-        self._component_registry = ComponentRegistry()
-
-    @property
-    def component_registry(self) -> ComponentRegistry:
-        """Access the local component registry."""
-        return self._component_registry
-
-    def register_component(
-        self,
-        ref: str,
-        handler: Any,
-        meta: ComponentMeta,
-    ) -> None:
-        """Register a local component handler."""
-        self._component_registry.register(ref, handler, meta)
-
-    def register_sub_engine(
-        self,
-        engine_id: str,
-        components: list[dict[str, Any]],
-        sub_engine: ChildEngineProxy,
-        platform: str = "",
-    ) -> None:
-        """Register a sub-engine and its components.
-
-        Every component ref on the wire is ``engine_id/ref``, so the engine id
-        must be non-empty, free of slashes, and not taken by another connected
-        sub-engine. Otherwise two engines would answer for the same refs.
+            engine_id: The id of this engine. Every ref of a local component is
+                ``engine_id/name``, so the id must be unique across the deployment.
+            event_lifetime: Seconds that get_event_detail keeps an event of a local
+                component after its notification.
 
         Raises:
-            ValueError: If the engine id is empty, contains a slash, or is
-                already registered by another sub-engine.
+            ValueError: The engine id is empty or contains a slash.
         """
-        if not engine_id:
-            raise ValueError("The engine id is empty.")
-        if "/" in engine_id:
-            raise ValueError(f"The engine id {engine_id!r} contains a slash.")
-        current = self._sub_engines.get(engine_id)
-        if current is not None and current["sub_engine"] is not sub_engine:
-            raise ValueError(f"The engine id {engine_id!r} is already connected.")
-        self._sub_engines[engine_id] = {
-            "engine_id": engine_id,
-            "platform": platform,
-            "components": components,
-            "sub_engine": sub_engine,
+        if not engine_id or "/" in engine_id:
+            raise ValueError(f"An engine id must be non-empty and free of slashes: {engine_id!r}")
+        self._engine_id = engine_id
+        self._local = LocalComponents(engine_id, event_lifetime=event_lifetime)
+        self._children: list[ComponentContract] = []
+        self._sessions: dict[str, Session] = {}
+        self._bindings: dict[str, str] = {}
+        self._commands: dict[str, _Command] = {}
+        self._subscriptions: dict[str, _Subscription] = {}
+        self._tasks: set[asyncio.Task[None]] = set()
+        self._next_session = 0
+        self._handlers: dict[str, _Handler] = {
+            "rois.system.connect": self._connect,
+            "rois.system.disconnect": self._disconnect,
+            "rois.system.get_profile": self._get_profile,
+            "rois.system.get_error_detail": self._get_error_detail,
+            "rois.command.search": self._search,
+            "rois.command.bind": self._bind_request,
+            "rois.command.bind_any": self._bind_any,
+            "rois.command.release": self._release,
+            "rois.command.get_parameter": self._get_parameter,
+            "rois.command.set_parameter": self._set_parameter,
+            "rois.command.execute": self._execute,
+            "rois.command.get_command_result": self._get_command_result,
+            "rois.query.query": self._query,
+            "rois.event.subscribe": self._subscribe,
+            "rois.event.unsubscribe": self._unsubscribe,
+            "rois.event.get_event_detail": self._get_event_detail,
         }
-        self._rebuild_index()
 
-    def unregister_sub_engine(self, sub_engine: ChildEngineProxy) -> None:
-        """Remove a sub-engine when its WebSocket disconnects.
+    @property
+    def engine_id(self) -> str:
+        """The id of this engine."""
+        return self._engine_id
 
-        The lookup goes by proxy, not by engine id, so a connection that was
-        refused for a duplicate id cannot remove the engine that holds the id.
+    # -- Components and child engines ----------------------------------------------------
+
+    def add_component(self, name: str, component: LocalComponent) -> str:
+        """Host a component in this process, and return its ref, ``engine_id/name``.
+
+        Add components before :meth:`start`.
+
+        Raises:
+            ValueError: The name is empty, contains a slash, or is taken.
         """
-        engine_id = next(
-            (eid for eid, entry in self._sub_engines.items() if entry["sub_engine"] is sub_engine),
-            None,
-        )
-        if engine_id is None:
+        return self._local.add(name, component)
+
+    def local_components(self) -> list[LocalComponent]:
+        """The components this engine hosts in its process."""
+        return self._local.components()
+
+    def add_child(self, child: ComponentContract) -> None:
+        """Add a discovered child engine and tell every session that the profile changed.
+
+        Raises:
+            ValueError: An engine id of the child is already in the tree.
+        """
+        self.check_engine_ids(child, child.engine_ids)
+        self._children.append(child)
+        self.profile_changed()
+
+    def check_engine_ids(self, child: ComponentContract, engine_ids: frozenset[str]) -> None:
+        """Refuse engine ids for a child that this engine or another child already uses.
+
+        Raises:
+            ValueError: One of the engine ids is taken.
+        """
+        taken = set(self._local.engine_ids)
+        for other in self._children:
+            if other is not child:
+                taken |= other.engine_ids
+        clash = sorted(engine_ids & taken)
+        if clash:
+            raise ValueError(f"Engine id {clash[0]} is already in use.")
+
+    def remove_child(self, child: ComponentContract) -> None:
+        """Remove a child engine whose connection is gone, with its bindings."""
+        if child not in self._children:
             return
-        del self._sub_engines[engine_id]
-        self._rebuild_index()
-        # Release all bindings for this sub-engine's components.
-        to_remove = [
-            ref for ref in self._bindings
-            if ref.startswith(f"{engine_id}/")
-        ]
-        for ref in to_remove:
+        refs = set(child.profiles())
+        self._children.remove(child)
+        for ref in refs & set(self._bindings):
             del self._bindings[ref]
+        gone = [s for s, entry in self._subscriptions.items() if entry.source is child]
+        for subscribe_id in gone:
+            del self._subscriptions[subscribe_id]
+        self.profile_changed()
 
-    def release_all(self, client_id: str) -> None:
-        """Release all components bound by a client."""
-        to_remove = [
-            ref for ref, owner in self._bindings.items()
-            if owner == client_id
-        ]
-        for ref in to_remove:
-            del self._bindings[ref]
+    def child_engine_ids(self) -> list[str]:
+        """The ids of the connected child engines, in the order they connected."""
+        return [p.identifier.code for c in self._children if (p := c.engine_profile()) is not None]
 
-    def get_sub_engines(self) -> list[dict[str, Any]]:
-        """Get all registered sub-engine entries."""
-        return list(self._sub_engines.values())
+    async def start(self) -> None:
+        """Connect the local components to their backends."""
+        await self._local.start()
 
-    def get_components(self) -> list[dict[str, Any]]:
-        """Get all registered components across all sub-engines and local."""
-        result = []
-        # Local components
-        for ref in self._component_registry._metadata:
-            result.append({"engine_id": self._engine_id, "component": ref})
-        # Sub-engine components
-        for entry in self._sub_engines.values():
-            for c in entry["components"]:
-                result.append({
-                    "engine_id": entry["engine_id"],
-                    "component": c,
-                })
+    async def stop(self) -> None:
+        """Cancel every running sequence and disconnect the local components."""
+        for task in self._tasks:
+            task.cancel()
+        await asyncio.gather(*self._tasks, return_exceptions=True)
+        await self._local.stop()
+
+    # -- Sessions ------------------------------------------------------------------------
+
+    def open_session(self, notify: Notify, *, trusted: bool = False) -> Session:
+        """Open a session for a client, or with ``trusted`` for the parent engine."""
+        self._next_session += 1
+        session = Session(f"session-{self._next_session}", notify, trusted)
+        self._sessions[session.id] = session
+        return session
+
+    async def close_session(self, session: Session) -> None:
+        """Release what a session held: its bindings and its subscriptions."""
+        await self._release_session(session)
+        self._sessions.pop(session.id, None)
+
+    def profile_changed(self) -> None:
+        """Tell every session that the engine profile changed."""
+        for session in list(self._sessions.values()):
+            session.notify("rois.system.profile_changed", ProfileChangedParams())
+
+    async def handle(self, session: Session, method: str, params: BaseModel) -> BaseModel:
+        """Answer one catalog request of a session with its result model.
+
+        Args:
+            session: The session that sent the request.
+            method: A method of the catalog, for example ``rois.command.execute``.
+            params: The params, already validated against the catalog model.
+
+        Raises:
+            KeyError: The method is not in the catalog.
+        """
+        return await self._handlers[method](session, params)
+
+    # -- SystemIF ------------------------------------------------------------------------
+
+    async def _connect(self, session: Session, params: ConnectParams) -> ConnectResult:
+        return ConnectResult(return_code=ReturnCode.OK)
+
+    async def _disconnect(self, session: Session, params: DisconnectParams) -> DisconnectResult:
+        await self._release_session(session)
+        return DisconnectResult(return_code=ReturnCode.OK)
+
+    async def _get_profile(self, session: Session, params: GetProfileParams) -> GetProfileResult:
+        selected = self._select(params.condition)
+        if selected is None:
+            return GetProfileResult(return_code=ReturnCode.BAD_PARAMETER)
+        components = self._components()
+        chosen = set(selected)
+        sub_profiles: list[HRIEngineProfileType] = []
+        for child in self._children:
+            profile = child.engine_profile()
+            if profile is None:
+                continue
+            if params.condition.strip():
+                trimmed = _trim(profile, chosen)
+                if trimmed is not None:
+                    sub_profiles.append(trimmed)
+            else:
+                sub_profiles.append(profile)
+        return GetProfileResult(
+            return_code=ReturnCode.OK,
+            profile=HRIEngineProfileType(
+                identifier=RoISIdentifierType(authority=ENGINE_AUTHORITY, code=self._engine_id),
+                sub_profiles=sub_profiles,
+                component_ids=selected,
+            ),
+            component_profiles={ref: components[ref][0] for ref in selected},
+        )
+
+    async def _get_error_detail(
+        self, session: Session, params: GetErrorDetailParams
+    ) -> GetErrorDetailResult:
+        source = self._owner_of(params.error_id)
+        if not _empty_filter(params.condition) or source is None:
+            return GetErrorDetailResult(return_code=ReturnCode.BAD_PARAMETER)
+        return await source.error_detail(params.error_id)
+
+    # -- CommandIF -----------------------------------------------------------------------
+
+    async def _search(self, session: Session, params: SearchParams) -> SearchResult:
+        selected = self._select(params.condition)
+        if selected is None:
+            return SearchResult(return_code=ReturnCode.BAD_PARAMETER)
+        return SearchResult(return_code=ReturnCode.OK, component_ref_list=selected)
+
+    async def _bind_request(self, session: Session, params: BindParams) -> BindResult:
+        profile = self._profile(params.component_ref)
+        if profile is None:
+            return BindResult(return_code=ReturnCode.UNSUPPORTED)
+        return BindResult(return_code=self._bind(session, params.component_ref, profile))
+
+    async def _bind_any(self, session: Session, params: BindAnyParams) -> BindAnyResult:
+        selected = self._select(params.condition)
+        if selected is None:
+            return BindAnyResult(return_code=ReturnCode.BAD_PARAMETER)
+        if not selected:
+            return BindAnyResult(return_code=ReturnCode.UNSUPPORTED)
+        components = self._components()
+        for ref in selected:
+            if self._bind(session, ref, components[ref][0]) is ReturnCode.OK:
+                return BindAnyResult(return_code=ReturnCode.OK, component_ref=ref)
+        return BindAnyResult(return_code=ReturnCode.OUT_OF_RESOURCES)
+
+    async def _release(self, session: Session, params: ReleaseParams) -> ReleaseResult:
+        if self._profile(params.component_ref) is None:
+            return ReleaseResult(return_code=ReturnCode.UNSUPPORTED)
+        if self._bindings.get(params.component_ref) == session.id:
+            del self._bindings[params.component_ref]
+        return ReleaseResult(return_code=ReturnCode.OK)
+
+    async def _get_parameter(
+        self, session: Session, params: GetParameterParams
+    ) -> GetParameterResult:
+        entry = self._components().get(params.component_ref)
+        if entry is None:
+            return GetParameterResult(return_code=ReturnCode.UNSUPPORTED)
+        return await entry[1].get_parameter(params.component_ref)
+
+    async def _set_parameter(
+        self, session: Session, params: SetParameterParams
+    ) -> SetParameterResult:
+        entry = self._components().get(params.component_ref)
+        if entry is None:
+            return SetParameterResult(return_code=ReturnCode.UNSUPPORTED)
+        profile, source = entry
+        if not self._holds(session, params.component_ref, profile):
+            return SetParameterResult(return_code=ReturnCode.OUT_OF_RESOURCES)
+        parameters = _checked_parameters(profile, params.parameters)
+        if parameters is None:
+            return SetParameterResult(return_code=ReturnCode.BAD_PARAMETER)
+
+        command = _Command(session.id, source)
+
+        def completed(command_id: str, status: CompletedStatus) -> None:
+            self._complete(session, command_id, command, status)
+
+        result = await source.set_parameter(params.component_ref, parameters, completed)
+        if result.return_code is ReturnCode.OK and result.command_id:
+            known = self._commands.get(result.command_id)
+            if known is None or known.status is not None:
+                # The entry replaces a finished command of the same id, which an engine
+                # below assigns again after it restarted.
+                self._commands[result.command_id] = command
+                self._prune_commands()
+            else:
+                logger.warning(
+                    "Command id %s of a set_parameter is taken by a running command.",
+                    result.command_id,
+                )
         return result
 
-    def get_bindings(self) -> list[dict[str, str]]:
-        """Get the current bindings."""
+    async def _execute(self, session: Session, params: ExecuteParams) -> ExecuteResult:
+        units = [unit for item in params.command_unit_list for unit in _units(item)]
+        if not units:
+            return ExecuteResult(return_code=ReturnCode.BAD_PARAMETER)
+        components = self._components()
+        seen: set[str] = set()
+        for unit in units:
+            entry = components.get(unit.component_ref)
+            if entry is None or not _declares(entry[0], unit.command_type):
+                return ExecuteResult(return_code=ReturnCode.UNSUPPORTED)
+            if not self._holds(session, unit.component_ref, entry[0]):
+                return ExecuteResult(return_code=ReturnCode.OUT_OF_RESOURCES)
+            if not _checked_arguments(entry[0], unit):
+                return ExecuteResult(return_code=ReturnCode.BAD_PARAMETER)
+            if (
+                not unit.command_id
+                or unit.command_id in self._commands
+                or unit.command_id in seen
+                or self._owner_of(unit.command_id) is not None
+            ):
+                return ExecuteResult(return_code=ReturnCode.BAD_PARAMETER)
+            seen.add(unit.command_id)
+        for unit in units:
+            source = components[unit.component_ref][1]
+            self._commands[unit.command_id] = _Command(session.id, source)
+        self._prune_commands()
+        self._spawn(self._run_sequence(session, params.command_unit_list))
+        return ExecuteResult(return_code=ReturnCode.OK)
+
+    async def _get_command_result(
+        self, session: Session, params: GetCommandResultParams
+    ) -> GetCommandResultResult:
+        command = self._commands.get(params.command_id)
+        if not _empty_filter(params.condition) or command is None:
+            return GetCommandResultResult(return_code=ReturnCode.BAD_PARAMETER)
+        if command.source is None:
+            # The command never ran, because its sequence stopped before it.
+            return GetCommandResultResult(return_code=ReturnCode.OK)
+        return await command.source.command_result(params.command_id)
+
+    # -- QueryIF and EventIF -------------------------------------------------------------
+
+    async def _query(self, session: Session, params: QueryParams) -> QueryResult:
+        picked = self._pick(
+            params.condition, lambda p: any(q.name == params.query_type for q in p.query_profiles)
+        )
+        if isinstance(picked, ReturnCode):
+            return QueryResult(return_code=picked)
+        ref, source = picked
+        return await source.query(ref, params.query_type)
+
+    async def _subscribe(self, session: Session, params: SubscribeParams) -> SubscribeResult:
+        picked = self._pick(
+            params.condition, lambda p: any(e.name == params.event_type for e in p.event_profiles)
+        )
+        if isinstance(picked, ReturnCode):
+            return SubscribeResult(return_code=picked)
+        ref, source = picked
+        result = await source.subscribe(ref, params.event_type, self._deliverer(session))
+        if result.return_code is ReturnCode.OK:
+            self._subscriptions[result.subscribe_id] = _Subscription(session.id, source)
+        return result
+
+    async def _unsubscribe(self, session: Session, params: UnsubscribeParams) -> UnsubscribeResult:
+        subscription = self._subscriptions.get(params.subscribe_id)
+        if subscription is not None and subscription.session_id == session.id:
+            del self._subscriptions[params.subscribe_id]
+            await subscription.source.unsubscribe(params.subscribe_id)
+        return UnsubscribeResult(return_code=ReturnCode.OK)
+
+    async def _get_event_detail(
+        self, session: Session, params: GetEventDetailParams
+    ) -> GetEventDetailResult:
+        source = self._owner_of(params.event_id)
+        if not _empty_filter(params.condition) or source is None:
+            return GetEventDetailResult(return_code=ReturnCode.BAD_PARAMETER)
+        return await source.event_detail(params.event_id)
+
+    # -- Commands ------------------------------------------------------------------------
+
+    async def _run_sequence(
+        self, session: Session, items: Sequence[CommandUnitSequenceItem]
+    ) -> None:
+        """Run the items of an execute in order, the commands of one item together."""
+        for index, item in enumerate(items):
+            if item.delay_time:
+                await asyncio.sleep(item.delay_time / 1000)
+            if isinstance(item, CommandUnit):
+                statuses = [await self._run_unit(session, item)]
+            else:
+                statuses = await asyncio.gather(
+                    *(self._run_unit(session, unit, delayed=True) for unit in item.command_list)
+                )
+            if any(status is not CompletedStatus.OK for status in statuses):
+                for later in items[index + 1 :]:
+                    for unit in _units(later):
+                        self._commands[unit.command_id].source = None
+                        self._finish(session, unit.command_id, CompletedStatus.ABORT)
+                return
+
+    async def _run_unit(
+        self, session: Session, unit: CommandUnit, *, delayed: bool = False
+    ) -> CompletedStatus:
+        """Run one command and finish it. ``delayed`` waits its own delay_time first."""
+        if delayed and unit.delay_time:
+            await asyncio.sleep(unit.delay_time / 1000)
+        entry = self._components().get(unit.component_ref)
+        if entry is None:
+            status = CompletedStatus.ERROR
+        else:
+            try:
+                status = await entry[1].run(unit)
+            except Exception:
+                logger.exception("Command %s failed", unit.command_id)
+                status = CompletedStatus.ERROR
+        self._finish(session, unit.command_id, status)
+        return status
+
+    def _finish(self, session: Session, command_id: str, status: CompletedStatus) -> None:
+        """Record how a command of an execute ended."""
+        command = self._commands.setdefault(command_id, _Command(session.id))
+        self._complete(session, command_id, command, status)
+
+    def _complete(
+        self, session: Session, command_id: str, command: _Command, status: CompletedStatus
+    ) -> None:
+        """Record how a command ended and tell the session that started it, once."""
+        if command.status is not None:
+            return
+        command.status = status
+        if session.id in self._sessions:
+            session.notify(
+                "rois.command.completed", CompletedParams(command_id=command_id, status=status)
+            )
+
+    def _prune_commands(self) -> None:
+        """Forget the oldest finished commands beyond what the table keeps."""
+        excess = len(self._commands) - _COMMANDS_KEPT
+        if excess <= 0:
+            return
+        finished = [c for c, entry in self._commands.items() if entry.status is not None]
+        for command_id in finished[:excess]:
+            del self._commands[command_id]
+
+    # -- Helpers -------------------------------------------------------------------------
+
+    def _components(self) -> dict[str, tuple[HRIComponentProfile, ComponentContract]]:
+        """Every component this engine reaches: profile and source, by ref."""
+        components: dict[str, tuple[HRIComponentProfile, ComponentContract]] = {}
+        for source in (self._local, *self._children):
+            for ref, profile in source.profiles().items():
+                components.setdefault(ref, (profile, source))
+        return components
+
+    def _profile(self, ref: str) -> HRIComponentProfile | None:
+        entry = self._components().get(ref)
+        return entry[0] if entry is not None else None
+
+    def _select(self, condition: str) -> list[str] | None:
+        """The refs a selection condition matches, or None when it does not parse."""
+        try:
+            parsed = parse_condition(condition)
+        except ConditionError:
+            return None
         return [
-            {"component_ref": ref, "client_id": client_id}
-            for ref, client_id in self._bindings.items()
+            ref
+            for ref, (profile, _) in self._components().items()
+            if parsed.matches(
+                {COMPONENT_REF: ref, COMPONENT_TYPE: component_type_urn(profile.identifier)}
+            )
         ]
 
-    async def dispatch(
-        self,
-        method: str,
-        params: dict[str, Any],
-        sink: Callable[[dict], Awaitable[None]] | None = None,
-        client_id: str | None = None,
-    ) -> dict[str, Any]:
-        """Dispatch a JSON-RPC method to the appropriate handler.
+    def _pick(
+        self, condition: str, qualifies: Callable[[HRIComponentProfile], bool]
+    ) -> tuple[str, ComponentContract] | ReturnCode:
+        """The one component a condition selects among those that qualify."""
+        selected = self._select(condition)
+        if selected is None:
+            return ReturnCode.BAD_PARAMETER
+        components = self._components()
+        candidates = [ref for ref in selected if qualifies(components[ref][0])]
+        if not candidates:
+            return ReturnCode.UNSUPPORTED
+        if len(candidates) > 1:
+            return ReturnCode.BAD_PARAMETER
+        return candidates[0], components[candidates[0]][1]
 
-        Returns a result dict for the JSON-RPC response.
-        """
-        logger.debug("[engine] %s %s", method, json.dumps(params))
-
-        if method == "rois.system.connect":
-            return {"return_code": ReturnCode.OK.value}
-
-        if method == "rois.system.disconnect":
-            self.release_all(client_id or "")
-            return {"return_code": ReturnCode.OK.value}
-
-        if method == "rois.system.get_profile":
-            return await self._handle_get_profile()
-
-        if method == "rois.command.search":
-            return await self._handle_search()
-
-        if method == "rois.command.bind":
-            return self._handle_bind(params, client_id)
-
-        if method == "rois.command.release":
-            return self._handle_release(params, client_id)
-
-        if method == "rois.command.execute":
-            return await self._handle_execute(params, client_id)
-
-        if method == "rois.command.set_parameter":
-            return await self._handle_set_parameter(params, client_id)
-
-        if method == "rois.query.query":
-            return await self._handle_query(params)
-
-        if method == "rois.event.subscribe":
-            return await self._handle_subscribe(params, sink)
-
-        if method == "rois.event.unsubscribe":
-            return await self._handle_unsubscribe(params)
-
-        return {"return_code": ReturnCode.UNSUPPORTED.value}
-
-    # -- Handlers --
-
-    async def _handle_search(self) -> dict[str, Any]:
-        refs: list[str] = []
-        components: list[dict[str, Any]] = []
-        # Local components (no prefix)
-        for ref, meta in self._component_registry._metadata.items():
-            refs.append(ref)
-            components.append({
-                "ref": ref,
-                "function": meta.function.value if meta.function else None,
-                "queries": list(meta.queries.keys()),
-                "commands": list(meta.invokes.keys()),
-                "events": list(meta.subscribes.keys()),
-                "parameters": meta.parameters,
-            })
-        # Sub-engine components (with engine_id prefix)
-        for entry in self._sub_engines.values():
-            for c in entry["components"]:
-                full_ref = f"{entry['engine_id']}/{c['ref']}"
-                refs.append(full_ref)
-                components.append(c)
-        return {
-            "return_code": ReturnCode.OK.value,
-            "component_ref_list": refs,
-            "components": components,
-            "profile": {
-                "identifier": {
-                    "authority": "OpenRoIS",
-                    "code": self._engine_id,
-                    "codebook_ref": "",
-                    "version": "",
-                },
-                "platform": self._platform,
-            },
-        }
-
-    async def _handle_get_profile(self) -> dict[str, Any]:
-        component_ids: list[str] = []
-        component_profiles: list[dict[str, Any]] = []
-
-        # Local components
-        local_profile = self._component_registry.get_profile()
-        for cid in local_profile["component_ids"]:
-            component_ids.append(cid)
-        component_profiles.extend(local_profile["component_profiles"])
-
-        # Sub-engine components
-        for entry in self._sub_engines.values():
-            for c in entry["components"]:
-                full_ref = f"{entry['engine_id']}/{c['ref']}"
-                component_ids.append(full_ref)
-                component_profiles.append({
-                    "identifier": {
-                        "authority": "OpenRoIS",
-                        "code": c["ref"],
-                        "codebook_ref": "",
-                        "version": "",
-                    },
-                    "name": c["ref"],
-                    "function": c.get("function"),
-                    "command_profiles": [
-                        {"name": name, "results": []} for name in c.get("commands", [])
-                    ],
-                    "query_profiles": [
-                        {"name": name, "results": []} for name in c.get("queries", [])
-                    ],
-                    "event_profiles": [
-                        {"name": name, "results": []} for name in c.get("events", [])
-                    ],
-                    "parameter_profiles": c.get("parameters", []),
-                })
-
-        return {
-            "return_code": ReturnCode.OK.value,
-            "profile": {
-                "identifier": {
-                    "authority": "OpenRoIS",
-                    "code": self._engine_id or "Engine",
-                    "codebook_ref": "",
-                    "version": "",
-                },
-                "sub_engine_ids": list(self._sub_engines.keys()),
-                "component_ids": component_ids,
-                "component_profiles": component_profiles,
-            },
-        }
-
-    def _handle_bind(
-        self,
-        params: dict[str, Any],
-        client_id: str | None,
-    ) -> dict[str, Any]:
-        component_ref = str(params.get("component_ref", ""))
-        component = self._find_component(component_ref)
-        if not component:
-            return {"return_code": ReturnCode.UNSUPPORTED.value}
-        # Derive binding requirement from function and commands.
-        if isinstance(component, dict):
-            function = component.get("function")
-            commands = component.get("commands", [])
-        else:
-            function = component.function.value if component.function else None
-            commands = list(component.invokes.keys()) if hasattr(component, "invokes") else []
-        if not _requires_bind(function, commands):
-            return {"return_code": ReturnCode.OK.value}
-        current_owner = self._bindings.get(component_ref)
-        if current_owner and current_owner != client_id:
-            return {"return_code": ReturnCode.OUT_OF_RESOURCES.value}
-        self._bindings[component_ref] = client_id or ""
-        return {"return_code": ReturnCode.OK.value}
-
-    def _handle_release(
-        self,
-        params: dict[str, Any],
-        client_id: str | None,
-    ) -> dict[str, Any]:
-        component_ref = str(params.get("component_ref", ""))
-        if self._bindings.get(component_ref) == (client_id or ""):
-            self._bindings.pop(component_ref, None)
-        return {"return_code": ReturnCode.OK.value}
-
-    async def _handle_execute(
-        self,
-        params: dict[str, Any],
-        client_id: str | None,
-    ) -> dict[str, Any]:
-        component_ref = str(params.get("component_ref", ""))
-        component = self._find_component(component_ref)
-        if not component:
-            return {"return_code": ReturnCode.UNSUPPORTED.value}
-
-        # Derive binding requirement from function and commands.
-        if isinstance(component, dict):
-            function = component.get("function")
-            commands = component.get("commands", [])
-        else:
-            function = component.function.value if component.function else None
-            commands = list(component.invokes.keys()) if hasattr(component, "invokes") else []
-        if _requires_bind(function, commands):
-            if self._enforce_bindings:
-                if self._bindings.get(component_ref) != (client_id or ""):
-                    return {"return_code": ReturnCode.OUT_OF_RESOURCES.value}
-
-        # Support both spec structured format (command_unit_list) and
-        # legacy flat format (command_type + parameters).
-        unit_list = params.get("command_unit_list", [])
-        if isinstance(unit_list, list) and len(unit_list) > 0:
-            unit = unit_list[0]
-            command_type = str(unit.get("command_type", "execute"))
-            raw_params = unit.get("arguments", [])
-            bare_ref = str(unit.get("component_ref", component_ref))
-        else:
-            command_type = str(params.get("command_type", "execute"))
-            raw_params = params.get("parameters", params.get("arguments", []))
-            bare_ref = component_ref
-
-        bare_ref = bare_ref.split("/", 1)[1] if "/" in bare_ref else bare_ref
-
-        # Try local first
-        if bare_ref in self._component_registry._handlers:
-            return await self._component_registry.invoke(
-                bare_ref, command_type, "", raw_params,
-            )
-
-        # Forward to sub-engine
-        sub_engine = self._find_sub_engine(component_ref)
-        if not sub_engine:
-            return {"return_code": ReturnCode.UNSUPPORTED.value}
-        return await sub_engine.invoke(component_ref, command_type, "", raw_params)
-
-    async def _handle_set_parameter(
-        self,
-        params: dict[str, Any],
-        client_id: str | None,
-    ) -> dict[str, Any]:
-        component_ref = str(params.get("component_ref", ""))
-        bare_ref = component_ref.split("/", 1)[1] if "/" in component_ref else component_ref
-
-        # Try local first
-        if bare_ref in self._component_registry._handlers:
-            return await self._component_registry.invoke(
-                bare_ref, "set_parameter", "", params.get("parameters", []),
-            )
-
-        sub_engine = self._find_sub_engine(component_ref)
-        if not sub_engine:
-            return {"return_code": ReturnCode.UNSUPPORTED.value}
-        return await sub_engine.invoke(
-            component_ref, "set_parameter", "", params.get("parameters", []),
-        )
-
-    async def _handle_query(self, params: dict[str, Any]) -> dict[str, Any]:
-        component_ref = str(params.get("component_ref", ""))
-        query_type = str(params.get("query_type", ""))
-        condition = str(params.get("condition", ""))
-        bare_ref = component_ref.split("/", 1)[1] if "/" in component_ref else component_ref
-
-        # Try local first
-        if bare_ref in self._component_registry._handlers:
-            return await self._component_registry.query(bare_ref, query_type, condition)
-
-        sub_engine = self._find_sub_engine(component_ref)
-        if not sub_engine:
-            return {"return_code": ReturnCode.UNSUPPORTED.value}
-        return await sub_engine.query(component_ref, query_type, condition)
-
-    async def _handle_subscribe(
-        self,
-        params: dict[str, Any],
-        sink: Callable[[dict], Awaitable[None]] | None,
-    ) -> dict[str, Any]:
-        component_ref = str(params.get("component_ref", ""))
-        event_type = str(params.get("event_type", ""))
-        condition = str(params.get("condition", ""))
-        bare_ref = component_ref.split("/", 1)[1] if "/" in component_ref else component_ref
-
-        logger.info("[subscribe] ref=%s bare=%s event=%s sink=%s",
-                     component_ref, bare_ref, event_type, sink is not None)
-
-        # Try local first. The ComponentRegistry handles subscriptions
-        # via the EventEmitter, which pushes events back through the
-        # WebSocket. The sink is not needed for local components: it
-        # is only used when forwarding to a remote sub-engine.
-        if bare_ref in self._component_registry._handlers:
-            logger.info("[subscribe] found local handler for %s", bare_ref)
-            result = await self._component_registry.subscribe(
-                bare_ref, event_type, condition,
-            )
-            logger.info("[subscribe] local result: %s", result)
-            return result
-
-        logger.info("[subscribe] no local handler for %s", bare_ref)
-        # Forward to sub-engine. The sink is required for forwarding
-        # because the sub-engine proxy needs a callback to deliver
-        # events back to the caller.
-        if not sink:
-            return {"return_code": ReturnCode.ERROR.value, "subscribe_id": ""}
-
-        sub_engine = self._find_sub_engine(component_ref)
-        if not sub_engine:
-            return {"return_code": ReturnCode.UNSUPPORTED.value, "subscribe_id": ""}
-        return await sub_engine.subscribe(component_ref, event_type, condition, sink)
-
-    async def _handle_unsubscribe(self, params: dict[str, Any]) -> dict[str, Any]:
-        subscribe_id = str(params.get("subscribe_id", ""))
-        # Unsubscribe from local registry
-        if self._component_registry._emitter:
-            self._component_registry._emitter.remove_subscription(subscribe_id)
-        # Unsubscribe from all sub-engines
-        for entry in self._sub_engines.values():
-            await entry["sub_engine"].unsubscribe(subscribe_id)
-        return {"return_code": ReturnCode.OK.value}
-
-    # -- Helpers --
-
-    def _rebuild_index(self) -> None:
-        """Rebuild the component index from sub-engines."""
-        self._component_index.clear()
-        for entry in self._sub_engines.values():
-            for c in entry["components"]:
-                self._component_index[c["ref"]] = entry["engine_id"]
-
-    def _find_component(self, ref: str) -> dict[str, Any] | ComponentMeta | None:
-        """Find a registered component by ref.
-
-        Checks local registry first, then sub-engines. Handles both
-        bare refs and engine_id-prefixed refs.
-        """
-        # Check local registry first (bare ref only)
-        bare_ref = ref.split("/", 1)[1] if "/" in ref else ref
-        local_meta = self._component_registry.get_metadata(bare_ref)
-        if local_meta:
-            return local_meta
-
-        # Check sub-engines
-        if "/" in ref:
-            slash_idx = ref.index("/")
-            engine_id = ref[:slash_idx]
-            bare = ref[slash_idx + 1:]
-            entry = self._sub_engines.get(engine_id)
-            if entry:
-                for c in entry["components"]:
-                    if c["ref"] == bare:
-                        return c
+    def _owner_of(self, assigned_id: str) -> ComponentContract | None:
+        """The source that assigned an id, by the engine id it starts with."""
+        engine_id, separator, _ = assigned_id.partition("/")
+        if not separator:
             return None
-
-        # Bare ref: search all sub-engines
-        for entry in self._sub_engines.values():
-            for c in entry["components"]:
-                if c["ref"] == ref:
-                    return c
+        for source in (self._local, *self._children):
+            if engine_id in source.engine_ids:
+                return source
         return None
 
-    def _find_sub_engine(self, ref: str) -> ChildEngineProxy | None:
-        """Find the ChildEngineProxy that owns a component ref."""
-        if "/" in ref:
-            slash_idx = ref.index("/")
-            engine_id = ref[:slash_idx]
-            bare = ref[slash_idx + 1:]
-            entry = self._sub_engines.get(engine_id)
-            if entry and any(c["ref"] == bare for c in entry["components"]):
-                return entry["sub_engine"]
-            return None
+    def _bind(self, session: Session, ref: str, profile: HRIComponentProfile) -> ReturnCode:
+        """Bind a component to a session. Only actuation components are reserved."""
+        if profile.function is not ComponentFunction.ACTUATION:
+            return ReturnCode.OK
+        holder = self._bindings.get(ref)
+        if holder is not None and holder != session.id:
+            return ReturnCode.OUT_OF_RESOURCES
+        self._bindings[ref] = session.id
+        return ReturnCode.OK
 
-        engine_id = self._component_index.get(ref)
-        if not engine_id:
+    def _holds(self, session: Session, ref: str, profile: HRIComponentProfile) -> bool:
+        """Whether a session may command a component."""
+        if session.trusted or profile.function is not ComponentFunction.ACTUATION:
+            return True
+        return self._bindings.get(ref) == session.id
+
+    def _deliverer(self, session: Session) -> Deliver:
+        def deliver(event: NotifyEventParams) -> None:
+            if session.id in self._sessions:
+                session.notify("rois.event.notify_event", event)
+
+        return deliver
+
+    async def _release_session(self, session: Session) -> None:
+        for ref in [r for r, holder in self._bindings.items() if holder == session.id]:
+            del self._bindings[ref]
+        mine = [s for s, entry in self._subscriptions.items() if entry.session_id == session.id]
+        for subscribe_id in mine:
+            subscription = self._subscriptions.pop(subscribe_id)
+            try:
+                await subscription.source.unsubscribe(subscribe_id)
+            except Exception:
+                logger.exception("Could not end subscription %s", subscribe_id)
+
+    def _spawn(self, coroutine: Coroutine[Any, Any, None]) -> None:
+        task = asyncio.create_task(coroutine)
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+
+
+def _units(item: CommandUnitSequenceItem) -> list[CommandUnit]:
+    """The commands of one item of an execute: a command, or the commands of a group."""
+    return [item] if isinstance(item, CommandUnit) else list(item.command_list)
+
+
+def _declares(profile: HRIComponentProfile, command_type: str) -> bool:
+    """Whether a component serves a command. set_parameter needs declared parameters."""
+    if command_type == "set_parameter":
+        return bool(profile.parameter_profiles)
+    return any(m.name == command_type for m in profile.command_profiles)
+
+
+def _checked_parameters(
+    profile: HRIComponentProfile, parameters: Sequence[Parameter]
+) -> list[Parameter] | None:
+    """Parameters with the types of the profile, or None when one does not fit."""
+    types = {p.name: p.data_type_ref.code for p in profile.parameter_profiles}
+    checked: list[Parameter] = []
+    for parameter in parameters:
+        code = types.get(parameter.name)
+        if code is None:
             return None
-        entry = self._sub_engines.get(engine_id)
-        return entry["sub_engine"] if entry else None
+        try:
+            decode_value(code, parameter.value)
+        except ValueError:
+            return None
+        checked.append(Parameter(name=parameter.name, data_type_ref=code, value=parameter.value))
+    return checked
+
+
+def _checked_arguments(profile: HRIComponentProfile, unit: CommandUnit) -> bool:
+    """Whether the arguments of a command are those of its profile, with fitting values."""
+    if unit.command_type == "set_parameter":
+        arguments = [Parameter(name=a.name, data_type_ref=a.data_type_ref, value=a.value)
+                     for a in unit.arguments]
+        return _checked_parameters(profile, arguments) is not None
+    message = next(m for m in profile.command_profiles if m.name == unit.command_type)
+    types = {a.name: a.data_type_ref.code for a in message.arguments}
+    for argument in unit.arguments:
+        code = types.get(argument.name)
+        if code is None:
+            return False
+        try:
+            decode_value(code, argument.value)
+        except ValueError:
+            return False
+    return True
+
+
+def _empty_filter(condition: str) -> bool:
+    """Whether a result filter is empty, the only filter defined so far."""
+    try:
+        parse_condition(condition, frozenset())
+    except ConditionError:
+        return False
+    return True
+
+
+def _trim(profile: HRIEngineProfileType, chosen: set[str]) -> HRIEngineProfileType | None:
+    """An engine profile with only the chosen components, or None when none is left."""
+    sub_profiles = [t for p in profile.sub_profiles if (t := _trim(p, chosen)) is not None]
+    component_ids = [ref for ref in profile.component_ids if ref in chosen]
+    if not component_ids:
+        return None
+    return profile.model_copy(update={"sub_profiles": sub_profiles, "component_ids": component_ids})

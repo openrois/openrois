@@ -12,15 +12,15 @@ profiles.
 
 ![The HRI client connected to an engine](../../docs/assets/hri-client.png)
 
-## Run It Against the Mock Engine
+## Run It Against the Gateway
 
 ```bash
 # Once, from the repository root: build the types and the SDK.
 (cd interfaces/typescript && npm install && npm run build)
 (cd sdk/typescript && npm install && npm run build)
 
-# Terminal 1: the mock engine, on ws://127.0.0.1:8765.
-(cd examples/mock-engine && npm install && npm start)
+# Terminal 1: the gateway on ws://127.0.0.1:8765, with the mock adapter behind it.
+docker compose up --build
 
 # Terminal 2: the client.
 cd examples/hri-client
@@ -30,12 +30,17 @@ npm run dev
 
 Open the address Vite prints, enter `ws://localhost:8765`, and click Connect.
 
-## Run It Against a Real Engine
+## Run It Against the Mock Engine
+
+Without Docker, start the [mock engine](../mock-engine/README.md) in terminal 1 instead:
+`cd examples/mock-engine && npm install && npm start`. It serves the same components on
+the same port.
+
+## Run It Against Another Engine
 
 Enter that engine's WebSocket URL instead. Any engine that implements the RoIS method
 catalog works: `rois.system.get_profile` answers with `component_profiles`, keyed by fully
-qualified ref, and the client renders a panel for each. The Python engine is moving to the
-catalog (in progress).
+qualified ref, and the client renders a panel for each.
 
 ## Where It Fits
 

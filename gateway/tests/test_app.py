@@ -52,13 +52,13 @@ async def test_a_client_reads_the_profile_of_the_configured_engine(gateway: Gate
 
 async def test_an_adapter_registers_with_the_gateway(gateway: Gateway) -> None:
     adapter = asyncio.create_task(
-        WsClient(Engine(engine_id="robot"), f"ws://127.0.0.1:{gateway.port}").run_async()
+        WsClient(Engine("robot"), f"ws://127.0.0.1:{gateway.port}").run_async()
     )
     try:
-        await wait_until(lambda: len(gateway.engine.get_sub_engines()) == 1)
+        await wait_until(lambda: gateway.engine.child_engine_ids() == ["robot"])
         async with connect(f"ws://127.0.0.1:{gateway.port}") as client:
             profile = (await call(client, "rois.system.get_profile"))["profile"]
-        assert profile["sub_engine_ids"] == ["robot"]
+        assert [p["identifier"]["code"] for p in profile["sub_profiles"]] == ["robot"]
     finally:
         adapter.cancel()
         await asyncio.gather(adapter, return_exceptions=True)

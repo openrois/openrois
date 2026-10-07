@@ -40,7 +40,7 @@ Once published to a UPM registry, add via `manifest.json`:
 ```json
 {
   "dependencies": {
-    "org.openrois.interfaces": "0.1.0-alpha.3"
+    "org.openrois.interfaces": "0.1.0-alpha.4"
   }
 }
 ```
@@ -48,8 +48,8 @@ Once published to a UPM registry, add via `manifest.json`:
 ## Usage
 
 ```csharp
+using OpenRoIS.Interfaces.Catalog;
 using OpenRoIS.Interfaces.Hri;
-using OpenRoIS.Interfaces.Contract;
 using System.Text.Json;
 
 // Deserialize a RoIS Result
@@ -59,15 +59,8 @@ var result = JsonSerializer.Deserialize<Result>(
 // Type-safe enum
 ReturnCode code = ReturnCode.OK;
 
-// Implement the Component Contract
-class MyComponents : IComponentContract
-{
-    public Task<DiscoverResponse> Discover(DiscoverRequest request) { /* ... */ }
-    public Task<InvokeResponse> Invoke(CommandRequest request) { /* ... */ }
-    public Task<QueryResponse> Query(QueryRequest request) { /* ... */ }
-    public Task<SubscribeResponse> Subscribe(SubscribeRequest request, EventSink sink) { /* ... */ }
-    public Task<ReturnCode> Unsubscribe(string subscribeId) { /* ... */ }
-}
+// The params of a catalog method
+var search = new SearchParams("component_ref = 'robot_1/navigation'");
 ```
 
 ## Namespaces
@@ -78,20 +71,17 @@ class MyComponents : IComponentContract
 | `OpenRoIS.Interfaces.Common` | `ComponentStatus`, `StreamStatus` |
 | `OpenRoIS.Interfaces.Service` | Params of the engine notifications: `NotifyErrorParams`, `CompletedParams`, `NotifyEventParams`, `ProfileChangedParams`, with `CompletedStatus` and `ErrorType` |
 | `OpenRoIS.Interfaces.Profiles` | Component profile schema models |
-| `OpenRoIS.Interfaces.Contract` | `IComponentContract` interface, `ComponentContractError`, `EventSink`. Request/response models and `EventEnvelope` are in `OpenRoIS.Interfaces.Contract.Models` |
 | `OpenRoIS.Interfaces.Catalog` | Service-side method catalog: params and result models for every `rois.*` method, `RoISMethods`, `RoISMethodTypes`, the notification names and types (`RoISNotifications`, `RoISNotificationTypes`), `RoISCommandTypes`, `JsonRpcErrorCodes` |
 | `OpenRoIS.Interfaces.Components` | Per-component typed message models |
 
 ## Generation
 
-The source files (except `Contract.cs`) are generated from `interfaces/schema/*.schema.json` and the method table in `interfaces/schema/catalog.json`:
+Every source file is generated from `interfaces/schema/*.schema.json` and the method table in `interfaces/schema/catalog.json`:
 
 ```bash
 # Reads ../schema by default (or the directory in OPENROIS_SCHEMA_DIR).
 dotnet run --project scripts/Generator/Generator.csproj
 ```
-
-The `IComponentContract` interface and error classes in `Contract.cs` are hand-written, because JSON Schema cannot represent behavioral interfaces.
 
 ## License
 

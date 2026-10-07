@@ -6,8 +6,8 @@ The OpenRoIS gateway: the process that hosts the main RoIS HRI Engine and faces 
 
 Adapters and lower gateways connect to it as child engines on the path `/adapter`. Service
 applications connect as clients on any other path. The gateway discovers each child engine's
-components, aggregates their profiles, routes every RoIS call to the engine that owns the
-component, holds the bindings, and relays events to the clients that subscribed. It composes
+components, aggregates their profiles, holds the bindings, runs command sequences across
+the child engines, and routes every RoIS call and every event to where it belongs. It composes
 `Engine` and `WsServer` from [`openrois-engine`](../engine/README.md) into a process with
 configuration, logging and a graceful stop.
 
@@ -53,9 +53,11 @@ docker compose up --build
 python gateway/scripts/smoke.py
 ```
 
-The smoke script connects as a client, waits until the adapter's components appear in the
-profile, runs a query, and waits for a relayed event. It needs only the `websockets`
-package and exits with 0 when every check passes.
+The smoke script connects as a client and waits until the adapter's components appear. It
+then reads the profile, runs the queries, reads a relayed event, drives the mock navigation
+to a target from bind to `reached_target`, and checks that a method outside the catalog
+gets `METHOD_NOT_FOUND`. It needs only the `websockets` package and exits with 0 when every
+check passes.
 
 ## Configuration
 
@@ -117,10 +119,9 @@ cd gateway && pytest && mypy && ruff check src/ tests/ scripts/
 
 ## Status
 
-Alpha, pre-1.0, unstable API. Clients built on the RoIS method catalog, such as the
-TypeScript SDK and the HRI client, reach the gateway once the engine moves to the catalog
-(in progress). Health endpoints and a compose healthcheck are planned for
-[Phase 5](https://openrois.org/docs/project/roadmap).
+Alpha, pre-1.0, unstable API. The gateway answers the RoIS method catalog that the
+TypeScript SDK and the HRI client speak. Health endpoints and a compose healthcheck are
+planned for [Phase 5](https://openrois.org/docs/project/roadmap).
 
 ## License
 

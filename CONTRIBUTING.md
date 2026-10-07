@@ -62,9 +62,9 @@ apply to all documentation, code comments, commit messages, and PR descriptions.
 
 ## 4. Changelog
 
-The `interfaces/*`, `sdk/*`, `engine`, and `gateway` packages have a `CHANGELOG.md` file.
-Update it when you change one of them. The packages under `components/` will get one with
-their first tagged release.
+The `interfaces/*`, `sdk/*`, `engine`, `gateway` and `components/core` packages have a
+`CHANGELOG.md` file. Update it when you change one of them. The other packages under
+`components/` will get one with their first tagged release.
 
 - Format: [Keep a Changelog](https://keepachangelog.com/en/2.0.0/)
 - Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
@@ -324,11 +324,13 @@ ran.
 | Python types | `interfaces/python` | `pytest`, `mypy src/`, `ruff check src/` |
 | TypeScript types | `interfaces/typescript` | `npm run build`, `npm test` |
 | C# types | `interfaces/csharp` | `dotnet build src/OpenRoIS.Interfaces`, `dotnet test tests/OpenRoIS.Interfaces.Tests` |
-| TypeScript SDK | `sdk/typescript` | `npm run build`, `npm test` |
+| TypeScript SDK | `sdk/typescript` | `npm run build`, `npm test`, and with `OPENROIS_GATEWAY_URL=ws://127.0.0.1:8765` against the Compose stack |
 | Mock engine | `examples/mock-engine` | `npm test` |
-| Engine | `engine` | `pytest`, `ruff check src/ tests/` |
+| Engine | `engine` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Gateway | `gateway` | `pytest`, `mypy`, `ruff check src/ tests/ scripts/` |
-| Component packages | `components/*` | `ruff check .` |
+| Component SDK | `components/core` | `pytest`, `mypy`, `ruff check src/ tests/` |
+| Common components | `components/common` | `pytest`, `mypy`, `ruff check src/ tests/` |
+| Kachaka components | `components/kachaka` | `pytest`, `mypy`, `ruff check src/ tests/` |
 
 Some tests in `interfaces/python` cross-check the models against the normative RoIS
 machine-readable files, which this repository does not redistribute: they carry OMG's

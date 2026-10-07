@@ -444,7 +444,7 @@ the specification text and the IDL conflict, it follows the IDL. Known divergenc
    follows the IDL operation signatures (`ReactionSetParameter`,
    `ReactionGetParameterResult`). This is the exception to the XML profile rule: the
    profile does not say how a `set_parameter` call carries several reactions, and the
-   IDL does.
+   IDL does. The `REACTION_PROFILE` constant is a profile, so it follows `Reaction.xml`.
 
 5. **`UNSUPPORTED` return code**: The IDL `ReturnCode_t` has six values, including
    `UNSUPPORTED`. The return code table of the specification text (Table 8.1 in the
@@ -459,6 +459,20 @@ the specification text and the IDL conflict, it follows the IDL. Known divergenc
    follows the IDL and the XSD: the application names each command, and `completed`
    and `get_command_result` use that name.
 
+7. **`Component_Status` and `Component_Status_t`**: `RoISCommon.xml` types the result of
+   `component_status` as `Component_Status`, the enumeration, and `SystemInformation.xml`
+   types the `status` result of `engine_status` the same way. `RoIS_Common.hpp` declares
+   `component_status(Component_Status& status)`. `RoIS_Common.idl` declares
+   `component_status(out Component_Status_t status)` with
+   `typedef long Component_Status_t`, a number. The implementation follows the XML
+   profiles: a status travels as the enumerator name, for example `READY`.
+
+8. **SystemInformation and RoIS_Common**: `RoIS_System_Information.idl` derives its
+   `Query` interface from `RoIS_Common::Query`, which declares `component_status`.
+   `SystemInformation.xml` includes no RoIS_Common profile and lists only
+   `robot_position` and `engine_status`. The implementation follows the XML profile:
+   SystemInformation has no `component_status` query and no RoIS_Common commands.
+
 ---
 
 ## 17. How OpenRoIS Implements RoIS
@@ -466,8 +480,8 @@ the specification text and the IDL conflict, it follows the IDL. Known divergenc
 This section describes OpenRoIS, not the specification. It records the choices
 OpenRoIS makes where the specification leaves them to the platform-specific model, and
 the few places where it adds to the specification. The interfaces packages
-(`interfaces/`) define all of it. The Python engine, the TypeScript SDK and the mock
-engine are moving to this method catalog (in progress).
+(`interfaces/`) define all of it, and the Python engine, the gateway, the TypeScript SDK
+and the mock engine implement it.
 
 ### 17.1 Wire Binding
 
@@ -569,11 +583,60 @@ comparison  = property ( "=" / "LIKE" ) literal
   differ by ref.
 - An engine profile's `component_ids` lists every component reachable through that
   engine, including those of its child engines, which `sub_profiles` also list.
+- The interfaces packages hold the full profile of each basic component type they model
+  as a constant, for example `NAVIGATION_PROFILE`: the XML profile with the messages of
+  the RoIS_Common profile it includes, listed first, and the RoSO function of the type.
+  A component declares the constant of its type and implements a part of it. Its profile
+  in `get_profile` lists only the messages it implements, so a client never sees an
+  operation the component does not answer. `ROIS_COMMON_PROFILE`,
+  `NAVIGATION_PROFILE`, `PERSON_DETECTION_PROFILE`, `REACTION_PROFILE` and
+  `SYSTEM_INFORMATION_PROFILE` exist so far. `openrois.interfaces.components` defines
+  them, and `interfaces/schema/profiles.json` carries them to the TypeScript package.
 - The XSD types `HRIComponent` as `xsd:ID`: a name without `/` that appears once per
   document. Fully qualified refs contain `/`, and a parent profile repeats the refs of
   its sub profiles. Neither matters in the JSON form, where a ref is a plain string. An
   XML rendering of an OpenRoIS profile would have to encode the refs and list each
   component once.
+
+### 17.6 Values
+
+The IDL types the value of a `Result`, a `Parameter` and an `Argument` as `any`, and names
+its type in `data_type_ref`. OpenRoIS carries every value as a string, written by its type:
+
+| `data_type_ref` | String form | Example |
+|-----------------|-------------|---------|
+| `int`, `integer`, `long`, `short` | Decimal | `42` |
+| `float`, `double` | A decimal number | `1.5` |
+| `bool`, `boolean` | `true` or `false` | `true` |
+| `Component_Status` | The enumerator name (§16, item 7) | `READY` |
+| `string`, `RoISIdentifier`, `DateTime` and any other type | The text itself, ISO 8601 for `DateTime` | `kitchen` |
+| `<type>[]` | A JSON array of the item type: numbers, `true` or `false`, or strings | `["kitchen", "hall"]` |
+
+Type names match without regard to case, so `String[]` and `string[]` are one type. An
+engine refuses a parameter value that does not fit its type with `BAD_PARAMETER`.
+`openrois.interfaces.values` writes and reads these forms.
+
+### 17.7 Commands, Ids and Status
+
+- `execute` runs its items in order. It waits each item's `delay_time` before the item
+  starts, and runs the commands of a `ConcurrentCommands` item at the same time, each
+  after its own `delay_time`. An engine that forwards a command to a child engine waits
+  the delay itself, so the delay counts once.
+- Every command completes exactly once, with one `rois.command.completed` notification
+  to the client that sent it. `get_command_result` reads its results afterwards.
+- A command that ends with a status other than `OK` stops the sequence. The commands of
+  the later items complete with `ABORT` and never run, so a step that depends on an
+  earlier one does not run after it failed.
+- An engine refuses a `command_id` it already tracks with `BAD_PARAMETER`, and one that
+  starts with the id of an engine and a slash, since those ids are the engines' own.
+- The ids an engine assigns, for subscriptions, events, errors and `set_parameter`
+  commands, start with the id of that engine, like refs: `reachy_real/sub-1`. They stay
+  the same through every gateway above that engine, never collide across engines, and
+  tell a service application or an agent which engine an id belongs to. Clients treat
+  them as opaque strings.
+- An engine answers `component_status` for each component whose profile includes it. A
+  component is `UNINITIALIZED` until it is ready to take commands, `ERROR` when it could
+  not start, `BUSY` while one of its commands runs, and `READY` otherwise.
 
 ---
 

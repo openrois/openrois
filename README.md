@@ -63,9 +63,10 @@ robots and virtual agents alike.
 - **Recursive engine.** A single `Engine` class realizes both the main and the sub HRI
   Engine roles defined by RoIS. The gateway and every adapter share one dispatch
   implementation.
-- **Five-method Component Contract.** The engine depends only on `discover`, `invoke`,
-  `query`, `subscribe`, and `unsubscribe`. ROS 2, gRPC, game engines, and cloud APIs
-  stay inside adapters, so adding a paradigm never touches the core.
+- **One component contract.** The engine reaches every component through one
+  interface, whether the component runs in its own process or behind a child engine.
+  ROS 2, gRPC, game engines, and cloud APIs stay inside components, so adding a paradigm
+  never touches the core.
 - **JSON-RPC 2.0 over WebSocket.** Every operation of the five RoIS interfaces maps to
   a namespaced method (`rois.system.*`, `rois.command.*`, `rois.query.*`,
   `rois.event.*`, `rois.stream.*`). The control plane works from browsers and across
@@ -85,7 +86,7 @@ robots and virtual agents alike.
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/openrois-architecture-dark.svg">
-    <img src="docs/assets/openrois-architecture.svg" alt="OpenRoIS architecture: service applications use an SDK to reach the gateway, which hosts the main HRI Engine and forwards calls over the Component Contract to adapters hosting sub HRI Engines for robots, avatars, and services." width="860">
+    <img src="docs/assets/openrois-architecture.svg" alt="OpenRoIS architecture: service applications use an SDK to reach the gateway, which hosts the main HRI Engine and forwards calls over JSON-RPC to adapters hosting sub HRI Engines for robots, avatars, and services." width="860">
   </picture>
 </p>
 
@@ -103,29 +104,35 @@ details.
 
 ## Quickstart
 
-Run a RoIS engine with simulated components and inspect it from the browser. You need
-[Node.js](https://nodejs.org/) 22 or later.
+Run a gateway with a simulated robot behind it, and inspect it from the browser. You need
+[Docker](https://docs.docker.com/get-started/get-docker/) with Compose, and
+[Node.js](https://nodejs.org/) 22 or later for the web inspector.
 
 ```bash
 git clone https://github.com/openrois/openrois.git
 cd openrois
 
-# Build the generated TypeScript types and the TypeScript SDK.
-(cd interfaces/typescript && npm install && npm run build)
-(cd sdk/typescript && npm install && npm run build)
-
-# Terminal 1: start a RoIS engine with simulated components on ws://127.0.0.1:8765.
-cd examples/mock-engine && npm install && npm start
+# Terminal 1: the gateway on ws://127.0.0.1:8765, with the mock adapter behind it.
+docker compose up --build
 ```
 
 ```bash
-# Terminal 2: start the web inspector, then open http://localhost:5173 and click Connect.
+# Terminal 2: build the types and the SDK, start the web inspector, then open
+# http://localhost:5173 and click Connect.
+(cd interfaces/typescript && npm install && npm run build)
+(cd sdk/typescript && npm install && npm run build)
 cd examples/hri-client && npm install && npm run dev
 ```
 
 The inspector reads the engine profile and renders every component it finds, with its
-queries, parameters, commands, and events. Nothing in the client is specific to the components on
-the other side.
+queries, parameters, commands, and events: `mock/navigation`, `mock/person_detection`
+and `mock/system_information`, served by the mock adapter, an engine of its own below the
+gateway. Nothing in the client is specific to the components on the other side.
+`python gateway/scripts/smoke.py` checks the same stack from the command line.
+
+To develop a client without Docker, the [mock engine](examples/mock-engine/README.md)
+serves the same components from one Node.js process:
+`cd examples/mock-engine && npm install && npm start`.
 
 <p align="center">
   <img src="docs/assets/hri-client-demo.gif" alt="Screen recording of the OpenRoIS HRI Client connecting to the mock engine, querying components, binding, subscribing to events, and executing a command." width="760">
@@ -174,42 +181,42 @@ ROS 2 action, a gRPC service, or an HTTP API. The adapter hosts it in a sub HRI 
 and connects it to the gateway.
 
 ```python
-from openrois.interfaces.contract import InvokeResponse
-from openrois.interfaces.hri import ReturnCode
-from openrois_components_core import component, invoke, query, results, subscribe
+from openrois.components.core import Component, component, invoke, subscribe
+from openrois.interfaces.components import NAVIGATION_PROFILE
 
 
-@component("Navigation", function="actuation")
-class Navigation:
-    def __init__(self, config: dict) -> None:
-        self._robot_url = config["robot_url"]
+@component(NAVIGATION_PROFILE)
+class Navigation(Component):
+    def __init__(self, robot_url: str) -> None:
+        self._robot_url = robot_url
 
     async def connect(self) -> None:
         self._robot = await MyRobotClient.open(self._robot_url)
 
-    @query("component_status")
-    async def status(self):
-        return results.status("BUSY" if self._robot.moving else "READY")
-
     @invoke("start")
-    async def start(self, parameters):
-        await self._robot.go_to(parameters)
-        return InvokeResponse(return_code=ReturnCode.OK, command_id="nav-1")
+    async def start(self) -> None:
+        target = self.parameters["target_positions"][0]
+        await self._robot.go_to(target)  # the command runs until the robot arrives
+        self.emit("reached_target", target=target, is_final_target=True)
 
     @subscribe("reached_target")
-    async def on_reached_target(self):
-        """Registers the event. Emit it with self.parent.emit_async(...)."""
+    async def reached_target(self) -> None:
+        pass  # start emits the event when the robot arrives.
 ```
+
+The engine stores the parameters, answers `component_status`, and reports the end of each
+command with `rois.command.completed`. Host the component in an engine and connect it to
+the gateway:
 
 ```python
 from openrois.engine import Engine, WsClient
-from openrois_components_core import meta_from_decorators
 
-config = {"robot_url": "http://192.168.0.10:8080"}
-engine = Engine(engine_id="robot_1", platform="my_robot")
-engine.register_component("Navigation", Navigation(config), meta_from_decorators(Navigation))
+engine = Engine("robot_1")
+engine.add_component("navigation", Navigation("http://192.168.0.10:8080"))
 WsClient(engine, "ws://gateway.example.com:8765").run()
 ```
+
+Clients see the component as `robot_1/navigation`.
 
 See [`examples/adapter-template`](examples/adapter-template) for a complete starting
 point and [`components/kachaka`](components/kachaka) for reference components backed by
@@ -225,7 +232,7 @@ open.
 |------|--------|
 | RoIS interface types (Python, JSON Schema, TypeScript, C#) | Available |
 | Recursive engine, WebSocket server and client, and adapter SDK (Python) | Available, hardening |
-| Gateway process, container image, and Docker Compose with a mock adapter | In progress |
+| Gateway process, container image, and Docker Compose with a mock adapter | Available |
 | TypeScript client SDK and web inspector | Available |
 | Reference components for the Preferred Robotics Kachaka (gRPC and ROS 2) | Available |
 | C# client SDK for Unity | In progress |

@@ -85,16 +85,16 @@ namespace OpenRoIS.Interfaces.Tests
     }
 
     [Fact]
-    public void DiscoverRequest_DefaultCondition()
+    public void SearchParams_DefaultCondition()
     {
-        var req = new OpenRoIS.Interfaces.Contract.Models.DiscoverRequest("");
+        var req = new OpenRoIS.Interfaces.Catalog.SearchParams();
         Assert.Equal("", req.Condition);
     }
 
     [Fact]
-    public void DiscoverResponse_WithComponentRefs()
+    public void SearchResult_WithComponentRefs()
     {
-        var resp = new OpenRoIS.Interfaces.Contract.Models.DiscoverResponse(
+        var resp = new OpenRoIS.Interfaces.Catalog.SearchResult(
             ReturnCode.OK, new List<string> { "robot/nav" });
         Assert.Equal(ReturnCode.OK, resp.ReturnCode);
         Assert.Single(resp.ComponentRefList!);

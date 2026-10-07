@@ -54,7 +54,7 @@ switch (message.Type)
         // message.Response.Result holds the RoIS result object.
         break;
     case JsonRpcMessageType.Notification:
-        // message.Notification.Method, for example "rois.event.notify".
+        // message.Notification.Method, for example "rois.event.notify_event".
         break;
     case JsonRpcMessageType.Error:
         // message.Error.Error.Code and .Message.

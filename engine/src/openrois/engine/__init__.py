@@ -1,36 +1,37 @@
 """OpenRoIS engine: the recursive RoIS HRI Engine, with its WebSocket server and client.
 
-This package provides the recursive Engine class that serves both the
-gateway (main engine with child engines) and the adapter (sub-engine with
-local components). Both registries can be populated simultaneously.
+One ``Engine`` class serves an adapter (components in its own process), a gateway
+(child engines) and a middle tier (both). It answers the RoIS method catalog and
+reaches every component through the component contract.
 
 Public API:
     Engine: The recursive HRI engine.
-    WsServer: WebSocket server for the gateway.
-    WsClient: WebSocket client for the adapter.
-    read_profile: Read a profile YAML file.
-    component_config: Build a per-component config dict from a profile.
+    Session: A client of an engine, or its parent engine.
+    ComponentContract: Where the components of an engine live.
+    LocalComponent: The shape of a component the engine hosts in its process.
+    LocalComponents: The component contract for the components of this process.
+    ChildEngine: The component contract for one child engine.
+    WsServer: WebSocket server for a gateway.
+    WsClient: WebSocket client for an adapter.
 """
 
 from __future__ import annotations
 
-from openrois.engine.config import component_config, read_profile
-from openrois.engine.engine import (
-    ChildEngineProxy,
-    ComponentRegistry,
-    Engine,
-    EventEmitter,
-)
+from openrois.engine.child import ChildEngine
+from openrois.engine.contract import ComponentContract
+from openrois.engine.engine import Engine
+from openrois.engine.local import LocalComponent, LocalComponents
+from openrois.engine.session import Session
 from openrois.engine.ws_client import WsClient
 from openrois.engine.ws_server import WsServer
 
 __all__ = [
+    "ChildEngine",
+    "ComponentContract",
     "Engine",
-    "ComponentRegistry",
-    "ChildEngineProxy",
-    "EventEmitter",
-    "WsServer",
+    "LocalComponent",
+    "LocalComponents",
+    "Session",
     "WsClient",
-    "read_profile",
-    "component_config",
+    "WsServer",
 ]

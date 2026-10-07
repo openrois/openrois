@@ -27,26 +27,18 @@ result = Result(name="number", data_type_ref="int", value="3")
 code = ReturnCode.OK
 ```
 
-The `ComponentContract` protocol is the only boundary between the engine and a concrete
-transport. Implement its five methods and the engine can drive your platform without
-knowing anything about it:
+Engines and clients exchange the params and result models of the method catalog:
 
 ```python
-from openrois.interfaces.contract import ComponentContract
+from openrois.interfaces.catalog import SearchParams, SearchResult
+from openrois.interfaces.condition import COMPONENT_REF, eq
 
-
-class MyContract(ComponentContract):
-    async def discover(self, request): ...
-    async def invoke(self, request): ...
-    async def query(self, request): ...
-    async def subscribe(self, request, sink): ...
-    async def unsubscribe(self, subscribe_id): ...
+params = SearchParams(condition=eq(COMPONENT_REF, "robot_1/navigation"))
+result = SearchResult.model_validate({"return_code": "OK", "component_ref_list": []})
 ```
 
-Most adapter authors do not implement it directly: `ComponentRegistry` and `ChildEngineProxy` in
-[`openrois-engine`](../../engine/README.md) play this role (aligning their signatures with the
-protocol exactly is part of Phase 4), and components are written with the
-decorators in [`openrois-components-core`](../../components/core/README.md).
+Components are written with [`openrois-components-core`](../../components/core/README.md),
+and [`openrois-engine`](../../engine/README.md) hosts them.
 
 ## Module Structure
 
@@ -56,10 +48,10 @@ decorators in [`openrois-components-core`](../../components/core/README.md).
 | `openrois.interfaces.common` | `ComponentStatus`, `StreamStatus` |
 | `openrois.interfaces.service` | Params of the engine notifications: `NotifyErrorParams`, `CompletedParams`, `NotifyEventParams`, `ProfileChangedParams`, with `CompletedStatus` and `ErrorType` |
 | `openrois.interfaces.profiles` | Component and engine profile models |
-| `openrois.interfaces.contract` | `ComponentContract` protocol, request and response models, `EventEnvelope`, error classes |
+| `openrois.interfaces.values` | `encode_value` and `decode_value`, the string form of a typed value in `Result.value`, `Parameter.value` and `Argument.value` |
 | `openrois.interfaces.condition` | The CQL2-Text subset every `condition` uses: `parse_condition`, `Condition`, the `component_ref` and `component_type` properties, and the `eq`, `like` and `all_of` builders |
 | `openrois.interfaces.catalog` | Service-side method catalog: params and result models for every `rois.*` method, the `SystemIF`, `CommandIF`, `QueryIF` and `EventIF` protocols, the method and notification tables, the `EXTENSIONS` registry, `JsonRpcErrorCode` |
-| `openrois.interfaces.components` | Per-component typed message models |
+| `openrois.interfaces.components` | The profile constants of the basic components (`NAVIGATION_PROFILE`, ...) and per-component typed message models |
 
 ## Development
 

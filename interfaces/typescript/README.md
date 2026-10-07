@@ -36,7 +36,7 @@ Then reference from your project:
 ## Usage
 
 ```ts
-import { ResultSchema, ReturnCode, ComponentContract } from "@openrois/interfaces";
+import { ResultSchema, ReturnCode, RoISMethodSchemas } from "@openrois/interfaces";
 
 // Validate a RoIS Result
 const result = ResultSchema.parse({
@@ -48,14 +48,11 @@ const result = ResultSchema.parse({
 // Type-safe enum
 const code: ReturnCode = "OK";
 
-// Implement the Component Contract
-class MyComponents implements ComponentContract {
-  async discover(request) { /* ... */ }
-  async invoke(request) { /* ... */ }
-  async query(request) { /* ... */ }
-  async subscribe(request, sink) { /* ... */ }
-  async unsubscribe(subscribeId) { /* ... */ }
-}
+// Validate the result of a catalog method
+const search = RoISMethodSchemas["rois.command.search"].result.parse({
+  return_code: "OK",
+  component_ref_list: ["robot_1/navigation"],
+});
 ```
 
 ## Subpath Exports
@@ -67,21 +64,20 @@ class MyComponents implements ComponentContract {
 | `@openrois/interfaces/common` | `ComponentStatus`, `StreamStatus` |
 | `@openrois/interfaces/service` | Params of the engine notifications: `NotifyErrorParams`, `CompletedParams`, `NotifyEventParams`, `ProfileChangedParams`, with `CompletedStatus` and `ErrorType` |
 | `@openrois/interfaces/profiles` | Component profile schema models |
-| `@openrois/interfaces/contract` | `ComponentContract` interface, request/response models, `EventEnvelope`, error classes |
 | `@openrois/interfaces/condition` | The CQL2-Text subset every `condition` uses: `parseCondition`, `Condition`, `Comparison`, `ConditionError`, the `component_ref` and `component_type` properties, and the `eq`, `like`, `allOf`, `quote`, `componentRef` and `componentType` builders |
 | `@openrois/interfaces/catalog` | Service-side method catalog: params and result schemas for every `rois.*` method, `RoISMethods`, `RoISMethodMap`, `RoISMethodSchemas`, the notification names and schemas (`RoISNotifications`, `RoISNotificationMap`, `RoISNotificationSchemas`), `RoISCommandTypes`, `JsonRpcErrorCode` |
-| `@openrois/interfaces/components` | Per-component typed message models |
+| `@openrois/interfaces/components` | The profile constants of the basic components (`NAVIGATION_PROFILE`, ...), generated from `schema/profiles.json`, and per-component typed message models |
 
 ## Generation
 
-The source files in `src/` (except `contract.ts`, `condition.ts` and the `index.ts` barrels) are generated from `interfaces/schema/*.schema.json` and the method table in `interfaces/schema/catalog.json`:
+The source files in `src/` (except `condition.ts` and the `index.ts` barrels) are generated from `interfaces/schema/*.schema.json`, the method table in `interfaces/schema/catalog.json` and the profile constants in `interfaces/schema/profiles.json`:
 
 ```bash
 npm run generate   # reads ../schema/*.json → writes src/*.ts
 npm run build      # generate + tsc → dist/
 ```
 
-The `ComponentContract` interface and error classes in `contract.ts` are hand-written, because JSON Schema cannot represent behavioral interfaces. So is `condition.ts`, the parser, matcher and builders of the CQL2-Text conditions, which mirrors the Python `openrois.interfaces.condition` module.
+`condition.ts`, the parser, matcher and builders of the CQL2-Text conditions, is hand-written. It mirrors the Python `openrois.interfaces.condition` module.
 
 ## License
 

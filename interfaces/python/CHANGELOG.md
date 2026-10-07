@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0a4] - 2026-10-08
+
+### Added
+
+- Add a profile constant for each basic component type the package models: `NAVIGATION_PROFILE`, `PERSON_DETECTION_PROFILE`, `REACTION_PROFILE` and `SYSTEM_INFORMATION_PROFILE` in `openrois.interfaces.components`, and `ROIS_COMMON_PROFILE` with `ROIS_COMMON_URN` for the RoIS_Common profile they include. Each constant is the full profile of its type: the XML profile with the RoIS_Common messages listed first, and the RoSO function. A component declares the constant of its type and implements a part of it.
+- Export the profile constants to `schema/profiles.json` with `profiles_document()`, for the TypeScript generator.
+- Cross-check every profile constant against its XML profile and `OWL.ttl` when the normative files are available.
+- Add the `openrois.interfaces.values` module: `encode_value` and `decode_value` write a typed value as the string that travels in `Result.value`, `Parameter.value` and `Argument.value`, and read it back, by its `data_type_ref`. Numbers are decimal, booleans `true` or `false`, a `Component_Status` its name, and an array type a JSON array.
+
+### Changed
+
+- **Breaking:** remove `ComponentStatusT` and `COMPONENT_STATUS_MAP`. A component status travels as its name, for example `READY`, as the XML profiles type it.
+- **Breaking:** remove the `openrois.interfaces.contract` module: `ComponentContract`, its request and response models, `EventEnvelope`, `EventSink` and the error classes, with their schemas and the `contract` module of `schema/manifest.json`. Engines and clients exchange the params and result models of the method catalog, and the component contract of an engine is part of `openrois-engine`.
+
 ## [0.1.0a3] - 2026-10-08
 
 ### Added
@@ -62,7 +76,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `test_schema_drift.py` to verify committed schemas match Pydantic output (CI guard).
 - Cross-check types against `PersonDetection.xml`, `Navigation.xml`, `SystemInformation.xml` and validate against `XML-Profiles.xsd`.
 
-[unreleased]: https://github.com/openrois/openrois/compare/interfaces-v0.1.0-alpha.3...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/interfaces-v0.1.0-alpha.4...HEAD
+[0.1.0a4]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.4
 [0.1.0a3]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.3
 [0.1.0a2]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.2
 [0.1.0a1]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.1

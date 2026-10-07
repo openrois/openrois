@@ -1,20 +1,60 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "openrois-components-kachaka"
 version = "0.1.0a2"
-description = "OpenRoIS components for the Kachaka robot"
+description = "OpenRoIS components for the Preferred Robotics Kachaka, over its gRPC API or ROS 2"
+readme = "README.md"
 license = "Apache-2.0"
+authors = [
+    { name = "OpenRoIS Community" },
+]
 requires-python = ">=3.12"
 dependencies = [
-    "openrois-components-core>=0.1.0a2",
+    "openrois-interfaces>=0.1.0a4",
+    "openrois-components-core>=0.1.0a1",
 ]
 
 [project.optional-dependencies]
-api = ["kachaka-api"]
-ros2 = ["rclpy"]
+grpc = ["kachaka-api"]
+dev = [
+    "openrois-engine>=0.1.0a1",
+    "pytest>=8.4",
+    "pytest-asyncio>=1.0",
+    "mypy>=1.8",
+    "ruff>=0.4",
+]
 
-[build-system]
-requires = ["setuptools>=64"]
-build-backend = "setuptools.build_meta"
+# openrois and openrois.components are namespace packages shared with the other OpenRoIS
+# distributions, so this one ships only openrois/components/kachaka/.
+[tool.hatch.build.targets.wheel]
+packages = ["src/openrois"]
 
-[tool.setuptools.packages.find]
-include = ["openrois_components.*"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+files = ["src", "tests"]
+mypy_path = "src"
+explicit_package_bases = true
+
+# The backends ship no type information, and the ROS 2 ones come with a ROS 2
+# installation rather than from PyPI.
+[[tool.mypy.overrides]]
+module = ["kachaka_api.*", "rclpy.*", "kachaka_interfaces.*", "nav_msgs.*"]
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]

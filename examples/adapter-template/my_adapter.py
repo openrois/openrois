@@ -1,271 +1,250 @@
-"""Adapter template: starting point for writing your own OpenRoIS adapter.
+"""Adapter template: the starting point of an adapter for your robot, avatar or service.
 
-Copy this file, rename the class, and fill in the # IMPLEMENT YOUR CODE HERE #
-blocks with your robot's API calls.
+Copy this directory and fill in every ``IMPLEMENT YOUR CODE HERE`` block with calls to
+the API of your platform: an HTTP client, a gRPC stub, a ROS 2 node, a serial port. The
+three components show the kinds of component an adapter hosts:
+
+- ``MyNavigation``: a basic RoIS component type, declared with its profile constant. It
+  implements a part of the type, ``start`` and ``stop``, and the engine serves that part.
+- ``MySystemInformation``: another basic type, with queries only.
+- ``Battery``: a type of your own, with a profile of its own, for what the basic types
+  do not cover.
 
 Usage:
-    python my_adapter.py --config openrois-profile.yaml
+    python my_adapter.py [--robot-url URL] [--gateway-url URL] [--engine-id ID]
 """
 
 from __future__ import annotations
 
 import argparse
+import asyncio
 import logging
+import os
+from datetime import UTC, datetime
 
-from openrois.interfaces.contract import InvokeResponse
-from openrois.interfaces.hri import ReturnCode
-from openrois.engine import Engine, WsClient, component_config, read_profile
-from openrois_components_core import (
+from openrois.components.core import (
+    CommandFailed,
+    Component,
     component,
     invoke,
-    meta_from_decorators,
     query,
-    results,
     subscribe,
 )
+from openrois.engine import Engine, WsClient
+from openrois.interfaces.common import ComponentStatus
+from openrois.interfaces.components import (
+    NAVIGATION_PROFILE,
+    ROIS_COMMON_PROFILE,
+    ROIS_COMMON_URN,
+    SYSTEM_INFORMATION_PROFILE,
+)
+from openrois.interfaces.profiles import (
+    ComponentFunction,
+    EventMessageProfile,
+    HRIComponentProfile,
+    ParameterProfile,
+    QueryMessageProfile,
+    RoISIdentifierType,
+)
+from openrois.interfaces.service import CompletedStatus
 
-logger = logging.getLogger(__name__)
-
-
-# ─── SystemInformation (shared read, no bind) ────────────────
-
-@component("SystemInformation")
-class SystemInformation:
-
-    def __init__(self, config: dict) -> None:
-        # IMPLEMENT YOUR CODE HERE
-        # Read per-component config from the config dict.
-        # Example: self._grpc_server = config.get("grpc_server", "...")
-        pass
-
-    async def connect(self) -> None:
-        # IMPLEMENT YOUR CODE HERE
-        # Create your robot's API client (gRPC, ROS 2 node, etc.).
-        pass
-
-    async def disconnect(self) -> None:
-        # IMPLEMENT YOUR CODE HERE
-        # Tear down the API client.
-        pass
-
-    @query("robot_position")
-    async def robot_position(self):
-        # IMPLEMENT YOUR CODE HERE
-        # Call your robot's API to get the position.
-        # Example: return results.position(x=3.2, y=1.8, theta=0.5)
-        raise NotImplementedError
-
-    @query("battery_level")
-    async def battery_level(self):
-        # IMPLEMENT YOUR CODE HERE
-        # Example: return results.battery_level(percentage=85.5)
-        raise NotImplementedError
-
-    @query("component_status")
-    async def status(self):
-        return results.status("READY")
+logger = logging.getLogger("my_adapter")
 
 
-# ─── Navigation (exclusive, bind required, BUSY) ─────────────
+# ─── A basic component type ──────────────────────────────────
 
-@component("Navigation", function="actuation")
-class Navigation:
 
-    def __init__(self, config: dict) -> None:
-        # IMPLEMENT YOUR CODE HERE
-        self._busy = False
+@component(NAVIGATION_PROFILE)
+class MyNavigation(Component):
+    """Navigation: drives to the first of ``target_positions``.
+
+    The engine stores the parameters, reserves the component for the client that binds
+    it, and reports BUSY while ``start`` runs. ``stop``, or a new ``start``, runs
+    ``stop`` and then cancels the running ``start``, which ends with ABORT.
+    """
+
+    def __init__(self, robot_url: str) -> None:
+        self._robot_url = robot_url
 
     async def connect(self) -> None:
         # IMPLEMENT YOUR CODE HERE
-        pass
+        # Open the connection to the robot. An exception here makes the engine report
+        # the component as ERROR.
+        logger.info("Navigation would connect to %s", self._robot_url)
 
     async def disconnect(self) -> None:
         # IMPLEMENT YOUR CODE HERE
+        # Close the connection to the robot.
         pass
 
-    @query("waypoints")
-    async def get_waypoints(self):
-        # IMPLEMENT YOUR CODE HERE
-        # Example:
-        #   return results.waypoints([
-        #       {"id": "desk", "name": "desk", "x": 2.0, "y": 1.5},
-        #   ])
-        raise NotImplementedError
-
-    @query("component_status")
-    async def status(self):
-        # Return "BUSY" if navigating, "READY" if idle.
-        return results.status("BUSY" if self._busy else "READY")
-
-    @invoke("execute")
-    async def navigate(self, parameters):
-        # IMPLEMENT YOUR CODE HERE
-        # parameters[0].value is the target WayPoint name.
-        # Call your robot's navigation API.
-        # Return InvokeResponse with a command_id.
-        raise NotImplementedError
+    @invoke("start")
+    async def start(self) -> None:
+        targets = self.parameters.get("target_positions", [])
+        if not targets:
+            # The command ends with the status CommandFailed names, here ERROR.
+            raise CommandFailed(CompletedStatus.ERROR, "Set target_positions first.")
+        target = targets[0]
+        await self._drive_to(target)
+        self.emit("reached_target", target=target, is_final_target=True)
 
     @invoke("stop")
-    async def stop(self, parameters):
-        # IMPLEMENT YOUR CODE HERE
-        # Cancel the current navigation.
-        self._busy = False
-        return InvokeResponse(return_code=ReturnCode.OK, command_id="")
+    async def stop(self) -> None:
+        await self._halt()
 
     @subscribe("reached_target")
-    async def on_reached(self):
-        # Called once when an operator subscribes.
-        # Do setup here if needed (e.g., start monitoring).
-        # Use self.parent.emit_async("Navigation", "reached_target",
-        #     results.reached_target(...))
-        # to push events when navigation completes.
-        pass
+    async def reached_target(self) -> None:
+        pass  # start emits the event when the robot arrives.
 
-
-# ─── ObjectDetection (shared read, no bind) ──────────────────
-
-@component("ObjectDetection", function="sensing")
-class ObjectDetection:
-
-    def __init__(self, config: dict) -> None:
+    async def _drive_to(self, target: str) -> None:
         # IMPLEMENT YOUR CODE HERE
-        pass
+        # Drive to the target and return when the robot arrives. Raise
+        # CommandFailed(CompletedStatus.ERROR, "why") when the robot cannot get there.
+        raise NotImplementedError(f"drive to {target}")
 
-    async def connect(self) -> None:
+    async def _halt(self) -> None:
         # IMPLEMENT YOUR CODE HERE
-        pass
+        # Stop the robot where it is.
+        raise NotImplementedError("halt")
+
+
+@component(SYSTEM_INFORMATION_PROFILE)
+class MySystemInformation(Component):
+    """SystemInformation: where the robot is, and since when the engine runs."""
+
+    def __init__(self, robot_url: str) -> None:
+        self._robot_url = robot_url
+        self._started = datetime.now(UTC)
+
+    @query("robot_position")
+    async def robot_position(self) -> dict[str, object]:
+        x, y, theta = await self._read_pose()
+        return {
+            "position_data": [f"{x},{y},{theta}"],
+            "robot_ref": [self.ref.split("/", 1)[0]],
+            "timestamp": datetime.now(UTC),
+        }
+
+    @query("engine_status")
+    async def engine_status(self) -> dict[str, object]:
+        return {"operable_time": self._started, "status": ComponentStatus.READY}
+
+    async def _read_pose(self) -> tuple[float, float, float]:
+        # IMPLEMENT YOUR CODE HERE
+        # Read the pose of the robot: x and y in meters, theta in radians.
+        raise NotImplementedError("read the pose")
+
+
+# ─── A component type of your own ────────────────────────────
+
+
+def _parameter(name: str, code: str, description: str, default: str = "") -> ParameterProfile:
+    return ParameterProfile(
+        name=name,
+        data_type_ref=RoISIdentifierType(code=code),
+        description=description,
+        default_value=default,
+    )
+
+
+#: The profile of a type no basic RoIS component covers. Name the authority after your
+#: organization, include RoIS_Common for component_status, which the engine answers, and
+#: declare every message and parameter the type has. A client discovers them from the
+#: profile, as it does for the basic types.
+BATTERY_PROFILE = HRIComponentProfile(
+    identifier=RoISIdentifierType(authority="MyOrganization", code="Battery"),
+    name="battery",
+    function=ComponentFunction.SENSING,
+    sub_component_profiles=[ROIS_COMMON_URN],
+    query_profiles=[
+        *ROIS_COMMON_PROFILE.query_profiles,
+        QueryMessageProfile(
+            name="battery_level",
+            results=[_parameter("percentage", "double", "remaining charge, 0 to 100")],
+        ),
+    ],
+    event_profiles=[
+        EventMessageProfile(
+            name="battery_low",
+            results=[_parameter("percentage", "double", "remaining charge, 0 to 100")],
+        ),
+    ],
+    parameter_profiles=[
+        _parameter("low_threshold", "double", "charge below which battery_low fires", "20"),
+    ],
+)
+
+
+@component(BATTERY_PROFILE)
+class Battery(Component):
+    """Battery: the charge of the robot, and an event when it runs low."""
+
+    def __init__(self, robot_url: str, *, check_interval: float = 30.0) -> None:
+        self._robot_url = robot_url
+        self._check_interval = check_interval
+        self._monitor: asyncio.Task[None] | None = None
 
     async def disconnect(self) -> None:
+        if self._monitor is not None:
+            self._monitor.cancel()
+            await asyncio.gather(self._monitor, return_exceptions=True)
+            self._monitor = None
+
+    @query("battery_level")
+    async def battery_level(self) -> dict[str, object]:
+        return {"percentage": await self._read_level()}
+
+    @subscribe("battery_low")
+    async def battery_low(self) -> None:
+        # The first subscription starts the monitor. The engine sends each event to every
+        # subscription.
+        if self._monitor is None:
+            self._monitor = asyncio.create_task(self._watch())
+
+    async def _watch(self) -> None:
+        while True:
+            try:
+                level = await self._read_level()
+                if level < self.parameters["low_threshold"]:
+                    self.emit("battery_low", percentage=level)
+            except Exception:
+                logger.exception("Could not read the battery level")
+            await asyncio.sleep(self._check_interval)
+
+    async def _read_level(self) -> float:
         # IMPLEMENT YOUR CODE HERE
-        pass
-
-    @query("list_objects")
-    async def list_objects(self):
-        # IMPLEMENT YOUR CODE HERE
-        # Return the latest detections as Result lists.
-        # Example:
-        #   return [
-        #       *results.detection(
-        #           object_id="0",
-        #           object_class="person",
-        #           bounding_box=[[0.1, 0.2], [0.3, 0.2], [0.3, 0.4], [0.1, 0.4]],
-        #       )
-        #   ]
-        raise NotImplementedError
-
-    @query("component_status")
-    async def status(self):
-        return results.status("READY")
-
-    @subscribe("object_detected")
-    async def on_object_detected(self):
-        # Called once when an operator subscribes.
-        # Use self.parent.emit_async("ObjectDetection", "object_detected",
-        #     results.detection(...))
-        # to push events when new detections arrive.
-        pass
+        # Read the remaining charge of the robot, 0 to 100.
+        raise NotImplementedError("read the battery level")
 
 
-# ─── ObjectManipulation (exclusive, bind required, BUSY) ────
-
-@component("ObjectManipulation", function="actuation")
-class ObjectManipulation:
-
-    def __init__(self, config: dict) -> None:
-        # IMPLEMENT YOUR CODE HERE
-        self._busy = False
-
-    async def connect(self) -> None:
-        # IMPLEMENT YOUR CODE HERE
-        pass
-
-    async def disconnect(self) -> None:
-        # IMPLEMENT YOUR CODE HERE
-        pass
-
-    @query("component_status")
-    async def status(self):
-        # Return "BUSY" if the arm is moving, "READY" if idle.
-        return results.status("BUSY" if self._busy else "READY")
-
-    @query("gripper_state")
-    async def gripper_state(self):
-        # IMPLEMENT YOUR CODE HERE
-        # Example: return results.gripper_state("open")
-        raise NotImplementedError
-
-    @query("current_grasped_object")
-    async def current_grasped_object(self):
-        # IMPLEMENT YOUR CODE HERE
-        # Example: return results.current_grasped_object("obj_42")
-        raise NotImplementedError
-
-    @invoke("execute")
-    async def execute(self, parameters):
-        # IMPLEMENT YOUR CODE HERE
-        # parameters[0].value is the command: "grasp" or "place".
-        # For grasp: parameters[1].value is the object_id.
-        # For place: parameters[1].value is object_id,
-        #            parameters[2].value is plane_id,
-        #            parameters[3].value is x, parameters[4].value is y.
-        raise NotImplementedError
-
-    @invoke("stop")
-    async def stop(self, parameters):
-        # IMPLEMENT YOUR CODE HERE
-        # Cancel the current arm motion.
-        self._busy = False
-        return InvokeResponse(return_code=ReturnCode.OK, command_id="")
-
-    @subscribe("manipulation_complete")
-    async def on_complete(self):
-        # Called once when an operator subscribes.
-        # Use self.parent.emit_async("ObjectManipulation",
-        #     "manipulation_complete",
-        #     results.manipulation_complete(success=True))
-        # to push events when manipulation finishes.
-        pass
-
-
-# ─── Component classes to register ───────────────────────────
-
-COMPONENT_CLASSES = [
-    SystemInformation,
-    Navigation,
-    ObjectDetection,
-    ObjectManipulation,
-]
+# ─── The adapter ─────────────────────────────────────────────
 
 
 def main() -> None:
-    """Entry point: load profile, create engine, register components, run."""
-    logging.basicConfig(level=logging.INFO)
-
-    parser = argparse.ArgumentParser(description="OpenRoIS adapter")
+    """Host the components in an engine and serve them to the gateway until Ctrl+C."""
+    parser = argparse.ArgumentParser(description="An OpenRoIS adapter for my robot.")
     parser.add_argument(
-        "--config",
-        default="openrois-profile.yaml",
-        help="Path to the profile YAML file (default: openrois-profile.yaml)",
+        "--robot-url",
+        default=os.environ.get("MY_ROBOT_URL", "http://127.0.0.1:8080"),
+        help="the API of the robot (env MY_ROBOT_URL)",
+    )
+    parser.add_argument(
+        "--gateway-url",
+        default=os.environ.get("OPENROIS_GATEWAY_URL", "ws://127.0.0.1:8765"),
+        help="the gateway to connect to (env OPENROIS_GATEWAY_URL)",
+    )
+    parser.add_argument(
+        "--engine-id",
+        default="my_robot",
+        help="the engine id, the first part of every ref, unique across the deployment",
     )
     args = parser.parse_args()
+    logging.basicConfig(level=logging.INFO)
 
-    profile = read_profile(args.config)
-
-    engine = Engine(
-        engine_id=profile["engine"]["id"],
-        platform=profile["engine"].get("platform", ""),
-    )
-
-    for cls in COMPONENT_CLASSES:
-        meta = meta_from_decorators(cls)
-        engine.register_component(
-            meta.ref,
-            cls(component_config(profile, meta.ref)),
-            meta,
-        )
-
-    ws_client = WsClient(engine, profile["engine"]["gateway_url"])
-    ws_client.run()
+    engine = Engine(args.engine_id)
+    engine.add_component("navigation", MyNavigation(args.robot_url))
+    engine.add_component("system_information", MySystemInformation(args.robot_url))
+    engine.add_component("battery", Battery(args.robot_url))
+    WsClient(engine, args.gateway_url).run()
 
 
 if __name__ == "__main__":
