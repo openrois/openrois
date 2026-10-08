@@ -1759,9 +1759,9 @@ details and open decisions.
 | 1 | Engine and Sub HRI Engine | TypeScript proof of concept, child engines, mock components | done |
 | 2 | Adapter Framework and Components | component framework, reference components, real robot adapter | done |
 | 3 | Client SDKs and First Demonstration | TypeScript SDK and web client done, C# SDK in progress, exit tag `v0.1.0` | in progress |
-| 4 | Recursive Engine in Python | the Python engine on the RoIS method catalog is the only dispatch implementation | done |
+| 4 | Recursive Engine in Python | the Python engine on the RoIS method catalog is the only dispatch implementation | in progress |
 | 5 | Hardening the Engine | graceful shutdown, reconnection, package loading, health endpoints | planned |
-| 6 | Gateway Process | `openrois-gateway` from `Engine` + `WsServer`, Docker Compose quickstart | done |
+| 6 | Gateway Process | `openrois-gateway` from `Engine` + `WsServer`, Docker Compose quickstart | in progress |
 | 7 | Adapter Process | a packaged adapter process that builds its components from a configuration | planned |
 | 8 | Open Reference Platform and Mixed Paradigm | reference platform on open hardware, paradigm-neutrality proof | planned |
 | 9 | Auth, Security, Media | parallelizable after Phase 7 | planned |

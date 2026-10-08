@@ -1,8 +1,0 @@
-# Mock adapter profile for testing without a real robot.
-
-engine:
-  id: mock_robot
-  platform: mock
-  gateway_url: "ws://127.0.0.1:8765"
-
-components: {}
