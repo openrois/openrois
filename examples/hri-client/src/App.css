@@ -103,8 +103,13 @@ body {
   color: white;
 }
 
-.btn-connect:hover {
+.btn-connect:hover:not(:disabled) {
   background: var(--accent-hover);
+}
+
+.btn-connect:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .btn-disconnect {
@@ -143,6 +148,10 @@ body {
 .connection-dot.error {
   background: var(--red);
   box-shadow: 0 0 6px var(--red);
+}
+
+.connection-dot.idle {
+  background: var(--text-muted);
 }
 
 .connection-dot.connecting {

@@ -24,7 +24,11 @@ export function useProfile(client: RoISClient | null): {
   }, [client]);
 
   useEffect(() => {
-    if (!client) return;
+    if (!client) {
+      setProfile(null);
+      setError(null);
+      return;
+    }
     client
       .getProfile()
       .then((result) => {

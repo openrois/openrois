@@ -11,8 +11,11 @@ const DEFAULT_ENGINE_URL = "ws://localhost:8765";
 function App() {
   const [urlInput, setUrlInput] = useState(DEFAULT_ENGINE_URL);
   const [connectedUrl, setConnectedUrl] = useState<string | null>(null);
+  // Counts the clicks on Connect, so a click retries the same URL.
+  const [attempt, setAttempt] = useState(0);
 
-  const { client, connected, error } = useRoISClient(connectedUrl ?? "");
+  const { client, state, error } = useRoISClient(connectedUrl, attempt);
+  const connected = state === "connected";
   const { profile, error: profileError } = useProfile(connected ? client : null);
 
   // Group components by engine id, the part of each ref before the slash
@@ -34,7 +37,8 @@ function App() {
   }, [profile]);
 
   const handleConnect = () => {
-    setConnectedUrl(urlInput);
+    setConnectedUrl(urlInput.trim());
+    setAttempt((n) => n + 1);
   };
 
   const handleDisconnect = () => {
@@ -60,11 +64,15 @@ function App() {
             Disconnect
           </button>
         ) : (
-          <button onClick={handleConnect} className="btn btn-connect">
+          <button
+            onClick={handleConnect}
+            className="btn btn-connect"
+            disabled={state === "connecting" || !urlInput.trim()}
+          >
             Connect
           </button>
         )}
-        <ConnectionIndicator connected={connected} error={error} />
+        <ConnectionIndicator state={state} error={error} />
       </div>
 
       {profileError && (
