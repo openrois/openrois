@@ -1,9 +1,9 @@
 """Cross-check Pydantic models against normative XML profile files.
 
 This test module parses the XML profile files (PersonDetection.xml, Navigation.xml,
-SystemInformation.xml, Reaction.xml, RoISCommon.xml) using lxml and validates that
-the Pydantic models and the profile constants agree with the XML definitions: field
-names, data types, descriptions and default values must match.
+SystemInformation.xml, Reaction.xml, SpeechSynthesis.xml, RoISCommon.xml) using lxml and
+validates that the Pydantic models and the profile constants agree with the XML
+definitions: field names, data types, descriptions and default values must match.
 """
 
 import re
@@ -17,6 +17,7 @@ from openrois.interfaces.components import (
     REACTION_PROFILE,
     ROIS_COMMON_PROFILE,
     ROIS_COMMON_URN,
+    SPEECH_SYNTHESIS_PROFILE,
     SYSTEM_INFORMATION_PROFILE,
 )
 from openrois.interfaces.profiles import (
@@ -470,9 +471,17 @@ def _full_profile(filename: str) -> HRIComponentProfile:
         (NAVIGATION_PROFILE, "Navigation.xml"),
         (PERSON_DETECTION_PROFILE, "PersonDetection.xml"),
         (REACTION_PROFILE, "Reaction.xml"),
+        (SPEECH_SYNTHESIS_PROFILE, "SpeechSynthesis.xml"),
         (SYSTEM_INFORMATION_PROFILE, "SystemInformation.xml"),
     ],
-    ids=["RoISCommon", "Navigation", "PersonDetection", "Reaction", "SystemInformation"],
+    ids=[
+        "RoISCommon",
+        "Navigation",
+        "PersonDetection",
+        "Reaction",
+        "SpeechSynthesis",
+        "SystemInformation",
+    ],
 )
 def test_profile_constant_matches_xml(constant: HRIComponentProfile, filename: str) -> None:
     """Each profile constant equals the full profile built from the normative files."""
@@ -483,5 +492,10 @@ def test_rois_common_urn_matches_xml() -> None:
     """ROIS_COMMON_URN is the identifier of RoISCommon.xml and the SubComponentProfile text."""
     root = _parse_xml("RoISCommon.xml")
     assert root.find(f"{{{GML_NS}}}identifier").text == ROIS_COMMON_URN
-    for filename in ("Navigation.xml", "PersonDetection.xml", "Reaction.xml"):
+    for filename in (
+        "Navigation.xml",
+        "PersonDetection.xml",
+        "Reaction.xml",
+        "SpeechSynthesis.xml",
+    ):
         assert ROIS_COMMON_URN in _build_component_profile_from_xml(filename).sub_component_profiles

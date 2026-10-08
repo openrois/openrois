@@ -369,6 +369,155 @@ export const REACTION_PROFILE: HRIComponentProfile = {
   ],
 };
 
+/** The OMG SpeechSynthesis profile. */
+export const SPEECH_SYNTHESIS_PROFILE: HRIComponentProfile = {
+  identifier: {
+    authority: "OMG",
+    code: "SpeechSynthesis",
+    codebook_ref: "",
+    version: "",
+  },
+  name: "speech_synthesizer",
+  function: "actuation",
+  sub_component_profiles: [
+    "urn:x-rois:def:Component:OMG::RoISCommon",
+  ],
+  command_profiles: [
+    {
+      name: "start",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "stop",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "suspend",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "resume",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+  ],
+  query_profiles: [
+    {
+      name: "component_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Component_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "",
+        },
+      ],
+    },
+    {
+      name: "synthesizable_languages",
+      results: [
+        {
+          name: "languages",
+          data_type_ref: {
+            authority: "",
+            code: "string[]",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "list of available languages",
+        },
+      ],
+    },
+    {
+      name: "available_voices",
+      results: [
+        {
+          name: "characters",
+          data_type_ref: {
+            authority: "",
+            code: "string[]",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "list of available voice characters",
+        },
+      ],
+    },
+  ],
+  event_profiles: [],
+  parameter_profiles: [
+    {
+      name: "speech_text",
+      data_type_ref: {
+        authority: "",
+        code: "string",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: "",
+      description: "speech text in plain text",
+    },
+    {
+      name: "ssml_text",
+      data_type_ref: {
+        authority: "",
+        code: "string",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: "",
+      description: "speech text in SSML text",
+    },
+    {
+      name: "volume",
+      data_type_ref: {
+        authority: "",
+        code: "int",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: "50",
+      description: "Volume",
+    },
+    {
+      name: "language",
+      data_type_ref: {
+        authority: "",
+        code: "string",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: "en",
+      description: "Language of the speech",
+    },
+    {
+      name: "character",
+      data_type_ref: {
+        authority: "",
+        code: "string",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: "default",
+      description: "character of the voice",
+    },
+  ],
+};
+
 /** The OMG SystemInformation profile. */
 export const SYSTEM_INFORMATION_PROFILE: HRIComponentProfile = {
   identifier: {
