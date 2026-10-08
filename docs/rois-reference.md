@@ -473,6 +473,16 @@ the specification text and the IDL conflict, it follows the IDL. Known divergenc
    `robot_position` and `engine_status`. The implementation follows the XML profile:
    SystemInformation has no `component_status` query and no RoIS_Common commands.
 
+9. **SpeechSynthesis `character` and the voice lists**: `RoIS_Speech_Synthesis.idl`
+   types `character` as a `RoIS_Identifier`, spells the SSML parameter `SSML_text`, and
+   returns `synthesizable_languages` and a `RoIS_IdentifierList` named
+   `synthesizable_characters` from `get_parameter`. `SpeechSynthesis.xml` types
+   `character` as a `string`, names the parameter `ssml_text`, and offers the languages
+   and the voices as the `synthesizable_languages` and `available_voices` queries, whose
+   `string[]` results are `languages` and `characters`. The implementation follows the
+   XML profile: `SPEECH_SYNTHESIS_PROFILE` is `SpeechSynthesis.xml` with the RoIS_Common
+   messages it includes.
+
 ---
 
 ## 17. How OpenRoIS Implements RoIS
@@ -589,9 +599,10 @@ comparison  = property ( "=" / "LIKE" ) literal
   A component declares the constant of its type and implements a part of it. Its profile
   in `get_profile` lists only the messages it implements, so a client never sees an
   operation the component does not answer. `ROIS_COMMON_PROFILE`,
-  `NAVIGATION_PROFILE`, `PERSON_DETECTION_PROFILE`, `REACTION_PROFILE` and
-  `SYSTEM_INFORMATION_PROFILE` exist so far. `openrois.interfaces.components` defines
-  them, and `interfaces/schema/profiles.json` carries them to the TypeScript package.
+  `NAVIGATION_PROFILE`, `PERSON_DETECTION_PROFILE`, `REACTION_PROFILE`,
+  `SPEECH_SYNTHESIS_PROFILE` and `SYSTEM_INFORMATION_PROFILE` exist so far.
+  `openrois.interfaces.components` defines them, and `interfaces/schema/profiles.json`
+  carries them to the TypeScript package.
 - The XSD types `HRIComponent` as `xsd:ID`: a name without `/` that appears once per
   document. Fully qualified refs contain `/`, and a parent profile repeats the refs of
   its sub profiles. Neither matters in the JSON form, where a ref is a plain string. An

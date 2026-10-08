@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add `SPEECH_SYNTHESIS_PROFILE` and `SPEECH_SYNTHESIS_URN` to `openrois.interfaces.components`. The constant is the full profile of the SpeechSynthesis type: `SpeechSynthesis.xml` with the RoIS_Common messages listed first, and the RoSO function `actuation`. A component that speaks a text, on a speaker or through an avatar's voice, declares it.
+
 ## [0.1.0a4] - 2026-10-08
 
 ### Added

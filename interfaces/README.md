@@ -68,8 +68,8 @@ Every `condition` is a string in a subset of CQL2-Text (OGC 21-065r2), for examp
 `component_ref = 'reachy_real/head'`. The Python `condition` module and its TypeScript
 port parse, match and build conditions.
 
-Profile constants and typed per-component message models exist for 4 of the 17 basic
-RoIS HRI Components, and for the RoIS_Common profile they include:
+Profile constants exist for 5 of the 17 basic RoIS HRI Components and for the RoIS_Common
+profile they include, and typed per-component message models for 4 of them:
 
 | Component | Profile constant | Typed messages |
 |-----------|------------------|----------------|
@@ -77,6 +77,7 @@ RoIS HRI Components, and for the RoIS_Common profile they include:
 | `PersonDetection` | `PERSON_DETECTION_PROFILE` | Event `person_detected`, `component_status` |
 | `Navigation` | `NAVIGATION_PROFILE` | Command `set_parameter`, Query `get_parameter`, Event `reached_target`, `component_status` |
 | `Reaction` | `REACTION_PROFILE` | Command `set_parameter`, Query `get_parameter`, `component_status` |
+| `SpeechSynthesis` | `SPEECH_SYNTHESIS_PROFILE` | |
 | `SystemInformation` | `SYSTEM_INFORMATION_PROFILE` | Queries `robot_position`, `engine_status` |
 
 A profile constant is the full profile of the type: its XML profile with the RoIS_Common

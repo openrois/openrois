@@ -1,9 +1,9 @@
 """Per-component profiles and typed message models.
 
 Each module in this sub-package holds one RoIS component type: the full profile of
-the type as a constant, and typed Pydantic models for its command, query and event
-messages. The models provide compile-time safety and clear field documentation
-instead of the generic ``Result(value=str)`` for event payloads.
+the type as a constant and, for most types, typed Pydantic models for its command,
+query and event messages. The models provide compile-time safety and clear field
+documentation instead of the generic ``Result(value=str)`` for event payloads.
 
 A profile constant is the XML profile of the type with the RoIS_Common messages it
 includes, and the RoSO function from the ontology. A component declares the constant
@@ -42,6 +42,10 @@ from openrois.interfaces.components.rois_common import (
     ROIS_COMMON_PROFILE,
     ROIS_COMMON_URN,
 )
+from openrois.interfaces.components.speech_synthesis import (
+    SPEECH_SYNTHESIS_PROFILE,
+    SPEECH_SYNTHESIS_URN,
+)
 from openrois.interfaces.components.system_information import (
     SYSTEM_INFORMATION_PROFILE,
     SYSTEM_INFORMATION_URN,
@@ -57,6 +61,7 @@ _PROFILES: Mapping[str, HRIComponentProfile] = MappingProxyType(
         "NAVIGATION_PROFILE": NAVIGATION_PROFILE,
         "PERSON_DETECTION_PROFILE": PERSON_DETECTION_PROFILE,
         "REACTION_PROFILE": REACTION_PROFILE,
+        "SPEECH_SYNTHESIS_PROFILE": SPEECH_SYNTHESIS_PROFILE,
         "SYSTEM_INFORMATION_PROFILE": SYSTEM_INFORMATION_PROFILE,
     }
 )
@@ -101,6 +106,9 @@ __all__ = [
     "ReactionSetParameterResult",
     "ReactionGetParameterResult",
     "ReactionStatusResult",
+    # SpeechSynthesis
+    "SPEECH_SYNTHESIS_URN",
+    "SPEECH_SYNTHESIS_PROFILE",
     # SystemInformation
     "SYSTEM_INFORMATION_URN",
     "SYSTEM_INFORMATION_PROFILE",

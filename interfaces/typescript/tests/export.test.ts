@@ -61,6 +61,7 @@ describe("Export completeness", () => {
     expect(components.NAVIGATION_PROFILE).toBeDefined();
     expect(components.PERSON_DETECTION_PROFILE).toBeDefined();
     expect(components.REACTION_PROFILE).toBeDefined();
+    expect(components.SPEECH_SYNTHESIS_PROFILE).toBeDefined();
     expect(components.SYSTEM_INFORMATION_PROFILE).toBeDefined();
   });
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add `SPEECH_SYNTHESIS_PROFILE` to `./components`, generated from `schema/profiles.json`. The constant is the full profile of the SpeechSynthesis type: its XML profile with the RoIS_Common messages listed first, and the RoSO function `actuation`.
+
 ## [0.1.0-alpha.4] - 2026-10-08
 
 ### Added
