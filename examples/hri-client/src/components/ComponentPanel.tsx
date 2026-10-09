@@ -129,10 +129,7 @@ export function ComponentPanel({ client, componentRef, profile }: ComponentPanel
         <h3>{componentRef}</h3>
         <span className="component-type-badge">{profile.identifier.code}</span>
         {isActuation && (
-          <span
-            className="bind-badge"
-            style={{ fontSize: "0.75rem", marginLeft: "0.5rem", color: bound ? "green" : "orange" }}
-          >
+          <span className={`bind-badge ${bound ? "bound" : "unbound"}`}>
             {bound ? "Bound" : "Not bound"}
           </span>
         )}
