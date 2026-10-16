@@ -126,6 +126,33 @@ describe("JSON-RPC protocol", () => {
 // ---------------------------------------------------------------------------
 
 describe("a session through the SDK", () => {
+  it("runs the branches of a group, each in order", async () => {
+    const client = await RoISClient.connect(url());
+    const person = "mock/person_detection";
+    const completed: string[] = [];
+    client.on("rois.command.completed", (params: CompletedParams) => {
+      completed.push(params.command_id);
+    });
+    const ids = await client.execute([
+      {
+        branch_list: [
+          {
+            command_list: [
+              { component_ref: person, command_type: "suspend", delay_time: 20 },
+              { component_ref: person, command_type: "resume" },
+            ],
+          },
+          { command_list: [{ component_ref: person, command_type: "start" }] },
+        ],
+      },
+    ]);
+    expect(ids).toHaveLength(3);
+    const [b1, b2, b3] = ids;
+    await expect.poll(() => completed.length).toBe(3);
+    expect(completed).toEqual([b3, b1, b2]);
+    await client.disconnect();
+  });
+
   it("reads the profile of every component", async () => {
     const client = await RoISClient.connect(url());
     const { profile, component_profiles } = await client.getProfile();

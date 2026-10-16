@@ -9,19 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `ExecuteResult.command_unit_list`, an OpenRoIS extension: the sequence with the command id the engine assigned to every command.
-- `AUDIO_STREAMING_PROFILE`, `VIDEO_STREAMING_PROFILE` and their URNs in `openrois.interfaces.components`, a local copy until the profile generator writes them.
-- Add `SPEECH_SYNTHESIS_PROFILE` and `SPEECH_SYNTHESIS_URN` to `openrois.interfaces.components`. The constant is the full profile of the SpeechSynthesis type: `SpeechSynthesis.xml` with the RoIS_Common messages listed first, and the RoSO function `actuation`. A component that speaks a text, on a speaker or through an avatar's voice, declares it.
+- `ExecuteResult.command_unit_list`, an OpenRoIS extension: the sequence with the command id the engine assigned to every command. It realizes the inout of execute that Figure 8.5 draws.
+- Declare your own component type in Python with `openrois.interfaces.declaration`. A `ComponentDeclaration` names the identifier, the name, the RoSO function (`sensing`, `actuation` or `function`), the commands, queries, events and parameters, and the sub-profiles (RoIS_Common unless you say otherwise). `profile()` gives the `HRIComponentProfile` a component class declares, and `to_xml()` gives the RoIS XML profile. A query and an event may share a name, and any type code is accepted, so the Annex C examples such as the wheelchair and the grammar-based speech recognizer can be written as they are.
+- Read and write RoIS XML with `openrois.interfaces.xmlcodec`: component profiles (`read_component_profile`, `write_component_profile`), engine profiles (`read_engine_profile`, `write_engine_profile`, and `write_engine_bundle` for an engine with one document per component it names), command unit sequences (`read_command_unit_sequence`, `write_command_unit_sequence`) and single command messages (`read_command_message`). A `ProfileRegistry` resolves SubComponentProfile references. The reader needs no network and loads no external entities. It reads the RoIS namespace as published (`http://www.omg.org/spec/RoIS/20240801`) and also as `http://www.omg.org/spec/RoIS/20250801`, and the writer emits the first. It reads concurrent commands in every form the specification shows: the Annex B.1 `branch_list`, the flat `command_list` of the XSD, and a `command_list` that holds branches as formal Table 8-15 names it.
+- All 18 standard component types now have a profile constant in `openrois.interfaces.components`, generated from the OMG files by `tools/generate_profiles.py`. New: `AUDIO_STREAMING_PROFILE`, `VIDEO_STREAMING_PROFILE`, `FACE_DETECTION_PROFILE`, `FACE_LOCALIZATION_PROFILE`, `FOLLOW_PROFILE`, `GESTURE_RECOGNITION_PROFILE`, `MOVE_PROFILE`, `PERSON_IDENTIFICATION_PROFILE`, `PERSON_LOCALIZATION_PROFILE`, `SOUND_DETECTION_PROFILE`, `SOUND_LOCALIZATION_PROFILE` and `SPEECH_RECOGNITION_PROFILE`, each with its `_URN`. `SPEECH_SYNTHESIS_PROFILE` and `SPEECH_SYNTHESIS_URN` are added too. `STANDARD_PROFILES` lists them all and `standard_registry()` returns a registry holding them. `profiles.json` lists all 18.
+- Add `openrois.interfaces.type_codes`: `python_type()` gives the Python type of a `data_type_ref` code (`string` and `String` are `str`, `int[]` is `list[int]`, `Component_Status` is `ComponentStatus`), and an unknown code maps to `Any`.
+- Query and event profiles carry `arguments`. The streaming profiles use them for `stream_id`.
+- Add `ParameterProfile.read_only` (OpenRoIS extension). It is set on the parameters the specification lists only under get_parameter: `available_encodings` and `available_transports` of the streaming types, and `recognizable_gestures` of GestureRecognition.
+- Add `HRIEngineProfileType.name`, the gml:name of an engine, optional.
+- `lxml` is now a runtime dependency.
 
 ### Changed
 
-- **Breaking:** `CommandUnit.command_id` defaults to empty: the engine a client calls assigns it.
-- **Breaking:** `ConcurrentCommands` holds `branch_list`, a list of `Branch`, each an ordered `command_list`. The flat `command_list` of the XSD reads as one branch per command.
-- `QueryMessageProfile` and `EventMessageProfile` gain `arguments`, and `ParameterProfile` gains `read_only`, an OpenRoIS extension.
+- **Breaking:** `CommandUnit.command_id` defaults to empty: the engine a client calls assigns it, and ignores one a client sends.
+- **Breaking:** `ConcurrentCommands` holds `branch_list`, a list of `Branch`, each with an ordered `command_list`. The branches run in parallel and each branch runs its commands in order. A flat `command_list` is still read, as one command per branch, but the model and its JSON Schema only write `branch_list`.
+- **Breaking:** `ParameterProfile.default_value` is `None` when a parameter has no default. An empty `default_value` reads as `None`, because the XML profiles write `default_value=""` on parameters that have none.
+- **Breaking:** remove the `openrois.interfaces.components.rois_common` and `openrois.interfaces.components.speech_synthesis` modules, with the `omg_identifier` and `parameter` helpers. Import every profile constant and URN from `openrois.interfaces.components`. The typed message models stay where they were.
 
 ### Removed
 
-- **Breaking:** `STREAMING_METHOD_PREFIX` and the `unmodelled_method_prefixes` entry of `catalog.json`. Streaming has no methods of its own.
+- **Breaking:** `STREAMING_METHOD_PREFIX` and the `unmodelled_method_prefixes` entry of `catalog.json`. Streaming has no methods of its own: the streaming components carry their messages on the Command, Query and Event interfaces.
 
 ## [0.1.0a4] - 2026-10-08
 

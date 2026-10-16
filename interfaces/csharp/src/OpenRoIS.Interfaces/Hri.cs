@@ -127,12 +127,15 @@ namespace OpenRoIS.Interfaces.Hri
     }
 
     /// <summary>
-    /// One branch of a ConcurrentCommands item: commands that run one after another.
+    /// One branch of a ConcurrentCommands group: commands that run in order.
     /// 
-    /// Maps to BranchType in XML-Profiles.xsd.
+    /// Maps to BranchType in XML-Profiles.xsd, which ConcurrentCommandsType does not use.
+    /// Annex B.1 and Tables 8.15 and 8.16 of the specification give ConcurrentCommands a
+    /// branch_list of branches, and OpenRoIS follows them (docs/rois-reference.md, section
+    /// 16).
     /// 
     /// Attributes:
-    ///     command_list: The commands of the branch, in the order they run.
+    ///     command_list: The commands of the branch, run one after the other.
     /// </summary>
     public sealed class Branch : IEquatable<Branch>
     {
@@ -168,12 +171,13 @@ namespace OpenRoIS.Interfaces.Hri
     }
 
     /// <summary>
-    /// A group of branches that run at the same time.
+    /// A group of branches executed in parallel.
     /// 
-    /// Maps to ConcurrentCommandsType in XML-Profiles.xsd and to the branch_list form of
-    /// Annex B.1. Each branch runs its commands in order, the branches run in parallel,
-    /// and the next item of the sequence waits for every branch. The XSD form, a flat
-    /// ``command_list``, is read as one branch per command.
+    /// Maps to ConcurrentCommandsType in XML-Profiles.xsd, with the branch_list of Annex
+    /// B.1. The branches run at the same time, each branch runs its commands in order, and
+    /// the next unit of the sequence waits for every branch.
+    /// 
+    /// The XSD form, a flat command_list, is read as one-command branches.
     /// 
     /// Attributes:
     ///     branch_list: The branches to run in parallel.

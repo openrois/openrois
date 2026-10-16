@@ -132,6 +132,7 @@ __all__ = [
     "CommandUnit",
     "CommandUnitSequence",
     "CommandUnitSequenceItem",
+    "Branch",
     "ConcurrentCommands",
     "ConditionT",
     "DateTime",

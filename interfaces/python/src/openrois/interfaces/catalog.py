@@ -897,7 +897,8 @@ EXTENSIONS: tuple[Extension, ...] = (
         "ExecuteResult",
         "command_unit_list",
         "The engine assigns the command ids (spec 8.2.2.2, Annex B.2), and the client "
-        "needs them to match each completed notification and to read results.",
+        "needs them to match each completed notification and to read results. It "
+        "realizes the inout command_unit_list that Figure 8.5 draws for execute.",
     ),
     Extension(
         "GetProfileResult",
@@ -912,15 +913,16 @@ EXTENSIONS: tuple[Extension, ...] = (
         "The values come from the RoSO ontology shipped with the specification.",
     ),
     Extension(
-        "ParameterProfile",
-        "read_only",
-        "A client and the engine know which parameters set_parameter may not change, "
-        "the ones the specification lists only under get_parameter.",
-    ),
-    Extension(
         "NotifyEventParams",
         "results",
         "Without the payload, every event costs a get_event_detail round trip.",
+    ),
+    Extension(
+        "ParameterProfile",
+        "read_only",
+        "The specification lists some parameters only under get_parameter, but the XML "
+        "profiles declare them as ParameterProfiles, which reads as settable. The engine "
+        "refuses set_parameter on them.",
     ),
     Extension(
         "ProfileChangedParams",

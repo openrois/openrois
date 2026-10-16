@@ -7,9 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add `Branch`, `Arguments` on query and event profiles, `ReadOnly` on parameter profiles, and an optional `Name` on engine profiles.
+- `ExecuteResult` carries `CommandUnitList`, the sequence with the command ids the engine assigned (OpenRoIS extension).
+
 ### Changed
 
-- **Breaking:** `CommandUnit.CommandId` is optional, since the engine assigns it, and `ConcurrentCommands` holds `BranchList`, branches of commands that run in order. `ExecuteResult` carries `CommandUnitList` with the assigned ids, query and event profiles gain `Arguments`, and parameter profiles `ReadOnly`.
+- **Breaking:** `ConcurrentCommands` holds `BranchList`, a list of branches each with an ordered `CommandList`, instead of a flat `CommandList`.
+- **Breaking:** a parameter profile without a default has a null `DefaultValue` instead of an empty string.
+- **Breaking:** `CommandUnit.CommandId` is optional, since the engine assigns it.
 
 ### Removed
 

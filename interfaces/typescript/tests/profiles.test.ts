@@ -73,8 +73,8 @@ describe("Profile constants", () => {
       (SPEECH_SYNTHESIS_PROFILE.parameter_profiles ?? []).map((p) => [p.name, p.default_value]),
     );
     expect(defaults).toEqual({
-      speech_text: "",
-      ssml_text: "",
+      speech_text: null,
+      ssml_text: null,
       volume: "50",
       language: "en",
       character: "default",

@@ -33,7 +33,7 @@
     },
     "Branch": {
       "additionalProperties": false,
-      "description": "One branch of a ConcurrentCommands item: commands that run one after another.\n\nMaps to BranchType in XML-Profiles.xsd.\n\nAttributes:\n    command_list: The commands of the branch, in the order they run.",
+      "description": "One branch of a ConcurrentCommands group: commands that run in order.\n\nMaps to BranchType in XML-Profiles.xsd, which ConcurrentCommandsType does not use.\nAnnex B.1 and Tables 8.15 and 8.16 of the specification give ConcurrentCommands a\nbranch_list of branches, and OpenRoIS follows them (docs/rois-reference.md, section\n16).\n\nAttributes:\n    command_list: The commands of the branch, run one after the other.",
       "properties": {
         "command_list": {
           "items": {
@@ -101,7 +101,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "A group of branches that run at the same time.\n\nMaps to ConcurrentCommandsType in XML-Profiles.xsd and to the branch_list form of\nAnnex B.1. Each branch runs its commands in order, the branches run in parallel,\nand the next item of the sequence waits for every branch. The XSD form, a flat\n``command_list``, is read as one branch per command.\n\nAttributes:\n    branch_list: The branches to run in parallel.\n    delay_time: Optional delay in milliseconds before executing this group.",
+  "description": "A group of branches executed in parallel.\n\nMaps to ConcurrentCommandsType in XML-Profiles.xsd, with the branch_list of Annex\nB.1. The branches run at the same time, each branch runs its commands in order, and\nthe next unit of the sequence waits for every branch.\n\nThe XSD form, a flat command_list, is read as one-command branches.\n\nAttributes:\n    branch_list: The branches to run in parallel.\n    delay_time: Optional delay in milliseconds before executing this group.",
   "properties": {
     "branch_list": {
       "items": {

@@ -94,8 +94,8 @@ MODELS: list[type[BaseModel]] = [
     Result,
     Parameter,
     Argument,
-    CommandUnit,
     Branch,
+    CommandUnit,
     ConcurrentCommands,
     CommandUnitSequence,
     # service

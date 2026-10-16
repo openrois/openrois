@@ -59,8 +59,16 @@ describe("execute", () => {
         { component_ref: "reachy_real/head", command_type: "start", command_id: "nod-1" },
         {
           branch_list: [
-            { command_list: [{ component_ref: "reachy_real/head", command_type: "stop" }] },
-            { command_list: [{ component_ref: "reachy_sim/head", command_type: "stop" }] },
+            {
+              command_list: [
+                { component_ref: "reachy_real/head", command_type: "stop", command_id: "nod-2" },
+              ],
+            },
+            {
+              command_list: [
+                { component_ref: "reachy_sim/head", command_type: "stop", command_id: "nod-3" },
+              ],
+            },
           ],
           delay_time: 500,
         },

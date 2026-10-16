@@ -227,12 +227,15 @@ class CommandUnit(BaseModel):
 
 
 class Branch(BaseModel):
-    """One branch of a ConcurrentCommands item: commands that run one after another.
+    """One branch of a ConcurrentCommands group: commands that run in order.
 
-    Maps to BranchType in XML-Profiles.xsd.
+    Maps to BranchType in XML-Profiles.xsd, which ConcurrentCommandsType does not use.
+    Annex B.1 and Tables 8.15 and 8.16 of the specification give ConcurrentCommands a
+    branch_list of branches, and OpenRoIS follows them (docs/rois-reference.md, section
+    16).
 
     Attributes:
-        command_list: The commands of the branch, in the order they run.
+        command_list: The commands of the branch, run one after the other.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
@@ -241,12 +244,13 @@ class Branch(BaseModel):
 
 
 class ConcurrentCommands(BaseModel):
-    """A group of branches that run at the same time.
+    """A group of branches executed in parallel.
 
-    Maps to ConcurrentCommandsType in XML-Profiles.xsd and to the branch_list form of
-    Annex B.1. Each branch runs its commands in order, the branches run in parallel,
-    and the next item of the sequence waits for every branch. The XSD form, a flat
-    ``command_list``, is read as one branch per command.
+    Maps to ConcurrentCommandsType in XML-Profiles.xsd, with the branch_list of Annex
+    B.1. The branches run at the same time, each branch runs its commands in order, and
+    the next unit of the sequence waits for every branch.
+
+    The XSD form, a flat command_list, is read as one-command branches.
 
     Attributes:
         branch_list: The branches to run in parallel.
@@ -260,14 +264,14 @@ class ConcurrentCommands(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _branches_of_command_list(cls, data: Any) -> Any:
-        """Read the flat command_list of the XSD as one-command branches."""
-        if isinstance(data, dict) and "command_list" in data and "branch_list" not in data:
-            data = dict(data)
-            commands = data.pop("command_list")
-            if isinstance(commands, list):
-                data["branch_list"] = [{"command_list": [command]} for command in commands]
-        return data
+    def _flat_command_list(cls, data: Any) -> Any:
+        if not isinstance(data, dict) or "command_list" not in data:
+            return data
+        if "branch_list" in data:
+            raise ValueError("Give either branch_list or command_list, not both")
+        flat = {k: v for k, v in data.items() if k != "command_list"}
+        flat["branch_list"] = [{"command_list": [unit]} for unit in data["command_list"]]
+        return flat
 
 
 # A single item in a CommandUnitSequence — either a CommandUnit or a ConcurrentCommands group.

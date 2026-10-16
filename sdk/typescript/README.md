@@ -49,14 +49,12 @@ await client.bind(nav);
 await client.setParameter(nav, [
   { name: "target_positions", data_type_ref: "string[]", value: '["kitchen"]' },
 ]);
-const commandId = crypto.randomUUID();
-const ended = new Promise<string>((resolve) => {
-  client.on("rois.command.completed", ({ command_id, status }) => {
-    if (command_id === commandId) resolve(status);
-  });
-});
-await client.execute([{ component_ref: nav, command_type: "start", command_id: commandId }]);
-console.log("navigation ended:", await ended);
+const statuses = new Map<string, string>();
+client.on("rois.command.completed", ({ command_id, status }) => statuses.set(command_id, status));
+// The engine assigns the command ids and returns them. Its completed notifications
+// arrive after the answer and name those ids.
+const [commandId] = await client.execute([{ component_ref: nav, command_type: "start" }]);
+// ... later: statuses.get(commandId) is "OK" once the navigation has ended.
 await client.release(nav);
 
 await client.disconnect();
@@ -81,9 +79,10 @@ catalog schemas in `@openrois/interfaces`, and returns the result's out paramete
 - `getProfile()` returns `{ profile, component_profiles }`: the engine profile and the
   profile of every component it lists, keyed by fully qualified ref.
 - `execute()` takes a `command_unit_list`: commands that run in order, and
-  `{ command_list, delay_time }` groups whose commands run at the same time. A command
-  without a `command_id` gets a UUID. `execute()` returns every `command_id` in order, and
-  each command ends with a `rois.command.completed` notification.
+  `{ branch_list, delay_time }` groups whose branches run at the same time, each branch
+  in order. The commands carry no `command_id`: the engine assigns one to each, and
+  `execute()` returns them in order, branch by branch. Each command ends with a
+  `rois.command.completed` notification that names its id.
 - `query()` and `subscribe()` go to the one component that declares the query or event
   type and matches the condition.
 

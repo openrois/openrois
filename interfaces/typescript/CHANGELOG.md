@@ -9,12 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `ExecuteResultSchema` carries `command_unit_list`, the sequence with the command ids the engine assigned, and `AUDIO_STREAMING_PROFILE` and `VIDEO_STREAMING_PROFILE` are generated into `./components`.
+- `ExecuteResultSchema` carries `command_unit_list`, the sequence with the command ids the engine assigned (OpenRoIS extension).
 - Add `SPEECH_SYNTHESIS_PROFILE` to `./components`, generated from `schema/profiles.json`. The constant is the full profile of the SpeechSynthesis type: its XML profile with the RoIS_Common messages listed first, and the RoSO function `actuation`.
+- Add the profile constants of the other twelve standard component types to `./components`, so all 18 are there, generated from `schema/profiles.json`.
+- Add `BranchSchema`, `arguments` on query and event profiles, `read_only` on parameter profiles, and an optional `name` on engine profiles.
 
 ### Changed
 
-- **Breaking:** `command_id` is optional on a command unit, since the engine assigns it, and `ConcurrentCommandsSchema` holds `branch_list`, branches of commands that run in order. Query and event profiles gain `arguments`, and parameter profiles `read_only`.
+- **Breaking:** `ConcurrentCommandsSchema` takes `branch_list`, a list of branches each with an ordered `command_list`, instead of a flat `command_list`.
+- **Breaking:** a parameter profile without a default has `default_value: null` instead of `""`.
+- **Breaking:** `command_id` is optional on a command unit, since the engine assigns it.
 
 ### Removed
 

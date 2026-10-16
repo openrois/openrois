@@ -54,7 +54,7 @@
     },
     "EventMessageProfile": {
       "additionalProperties": false,
-      "description": "An event message profile.\n\nMaps to EventMessageProfileType in XML-Profiles.xsd. AudioStreaming.xml gives an\nevent arguments, which the XSD does not define for events, and the profile wins\n(docs/rois-reference.md, section 16). A client passes the argument values in the\nsubscribe condition.\n\nAttributes:\n    arguments: The input arguments of this event.",
+      "description": "An event message profile.\n\nMaps to EventMessageProfileType in XML-Profiles.xsd.\n\nAttributes:\n    arguments: The arguments of this event. The XSD gives an event no Arguments,\n        but the streaming profiles have them (notify_stream_status names stream_id),\n        and the codec follows the profiles. A subscription selects them with its\n        condition.",
       "properties": {
         "name": {
           "title": "Name",
@@ -149,10 +149,22 @@
     },
     "HRIEngineProfileType": {
       "additionalProperties": false,
-      "description": "Describes an HRI Engine's composition of sub-engines and components.\n\nMaps to HRIEngineProfileType in XML-Profiles.xsd, field for field. The profile\nnames its components by ref only, as the XSD does. The get_profile result carries\ntheir HRIComponentProfiles next to it.\n\nAttributes:\n    identifier: The engine's structured identifier.\n    sub_profiles: One profile per child engine (XSD SubProfile).\n    component_ids: Fully qualified refs of every component reachable through this\n        engine, including the components of its child engines (XSD HRIComponent).\n    parameter_profiles: Engine-level parameter declarations.",
+      "description": "Describes an HRI Engine's composition of sub-engines and components.\n\nMaps to HRIEngineProfileType in XML-Profiles.xsd, field for field. The profile\nnames its components by ref only, as the XSD does. The get_profile result carries\ntheir HRIComponentProfiles next to it.\n\nAttributes:\n    identifier: The engine's structured identifier.\n    name: The gml:name of the engine, or None when it has none.\n    sub_profiles: One profile per child engine (XSD SubProfile).\n    component_ids: Fully qualified refs of every component reachable through this\n        engine, including the components of its child engines (XSD HRIComponent).\n    parameter_profiles: Engine-level parameter declarations.",
       "properties": {
         "identifier": {
           "$ref": "#/$defs/RoISIdentifierType"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
         },
         "sub_profiles": {
           "items": {
@@ -184,7 +196,7 @@
     },
     "ParameterProfile": {
       "additionalProperties": false,
-      "description": "Describes a parameter's data type and metadata.\n\nMaps to ParameterProfileType in XML-Profiles.xsd.\n\nUsed in both message profiles (Arguments/Results) and component-level\nparameter declarations.\n\nAttributes:\n    name: The parameter name.\n    data_type_ref: Reference to the data type (e.g., 'int', 'DateTime',\n        'RoISIdentifier[]').\n    default_value: Optional default value as a string.\n    description: Optional human-readable description.\n    read_only: Whether set_parameter may change the parameter. True for the\n        parameters the spec lists only under get_parameter, such as\n        ``available_encodings``. Not part of XML-Profiles.xsd.",
+      "description": "Describes a parameter's data type and metadata.\n\nMaps to ParameterProfileType in XML-Profiles.xsd.\n\nUsed in both message profiles (Arguments/Results) and component-level\nparameter declarations.\n\nAttributes:\n    name: The parameter name.\n    data_type_ref: Reference to the data type (e.g., 'int', 'DateTime',\n        'RoISIdentifier[]').\n    default_value: The default value as a string, or None when the profile gives\n        none. An empty default_value reads as None: the profiles write\n        ``default_value=\"\"`` on parameters that have no default.\n    description: Optional human-readable description.\n    read_only: True for a parameter that get_parameter returns and set_parameter\n        refuses. An OpenRoIS extension: the XSD has no such attribute.",
       "properties": {
         "name": {
           "title": "Name",
@@ -194,9 +206,16 @@
           "$ref": "#/$defs/RoISIdentifierType"
         },
         "default_value": {
-          "default": "",
-          "title": "Default Value",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Value"
         },
         "description": {
           "default": "",
@@ -205,7 +224,7 @@
         },
         "read_only": {
           "default": false,
-          "description": "Whether set_parameter may not change the parameter (OpenRoIS extension)",
+          "description": "Read-only parameter, refused by set_parameter (OpenRoIS extension)",
           "title": "Read Only",
           "type": "boolean"
         }
@@ -219,7 +238,7 @@
     },
     "QueryMessageProfile": {
       "additionalProperties": false,
-      "description": "A query message profile.\n\nMaps to QueryMessageProfileType in XML-Profiles.xsd. AudioStreaming.xml gives a\nquery arguments, which the XSD does not define for queries, and the profile wins\n(docs/rois-reference.md, section 16). A client passes the argument values in the\nquery condition, for example ``stream_id = 'audio-1'``.\n\nAttributes:\n    arguments: The input arguments of this query.",
+      "description": "A query message profile.\n\nMaps to QueryMessageProfileType in XML-Profiles.xsd.\n\nAttributes:\n    arguments: The input arguments of this query. The XSD gives a query no\n        Arguments, but the streaming profiles have them (get_stream_status takes\n        stream_id), and the codec follows the profiles.",
       "properties": {
         "name": {
           "title": "Name",

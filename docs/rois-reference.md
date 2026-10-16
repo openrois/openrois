@@ -483,6 +483,182 @@ the specification text and the IDL conflict, it follows the IDL. Known divergenc
    XML profile: `SPEECH_SYNTHESIS_PROFILE` is `SpeechSynthesis.xml` with the RoIS_Common
    messages it includes.
 
+### Draft: entries from the October 2026 validation pass
+
+These entries come from the check of every normative file against the rendered pages
+of the 2.0-beta2 PDF. Each names its row of that validation table. They are drafts:
+the consolidation of section 16 folds them in with the items above, and where an entry
+and an item above disagree (V1 and item 6, V3 and item 3, V26 and item 4) the entry is
+the decided behavior. The precedence behind them: the XML profiles and the XSD decide
+the wire, the specification text decides behavior, the IDL fills gaps, the hpp breaks
+ties. `interfaces/python/tests/_normative_expectations.py` holds the files to these
+entries.
+
+- **V1. `execute` returns the command ids** (Figure 8.10, Table 8.3, Figure 8.5;
+  `RoIS_HRI.idl`).
+  Spec: `execute` takes `command_unit_list` as inout, and the reply carries the command
+  ids the engine assigned.
+  Files: the IDL declares the list as `in` only.
+  OpenRoIS: follows the figure; the engine assigns every `command_id` and returns the
+  sequence with the ids filled in.
+
+- **V3. `ConcurrentCommands` and branches** (Figure 8.11, Tables 8.15 and 8.16, Annex
+  B.1; `XML-Profiles.xsd`).
+  Spec: `ConcurrentCommands` holds a `branch_list` of `Branch`, each a sequential
+  `command_list`.
+  Files: `ConcurrentCommandsType` holds a `command_list` of `CommandMessageType`
+  directly; `BranchType` is declared and never used.
+  OpenRoIS: runs branches in parallel and each branch in order; a flat `command_list`
+  reads as one-command branches. The codec reads both forms and writes the XSD form.
+
+- **V4. Several sub-component profiles** (Figure 8.12, Table 8.34;
+  `XML-Profiles.xsd`).
+  Spec: `sub_component` is 0..1, "only one item may be defined".
+  Files: `SubComponentProfile` is 0..unbounded; every standard profile but
+  SystemInformation and RoISCommon itself names RoISCommon only.
+  OpenRoIS: the reader accepts several; the writer emits what the component declares.
+
+- **V6. `HRIComponent` in an engine profile** (Annex A.4; `XML-Profiles.xsd`).
+  Spec: the values are URNs such as `urn:x-rois:def:HRIComponent:ATR::PersonDetection`.
+  Files: `HRIComponent` is typed `xsd:ID`, which forbids colons and must be unique in the
+  document, so the spec's own engine profile example does not validate.
+  OpenRoIS: treats `HRIComponent` as a plain string and does not run full XSD validation
+  on engine profiles.
+
+- **V7. Type codes are short codes, not URNs** (Annex A, Annex B.2; the profiles).
+  Spec: `data_type_ref` codes are URNs such as `urn:x-rois:def:DataType:ATR::Integer`.
+  Files: short codes with inconsistent case, such as `string`, `String`, `int`,
+  `DateTime`.
+  OpenRoIS: keeps codes verbatim, maps the known codes to Python types (V33) and passes
+  unknown codes through as strings.
+
+- **V8. `get_stream_status`** (Table 8.6 against Table 8.56, Figures 8.9 and 8.28;
+  `AudioStreaming.xml`).
+  Spec: Table 8.6 names the query `query_stream_status`; Table 8.56 and both figures
+  name it `get_stream_status`.
+  Files: `get_stream_status`.
+  OpenRoIS: `get_stream_status`.
+
+- **V9. Arguments on queries and events** (Table 8.56, Figure 8.28;
+  `AudioStreaming.xml`, `VideoStreaming.xml`, `XML-Profiles.xsd`).
+  Spec: `notify_stream_status` lists `stream_id`, `timestamp` and `status` as arguments.
+  Files: the profiles put `stream_id` under `Arguments` and `timestamp` and `status`
+  under `Results`, on `get_stream_status` and `notify_stream_status`; the XSD declares
+  `Arguments` on command message profiles only.
+  OpenRoIS: query and event profiles carry an arguments list; the subscription condition
+  selects the stream and the event detail returns `timestamp` and `status`.
+
+- **V11. SpeechSynthesis voices and languages** (Table 8.51, Figure 8.23;
+  `SpeechSynthesis.xml`, `RoIS_Speech_Synthesis.idl`).
+  Spec: `get_parameter` also returns `synthesizable_languages` (Set<String>) and
+  `synthesizable_characters` (Set<RoIS_Identifier>); `character` is a RoIS_Identifier.
+  Files: two queries, `synthesizable_languages` (result `languages`) and
+  `available_voices` (result `characters`); `character` is a `string`.
+  OpenRoIS: the queries as named in the XML; `get_parameter` returns the five
+  parameters.
+
+- **V13. Navigation parameters and event** (Table 8.53, Figure 8.25; `Navigation.xml`).
+  Spec: `target_position` List<Data> [RLS], mandatory; `time_limit` UnlimitedNatural,
+  optional; no event method.
+  Files: `target_positions` `string[]`; `time_limit` `int` with default `0`; an event
+  `reached_target` with results `target` and `is_final_target`.
+  OpenRoIS: `target_positions` as a list of strings (RLS data serialized);
+  `reached_target` stays.
+
+- **V20. SystemInformation `operable_time`** (Table 8.41, Figure 8.13;
+  `SystemInformation.xml`, `RoIS_System_Information.idl`).
+  Spec: no RoIS_Common methods; `engine_status` returns status and operable time as a
+  List<DateTime>.
+  Files: no RoISCommon sub-profile; `operable_time` is a single `DateTime`; the IDL has
+  the list.
+  OpenRoIS: a single `DateTime` on the wire.
+
+- **V22. Localization defaults and position data** (Tables 8.43, 8.46, 8.48; the three
+  localization profiles).
+  Spec: detection threshold and minimum interval, both optional; position data
+  List<Data> [RLS].
+  Files: `position_data` typed `String[]`; both parameters carry `default_value=""` on an
+  `int`.
+  OpenRoIS: an empty `default_value` means no default; RLS data travels as strings.
+
+- **V24. SpeechRecognition names** (Table 8.49, Figure 8.21; `SpeechRecognition.xml`,
+  `RoIS_Speech_Recognition.idl`).
+  Spec: `set_parameter` takes `languages`, `grammer` and `rule`; `get_parameter` also
+  returns recognizable languages.
+  Files: parameters `rule`, `languages` (default `"jp"`) and `grammar`;
+  `recognizable_languages` is a query.
+  OpenRoIS: the XML names (`grammar`, the query). The default `"jp"` is not an ISO 639-1
+  code; the profile keeps it verbatim and the engine does not validate it.
+
+- **V25. `recognizable_gestures` is read-only** (Table 8.50, Figure 8.22;
+  `GestureRecognition.xml`).
+  Spec: `get_parameter` only, returning recognizable gestures; no `set_parameter`.
+  Files: `recognizable_gestures` is a ParameterProfile, so it is settable in form.
+  OpenRoIS: a read-only parameter; `set_parameter` on it is refused with
+  `BAD_PARAMETER`, the same rule as `available_encodings` and `available_transports` of
+  the streaming components.
+
+- **V26. Reaction `reaction_ref`** (Table 8.52, Figure 8.24; `Reaction.xml`,
+  `RoIS_Reaction.idl`).
+  Spec: `set_parameter` takes a single reaction ref; `get_parameter` returns
+  `available_reactions` and the reaction ref.
+  Files: `available_reactions` is a query and `reaction_ref` the only parameter; the IDL
+  takes a list of reaction refs in `set_parameter`.
+  OpenRoIS: a single `reaction_ref` and the query as named.
+
+- **V33. The type codes in use** (Annex A, all tables; all 18 profiles).
+  Spec: type codes are URNs.
+  Files: twelve spellings in use, ten codes once case is ignored: `string`, `String`,
+  `int`, `bool`, `string[]`, `String[]`, `int[]`, `RoISIdentifier`, `RoISIdentifier[]`,
+  `DateTime`, `Component_Status`, `Stream_Status`.
+  OpenRoIS: this is the mapping table the codec ships, case-insensitive on `string`.
+
+- **V34. Every profile has the same `gml:id`** (Annex A.3; all 18 profiles).
+  Spec: one profile per document, each with its own `gml:id`.
+  Files: every file uses `gml:id="component_profile"`.
+  OpenRoIS: the engine profile writer gives every embedded component profile a unique
+  `gml:id`.
+
+- **V35. The ontology parent of the streaming components** (Table 8.40; `OWL.ttl`).
+  Spec: AudioStreaming and VideoStreaming sit under Function, and the other basic
+  components under Sensing or Actuation.
+  Files: `OWL.ttl` places the streaming types under
+  `https://www.omg.org/spec/RoSO/RoboticServiceOntology/Function`, while Sensing and
+  Actuation are in `https://www.omg.org/spec/RoSO/RoboticServiceFunctionOntology/`, a
+  different ontology namespace.
+  OpenRoIS: reads the function from both namespaces; the streaming components are
+  Function, which sets the bind cardinality to one bind per session.
+
+- **V36. FaceLocalization namespace** (Annex A; `FaceLocalization.xml`).
+  Spec: every profile is in the namespace `http://www.omg.org/spec/RoIS/20240801`.
+  Files: `FaceLocalization.xml` declares `xmlns:rois` with a trailing space,
+  `"http://www.omg.org/spec/RoIS/20240801 "`, which a strict XML parser rejects as an
+  invalid URI.
+  OpenRoIS: the reader strips the surrounding whitespace from that namespace URI before
+  parsing, and reads the file as the RoIS namespace.
+
+The two entries below come from the check of the formal specification (formal/26-06-03)
+and the 20250801 file set against 2.0-beta2. They have no row in the validation table,
+which keeps its 2.0-beta2 numbering.
+
+- **F1. The 20250801 file set and the 20240801 namespace** (formal/26-06-03;
+  `https://www.omg.org/spec/RoIS/20250801/`).
+  Spec: the machine-readable files are published under
+  `https://www.omg.org/spec/RoIS/20250801/`.
+  Files: every profile and the `targetNamespace` of `XML-Profiles.xsd` still declare
+  `http://www.omg.org/spec/RoIS/20240801`.
+  OpenRoIS: treats `http://www.omg.org/spec/RoIS/20250801` as an alias of the
+  `20240801` namespace when reading.
+
+- **F2. `ConcurrentCommands` in the formal text** (Table 8-15 of formal/26-06-03; Annex
+  B.1; `XML-Profiles.xsd`).
+  Spec: Table 8-15 renames the attribute from `branch list` to `command list` and still
+  types it `Branch`; Annex B.1 keeps `branch_list`, and its example is truncated after
+  the first branch while Figure B.1 shows commands A to F.
+  Files: `ConcurrentCommandsType` holds a `command_list` of `CommandMessageType`.
+  OpenRoIS: unchanged from V3. The codec reads both forms and writes the XSD form; its
+  tests use the complete Annex B.1 example of 2.0-beta2.
+
 ---
 
 ## 17. How OpenRoIS Implements RoIS

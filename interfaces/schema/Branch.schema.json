@@ -82,7 +82,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "One branch of a ConcurrentCommands item: commands that run one after another.\n\nMaps to BranchType in XML-Profiles.xsd.\n\nAttributes:\n    command_list: The commands of the branch, in the order they run.",
+  "description": "One branch of a ConcurrentCommands group: commands that run in order.\n\nMaps to BranchType in XML-Profiles.xsd, which ConcurrentCommandsType does not use.\nAnnex B.1 and Tables 8.15 and 8.16 of the specification give ConcurrentCommands a\nbranch_list of branches, and OpenRoIS follows them (docs/rois-reference.md, section\n16).\n\nAttributes:\n    command_list: The commands of the branch, run one after the other.",
   "properties": {
     "command_list": {
       "items": {

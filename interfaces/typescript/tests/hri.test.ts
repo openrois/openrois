@@ -98,15 +98,18 @@ describe("CommandUnitSequenceSchema", () => {
     expect(seq.command_unit_list).toHaveLength(1);
   });
 
-  it("parses a sequence with concurrent branches", () => {
+  it("parses a sequence with concurrent commands", () => {
     const seq = CommandUnitSequenceSchema.parse({
       command_unit_list: [
         {
           branch_list: [
             {
               command_list: [
-                { component_ref: "robot/nav", command_type: "start" },
-                { component_ref: "robot/nav", command_type: "stop" },
+                {
+                  component_ref: "robot/nav",
+                  command_type: "start",
+                  command_id: "cmd-1",
+                },
               ],
             },
           ],

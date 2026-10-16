@@ -38,19 +38,20 @@ export type RoISIdentifierType = z.infer<typeof RoISIdentifierTypeSchema>;
  *     name: The parameter name.
  *     data_type_ref: Reference to the data type (e.g., 'int', 'DateTime',
  *         'RoISIdentifier[]').
- *     default_value: Optional default value as a string.
+ *     default_value: The default value as a string, or None when the profile gives
+ *         none. An empty default_value reads as None: the profiles write
+ *         ``default_value=""`` on parameters that have no default.
  *     description: Optional human-readable description.
- *     read_only: Whether set_parameter may change the parameter. True for the
- *         parameters the spec lists only under get_parameter, such as
- *         ``available_encodings``. Not part of XML-Profiles.xsd.
+ *     read_only: True for a parameter that get_parameter returns and set_parameter
+ *         refuses. An OpenRoIS extension: the XSD has no such attribute.
  */
 
 export const ParameterProfileSchema = z.object({
   name: z.string(),
   data_type_ref: RoISIdentifierTypeSchema,
-  default_value: z.string().default(""),
+  default_value: z.string().nullable().default(null),
   description: z.string().default(""),
-  read_only: z.boolean().default(false), // Whether set_parameter may not change the parameter (OpenRoIS extension)
+  read_only: z.boolean().default(false), // Read-only parameter, refused by set_parameter (OpenRoIS extension)
 }).strict();
 export type ParameterProfile = z.infer<typeof ParameterProfileSchema>;
 
@@ -93,13 +94,13 @@ export type ComponentFunction = z.infer<typeof ComponentFunctionSchema>;
 /**
  * An event message profile.
  * 
- * Maps to EventMessageProfileType in XML-Profiles.xsd. AudioStreaming.xml gives an
- * event arguments, which the XSD does not define for events, and the profile wins
- * (docs/rois-reference.md, section 16). A client passes the argument values in the
- * subscribe condition.
+ * Maps to EventMessageProfileType in XML-Profiles.xsd.
  * 
  * Attributes:
- *     arguments: The input arguments of this event.
+ *     arguments: The arguments of this event. The XSD gives an event no Arguments,
+ *         but the streaming profiles have them (notify_stream_status names stream_id),
+ *         and the codec follows the profiles. A subscription selects them with its
+ *         condition.
  */
 
 export const EventMessageProfileSchema = z.object({
@@ -112,13 +113,12 @@ export type EventMessageProfile = z.infer<typeof EventMessageProfileSchema>;
 /**
  * A query message profile.
  * 
- * Maps to QueryMessageProfileType in XML-Profiles.xsd. AudioStreaming.xml gives a
- * query arguments, which the XSD does not define for queries, and the profile wins
- * (docs/rois-reference.md, section 16). A client passes the argument values in the
- * query condition, for example ``stream_id = 'audio-1'``.
+ * Maps to QueryMessageProfileType in XML-Profiles.xsd.
  * 
  * Attributes:
- *     arguments: The input arguments of this query.
+ *     arguments: The input arguments of this query. The XSD gives a query no
+ *         Arguments, but the streaming profiles have them (get_stream_status takes
+ *         stream_id), and the codec follows the profiles.
  */
 
 export const QueryMessageProfileSchema = z.object({
@@ -137,6 +137,7 @@ export type QueryMessageProfile = z.infer<typeof QueryMessageProfileSchema>;
  * 
  * Attributes:
  *     identifier: The engine's structured identifier.
+ *     name: The gml:name of the engine, or None when it has none.
  *     sub_profiles: One profile per child engine (XSD SubProfile).
  *     component_ids: Fully qualified refs of every component reachable through this
  *         engine, including the components of its child engines (XSD HRIComponent).
@@ -145,12 +146,14 @@ export type QueryMessageProfile = z.infer<typeof QueryMessageProfileSchema>;
 
 export interface HRIEngineProfileType {
   identifier: RoISIdentifierType;
+  name?: string | null;
   sub_profiles?: HRIEngineProfileType[];
   component_ids?: string[];
   parameter_profiles?: ParameterProfile[];
 }
 export const HRIEngineProfileTypeSchema: z.ZodType<any> = z.lazy(() => z.object({
     identifier: RoISIdentifierTypeSchema,
+    name: z.string().nullable().default(null),
     sub_profiles: z.array(HRIEngineProfileTypeSchema).optional(),
     component_ids: z.array(z.string()).optional(),
     parameter_profiles: z.array(ParameterProfileSchema).optional(),

@@ -3,7 +3,7 @@
   "$defs": {
     "ParameterProfile": {
       "additionalProperties": false,
-      "description": "Describes a parameter's data type and metadata.\n\nMaps to ParameterProfileType in XML-Profiles.xsd.\n\nUsed in both message profiles (Arguments/Results) and component-level\nparameter declarations.\n\nAttributes:\n    name: The parameter name.\n    data_type_ref: Reference to the data type (e.g., 'int', 'DateTime',\n        'RoISIdentifier[]').\n    default_value: Optional default value as a string.\n    description: Optional human-readable description.\n    read_only: Whether set_parameter may change the parameter. True for the\n        parameters the spec lists only under get_parameter, such as\n        ``available_encodings``. Not part of XML-Profiles.xsd.",
+      "description": "Describes a parameter's data type and metadata.\n\nMaps to ParameterProfileType in XML-Profiles.xsd.\n\nUsed in both message profiles (Arguments/Results) and component-level\nparameter declarations.\n\nAttributes:\n    name: The parameter name.\n    data_type_ref: Reference to the data type (e.g., 'int', 'DateTime',\n        'RoISIdentifier[]').\n    default_value: The default value as a string, or None when the profile gives\n        none. An empty default_value reads as None: the profiles write\n        ``default_value=\"\"`` on parameters that have no default.\n    description: Optional human-readable description.\n    read_only: True for a parameter that get_parameter returns and set_parameter\n        refuses. An OpenRoIS extension: the XSD has no such attribute.",
       "properties": {
         "name": {
           "title": "Name",
@@ -13,9 +13,16 @@
           "$ref": "#/$defs/RoISIdentifierType"
         },
         "default_value": {
-          "default": "",
-          "title": "Default Value",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Value"
         },
         "description": {
           "default": "",
@@ -24,7 +31,7 @@
         },
         "read_only": {
           "default": false,
-          "description": "Whether set_parameter may not change the parameter (OpenRoIS extension)",
+          "description": "Read-only parameter, refused by set_parameter (OpenRoIS extension)",
           "title": "Read Only",
           "type": "boolean"
         }

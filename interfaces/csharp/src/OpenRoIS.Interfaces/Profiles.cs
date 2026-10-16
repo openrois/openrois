@@ -75,11 +75,12 @@ namespace OpenRoIS.Interfaces.Profiles
     ///     name: The parameter name.
     ///     data_type_ref: Reference to the data type (e.g., 'int', 'DateTime',
     ///         'RoISIdentifier[]').
-    ///     default_value: Optional default value as a string.
+    ///     default_value: The default value as a string, or None when the profile gives
+    ///         none. An empty default_value reads as None: the profiles write
+    ///         ``default_value=""`` on parameters that have no default.
     ///     description: Optional human-readable description.
-    ///     read_only: Whether set_parameter may change the parameter. True for the
-    ///         parameters the spec lists only under get_parameter, such as
-    ///         ``available_encodings``. Not part of XML-Profiles.xsd.
+    ///     read_only: True for a parameter that get_parameter returns and set_parameter
+    ///         refuses. An OpenRoIS extension: the XSD has no such attribute.
     /// </summary>
     public sealed class ParameterProfile : IEquatable<ParameterProfile>
     {
@@ -88,13 +89,13 @@ namespace OpenRoIS.Interfaces.Profiles
         [JsonPropertyName("data_type_ref")]
         public RoISIdentifierType DataTypeRef { get; }
         [JsonPropertyName("default_value")]
-        public string DefaultValue { get; }
+        public string? DefaultValue { get; }
         [JsonPropertyName("description")]
         public string Description { get; }
         [JsonPropertyName("read_only")]
         public bool ReadOnly { get; }
 
-        public ParameterProfile(string name, RoISIdentifierType dataTypeRef, string defaultValue = "", string description = "", bool readOnly = false)
+        public ParameterProfile(string name, RoISIdentifierType dataTypeRef, string? defaultValue = null, string description = "", bool readOnly = false)
         {
             Name = name;
             DataTypeRef = dataTypeRef;
@@ -201,13 +202,13 @@ namespace OpenRoIS.Interfaces.Profiles
     /// <summary>
     /// An event message profile.
     /// 
-    /// Maps to EventMessageProfileType in XML-Profiles.xsd. AudioStreaming.xml gives an
-    /// event arguments, which the XSD does not define for events, and the profile wins
-    /// (docs/rois-reference.md, section 16). A client passes the argument values in the
-    /// subscribe condition.
+    /// Maps to EventMessageProfileType in XML-Profiles.xsd.
     /// 
     /// Attributes:
-    ///     arguments: The input arguments of this event.
+    ///     arguments: The arguments of this event. The XSD gives an event no Arguments,
+    ///         but the streaming profiles have them (notify_stream_status names stream_id),
+    ///         and the codec follows the profiles. A subscription selects them with its
+    ///         condition.
     /// </summary>
     public sealed class EventMessageProfile : IEquatable<EventMessageProfile>
     {
@@ -251,13 +252,12 @@ namespace OpenRoIS.Interfaces.Profiles
     /// <summary>
     /// A query message profile.
     /// 
-    /// Maps to QueryMessageProfileType in XML-Profiles.xsd. AudioStreaming.xml gives a
-    /// query arguments, which the XSD does not define for queries, and the profile wins
-    /// (docs/rois-reference.md, section 16). A client passes the argument values in the
-    /// query condition, for example ``stream_id = 'audio-1'``.
+    /// Maps to QueryMessageProfileType in XML-Profiles.xsd.
     /// 
     /// Attributes:
-    ///     arguments: The input arguments of this query.
+    ///     arguments: The input arguments of this query. The XSD gives a query no
+    ///         Arguments, but the streaming profiles have them (get_stream_status takes
+    ///         stream_id), and the codec follows the profiles.
     /// </summary>
     public sealed class QueryMessageProfile : IEquatable<QueryMessageProfile>
     {
@@ -307,6 +307,7 @@ namespace OpenRoIS.Interfaces.Profiles
     /// 
     /// Attributes:
     ///     identifier: The engine's structured identifier.
+    ///     name: The gml:name of the engine, or None when it has none.
     ///     sub_profiles: One profile per child engine (XSD SubProfile).
     ///     component_ids: Fully qualified refs of every component reachable through this
     ///         engine, including the components of its child engines (XSD HRIComponent).
@@ -316,6 +317,8 @@ namespace OpenRoIS.Interfaces.Profiles
     {
         [JsonPropertyName("identifier")]
         public RoISIdentifierType Identifier { get; }
+        [JsonPropertyName("name")]
+        public string? Name { get; }
         [JsonPropertyName("sub_profiles")]
         public IReadOnlyList<HRIEngineProfileType>? SubProfiles { get; }
         [JsonPropertyName("component_ids")]
@@ -323,9 +326,10 @@ namespace OpenRoIS.Interfaces.Profiles
         [JsonPropertyName("parameter_profiles")]
         public IReadOnlyList<ParameterProfile>? ParameterProfiles { get; }
 
-        public HRIEngineProfileType(RoISIdentifierType identifier, IReadOnlyList<HRIEngineProfileType>? subProfiles = null, IReadOnlyList<string>? componentIds = null, IReadOnlyList<ParameterProfile>? parameterProfiles = null)
+        public HRIEngineProfileType(RoISIdentifierType identifier, string? name = null, IReadOnlyList<HRIEngineProfileType>? subProfiles = null, IReadOnlyList<string>? componentIds = null, IReadOnlyList<ParameterProfile>? parameterProfiles = null)
         {
             Identifier = identifier;
+            Name = name;
             SubProfiles = subProfiles;
             ComponentIds = componentIds;
             ParameterProfiles = parameterProfiles;
@@ -335,7 +339,7 @@ namespace OpenRoIS.Interfaces.Profiles
         {
             if (ReferenceEquals(other, this)) return true;
             if (other is null) return false;
-            return Equals(Identifier, other.Identifier) && Equals(SubProfiles, other.SubProfiles) && Equals(ComponentIds, other.ComponentIds) && Equals(ParameterProfiles, other.ParameterProfiles);
+            return Equals(Identifier, other.Identifier) && Equals(Name, other.Name) && Equals(SubProfiles, other.SubProfiles) && Equals(ComponentIds, other.ComponentIds) && Equals(ParameterProfiles, other.ParameterProfiles);
         }
 
         public override bool Equals(object? obj)
@@ -345,7 +349,7 @@ namespace OpenRoIS.Interfaces.Profiles
 
         public override int GetHashCode()
         {
-            return System.HashCode.Combine(Identifier, SubProfiles, ComponentIds, ParameterProfiles);
+            return System.HashCode.Combine(Identifier, Name, SubProfiles, ComponentIds, ParameterProfiles);
         }
 
         public static bool operator ==(HRIEngineProfileType? left, HRIEngineProfileType? right)

@@ -13,16 +13,16 @@
  *     event type: UNSUPPORTED when none does, BAD_PARAMETER when several do.
  *   - An actuation component takes commands and parameters only from the client
  *     that bound it. Another client gets OUT_OF_RESOURCES.
- *   - The command table holds every command_id. A command_id already in it, or
- *     one that starts with the engine id and a slash like the ids the engine
- *     assigns, is answered with BAD_PARAMETER. Each command ends exactly once
- *     with a rois.command.completed notification, and get_command_result reads
- *     its results.
- *   - execute runs its items in order, waits each item's delay_time, and runs
- *     the commands of a ConcurrentCommands item at the same time, each after its
- *     own delay_time. When a command ends with a status other than OK, the
- *     sequence stops: the commands of the items after it complete with ABORT and
- *     never run.
+ *   - The engine assigns every command_id, mock/cmd-1 for example, ignores the
+ *     ids a client sends, and returns the sequence with the ids in the execute
+ *     result. Each command ends exactly once with a rois.command.completed
+ *     notification, and get_command_result reads its results.
+ *   - execute runs its items in order and waits each item's delay_time. The
+ *     branches of a ConcurrentCommands item run at the same time, each branch
+ *     runs its commands in order, each after its own delay_time, and the next
+ *     item waits for every branch. When a command ends with a status other than
+ *     OK, the sequence stops: the rest of its branch and the commands of the
+ *     items after it complete with ABORT and never run.
  *   - The ids the engine assigns, for subscriptions, events and set_parameter
  *     commands, start with the engine id, like refs: mock/sub-1.
  *   - Navigation start ends after a while with the reached_target event, and
@@ -154,9 +154,14 @@ function names(messages: readonly { name: string }[] | undefined): string[] {
   return (messages ?? []).map((message) => message.name);
 }
 
-/** The commands of one item of an execute: a command, or the commands of a group. */
+/** The branches of one item of an execute: one for a command, those of a group. */
+function branchesOf(item: CommandUnitSequenceItem): readonly (readonly CommandUnit[])[] {
+  return "branch_list" in item ? item.branch_list.map((branch) => branch.command_list) : [[item]];
+}
+
+/** The commands of one item of an execute, branch by branch. */
 function unitsOf(item: CommandUnitSequenceItem): readonly CommandUnit[] {
-  return "command_list" in item ? item.command_list : [item];
+  return branchesOf(item).flat();
 }
 
 // ---------------------------------------------------------------------------
@@ -326,7 +331,6 @@ export class MockEngineCore {
       if (units.length === 0) {
         return failed("BAD_PARAMETER");
       }
-      const commandIds = new Set<string>();
       for (const unit of units) {
         const component = this.components.get(unit.component_ref);
         if (!component || !this.declaresCommand(component, unit.command_type)) {
@@ -338,20 +342,24 @@ export class MockEngineCore {
         if (unit.command_type === "set_parameter" && !this.knowsParameters(component, unit.arguments ?? [])) {
           return failed("BAD_PARAMETER");
         }
-        if (
-          this.commands.has(unit.command_id) ||
-          commandIds.has(unit.command_id) ||
-          unit.command_id.startsWith(`${ENGINE_ID}/`)
-        ) {
-          return failed("BAD_PARAMETER");
-        }
-        commandIds.add(unit.command_id);
       }
-      for (const commandId of commandIds) {
+      const named = (unit: CommandUnit): CommandUnit => {
+        const commandId = this.assignId("cmd");
         this.commands.set(commandId, { status: null, results: [] });
-      }
-      void this.runSequence(session, command_unit_list);
-      return ok;
+        return { ...unit, command_id: commandId };
+      };
+      const items: CommandUnitSequenceItem[] = command_unit_list.map((item) =>
+        "branch_list" in item
+          ? {
+              ...item,
+              branch_list: item.branch_list.map((branch) => ({
+                command_list: branch.command_list.map(named),
+              })),
+            }
+          : named(item),
+      );
+      void this.runSequence(session, items);
+      return { return_code: "OK", command_unit_list: items };
     },
 
     "rois.command.get_command_result": (_session, { command_id, condition }) => {
@@ -518,23 +526,19 @@ export class MockEngineCore {
   // -------------------------------------------------------------------------
 
   /**
-   * Run the items of an execute in order, the commands of one item at the same time.
-   * A command that ends other than OK stops the sequence, and the commands of the
-   * later items complete with ABORT.
+   * Run the items of an execute in order, the branches of one item at the same time
+   * and the commands of a branch in order. A command that ends other than OK stops
+   * the sequence: the rest of its branch and the commands of the later items
+   * complete with ABORT.
    */
   private async runSequence(session: Session, items: readonly CommandUnitSequenceItem[]): Promise<void> {
     for (const [index, item] of items.entries()) {
       if (item.delay_time) {
         await this.wait(item.delay_time);
       }
-      const grouped = "command_list" in item;
+      const grouped = "branch_list" in item;
       const statuses = await Promise.all(
-        unitsOf(item).map(async (unit) => {
-          if (grouped && unit.delay_time) {
-            await this.wait(unit.delay_time);
-          }
-          return this.runCommand(session, unit);
-        }),
+        branchesOf(item).map((branch) => this.runBranch(session, branch, grouped)),
       );
       if (statuses.some((status) => status !== "OK")) {
         for (const unit of items.slice(index + 1).flatMap(unitsOf)) {
@@ -543,6 +547,27 @@ export class MockEngineCore {
         return;
       }
     }
+  }
+
+  /** Run the commands of a branch in order, and resolve with the first status other than OK. */
+  private async runBranch(
+    session: Session,
+    branch: readonly CommandUnit[],
+    grouped: boolean,
+  ): Promise<CompletedStatus> {
+    for (const [index, unit] of branch.entries()) {
+      if (grouped && unit.delay_time) {
+        await this.wait(unit.delay_time);
+      }
+      const status = await this.runCommand(session, unit);
+      if (status !== "OK") {
+        for (const rest of branch.slice(index + 1)) {
+          this.complete(session, rest.command_id, "ABORT");
+        }
+        return status;
+      }
+    }
+    return "OK";
   }
 
   /** Run one command until it completes, and resolve with its status. */
@@ -685,7 +710,7 @@ export class MockEngineCore {
   // -------------------------------------------------------------------------
 
   /** A new id the engine assigns, prefixed with the engine id like a ref: mock/sub-1. */
-  private assignId(kind: "param" | "sub" | "evt"): string {
+  private assignId(kind: "cmd" | "param" | "sub" | "evt"): string {
     return `${ENGINE_ID}/${kind}-${this.nextId++}`;
   }
 
