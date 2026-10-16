@@ -40,6 +40,84 @@ result = SearchResult.model_validate({"return_code": "OK", "component_ref_list":
 Components are written with [`openrois-components-core`](../../components/core/README.md),
 and [`openrois-engine`](../../engine/README.md) hosts them.
 
+## Component Profiles
+
+A RoIS component publishes a profile: its name and type, the commands it accepts, the
+queries it answers, the events it sends and the parameters you can get and set. The OMG
+specification writes profiles in XML. You do not need to read or write that XML: this
+package gives you the profiles as Python objects and produces the XML when something asks
+for it.
+
+### The 18 Standard Types
+
+Every component type the specification defines has a constant, from `ROIS_COMMON_PROFILE`
+to `VIDEO_STREAMING_PROFILE`. Pick the one your component implements:
+
+```python
+from openrois.interfaces.components import NAVIGATION_PROFILE
+
+[p.name for p in NAVIGATION_PROFILE.parameter_profiles]
+# ['target_positions', 'time_limit', 'routing_policy']
+```
+
+Each constant already lists the start, stop, suspend, resume and component_status messages
+every basic component shares, and carries the RoSO function (`sensing`, `actuation` or
+`function`) that tells the engine how many clients may bind the component at once.
+
+### Your Own Component Type
+
+When no standard type fits, declare your own. This is the wheelchair of Annex C of the
+specification:
+
+```python
+from openrois.interfaces.declaration import (
+    Command, ComponentDeclaration, Event, Param, Query,
+)
+
+status = [Param("brake_status", "Boolean"), Param("wc_status", "String")]
+
+WHEELCHAIR = ComponentDeclaration(
+    identifier="urn:x-rois:def:component:ACME::Wheelchair",
+    name="wheelchair",
+    function="actuation",
+    commands=[Command("brake", arguments=[Param("status", "Boolean")])],
+    queries=[Query("wc_status_change", results=status)],
+    events=[Event("wc_status_change", results=status)],
+    parameters=[Param("preferred_max_speed", "Double"), Param("mode", "String", default="Tag")],
+)
+
+profile = WHEELCHAIR.profile()  # an HRIComponentProfile, with start, stop, ... included
+xml = WHEELCHAIR.to_xml()       # the RoIS XML profile, as bytes
+```
+
+- `function` is the RoSO class of the component. `actuation` components are bound by one
+  client at a time, `sensing` and `function` components by every client that asks.
+- The component includes RoIS_Common unless you pass `sub_profiles=()` or other URNs.
+- A query and an event may share a name. Any type code is accepted, and
+  `openrois.interfaces.type_codes.python_type()` tells you the Python type of a code
+  (`Any` for one it does not know).
+- `Param(..., read_only=True)` marks a parameter that clients can get but not set.
+
+### Reading and Writing the XML
+
+`openrois.interfaces.xmlcodec` reads and writes the XML forms when you need them, for
+example to load a vendor's profile file or to hand a profile to another RoIS
+implementation:
+
+```python
+from pathlib import Path
+
+from openrois.interfaces.components import standard_registry
+from openrois.interfaces.xmlcodec import read_component_profile, write_component_profile
+
+registry = standard_registry()
+profile = read_component_profile(Path("Wheelchair.xml"), registry=registry)
+xml = write_component_profile(profile, registry=registry)
+```
+
+The registry resolves the profiles a file includes by reference, such as RoIS_Common. The
+module also reads and writes engine profiles and the command unit sequences of `execute`.
+
 ## Module Structure
 
 | Module | Contents |
@@ -51,7 +129,10 @@ and [`openrois-engine`](../../engine/README.md) hosts them.
 | `openrois.interfaces.values` | `encode_value` and `decode_value`, the string form of a typed value in `Result.value`, `Parameter.value` and `Argument.value` |
 | `openrois.interfaces.condition` | The CQL2-Text subset every `condition` uses: `parse_condition`, `Condition`, the `component_ref` and `component_type` properties, and the `eq`, `like` and `all_of` builders |
 | `openrois.interfaces.catalog` | Service-side method catalog: params and result models for every `rois.*` method, the `SystemIF`, `CommandIF`, `QueryIF` and `EventIF` protocols, the method and notification tables, the `EXTENSIONS` registry, `JsonRpcErrorCode` |
-| `openrois.interfaces.components` | The profile constants of the basic components (`NAVIGATION_PROFILE`, ...) and per-component typed message models |
+| `openrois.interfaces.components` | The profile constants of the 18 standard component types (`NAVIGATION_PROFILE`, ...), `standard_registry()`, and per-component typed message models |
+| `openrois.interfaces.declaration` | `ComponentDeclaration`, `Command`, `Query`, `Event` and `Param`, for a component type of your own |
+| `openrois.interfaces.xmlcodec` | The RoIS XML reader and writer for component profiles, engine profiles and command unit sequences, and `ProfileRegistry` |
+| `openrois.interfaces.type_codes` | `python_type()`, the Python type of a `data_type_ref` code |
 
 ## Development
 
@@ -69,6 +150,14 @@ to a local copy of the OMG RoIS Framework 2.0 machine-readable files.
 
 After regenerating the schema, regenerate the other two stacks as described in
 [AGENTS.md](../../AGENTS.md).
+
+The standard profile constants in `components/standard_profiles.py` are generated from the
+same normative files. Regenerate them, or check that they are current, with:
+
+```bash
+OPENROIS_NORMATIVE_DIR=/path/to/machine-readable python tools/generate_profiles.py
+OPENROIS_NORMATIVE_DIR=/path/to/machine-readable python tools/generate_profiles.py --check
+```
 
 ## License
 

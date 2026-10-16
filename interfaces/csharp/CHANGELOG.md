@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add `Branch`, `Arguments` on query and event profiles, `ReadOnly` on parameter profiles, and an optional `Name` on engine profiles.
+
+### Changed
+
+- **Breaking:** `ConcurrentCommands` holds `BranchList`, a list of branches each with an ordered `CommandList`, instead of a flat `CommandList`.
+- **Breaking:** a parameter profile without a default has a null `DefaultValue` instead of an empty string.
+
 ## [0.1.0-alpha.4] - 2026-10-08
 
 ### Changed

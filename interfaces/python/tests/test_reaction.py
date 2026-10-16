@@ -3,7 +3,7 @@
 import pytest
 
 from openrois.interfaces.common import ComponentStatus
-from openrois.interfaces.components.reaction import (
+from openrois.interfaces.components import (
     REACTION_URN,
     ReactionGetParameterResult,
     ReactionSetParameter,

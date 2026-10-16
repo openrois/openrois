@@ -58,14 +58,811 @@ export const ROIS_COMMON_PROFILE: HRIComponentProfile = {
             codebook_ref: "",
             version: "",
           },
-          default_value: "",
+          default_value: null,
           description: "",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
   ],
   event_profiles: [],
   parameter_profiles: [],
+};
+
+/** The OMG AudioStreaming profile. */
+export const AUDIO_STREAMING_PROFILE: HRIComponentProfile = {
+  identifier: {
+    authority: "OMG",
+    code: "AudioStreaming",
+    codebook_ref: "",
+    version: "",
+  },
+  name: "audio_streaming",
+  function: "function",
+  sub_component_profiles: [
+    "urn:x-rois:def:Component:OMG::RoISCommon",
+  ],
+  command_profiles: [
+    {
+      name: "start",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "stop",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "suspend",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "resume",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "connect_stream",
+      results: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "disconnect_stream",
+      results: [],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+      timeout: null,
+    },
+    {
+      name: "suspend_stream",
+      results: [],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+      timeout: null,
+    },
+    {
+      name: "resume_stream",
+      results: [],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+      timeout: null,
+    },
+  ],
+  query_profiles: [
+    {
+      name: "component_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Component_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+    {
+      name: "get_stream_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Stream_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "",
+          read_only: false,
+        },
+      ],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+    },
+  ],
+  event_profiles: [
+    {
+      name: "notify_stream_status",
+      results: [
+        {
+          name: "timestamp",
+          data_type_ref: {
+            authority: "",
+            code: "DateTime",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "time when status changed",
+          read_only: false,
+        },
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Stream_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "status of the stream",
+          read_only: false,
+        },
+      ],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+    },
+  ],
+  parameter_profiles: [
+    {
+      name: "encoding_parameters",
+      data_type_ref: {
+        authority: "",
+        code: "String",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "parameters to encode the audio stream",
+      read_only: false,
+    },
+    {
+      name: "transport_parameters",
+      data_type_ref: {
+        authority: "",
+        code: "String",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "parameters to transport the audio stream",
+      read_only: false,
+    },
+    {
+      name: "available_encodings",
+      data_type_ref: {
+        authority: "",
+        code: "String",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "available parameters to encode the audio stream",
+      read_only: true,
+    },
+    {
+      name: "available_transports",
+      data_type_ref: {
+        authority: "",
+        code: "String",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "available parameters to transport the audio stream",
+      read_only: true,
+    },
+  ],
+};
+
+/** The OMG FaceDetection profile. */
+export const FACE_DETECTION_PROFILE: HRIComponentProfile = {
+  identifier: {
+    authority: "OMG",
+    code: "FaceDetection",
+    codebook_ref: "",
+    version: "",
+  },
+  name: "face_detecter",
+  function: "sensing",
+  sub_component_profiles: [
+    "urn:x-rois:def:Component:OMG::RoISCommon",
+  ],
+  command_profiles: [
+    {
+      name: "start",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "stop",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "suspend",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "resume",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+  ],
+  query_profiles: [
+    {
+      name: "component_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Component_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+  ],
+  event_profiles: [
+    {
+      name: "face_detected",
+      results: [
+        {
+          name: "number",
+          data_type_ref: {
+            authority: "",
+            code: "int",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "number of detected faces",
+          read_only: false,
+        },
+        {
+          name: "timestamp",
+          data_type_ref: {
+            authority: "",
+            code: "DateTime",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "time when measuered",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+  ],
+  parameter_profiles: [],
+};
+
+/** The OMG FaceLocalization profile. */
+export const FACE_LOCALIZATION_PROFILE: HRIComponentProfile = {
+  identifier: {
+    authority: "OMG",
+    code: "FaceLocalization",
+    codebook_ref: "",
+    version: "",
+  },
+  name: "face_localizer",
+  function: "sensing",
+  sub_component_profiles: [
+    "urn:x-rois:def:Component:OMG::RoISCommon",
+  ],
+  command_profiles: [
+    {
+      name: "start",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "stop",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "suspend",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "resume",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+  ],
+  query_profiles: [
+    {
+      name: "component_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Component_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+  ],
+  event_profiles: [
+    {
+      name: "face_localized",
+      results: [
+        {
+          name: "face_ref",
+          data_type_ref: {
+            authority: "",
+            code: "RoISIdentifier[]",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "list of face IDs",
+          read_only: false,
+        },
+        {
+          name: "timestamp",
+          data_type_ref: {
+            authority: "",
+            code: "DateTime",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "time when measured",
+          read_only: false,
+        },
+        {
+          name: "position_data",
+          data_type_ref: {
+            authority: "",
+            code: "String[]",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "position of detected faces in comma seperated double values [x, y, th]",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+  ],
+  parameter_profiles: [
+    {
+      name: "detection_threshold",
+      data_type_ref: {
+        authority: "",
+        code: "int",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "threshold for displacement, for event notification",
+      read_only: false,
+    },
+    {
+      name: "minimum_interval",
+      data_type_ref: {
+        authority: "",
+        code: "int",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "minimul interval to kept between event notifications",
+      read_only: false,
+    },
+  ],
+};
+
+/** The OMG Follow profile. */
+export const FOLLOW_PROFILE: HRIComponentProfile = {
+  identifier: {
+    authority: "OMG",
+    code: "Follow",
+    codebook_ref: "",
+    version: "",
+  },
+  name: "follower",
+  function: "actuation",
+  sub_component_profiles: [
+    "urn:x-rois:def:Component:OMG::RoISCommon",
+  ],
+  command_profiles: [
+    {
+      name: "start",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "stop",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "suspend",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "resume",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+  ],
+  query_profiles: [
+    {
+      name: "component_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Component_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+  ],
+  event_profiles: [],
+  parameter_profiles: [
+    {
+      name: "target_object_ref",
+      data_type_ref: {
+        authority: "",
+        code: "RoISIdentifier",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "ID of the object/person to follow",
+      read_only: false,
+    },
+    {
+      name: "distance",
+      data_type_ref: {
+        authority: "",
+        code: "int",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "minimum distance between target and the robot",
+      read_only: false,
+    },
+    {
+      name: "time_limit",
+      data_type_ref: {
+        authority: "",
+        code: "int",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "time limit to cancel following in case if target is lost",
+      read_only: false,
+    },
+  ],
+};
+
+/** The OMG GestureRecognition profile. */
+export const GESTURE_RECOGNITION_PROFILE: HRIComponentProfile = {
+  identifier: {
+    authority: "OMG",
+    code: "GestureRecognition",
+    codebook_ref: "",
+    version: "",
+  },
+  name: "gesture_recognizer",
+  function: "sensing",
+  sub_component_profiles: [
+    "urn:x-rois:def:Component:OMG::RoISCommon",
+  ],
+  command_profiles: [
+    {
+      name: "start",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "stop",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "suspend",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "resume",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+  ],
+  query_profiles: [
+    {
+      name: "component_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Component_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+  ],
+  event_profiles: [
+    {
+      name: "gesture_recognized",
+      results: [
+        {
+          name: "gesture_ref",
+          data_type_ref: {
+            authority: "",
+            code: "RoISIdentifier[]",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "list of gesture IDs",
+          read_only: false,
+        },
+        {
+          name: "timestamp",
+          data_type_ref: {
+            authority: "",
+            code: "DateTime",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "time when measured",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+  ],
+  parameter_profiles: [
+    {
+      name: "recognizable_gestures",
+      data_type_ref: {
+        authority: "",
+        code: "RoISIdentifier[]",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "list of gesture IDs this recognizer can recognize",
+      read_only: true,
+    },
+  ],
+};
+
+/** The OMG Move profile. */
+export const MOVE_PROFILE: HRIComponentProfile = {
+  identifier: {
+    authority: "OMG",
+    code: "Move",
+    codebook_ref: "",
+    version: "",
+  },
+  name: "move",
+  function: "actuation",
+  sub_component_profiles: [
+    "urn:x-rois:def:Component:OMG::RoISCommon",
+  ],
+  command_profiles: [
+    {
+      name: "start",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "stop",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "suspend",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "resume",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+  ],
+  query_profiles: [
+    {
+      name: "component_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Component_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+  ],
+  event_profiles: [],
+  parameter_profiles: [
+    {
+      name: "line",
+      data_type_ref: {
+        authority: "",
+        code: "int[]",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "distance in mm and orientation in deg",
+      read_only: false,
+    },
+    {
+      name: "curve",
+      data_type_ref: {
+        authority: "",
+        code: "int[]",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "radius in mm and direction in deg",
+      read_only: false,
+    },
+    {
+      name: "time",
+      data_type_ref: {
+        authority: "",
+        code: "int",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "time for motion",
+      read_only: false,
+    },
+  ],
 };
 
 /** The OMG Navigation profile. */
@@ -119,10 +916,12 @@ export const NAVIGATION_PROFILE: HRIComponentProfile = {
             codebook_ref: "",
             version: "",
           },
-          default_value: "",
+          default_value: null,
           description: "",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
   ],
   event_profiles: [
@@ -137,8 +936,9 @@ export const NAVIGATION_PROFILE: HRIComponentProfile = {
             codebook_ref: "",
             version: "",
           },
-          default_value: "",
+          default_value: null,
           description: "reached target destination",
+          read_only: false,
         },
         {
           name: "is_final_target",
@@ -148,10 +948,12 @@ export const NAVIGATION_PROFILE: HRIComponentProfile = {
             codebook_ref: "",
             version: "",
           },
-          default_value: "",
+          default_value: null,
           description: "if it is final destination point",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
   ],
   parameter_profiles: [
@@ -163,8 +965,9 @@ export const NAVIGATION_PROFILE: HRIComponentProfile = {
         codebook_ref: "",
         version: "",
       },
-      default_value: "",
+      default_value: null,
       description: "navigation target positions",
+      read_only: false,
     },
     {
       name: "time_limit",
@@ -176,6 +979,7 @@ export const NAVIGATION_PROFILE: HRIComponentProfile = {
       },
       default_value: "0",
       description: "intended time limit to complete navigation",
+      read_only: false,
     },
     {
       name: "routing_policy",
@@ -187,6 +991,7 @@ export const NAVIGATION_PROFILE: HRIComponentProfile = {
       },
       default_value: "time",
       description: "routing policy: 'time' priority or 'distance' priority",
+      read_only: false,
     },
   ],
 };
@@ -242,10 +1047,12 @@ export const PERSON_DETECTION_PROFILE: HRIComponentProfile = {
             codebook_ref: "",
             version: "",
           },
-          default_value: "",
+          default_value: null,
           description: "",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
   ],
   event_profiles: [
@@ -260,8 +1067,9 @@ export const PERSON_DETECTION_PROFILE: HRIComponentProfile = {
             codebook_ref: "",
             version: "",
           },
-          default_value: "",
+          default_value: null,
           description: "number of detected persons",
+          read_only: false,
         },
         {
           name: "timestamp",
@@ -271,13 +1079,240 @@ export const PERSON_DETECTION_PROFILE: HRIComponentProfile = {
             codebook_ref: "",
             version: "",
           },
-          default_value: "",
+          default_value: null,
           description: "time when measuered",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
   ],
   parameter_profiles: [],
+};
+
+/** The OMG PersonIdentification profile. */
+export const PERSON_IDENTIFICATION_PROFILE: HRIComponentProfile = {
+  identifier: {
+    authority: "OMG",
+    code: "PersonIdentification",
+    codebook_ref: "",
+    version: "",
+  },
+  name: "person_identifier",
+  function: "sensing",
+  sub_component_profiles: [
+    "urn:x-rois:def:Component:OMG::RoISCommon",
+  ],
+  command_profiles: [
+    {
+      name: "start",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "stop",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "suspend",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "resume",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+  ],
+  query_profiles: [
+    {
+      name: "component_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Component_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+  ],
+  event_profiles: [
+    {
+      name: "person_identified",
+      results: [
+        {
+          name: "person_ref",
+          data_type_ref: {
+            authority: "",
+            code: "RoISIdentifier[]",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "list of person IDs",
+          read_only: false,
+        },
+        {
+          name: "timestamp",
+          data_type_ref: {
+            authority: "",
+            code: "DateTime",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "time when measuered",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+  ],
+  parameter_profiles: [],
+};
+
+/** The OMG PersonLocalization profile. */
+export const PERSON_LOCALIZATION_PROFILE: HRIComponentProfile = {
+  identifier: {
+    authority: "OMG",
+    code: "PersonLocalization",
+    codebook_ref: "",
+    version: "",
+  },
+  name: "person_localizer",
+  function: "sensing",
+  sub_component_profiles: [
+    "urn:x-rois:def:Component:OMG::RoISCommon",
+  ],
+  command_profiles: [
+    {
+      name: "start",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "stop",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "suspend",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "resume",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+  ],
+  query_profiles: [
+    {
+      name: "component_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Component_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+  ],
+  event_profiles: [
+    {
+      name: "person_localized",
+      results: [
+        {
+          name: "person_ref",
+          data_type_ref: {
+            authority: "",
+            code: "RoISIdentifier[]",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "list of person IDs",
+          read_only: false,
+        },
+        {
+          name: "timestamp",
+          data_type_ref: {
+            authority: "",
+            code: "DateTime",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "time when measured",
+          read_only: false,
+        },
+        {
+          name: "position_data",
+          data_type_ref: {
+            authority: "",
+            code: "String[]",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "position of detected persons in comma seperated double values [x, y, th]",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+  ],
+  parameter_profiles: [
+    {
+      name: "detection_threshold",
+      data_type_ref: {
+        authority: "",
+        code: "int",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "threshold for displacement, for event notification",
+      read_only: false,
+    },
+    {
+      name: "minimum_interval",
+      data_type_ref: {
+        authority: "",
+        code: "int",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "minimul interval to kept between event notifications",
+      read_only: false,
+    },
+  ],
 };
 
 /** The OMG Reaction profile. */
@@ -331,10 +1366,12 @@ export const REACTION_PROFILE: HRIComponentProfile = {
             codebook_ref: "",
             version: "",
           },
-          default_value: "",
+          default_value: null,
           description: "",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
     {
       name: "available_reactions",
@@ -347,10 +1384,12 @@ export const REACTION_PROFILE: HRIComponentProfile = {
             codebook_ref: "",
             version: "",
           },
-          default_value: "",
+          default_value: null,
           description: "list of available reaction IDs, this robot can perform",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
   ],
   event_profiles: [],
@@ -363,8 +1402,419 @@ export const REACTION_PROFILE: HRIComponentProfile = {
         codebook_ref: "",
         version: "",
       },
-      default_value: "",
+      default_value: null,
       description: "Reaction type as ID",
+      read_only: false,
+    },
+  ],
+};
+
+/** The OMG SoundDetection profile. */
+export const SOUND_DETECTION_PROFILE: HRIComponentProfile = {
+  identifier: {
+    authority: "OMG",
+    code: "SoundDetection",
+    codebook_ref: "",
+    version: "",
+  },
+  name: "sound_detecter",
+  function: "sensing",
+  sub_component_profiles: [
+    "urn:x-rois:def:Component:OMG::RoISCommon",
+  ],
+  command_profiles: [
+    {
+      name: "start",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "stop",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "suspend",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "resume",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+  ],
+  query_profiles: [
+    {
+      name: "component_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Component_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+  ],
+  event_profiles: [
+    {
+      name: "sound_detected",
+      results: [
+        {
+          name: "number",
+          data_type_ref: {
+            authority: "",
+            code: "int",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "number of sound sources",
+          read_only: false,
+        },
+        {
+          name: "timestamp",
+          data_type_ref: {
+            authority: "",
+            code: "DateTime",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "time when measuered",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+  ],
+  parameter_profiles: [],
+};
+
+/** The OMG SoundLocalization profile. */
+export const SOUND_LOCALIZATION_PROFILE: HRIComponentProfile = {
+  identifier: {
+    authority: "OMG",
+    code: "SoundLocalization",
+    codebook_ref: "",
+    version: "",
+  },
+  name: "sound_localizer",
+  function: "sensing",
+  sub_component_profiles: [
+    "urn:x-rois:def:Component:OMG::RoISCommon",
+  ],
+  command_profiles: [
+    {
+      name: "start",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "stop",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "suspend",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "resume",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+  ],
+  query_profiles: [
+    {
+      name: "component_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Component_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+  ],
+  event_profiles: [
+    {
+      name: "sound_localized",
+      results: [
+        {
+          name: "sound_ref",
+          data_type_ref: {
+            authority: "",
+            code: "RoISIdentifier[]",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "list of sound source IDs",
+          read_only: false,
+        },
+        {
+          name: "timestamp",
+          data_type_ref: {
+            authority: "",
+            code: "DateTime",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "time when measured",
+          read_only: false,
+        },
+        {
+          name: "position_data",
+          data_type_ref: {
+            authority: "",
+            code: "String[]",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "position of detected sources in comma seperated double values [x, y, th]",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+  ],
+  parameter_profiles: [
+    {
+      name: "detection_threshold",
+      data_type_ref: {
+        authority: "",
+        code: "int",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "threshold for displacement, for event notification",
+      read_only: false,
+    },
+    {
+      name: "minimum_interval",
+      data_type_ref: {
+        authority: "",
+        code: "int",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "minimul interval to kept between event notifications",
+      read_only: false,
+    },
+  ],
+};
+
+/** The OMG SpeechRecognition profile. */
+export const SPEECH_RECOGNITION_PROFILE: HRIComponentProfile = {
+  identifier: {
+    authority: "OMG",
+    code: "SpeechRecognition",
+    codebook_ref: "",
+    version: "",
+  },
+  name: "speech_recognizer",
+  function: "sensing",
+  sub_component_profiles: [
+    "urn:x-rois:def:Component:OMG::RoISCommon",
+  ],
+  command_profiles: [
+    {
+      name: "start",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "stop",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "suspend",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "resume",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+  ],
+  query_profiles: [
+    {
+      name: "component_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Component_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+    {
+      name: "recognizable_languages",
+      results: [
+        {
+          name: "languages",
+          data_type_ref: {
+            authority: "",
+            code: "string[]",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "ISO639-1 languages the speech recognizer can recognize",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+  ],
+  event_profiles: [
+    {
+      name: "speech_input_started",
+      results: [
+        {
+          name: "timestamp",
+          data_type_ref: {
+            authority: "",
+            code: "DateTime",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "time when speech input started",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+    {
+      name: "speech_input_finished",
+      results: [
+        {
+          name: "timestamp",
+          data_type_ref: {
+            authority: "",
+            code: "DateTime",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "time when speech nput ended",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+    {
+      name: "speech_recognized",
+      results: [
+        {
+          name: "recognized_text",
+          data_type_ref: {
+            authority: "",
+            code: "string[]",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "list of recognized sentence or word utterances",
+          read_only: false,
+        },
+        {
+          name: "timestamp",
+          data_type_ref: {
+            authority: "",
+            code: "DateTime",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "time when recognition completed",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+  ],
+  parameter_profiles: [
+    {
+      name: "rule",
+      data_type_ref: {
+        authority: "",
+        code: "string",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: "default",
+      description: "Specifies active rule in the grammer",
+      read_only: false,
+    },
+    {
+      name: "languages",
+      data_type_ref: {
+        authority: "",
+        code: "string[]",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: "jp",
+      description: "ISO639-1 languages the speech recognizer will recognize",
+      read_only: false,
+    },
+    {
+      name: "grammar",
+      data_type_ref: {
+        authority: "",
+        code: "string",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: "default",
+      description: "Specifies grammar for the speech recognizer",
+      read_only: false,
     },
   ],
 };
@@ -420,10 +1870,12 @@ export const SPEECH_SYNTHESIS_PROFILE: HRIComponentProfile = {
             codebook_ref: "",
             version: "",
           },
-          default_value: "",
+          default_value: null,
           description: "",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
     {
       name: "synthesizable_languages",
@@ -436,10 +1888,12 @@ export const SPEECH_SYNTHESIS_PROFILE: HRIComponentProfile = {
             codebook_ref: "",
             version: "",
           },
-          default_value: "",
+          default_value: null,
           description: "list of available languages",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
     {
       name: "available_voices",
@@ -452,10 +1906,12 @@ export const SPEECH_SYNTHESIS_PROFILE: HRIComponentProfile = {
             codebook_ref: "",
             version: "",
           },
-          default_value: "",
+          default_value: null,
           description: "list of available voice characters",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
   ],
   event_profiles: [],
@@ -468,8 +1924,9 @@ export const SPEECH_SYNTHESIS_PROFILE: HRIComponentProfile = {
         codebook_ref: "",
         version: "",
       },
-      default_value: "",
+      default_value: null,
       description: "speech text in plain text",
+      read_only: false,
     },
     {
       name: "ssml_text",
@@ -479,8 +1936,9 @@ export const SPEECH_SYNTHESIS_PROFILE: HRIComponentProfile = {
         codebook_ref: "",
         version: "",
       },
-      default_value: "",
+      default_value: null,
       description: "speech text in SSML text",
+      read_only: false,
     },
     {
       name: "volume",
@@ -492,6 +1950,7 @@ export const SPEECH_SYNTHESIS_PROFILE: HRIComponentProfile = {
       },
       default_value: "50",
       description: "Volume",
+      read_only: false,
     },
     {
       name: "language",
@@ -503,6 +1962,7 @@ export const SPEECH_SYNTHESIS_PROFILE: HRIComponentProfile = {
       },
       default_value: "en",
       description: "Language of the speech",
+      read_only: false,
     },
     {
       name: "character",
@@ -514,6 +1974,7 @@ export const SPEECH_SYNTHESIS_PROFILE: HRIComponentProfile = {
       },
       default_value: "default",
       description: "character of the voice",
+      read_only: false,
     },
   ],
 };
@@ -542,8 +2003,9 @@ export const SYSTEM_INFORMATION_PROFILE: HRIComponentProfile = {
             codebook_ref: "",
             version: "",
           },
-          default_value: "",
+          default_value: null,
           description: "position of robot or its parts in comma seperated double values [x, y, th]",
+          read_only: false,
         },
         {
           name: "robot_ref",
@@ -553,8 +2015,9 @@ export const SYSTEM_INFORMATION_PROFILE: HRIComponentProfile = {
             codebook_ref: "",
             version: "",
           },
-          default_value: "",
+          default_value: null,
           description: "List of robot IDs",
+          read_only: false,
         },
         {
           name: "timestamp",
@@ -564,10 +2027,12 @@ export const SYSTEM_INFORMATION_PROFILE: HRIComponentProfile = {
             codebook_ref: "",
             version: "",
           },
-          default_value: "",
+          default_value: null,
           description: "timestamp of measurement",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
     {
       name: "engine_status",
@@ -580,8 +2045,9 @@ export const SYSTEM_INFORMATION_PROFILE: HRIComponentProfile = {
             codebook_ref: "",
             version: "",
           },
-          default_value: "",
+          default_value: null,
           description: "Operable time of the HRI Engine that includes this basic component",
+          read_only: false,
         },
         {
           name: "status",
@@ -591,12 +2057,277 @@ export const SYSTEM_INFORMATION_PROFILE: HRIComponentProfile = {
             codebook_ref: "",
             version: "",
           },
-          default_value: "",
+          default_value: null,
           description: "Status information of this engine",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
   ],
   event_profiles: [],
   parameter_profiles: [],
+};
+
+/** The OMG VideoStreaming profile. */
+export const VIDEO_STREAMING_PROFILE: HRIComponentProfile = {
+  identifier: {
+    authority: "OMG",
+    code: "VideoStreaming",
+    codebook_ref: "",
+    version: "",
+  },
+  name: "video_streaming",
+  function: "function",
+  sub_component_profiles: [
+    "urn:x-rois:def:Component:OMG::RoISCommon",
+  ],
+  command_profiles: [
+    {
+      name: "start",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "stop",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "suspend",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "resume",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "connect_stream",
+      results: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "disconnect_stream",
+      results: [],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+      timeout: null,
+    },
+    {
+      name: "suspend_stream",
+      results: [],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+      timeout: null,
+    },
+    {
+      name: "resume_stream",
+      results: [],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+      timeout: null,
+    },
+  ],
+  query_profiles: [
+    {
+      name: "component_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Component_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+    {
+      name: "get_stream_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Stream_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "",
+          read_only: false,
+        },
+      ],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+    },
+  ],
+  event_profiles: [
+    {
+      name: "notify_stream_status",
+      results: [
+        {
+          name: "timestamp",
+          data_type_ref: {
+            authority: "",
+            code: "DateTime",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "time when status changed",
+          read_only: false,
+        },
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Stream_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "status of the stream",
+          read_only: false,
+        },
+      ],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: null,
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+    },
+  ],
+  parameter_profiles: [
+    {
+      name: "encoding_parameters",
+      data_type_ref: {
+        authority: "",
+        code: "String",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "parameters to encode the audio stream",
+      read_only: false,
+    },
+    {
+      name: "transport_parameters",
+      data_type_ref: {
+        authority: "",
+        code: "String",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "parameters to transport the audio stream",
+      read_only: false,
+    },
+    {
+      name: "available_encodings",
+      data_type_ref: {
+        authority: "",
+        code: "String",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "available parameters to encode the audio stream",
+      read_only: true,
+    },
+    {
+      name: "available_transports",
+      data_type_ref: {
+        authority: "",
+        code: "String",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: null,
+      description: "available parameters to transport the audio stream",
+      read_only: true,
+    },
+  ],
 };

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 # ---------------------------------------------------------------------------
 # Component function (from the RoSO ontology)
@@ -79,16 +79,29 @@ class ParameterProfile(BaseModel):
         name: The parameter name.
         data_type_ref: Reference to the data type (e.g., 'int', 'DateTime',
             'RoISIdentifier[]').
-        default_value: Optional default value as a string.
+        default_value: The default value as a string, or None when the profile gives
+            none. An empty default_value reads as None: the profiles write
+            ``default_value=""`` on parameters that have no default.
         description: Optional human-readable description.
+        read_only: True for a parameter that get_parameter returns and set_parameter
+            refuses. An OpenRoIS extension: the XSD has no such attribute.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
 
     name: str
     data_type_ref: RoISIdentifierType
-    default_value: str = ""
+    default_value: str | None = None
     description: str = ""
+    read_only: bool = Field(
+        default=False,
+        description="Read-only parameter, refused by set_parameter (OpenRoIS extension)",
+    )
+
+    @field_validator("default_value")
+    @classmethod
+    def _empty_is_none(cls, value: str | None) -> str | None:
+        return value or None
 
 
 # ---------------------------------------------------------------------------
@@ -131,11 +144,13 @@ class QueryMessageProfile(MessageProfile):
 
     Maps to QueryMessageProfileType in XML-Profiles.xsd.
 
-    Queries have results but no arguments (the query_type and condition
-    are passed separately, not as message arguments).
+    Attributes:
+        arguments: The input arguments of this query. The XSD gives a query no
+            Arguments, but the streaming profiles have them (get_stream_status takes
+            stream_id), and the codec follows the profiles.
     """
 
-    pass
+    arguments: list[ParameterProfile] = Field(default_factory=list)
 
 
 class EventMessageProfile(MessageProfile):
@@ -143,10 +158,14 @@ class EventMessageProfile(MessageProfile):
 
     Maps to EventMessageProfileType in XML-Profiles.xsd.
 
-    Events have results (the event payload) but no arguments.
+    Attributes:
+        arguments: The arguments of this event. The XSD gives an event no Arguments,
+            but the streaming profiles have them (notify_stream_status names stream_id),
+            and the codec follows the profiles. A subscription selects them with its
+            condition.
     """
 
-    pass
+    arguments: list[ParameterProfile] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -197,6 +216,7 @@ class HRIEngineProfileType(BaseModel):
 
     Attributes:
         identifier: The engine's structured identifier.
+        name: The gml:name of the engine, or None when it has none.
         sub_profiles: One profile per child engine (XSD SubProfile).
         component_ids: Fully qualified refs of every component reachable through this
             engine, including the components of its child engines (XSD HRIComponent).
@@ -206,6 +226,7 @@ class HRIEngineProfileType(BaseModel):
     model_config = {"frozen": True, "extra": "forbid"}
 
     identifier: RoISIdentifierType
+    name: str | None = None
     sub_profiles: list[HRIEngineProfileType] = Field(default_factory=list)
     component_ids: list[str] = Field(default_factory=list)
     parameter_profiles: list[ParameterProfile] = Field(default_factory=list)

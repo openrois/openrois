@@ -39,7 +39,7 @@ export function ComponentPanel({ client, componentRef, profile }: ComponentPanel
   const isActuation = profile.function === "actuation";
 
   const [paramValues, setParamValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(paramProfiles.map((p) => [p.name, p.default_value])),
+    Object.fromEntries(paramProfiles.map((p) => [p.name, p.default_value ?? ""])),
   );
 
   const queryHook = useQuery(client, componentRef);
@@ -183,7 +183,7 @@ export function ComponentPanel({ client, componentRef, profile }: ComponentPanel
                   <input
                     type="text"
                     className="param-input"
-                    placeholder={p.default_value}
+                    placeholder={p.default_value ?? undefined}
                     value={paramValues[p.name] ?? ""}
                     onChange={(e) =>
                       setParamValues((prev) => ({ ...prev, [p.name]: e.target.value }))

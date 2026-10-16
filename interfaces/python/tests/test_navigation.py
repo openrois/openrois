@@ -3,7 +3,7 @@
 import pytest
 
 from openrois.interfaces.common import ComponentStatus
-from openrois.interfaces.components.navigation import (
+from openrois.interfaces.components import (
     NAVIGATION_URN,
     NavigationGetParameterResult,
     NavigationReachedTargetEvent,

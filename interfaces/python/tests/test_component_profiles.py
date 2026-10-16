@@ -108,7 +108,7 @@ def test_function(profile: HRIComponentProfile, function: ComponentFunction | No
 def test_navigation_parameters() -> None:
     """Navigation declares its three parameters with the XML defaults."""
     defaults = {p.name: p.default_value for p in NAVIGATION_PROFILE.parameter_profiles}
-    assert defaults == {"target_positions": "", "time_limit": "0", "routing_policy": "time"}
+    assert defaults == {"target_positions": None, "time_limit": "0", "routing_policy": "time"}
 
 
 def test_speech_synthesis_messages() -> None:
@@ -134,8 +134,8 @@ def test_speech_synthesis_messages() -> None:
         "character": "string",
     }
     assert defaults == {
-        "speech_text": "",
-        "ssml_text": "",
+        "speech_text": None,
+        "ssml_text": None,
         "volume": "50",
         "language": "en",
         "character": "default",
@@ -147,12 +147,9 @@ def test_profiles_document() -> None:
     document = profiles_document()
     entries = document["profiles"]
     assert isinstance(entries, list)
-    assert [entry["name"] for entry in entries] == [
-        "ROIS_COMMON_PROFILE",
-        "NAVIGATION_PROFILE",
-        "PERSON_DETECTION_PROFILE",
-        "REACTION_PROFILE",
-        "SPEECH_SYNTHESIS_PROFILE",
-        "SYSTEM_INFORMATION_PROFILE",
-    ]
-    assert entries[1]["profile"] == NAVIGATION_PROFILE.model_dump(mode="json")
+    names = [entry["name"] for entry in entries]
+    assert len(names) == 18
+    assert names[0] == "ROIS_COMMON_PROFILE"
+    assert names[1:] == sorted(names[1:])
+    navigation = entries[names.index("NAVIGATION_PROFILE")]
+    assert navigation["profile"] == NAVIGATION_PROFILE.model_dump(mode="json")

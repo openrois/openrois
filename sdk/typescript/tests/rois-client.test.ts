@@ -36,7 +36,7 @@ interface SentUnit {
   component_ref: string;
   command_id: string;
   delay_time?: number;
-  command_list?: SentUnit[];
+  branch_list?: { command_list: SentUnit[] }[];
 }
 
 class MockWebSocket implements WebSocketLike {
@@ -378,9 +378,14 @@ describe("execute()", () => {
       client.execute([
         { component_ref: "reachy_real/head", command_type: "start" },
         {
-          command_list: [
-            { component_ref: "reachy_real/antennas", command_type: "start", command_id: "mine" },
-            { component_ref: "reachy_sim/head", command_type: "start" },
+          branch_list: [
+            {
+              command_list: [
+                { component_ref: "reachy_real/antennas", command_type: "start", command_id: "mine" },
+                { component_ref: "reachy_real/antennas", command_type: "stop" },
+              ],
+            },
+            { command_list: [{ component_ref: "reachy_sim/head", command_type: "start" }] },
           ],
           delay_time: 500,
         },
@@ -388,7 +393,7 @@ describe("execute()", () => {
       { return_code: "OK" },
     );
 
-    expect(ids).toHaveLength(3);
+    expect(ids).toHaveLength(4);
     expect(ids[0]).toMatch(UUID);
     expect(ids[1]).toBe("mine");
     expect(ids[2]).toMatch(UUID);
@@ -397,7 +402,9 @@ describe("execute()", () => {
     expect(mock.last.method).toBe("rois.command.execute");
     expect(sent[0]).toMatchObject({ component_ref: "reachy_real/head", command_id: ids[0] });
     expect(sent[1].delay_time).toBe(500);
-    expect(sent[1].command_list?.map((unit) => unit.command_id)).toEqual(["mine", ids[2]]);
+    expect(
+      sent[1].branch_list?.map((branch) => branch.command_list.map((unit) => unit.command_id)),
+    ).toEqual([["mine", ids[2]], [ids[3]]]);
   });
 
   it("gives every unnamed command its own id", async () => {
