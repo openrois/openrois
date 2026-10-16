@@ -81,17 +81,14 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.12", "3.13"]
-        package: [core, common, kachaka]
+        package: [core, common]
         include:
-          # The OpenRoIS packages each one needs, installed from the tree. The core and
-          # Kachaka tests run components in an engine, against stand-ins for rclpy and
-          # the gRPC API.
+          # The OpenRoIS packages each one needs, installed from the tree. The core
+          # tests run components in an engine, against a stand-in for rclpy.
           - package: core
             needs-packages: -e interfaces/python -e engine
           - package: common
             needs-packages: -e interfaces/python -e components/core
-          - package: kachaka
-            needs-packages: -e interfaces/python -e components/core -e engine
     defaults:
       run:
         working-directory: components/${{ matrix.package }}

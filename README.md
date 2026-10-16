@@ -219,8 +219,7 @@ WsClient(engine, "ws://gateway.example.com:8765").run()
 Clients see the component as `robot_1/navigation`.
 
 See [`examples/adapter-template`](examples/adapter-template) for a complete starting
-point and [`components/kachaka`](components/kachaka) for reference components backed by
-both gRPC and ROS 2.
+point.
 
 ## Project Status
 
@@ -234,7 +233,6 @@ open.
 | Recursive engine, WebSocket server and client, and adapter SDK (Python) | Available, hardening |
 | Gateway process, container image, and Docker Compose with a mock adapter | Available |
 | TypeScript client SDK and web inspector | Available |
-| Reference components for the Preferred Robotics Kachaka (gRPC and ROS 2) | Available |
 | C# client SDK for Unity | In progress |
 | Open reference platform based on the Pollen Robotics Reachy Mini | Planned |
 | Authentication (JWT) and authorization (RBAC) | Planned |
@@ -253,8 +251,7 @@ openrois/
 ├── gateway/             Gateway process and container image (openrois-gateway)
 ├── components/
 │   ├── core/            Component decorators and result helpers (openrois-components-core)
-│   ├── common/          Platform-independent components
-│   └── kachaka/         Preferred Robotics Kachaka components (gRPC and ROS 2)
+│   └── common/          Platform-independent components
 ├── sdk/
 │   ├── typescript/      Client SDK for web and Node.js (@openrois/sdk)
 │   └── csharp/          Client SDK for Unity (OpenRoIS.Sdk, in progress)

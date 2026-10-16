@@ -330,7 +330,6 @@ ran.
 | Gateway | `gateway` | `pytest`, `mypy`, `ruff check src/ tests/ scripts/` |
 | Component SDK | `components/core` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Common components | `components/common` | `pytest`, `mypy`, `ruff check src/ tests/` |
-| Kachaka components | `components/kachaka` | `pytest`, `mypy`, `ruff check src/ tests/` |
 
 Some tests in `interfaces/python` cross-check the models against the normative RoIS
 machine-readable files, which this repository does not redistribute: they carry OMG's
