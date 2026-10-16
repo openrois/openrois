@@ -217,7 +217,7 @@ class TestConcurrentCommands:
                 CommandUnit(component_ref="r/fd", command_type="start", command_id="c2"),
             ],
         )
-        assert len(cc.command_list) == 2
+        assert [len(b.command_list) for b in cc.branch_list] == [1, 1]
         assert cc.delay_time is None
 
     def test_with_delay(self) -> None:

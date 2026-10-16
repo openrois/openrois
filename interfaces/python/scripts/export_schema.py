@@ -53,6 +53,7 @@ from openrois.interfaces.components.system_information import (
 )
 from openrois.interfaces.hri import (
     Argument,
+    Branch,
     CommandUnit,
     CommandUnitSequence,
     ConcurrentCommands,
@@ -94,6 +95,7 @@ MODELS: list[type[BaseModel]] = [
     Parameter,
     Argument,
     CommandUnit,
+    Branch,
     ConcurrentCommands,
     CommandUnitSequence,
     # service
@@ -149,6 +151,7 @@ MODULE_MAP: dict[type, str] = {
     Parameter: "hri",
     Argument: "hri",
     CommandUnit: "hri",
+    Branch: "hri",
     ConcurrentCommands: "hri",
     CommandUnitSequence: "hri",
     ReturnCode: "hri",

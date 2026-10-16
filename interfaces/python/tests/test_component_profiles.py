@@ -154,5 +154,7 @@ def test_profiles_document() -> None:
         "REACTION_PROFILE",
         "SPEECH_SYNTHESIS_PROFILE",
         "SYSTEM_INFORMATION_PROFILE",
+        "AUDIO_STREAMING_PROFILE",
+        "VIDEO_STREAMING_PROFILE",
     ]
     assert entries[1]["profile"] == NAVIGATION_PROFILE.model_dump(mode="json")

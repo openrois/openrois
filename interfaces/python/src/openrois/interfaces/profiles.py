@@ -81,6 +81,9 @@ class ParameterProfile(BaseModel):
             'RoISIdentifier[]').
         default_value: Optional default value as a string.
         description: Optional human-readable description.
+        read_only: Whether set_parameter may change the parameter. True for the
+            parameters the spec lists only under get_parameter, such as
+            ``available_encodings``. Not part of XML-Profiles.xsd.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
@@ -89,6 +92,10 @@ class ParameterProfile(BaseModel):
     data_type_ref: RoISIdentifierType
     default_value: str = ""
     description: str = ""
+    read_only: bool = Field(
+        default=False,
+        description="Whether set_parameter may not change the parameter (OpenRoIS extension)",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -129,24 +136,31 @@ class CommandMessageProfile(MessageProfile):
 class QueryMessageProfile(MessageProfile):
     """A query message profile.
 
-    Maps to QueryMessageProfileType in XML-Profiles.xsd.
+    Maps to QueryMessageProfileType in XML-Profiles.xsd. AudioStreaming.xml gives a
+    query arguments, which the XSD does not define for queries, and the profile wins
+    (docs/rois-reference.md, section 16). A client passes the argument values in the
+    query condition, for example ``stream_id = 'audio-1'``.
 
-    Queries have results but no arguments (the query_type and condition
-    are passed separately, not as message arguments).
+    Attributes:
+        arguments: The input arguments of this query.
     """
 
-    pass
+    arguments: list[ParameterProfile] = Field(default_factory=list)
 
 
 class EventMessageProfile(MessageProfile):
     """An event message profile.
 
-    Maps to EventMessageProfileType in XML-Profiles.xsd.
+    Maps to EventMessageProfileType in XML-Profiles.xsd. AudioStreaming.xml gives an
+    event arguments, which the XSD does not define for events, and the profile wins
+    (docs/rois-reference.md, section 16). A client passes the argument values in the
+    subscribe condition.
 
-    Events have results (the event payload) but no arguments.
+    Attributes:
+        arguments: The input arguments of this event.
     """
 
-    pass
+    arguments: list[ParameterProfile] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------

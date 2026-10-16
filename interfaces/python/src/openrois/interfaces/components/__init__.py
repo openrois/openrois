@@ -46,6 +46,12 @@ from openrois.interfaces.components.speech_synthesis import (
     SPEECH_SYNTHESIS_PROFILE,
     SPEECH_SYNTHESIS_URN,
 )
+from openrois.interfaces.components.streaming import (
+    AUDIO_STREAMING_PROFILE,
+    AUDIO_STREAMING_URN,
+    VIDEO_STREAMING_PROFILE,
+    VIDEO_STREAMING_URN,
+)
 from openrois.interfaces.components.system_information import (
     SYSTEM_INFORMATION_PROFILE,
     SYSTEM_INFORMATION_URN,
@@ -63,6 +69,8 @@ _PROFILES: Mapping[str, HRIComponentProfile] = MappingProxyType(
         "REACTION_PROFILE": REACTION_PROFILE,
         "SPEECH_SYNTHESIS_PROFILE": SPEECH_SYNTHESIS_PROFILE,
         "SYSTEM_INFORMATION_PROFILE": SYSTEM_INFORMATION_PROFILE,
+        "AUDIO_STREAMING_PROFILE": AUDIO_STREAMING_PROFILE,
+        "VIDEO_STREAMING_PROFILE": VIDEO_STREAMING_PROFILE,
     }
 )
 
@@ -114,4 +122,9 @@ __all__ = [
     "SYSTEM_INFORMATION_PROFILE",
     "SystemInformationRobotPositionResult",
     "SystemInformationEngineStatusResult",
+    # AudioStreaming and VideoStreaming
+    "AUDIO_STREAMING_URN",
+    "AUDIO_STREAMING_PROFILE",
+    "VIDEO_STREAMING_URN",
+    "VIDEO_STREAMING_PROFILE",
 ]

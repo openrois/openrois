@@ -25,8 +25,9 @@ Design decisions:
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # ---------------------------------------------------------------------------
 # Enumerations
@@ -204,7 +205,9 @@ class CommandUnit(BaseModel):
         component_ref: The component to send the command to.
         command_type: The command name: a standard one (start, stop, suspend, resume,
             set_parameter) or one the component profile defines.
-        command_id: Unique identifier for this command instance.
+        command_id: Unique identifier for this command instance. The engine a client
+            calls assigns it and ignores one the client sends. An engine passes the ids
+            it assigned on to the engines below it.
         arguments: Optional list of arguments for the command.
         delay_time: Optional delay in milliseconds before executing this command.
     """
@@ -215,25 +218,56 @@ class CommandUnit(BaseModel):
     command_type: str = Field(
         description="Command name, for example start, stop or set_parameter",
     )
-    command_id: CommandId = Field(description="Unique command instance identifier")
+    command_id: CommandId = Field(
+        default="",
+        description="Command instance identifier, assigned by the engine the client calls",
+    )
     arguments: ArgumentList = Field(default_factory=list)
     delay_time: Integer | None = Field(default=None, description="Delay in ms before execution")
 
 
-class ConcurrentCommands(BaseModel):
-    """A group of commands to be executed concurrently.
+class Branch(BaseModel):
+    """One branch of a ConcurrentCommands item: commands that run one after another.
 
-    Maps to ConcurrentCommandsType in XML-Profiles.xsd.
+    Maps to BranchType in XML-Profiles.xsd.
 
     Attributes:
-        command_list: The commands to execute in parallel.
+        command_list: The commands of the branch, in the order they run.
+    """
+
+    model_config = {"frozen": True, "extra": "forbid"}
+
+    command_list: list[CommandUnit] = Field(min_length=1)
+
+
+class ConcurrentCommands(BaseModel):
+    """A group of branches that run at the same time.
+
+    Maps to ConcurrentCommandsType in XML-Profiles.xsd and to the branch_list form of
+    Annex B.1. Each branch runs its commands in order, the branches run in parallel,
+    and the next item of the sequence waits for every branch. The XSD form, a flat
+    ``command_list``, is read as one branch per command.
+
+    Attributes:
+        branch_list: The branches to run in parallel.
         delay_time: Optional delay in milliseconds before executing this group.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
 
-    command_list: list[CommandUnit]
+    branch_list: list[Branch]
     delay_time: Integer | None = Field(default=None, description="Delay in ms before execution")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _branches_of_command_list(cls, data: Any) -> Any:
+        """Read the flat command_list of the XSD as one-command branches."""
+        if isinstance(data, dict) and "command_list" in data and "branch_list" not in data:
+            data = dict(data)
+            commands = data.pop("command_list")
+            if isinstance(commands, list):
+                data["branch_list"] = [{"command_list": [command]} for command in commands]
+        return data
 
 
 # A single item in a CommandUnitSequence — either a CommandUnit or a ConcurrentCommands group.

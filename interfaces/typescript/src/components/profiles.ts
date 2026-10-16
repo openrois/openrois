@@ -60,8 +60,10 @@ export const ROIS_COMMON_PROFILE: HRIComponentProfile = {
           },
           default_value: "",
           description: "",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
   ],
   event_profiles: [],
@@ -121,8 +123,10 @@ export const NAVIGATION_PROFILE: HRIComponentProfile = {
           },
           default_value: "",
           description: "",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
   ],
   event_profiles: [
@@ -139,6 +143,7 @@ export const NAVIGATION_PROFILE: HRIComponentProfile = {
           },
           default_value: "",
           description: "reached target destination",
+          read_only: false,
         },
         {
           name: "is_final_target",
@@ -150,8 +155,10 @@ export const NAVIGATION_PROFILE: HRIComponentProfile = {
           },
           default_value: "",
           description: "if it is final destination point",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
   ],
   parameter_profiles: [
@@ -165,6 +172,7 @@ export const NAVIGATION_PROFILE: HRIComponentProfile = {
       },
       default_value: "",
       description: "navigation target positions",
+      read_only: false,
     },
     {
       name: "time_limit",
@@ -176,6 +184,7 @@ export const NAVIGATION_PROFILE: HRIComponentProfile = {
       },
       default_value: "0",
       description: "intended time limit to complete navigation",
+      read_only: false,
     },
     {
       name: "routing_policy",
@@ -187,6 +196,7 @@ export const NAVIGATION_PROFILE: HRIComponentProfile = {
       },
       default_value: "time",
       description: "routing policy: 'time' priority or 'distance' priority",
+      read_only: false,
     },
   ],
 };
@@ -244,8 +254,10 @@ export const PERSON_DETECTION_PROFILE: HRIComponentProfile = {
           },
           default_value: "",
           description: "",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
   ],
   event_profiles: [
@@ -262,6 +274,7 @@ export const PERSON_DETECTION_PROFILE: HRIComponentProfile = {
           },
           default_value: "",
           description: "number of detected persons",
+          read_only: false,
         },
         {
           name: "timestamp",
@@ -273,8 +286,10 @@ export const PERSON_DETECTION_PROFILE: HRIComponentProfile = {
           },
           default_value: "",
           description: "time when measuered",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
   ],
   parameter_profiles: [],
@@ -333,8 +348,10 @@ export const REACTION_PROFILE: HRIComponentProfile = {
           },
           default_value: "",
           description: "",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
     {
       name: "available_reactions",
@@ -349,8 +366,10 @@ export const REACTION_PROFILE: HRIComponentProfile = {
           },
           default_value: "",
           description: "list of available reaction IDs, this robot can perform",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
   ],
   event_profiles: [],
@@ -365,6 +384,7 @@ export const REACTION_PROFILE: HRIComponentProfile = {
       },
       default_value: "",
       description: "Reaction type as ID",
+      read_only: false,
     },
   ],
 };
@@ -422,8 +442,10 @@ export const SPEECH_SYNTHESIS_PROFILE: HRIComponentProfile = {
           },
           default_value: "",
           description: "",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
     {
       name: "synthesizable_languages",
@@ -438,8 +460,10 @@ export const SPEECH_SYNTHESIS_PROFILE: HRIComponentProfile = {
           },
           default_value: "",
           description: "list of available languages",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
     {
       name: "available_voices",
@@ -454,8 +478,10 @@ export const SPEECH_SYNTHESIS_PROFILE: HRIComponentProfile = {
           },
           default_value: "",
           description: "list of available voice characters",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
   ],
   event_profiles: [],
@@ -470,6 +496,7 @@ export const SPEECH_SYNTHESIS_PROFILE: HRIComponentProfile = {
       },
       default_value: "",
       description: "speech text in plain text",
+      read_only: false,
     },
     {
       name: "ssml_text",
@@ -481,6 +508,7 @@ export const SPEECH_SYNTHESIS_PROFILE: HRIComponentProfile = {
       },
       default_value: "",
       description: "speech text in SSML text",
+      read_only: false,
     },
     {
       name: "volume",
@@ -492,6 +520,7 @@ export const SPEECH_SYNTHESIS_PROFILE: HRIComponentProfile = {
       },
       default_value: "50",
       description: "Volume",
+      read_only: false,
     },
     {
       name: "language",
@@ -503,6 +532,7 @@ export const SPEECH_SYNTHESIS_PROFILE: HRIComponentProfile = {
       },
       default_value: "en",
       description: "Language of the speech",
+      read_only: false,
     },
     {
       name: "character",
@@ -514,6 +544,7 @@ export const SPEECH_SYNTHESIS_PROFILE: HRIComponentProfile = {
       },
       default_value: "default",
       description: "character of the voice",
+      read_only: false,
     },
   ],
 };
@@ -544,6 +575,7 @@ export const SYSTEM_INFORMATION_PROFILE: HRIComponentProfile = {
           },
           default_value: "",
           description: "position of robot or its parts in comma seperated double values [x, y, th]",
+          read_only: false,
         },
         {
           name: "robot_ref",
@@ -555,6 +587,7 @@ export const SYSTEM_INFORMATION_PROFILE: HRIComponentProfile = {
           },
           default_value: "",
           description: "List of robot IDs",
+          read_only: false,
         },
         {
           name: "timestamp",
@@ -566,8 +599,10 @@ export const SYSTEM_INFORMATION_PROFILE: HRIComponentProfile = {
           },
           default_value: "",
           description: "timestamp of measurement",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
     {
       name: "engine_status",
@@ -582,6 +617,7 @@ export const SYSTEM_INFORMATION_PROFILE: HRIComponentProfile = {
           },
           default_value: "",
           description: "Operable time of the HRI Engine that includes this basic component",
+          read_only: false,
         },
         {
           name: "status",
@@ -593,10 +629,538 @@ export const SYSTEM_INFORMATION_PROFILE: HRIComponentProfile = {
           },
           default_value: "",
           description: "Status information of this engine",
+          read_only: false,
         },
       ],
+      arguments: [],
     },
   ],
   event_profiles: [],
   parameter_profiles: [],
+};
+
+/** The OMG AudioStreaming profile. */
+export const AUDIO_STREAMING_PROFILE: HRIComponentProfile = {
+  identifier: {
+    authority: "OMG",
+    code: "AudioStreaming",
+    codebook_ref: "",
+    version: "",
+  },
+  name: "audio_streaming",
+  function: "function",
+  sub_component_profiles: [
+    "urn:x-rois:def:Component:OMG::RoISCommon",
+  ],
+  command_profiles: [
+    {
+      name: "start",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "stop",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "suspend",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "resume",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "connect_stream",
+      results: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "disconnect_stream",
+      results: [],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+      timeout: null,
+    },
+    {
+      name: "suspend_stream",
+      results: [],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+      timeout: null,
+    },
+    {
+      name: "resume_stream",
+      results: [],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+      timeout: null,
+    },
+  ],
+  query_profiles: [
+    {
+      name: "component_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Component_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+    {
+      name: "get_stream_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Stream_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "",
+          read_only: false,
+        },
+      ],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+    },
+  ],
+  event_profiles: [
+    {
+      name: "notify_stream_status",
+      results: [
+        {
+          name: "timestamp",
+          data_type_ref: {
+            authority: "",
+            code: "DateTime",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "time when status changed",
+          read_only: false,
+        },
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Stream_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "status of the stream",
+          read_only: false,
+        },
+      ],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+    },
+  ],
+  parameter_profiles: [
+    {
+      name: "encoding_parameters",
+      data_type_ref: {
+        authority: "",
+        code: "String",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: "",
+      description: "parameters to encode the audio stream",
+      read_only: false,
+    },
+    {
+      name: "transport_parameters",
+      data_type_ref: {
+        authority: "",
+        code: "String",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: "",
+      description: "parameters to transport the audio stream",
+      read_only: false,
+    },
+    {
+      name: "available_encodings",
+      data_type_ref: {
+        authority: "",
+        code: "String",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: "",
+      description: "available parameters to encode the audio stream",
+      read_only: true,
+    },
+    {
+      name: "available_transports",
+      data_type_ref: {
+        authority: "",
+        code: "String",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: "",
+      description: "available parameters to transport the audio stream",
+      read_only: true,
+    },
+  ],
+};
+
+/** The OMG VideoStreaming profile. */
+export const VIDEO_STREAMING_PROFILE: HRIComponentProfile = {
+  identifier: {
+    authority: "OMG",
+    code: "VideoStreaming",
+    codebook_ref: "",
+    version: "",
+  },
+  name: "video_streaming",
+  function: "function",
+  sub_component_profiles: [
+    "urn:x-rois:def:Component:OMG::RoISCommon",
+  ],
+  command_profiles: [
+    {
+      name: "start",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "stop",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "suspend",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "resume",
+      results: [],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "connect_stream",
+      results: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+      timeout: null,
+    },
+    {
+      name: "disconnect_stream",
+      results: [],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+      timeout: null,
+    },
+    {
+      name: "suspend_stream",
+      results: [],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+      timeout: null,
+    },
+    {
+      name: "resume_stream",
+      results: [],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+      timeout: null,
+    },
+  ],
+  query_profiles: [
+    {
+      name: "component_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Component_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "",
+          read_only: false,
+        },
+      ],
+      arguments: [],
+    },
+    {
+      name: "get_stream_status",
+      results: [
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Stream_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "",
+          read_only: false,
+        },
+      ],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+    },
+  ],
+  event_profiles: [
+    {
+      name: "notify_stream_status",
+      results: [
+        {
+          name: "timestamp",
+          data_type_ref: {
+            authority: "",
+            code: "DateTime",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "time when status changed",
+          read_only: false,
+        },
+        {
+          name: "status",
+          data_type_ref: {
+            authority: "",
+            code: "Stream_Status",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "status of the stream",
+          read_only: false,
+        },
+      ],
+      arguments: [
+        {
+          name: "stream_id",
+          data_type_ref: {
+            authority: "",
+            code: "String",
+            codebook_ref: "",
+            version: "",
+          },
+          default_value: "",
+          description: "the ID of the stream",
+          read_only: false,
+        },
+      ],
+    },
+  ],
+  parameter_profiles: [
+    {
+      name: "encoding_parameters",
+      data_type_ref: {
+        authority: "",
+        code: "String",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: "",
+      description: "parameters to encode the audio stream",
+      read_only: false,
+    },
+    {
+      name: "transport_parameters",
+      data_type_ref: {
+        authority: "",
+        code: "String",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: "",
+      description: "parameters to transport the audio stream",
+      read_only: false,
+    },
+    {
+      name: "available_encodings",
+      data_type_ref: {
+        authority: "",
+        code: "String",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: "",
+      description: "available parameters to encode the audio stream",
+      read_only: true,
+    },
+    {
+      name: "available_transports",
+      data_type_ref: {
+        authority: "",
+        code: "String",
+        codebook_ref: "",
+        version: "",
+      },
+      default_value: "",
+      description: "available parameters to transport the audio stream",
+      read_only: true,
+    },
+  ],
 };

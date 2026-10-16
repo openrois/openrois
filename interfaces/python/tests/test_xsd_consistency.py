@@ -159,7 +159,8 @@ class TestXSDParameterProfile:
 
         # XSD has: name, default_value, description (attributes)
         # Plus data_type_ref (element)
-        xsd_attrs_with_element = xsd_attrs | {"data_type_ref"}
+        # read_only is an OpenRoIS extension, listed in EXTENSIONS.
+        xsd_attrs_with_element = xsd_attrs | {"data_type_ref", "read_only"}
         assert model_fields == xsd_attrs_with_element, (
             f"ParameterProfile fields {model_fields} != XSD attrs+elements {xsd_attrs_with_element}"
         )
@@ -360,9 +361,21 @@ class TestXSDCommandUnitSequence:
         """CommandUnit should have 'delay_time' field (XSD: delay_time from CommandBaseType)."""
         assert "delay_time" in CommandUnit.model_fields
 
-    def test_concurrent_commands_has_command_list(self) -> None:
-        """ConcurrentCommands should have 'command_list' field (XSD: command_list)."""
-        assert "command_list" in ConcurrentCommands.model_fields
+    @requires_normative
+    def test_concurrent_commands_reads_the_command_list_of_the_xsd(self) -> None:
+        """The XSD gives ConcurrentCommandsType a flat command_list, Annex B.1 a branch_list.
+
+        The model holds branches (BranchType) and reads the XSD form as one branch per
+        command (docs/rois-reference.md, section 16).
+        """
+        ct = _get_xsd_complex_type("ConcurrentCommandsType")
+        names = {e.get("name") for e in ct.iter(f"{{{XSD_NS}}}element")}
+        assert names == {"command_list"}
+        assert "branch_list" in ConcurrentCommands.model_fields
+        group = ConcurrentCommands.model_validate(
+            {"command_list": [{"component_ref": "r/a", "command_type": "start"}]}
+        )
+        assert len(group.branch_list) == 1
 
     def test_concurrent_commands_has_delay_time(self) -> None:
         """ConcurrentCommands should have 'delay_time' field (XSD: delay_time from CommandBaseType)."""

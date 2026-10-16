@@ -1,9 +1,10 @@
 """The Component base class and what it needs from the engine that hosts it.
 
 A component is a subclass of Component declared with ``@component(profile)``. Its author
-writes handlers for the messages it supports and reads two things the engine binds at
-registration: ``self.parameters``, the current parameter values, and ``self.emit``,
-which sends an event to the clients that subscribed.
+writes handlers for the messages it supports and uses what the engine binds at
+registration: ``self.parameters``, the current parameter values, ``self.emit``, which
+sends an event to the clients that subscribed, and ``self.raise_status`` and
+``self.clear_status``, which report WARNING or ERROR.
 
 The methods whose names start with ``rois_`` are the side the engine calls. An engine
 that hosts components written with this SDK calls them to read the served profile, bind
@@ -16,16 +17,20 @@ from collections.abc import Mapping, Sequence
 from types import MappingProxyType
 from typing import Any, ClassVar, Protocol
 
+from openrois.interfaces.common import ComponentStatus
 from openrois.interfaces.hri import Argument, Parameter, Result
 from openrois.interfaces.profiles import (
     CommandMessageProfile,
+    EventMessageProfile,
     HRIComponentProfile,
     MessageProfile,
+    QueryMessageProfile,
 )
 from openrois.interfaces.service import CompletedStatus
 from openrois.interfaces.values import decode_value, encode_value
 
 from openrois.components.core._spec import ComponentSpec
+from openrois.components.core.resource import Resource, check_raisable
 
 
 class CommandFailed(Exception):  # noqa: N818, the name says what happened to the command.
@@ -60,8 +65,30 @@ class EngineBinding(Protocol):
         """The current value of every parameter of the component."""
         ...
 
-    def emit(self, event_type: str, results: Sequence[Result]) -> None:
-        """Send an event to its subscriptions. Safe to call from any thread."""
+    def emit(
+        self,
+        event_type: str,
+        results: Sequence[Result],
+        concerning: Mapping[str, str] | None = None,
+    ) -> None:
+        """Send an event to its subscriptions. Safe to call from any thread.
+
+        ``concerning`` names the argument values the event is about, in their string
+        form. The event goes to the subscriptions whose arguments equal them, and to
+        every subscription of the event when it is empty.
+        """
+        ...
+
+    def raise_status(self, status: ComponentStatus, message: str) -> None:
+        """Report WARNING or ERROR for the component. Safe to call from any thread."""
+        ...
+
+    def clear_status(self) -> None:
+        """Withdraw the status the component raised. Safe to call from any thread."""
+        ...
+
+    def engine_status(self) -> ComponentStatus:
+        """The status of the engine: ERROR or WARNING as raised on it, or READY."""
         ...
 
 
@@ -91,7 +118,9 @@ class Component:
 
     The engine calls ``connect()`` before the component takes requests and
     ``disconnect()`` when it stops. Override them to open and close the connection to
-    the backend.
+    the backend. A connection that several components share is a Resource: the
+    component records it with ``self.uses(resource)``, and the engine opens it before
+    the first of them connects.
     """
 
     # Set by @component on the class it declares.
@@ -99,6 +128,9 @@ class Component:
 
     # Set by rois_bind when the engine registers the component.
     _rois_binding: EngineBinding | None = None
+
+    # Set by uses(), in the order the component recorded them.
+    _rois_resources: list[Resource] | None = None
 
     # -- For component authors ---------------------------------------------------------
 
@@ -125,16 +157,28 @@ class Component:
             }
         )
 
-    def emit(self, event_type: str, **values: object) -> None:
+    def emit(
+        self,
+        event_type: str,
+        *,
+        concerning: Mapping[str, object] | None = None,
+        **values: object,
+    ) -> None:
         """Send an event to the clients that subscribed to it.
 
         The values are the event's results by name, converted to their profile types. A
         result left out is not sent. Safe to call from any thread, for example a ROS 2
         callback.
 
+        An event whose profile has arguments, such as the ``stream_id`` of
+        ``notify_stream_status``, names in ``concerning`` the argument values it is
+        about. It then reaches the subscriptions that gave those values, or none, and an
+        event that names no values reaches every subscription.
+
         Raises:
-            ValueError: The component does not serve the event, or a value has no result
-                of that name or does not fit its type.
+            ValueError: The component does not serve the event, a value has no result
+                of that name or does not fit its type, or ``concerning`` names an
+                argument the event does not have.
             RuntimeError: No engine hosts the component yet.
         """
         spec = self._spec()
@@ -144,7 +188,56 @@ class Component:
                 "Mark it with @subscribe"
             )
         message = _message(spec.served.event_profiles, event_type)
-        self._binding().emit(event_type, _results(message, values))
+        concerns = _concerns(message, concerning or {})
+        self._binding().emit(event_type, _results(message, values), concerns)
+
+    def uses[R: Resource](self, resource: R) -> R:
+        """Record a resource the component shares with others, and return it.
+
+        Call it in ``__init__``. The engine opens every resource a component uses before
+        the component connects, and a status the resource raises becomes the
+        component's.
+        """
+        if self._rois_resources is None:
+            self._rois_resources = []
+        if not any(r is resource for r in self._rois_resources):
+            self._rois_resources.append(resource)
+        return resource
+
+    def raise_status(self, status: ComponentStatus, message: str = "") -> None:
+        """Report WARNING or ERROR, with a message, until ``clear_status``.
+
+        component_status reports the raised status, and the engine sends
+        ``rois.system.notify_error`` to the sessions that bound the component or
+        subscribed to its events. While ERROR is raised, the engine refuses the
+        component's commands and queries and holds back its events. Safe to call from
+        any thread.
+
+        Raises:
+            ValueError: The status is neither WARNING nor ERROR.
+            RuntimeError: No engine hosts the component yet.
+        """
+        check_raisable(status)
+        self._binding().raise_status(status, message)
+
+    def clear_status(self) -> None:
+        """Withdraw the status the component raised. Safe to call from any thread.
+
+        Raises:
+            RuntimeError: No engine hosts the component yet.
+        """
+        self._binding().clear_status()
+
+    def engine_state(self) -> ComponentStatus:
+        """The status of the engine that hosts the component.
+
+        ERROR or WARNING while one is raised on the engine, READY otherwise. A
+        SystemInformation component answers ``engine_status`` with it.
+
+        Raises:
+            RuntimeError: No engine hosts the component yet.
+        """
+        return self._binding().engine_status()
 
     async def connect(self) -> None:
         """Open the connection to the backend. The default does nothing."""
@@ -162,6 +255,10 @@ class Component:
     def rois_bind(self, binding: EngineBinding) -> None:
         """Attach the engine that hosts this component."""
         self._rois_binding = binding
+
+    def rois_resources(self) -> Sequence[Resource]:
+        """The resources the component uses, in the order it recorded them."""
+        return list(self._rois_resources or ())
 
     async def rois_command(
         self,
@@ -186,29 +283,40 @@ class Component:
         values = await getattr(self, method)(**_arguments(message, arguments))
         return _results(message, values)
 
-    async def rois_query(self, query_type: str) -> list[Result]:
+    async def rois_query(
+        self,
+        query_type: str,
+        arguments: Sequence[Argument] = (),
+    ) -> list[Result]:
         """Answer one query with its results.
 
         Raises:
-            ValueError: The component has no handler for the query.
+            ValueError: The component has no handler for the query, or an argument does
+                not fit its profile.
         """
         spec = self._spec()
         method = spec.queries.get(query_type)
         if method is None:
             raise ValueError(f"{type(self).__qualname__} does not answer {query_type!r}")
         message = _message(spec.served.query_profiles, query_type)
-        return _results(message, await getattr(self, method)())
+        values = await getattr(self, method)(**_arguments(message, arguments))
+        return _results(message, values)
 
-    async def rois_subscribed(self, event_type: str) -> None:
+    async def rois_subscribed(self, event_type: str, arguments: Sequence[Argument] = ()) -> None:
         """Run the @subscribe method of an event for a new subscription.
 
+        The method receives the arguments the subscription gave, by name.
+
         Raises:
-            ValueError: The component does not serve the event.
+            ValueError: The component does not serve the event, or an argument does not
+                fit its profile.
         """
-        method = self._spec().events.get(event_type)
+        spec = self._spec()
+        method = spec.events.get(event_type)
         if method is None:
             raise ValueError(f"{type(self).__qualname__} does not serve {event_type!r}")
-        await getattr(self, method)()
+        message = _message(spec.served.event_profiles, event_type)
+        await getattr(self, method)(**_arguments(message, arguments))
 
     async def rois_set_parameters(self, parameters: Sequence[Parameter]) -> None:
         """Run the @on_set_parameter hook with new values, before the engine stores them.
@@ -253,15 +361,29 @@ def _message[M: MessageProfile](messages: Sequence[M], name: str) -> M:
     raise ValueError(f"The component does not serve {name!r}")
 
 
-def _arguments(message: CommandMessageProfile, arguments: Sequence[Argument]) -> dict[str, Any]:
-    """The arguments of a command by name, converted from their profile types."""
+type _WithArguments = CommandMessageProfile | QueryMessageProfile | EventMessageProfile
+
+
+def _arguments(message: _WithArguments, arguments: Sequence[Argument]) -> dict[str, Any]:
+    """The arguments of a message by name, converted from their profile types."""
     types = {a.name: a.data_type_ref.code for a in message.arguments}
     values: dict[str, Any] = {}
     for argument in arguments:
         if argument.name not in types:
-            raise ValueError(f"The command {message.name!r} has no argument {argument.name!r}")
+            raise ValueError(f"{message.name!r} has no argument {argument.name!r}")
         values[argument.name] = decode_value(types[argument.name], argument.value)
     return values
+
+
+def _concerns(message: EventMessageProfile, values: Mapping[str, object]) -> dict[str, str]:
+    """The argument values an event concerns, in the form their types take on the wire."""
+    types = {a.name: a.data_type_ref.code for a in message.arguments}
+    concerns: dict[str, str] = {}
+    for name, value in values.items():
+        if name not in types:
+            raise ValueError(f"{message.name!r} has no argument {name!r}")
+        concerns[name] = encode_value(types[name], value)
+    return concerns
 
 
 def _results(message: MessageProfile, values: object) -> list[Result]:

@@ -54,7 +54,7 @@
     },
     "EventMessageProfile": {
       "additionalProperties": false,
-      "description": "An event message profile.\n\nMaps to EventMessageProfileType in XML-Profiles.xsd.\n\nEvents have results (the event payload) but no arguments.",
+      "description": "An event message profile.\n\nMaps to EventMessageProfileType in XML-Profiles.xsd. AudioStreaming.xml gives an\nevent arguments, which the XSD does not define for events, and the profile wins\n(docs/rois-reference.md, section 16). A client passes the argument values in the\nsubscribe condition.\n\nAttributes:\n    arguments: The input arguments of this event.",
       "properties": {
         "name": {
           "title": "Name",
@@ -66,6 +66,13 @@
           },
           "title": "Results",
           "type": "array"
+        },
+        "arguments": {
+          "items": {
+            "$ref": "#/$defs/ParameterProfile"
+          },
+          "title": "Arguments",
+          "type": "array"
         }
       },
       "required": [
@@ -76,7 +83,7 @@
     },
     "ParameterProfile": {
       "additionalProperties": false,
-      "description": "Describes a parameter's data type and metadata.\n\nMaps to ParameterProfileType in XML-Profiles.xsd.\n\nUsed in both message profiles (Arguments/Results) and component-level\nparameter declarations.\n\nAttributes:\n    name: The parameter name.\n    data_type_ref: Reference to the data type (e.g., 'int', 'DateTime',\n        'RoISIdentifier[]').\n    default_value: Optional default value as a string.\n    description: Optional human-readable description.",
+      "description": "Describes a parameter's data type and metadata.\n\nMaps to ParameterProfileType in XML-Profiles.xsd.\n\nUsed in both message profiles (Arguments/Results) and component-level\nparameter declarations.\n\nAttributes:\n    name: The parameter name.\n    data_type_ref: Reference to the data type (e.g., 'int', 'DateTime',\n        'RoISIdentifier[]').\n    default_value: Optional default value as a string.\n    description: Optional human-readable description.\n    read_only: Whether set_parameter may change the parameter. True for the\n        parameters the spec lists only under get_parameter, such as\n        ``available_encodings``. Not part of XML-Profiles.xsd.",
       "properties": {
         "name": {
           "title": "Name",
@@ -94,6 +101,12 @@
           "default": "",
           "title": "Description",
           "type": "string"
+        },
+        "read_only": {
+          "default": false,
+          "description": "Whether set_parameter may not change the parameter (OpenRoIS extension)",
+          "title": "Read Only",
+          "type": "boolean"
         }
       },
       "required": [
@@ -105,7 +118,7 @@
     },
     "QueryMessageProfile": {
       "additionalProperties": false,
-      "description": "A query message profile.\n\nMaps to QueryMessageProfileType in XML-Profiles.xsd.\n\nQueries have results but no arguments (the query_type and condition\nare passed separately, not as message arguments).",
+      "description": "A query message profile.\n\nMaps to QueryMessageProfileType in XML-Profiles.xsd. AudioStreaming.xml gives a\nquery arguments, which the XSD does not define for queries, and the profile wins\n(docs/rois-reference.md, section 16). A client passes the argument values in the\nquery condition, for example ``stream_id = 'audio-1'``.\n\nAttributes:\n    arguments: The input arguments of this query.",
       "properties": {
         "name": {
           "title": "Name",
@@ -116,6 +129,13 @@
             "$ref": "#/$defs/ParameterProfile"
           },
           "title": "Results",
+          "type": "array"
+        },
+        "arguments": {
+          "items": {
+            "$ref": "#/$defs/ParameterProfile"
+          },
+          "title": "Arguments",
           "type": "array"
         }
       },

@@ -10,7 +10,6 @@ import {
   RoISNotifications,
   RoISNotificationSchemas,
   SearchResultSchema,
-  UnmodelledMethodPrefixes,
   type RoISMethodMap,
   type RoISNotificationMap,
 } from "../src/catalog";
@@ -32,8 +31,7 @@ describe("method table", () => {
     expect(RoISMethods.Subscribe).toBe("rois.event.subscribe");
   });
 
-  it("does not model streaming", () => {
-    expect(UnmodelledMethodPrefixes).toEqual(["rois.stream."]);
+  it("gives streaming no methods of its own", () => {
     for (const method of Object.values(RoISMethods)) {
       expect(method.startsWith("rois.stream.")).toBe(false);
     }
@@ -60,9 +58,9 @@ describe("execute", () => {
       command_unit_list: [
         { component_ref: "reachy_real/head", command_type: "start", command_id: "nod-1" },
         {
-          command_list: [
-            { component_ref: "reachy_real/head", command_type: "stop", command_id: "nod-2" },
-            { component_ref: "reachy_sim/head", command_type: "stop", command_id: "nod-3" },
+          branch_list: [
+            { command_list: [{ component_ref: "reachy_real/head", command_type: "stop" }] },
+            { command_list: [{ component_ref: "reachy_sim/head", command_type: "stop" }] },
           ],
           delay_time: 500,
         },
@@ -81,11 +79,11 @@ describe("execute", () => {
     expect(parsed.success).toBe(false);
   });
 
-  it("requires a command_id on every unit", () => {
-    const parsed = ExecuteParamsSchema.safeParse({
+  it("lets a unit leave out its command_id, which the engine assigns", () => {
+    const parsed = ExecuteParamsSchema.parse({
       command_unit_list: [{ component_ref: "reachy_real/head", command_type: "start" }],
     });
-    expect(parsed.success).toBe(false);
+    expect(parsed.command_unit_list).toHaveLength(1);
   });
 });
 

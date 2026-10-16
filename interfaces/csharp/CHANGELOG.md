@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** `CommandUnit.CommandId` is optional, since the engine assigns it, and `ConcurrentCommands` holds `BranchList`, branches of commands that run in order. `ExecuteResult` carries `CommandUnitList` with the assigned ids, query and event profiles gain `Arguments`, and parameter profiles `ReadOnly`.
+
+### Removed
+
+- **Breaking:** `UnmodelledMethodPrefixes`. Streaming has no methods of its own.
+
 ## [0.1.0-alpha.4] - 2026-10-08
 
 ### Changed

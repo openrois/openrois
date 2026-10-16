@@ -40,6 +40,9 @@ export type RoISIdentifierType = z.infer<typeof RoISIdentifierTypeSchema>;
  *         'RoISIdentifier[]').
  *     default_value: Optional default value as a string.
  *     description: Optional human-readable description.
+ *     read_only: Whether set_parameter may change the parameter. True for the
+ *         parameters the spec lists only under get_parameter, such as
+ *         ``available_encodings``. Not part of XML-Profiles.xsd.
  */
 
 export const ParameterProfileSchema = z.object({
@@ -47,6 +50,7 @@ export const ParameterProfileSchema = z.object({
   data_type_ref: RoISIdentifierTypeSchema,
   default_value: z.string().default(""),
   description: z.string().default(""),
+  read_only: z.boolean().default(false), // Whether set_parameter may not change the parameter (OpenRoIS extension)
 }).strict();
 export type ParameterProfile = z.infer<typeof ParameterProfileSchema>;
 
@@ -89,29 +93,38 @@ export type ComponentFunction = z.infer<typeof ComponentFunctionSchema>;
 /**
  * An event message profile.
  * 
- * Maps to EventMessageProfileType in XML-Profiles.xsd.
+ * Maps to EventMessageProfileType in XML-Profiles.xsd. AudioStreaming.xml gives an
+ * event arguments, which the XSD does not define for events, and the profile wins
+ * (docs/rois-reference.md, section 16). A client passes the argument values in the
+ * subscribe condition.
  * 
- * Events have results (the event payload) but no arguments.
+ * Attributes:
+ *     arguments: The input arguments of this event.
  */
 
 export const EventMessageProfileSchema = z.object({
   name: z.string(),
   results: z.array(ParameterProfileSchema).optional(),
+  arguments: z.array(ParameterProfileSchema).optional(),
 }).strict();
 export type EventMessageProfile = z.infer<typeof EventMessageProfileSchema>;
 
 /**
  * A query message profile.
  * 
- * Maps to QueryMessageProfileType in XML-Profiles.xsd.
+ * Maps to QueryMessageProfileType in XML-Profiles.xsd. AudioStreaming.xml gives a
+ * query arguments, which the XSD does not define for queries, and the profile wins
+ * (docs/rois-reference.md, section 16). A client passes the argument values in the
+ * query condition, for example ``stream_id = 'audio-1'``.
  * 
- * Queries have results but no arguments (the query_type and condition
- * are passed separately, not as message arguments).
+ * Attributes:
+ *     arguments: The input arguments of this query.
  */
 
 export const QueryMessageProfileSchema = z.object({
   name: z.string(),
   results: z.array(ParameterProfileSchema).optional(),
+  arguments: z.array(ParameterProfileSchema).optional(),
 }).strict();
 export type QueryMessageProfile = z.infer<typeof QueryMessageProfileSchema>;
 

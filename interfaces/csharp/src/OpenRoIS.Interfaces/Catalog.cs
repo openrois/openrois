@@ -292,13 +292,13 @@ namespace OpenRoIS.Interfaces.Catalog
     /// <summary>
     /// Params of rois.command.execute.
     /// 
-    /// Maps to CommandIF::execute(in command_unit_list). The application names every
-    /// command with its own command_id, and completed notifications report each one.
-    /// The engine rejects a command_id it already tracks with BAD_PARAMETER.
+    /// Maps to CommandIF::execute(in command_unit_list). The engine the client calls
+    /// assigns every command_id and ignores the ids a client sends, and completed
+    /// notifications report each command by the id the engine assigned.
     /// 
     /// Attributes:
     ///     command_unit_list: Commands to run in order. A ConcurrentCommands item runs
-    ///         its commands at the same time.
+    ///         its branches at the same time.
     /// </summary>
     public sealed class ExecuteParams : IEquatable<ExecuteParams>
     {
@@ -341,22 +341,28 @@ namespace OpenRoIS.Interfaces.Catalog
     /// Attributes:
     ///     return_code: Whether the engine accepted the commands. Completed
     ///         notifications report how each command ended.
+    ///     command_unit_list: The sequence as the engine runs it, with the command_id it
+    ///         assigned to every command. Empty unless return_code is OK. An OpenRoIS
+    ///         extension.
     /// </summary>
     public sealed class ExecuteResult : IEquatable<ExecuteResult>
     {
         [JsonPropertyName("return_code")]
         public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; }
+        [JsonPropertyName("command_unit_list")]
+        public IReadOnlyList<OpenRoIS.Interfaces.Hri.ICommandUnitSequenceItem>? CommandUnitList { get; }
 
-        public ExecuteResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode)
+        public ExecuteResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode, IReadOnlyList<OpenRoIS.Interfaces.Hri.ICommandUnitSequenceItem>? commandUnitList = null)
         {
             ReturnCode = returnCode;
+            CommandUnitList = commandUnitList;
         }
 
         public bool Equals(ExecuteResult? other)
         {
             if (ReferenceEquals(other, this)) return true;
             if (other is null) return false;
-            return Equals(ReturnCode, other.ReturnCode);
+            return Equals(ReturnCode, other.ReturnCode) && Equals(CommandUnitList, other.CommandUnitList);
         }
 
         public override bool Equals(object? obj)
@@ -366,7 +372,7 @@ namespace OpenRoIS.Interfaces.Catalog
 
         public override int GetHashCode()
         {
-            return System.HashCode.Combine(ReturnCode);
+            return System.HashCode.Combine(ReturnCode, CommandUnitList);
         }
 
         public static bool operator ==(ExecuteResult? left, ExecuteResult? right)
@@ -1450,13 +1456,6 @@ namespace OpenRoIS.Interfaces.Catalog
         public const int MethodNotFound = -32601;
         public const int InvalidParams = -32602;
         public const int InternalError = -32603;
-    }
-
-    /// <summary>Method name prefixes the catalog does not model. Engines answer them with METHOD_NOT_FOUND.</summary>
-    public static class UnmodelledMethodPrefixes
-    {
-        /// <summary>Every unmodelled prefix.</summary>
-        public static readonly IReadOnlyList<string> All = new[] { "rois.stream." };
     }
 
 }

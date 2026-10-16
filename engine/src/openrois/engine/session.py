@@ -16,8 +16,9 @@ class Session:
     """A client of an engine, or the parent engine of an adapter.
 
     Bindings and subscriptions belong to a session, and the engine releases them
-    when the session closes. A command sends its ``rois.command.completed`` to the
-    session that started it.
+    when the session disconnects or closes. A command sends its
+    ``rois.command.completed`` to the session that started it. No request but
+    ``rois.system.connect`` is served before the session has connected.
 
     Attributes:
         id: Unique within the engine.
@@ -25,9 +26,12 @@ class Session:
             never blocks.
         trusted: Whether the peer is the parent engine of this one. A parent checked
             the bindings of a request before it forwarded it, so the engine does not
-            check them again.
+            check them again, and it names the command ids itself.
+        connected: Whether the session completed ``rois.system.connect`` and has not
+            disconnected since.
     """
 
     id: str
     notify: Notify
     trusted: bool = False
+    connected: bool = False

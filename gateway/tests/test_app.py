@@ -34,6 +34,12 @@ async def call(connection: ClientConnection, method: str) -> dict[str, Any]:
             return result
 
 
+async def connected(connection: ClientConnection) -> ClientConnection:
+    """A client connection that has completed rois.system.connect."""
+    assert (await call(connection, "rois.system.connect"))["return_code"] == "OK"
+    return connection
+
+
 @pytest.fixture
 async def gateway() -> AsyncIterator[Gateway]:
     running = Gateway(GatewayConfig(port=0, engine_id="lab", child_timeout=0.5))
@@ -46,7 +52,7 @@ async def gateway() -> AsyncIterator[Gateway]:
 
 async def test_a_client_reads_the_profile_of_the_configured_engine(gateway: Gateway) -> None:
     async with connect(f"ws://127.0.0.1:{gateway.port}") as client:
-        profile = (await call(client, "rois.system.get_profile"))["profile"]
+        profile = (await call(await connected(client), "rois.system.get_profile"))["profile"]
     assert profile["identifier"]["code"] == "lab"
 
 
@@ -57,7 +63,7 @@ async def test_an_adapter_registers_with_the_gateway(gateway: Gateway) -> None:
     try:
         await wait_until(lambda: gateway.engine.child_engine_ids() == ["robot"])
         async with connect(f"ws://127.0.0.1:{gateway.port}") as client:
-            profile = (await call(client, "rois.system.get_profile"))["profile"]
+            profile = (await call(await connected(client), "rois.system.get_profile"))["profile"]
         assert [p["identifier"]["code"] for p in profile["sub_profiles"]] == ["robot"]
     finally:
         adapter.cancel()

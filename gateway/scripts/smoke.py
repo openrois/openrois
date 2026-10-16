@@ -1,13 +1,14 @@
 """End-to-end check of a gateway with the mock adapter behind it.
 
-Connects to the gateway as a client and checks, in order:
+Connects to the gateway as a client, sends rois.system.connect, and checks, in order:
 
 1. The components of the mock adapter appear in rois.command.search.
 2. get_profile lists the adapter as a sub profile, with a profile for each component.
 3. robot_position and component_status answer OK.
 4. A person_detected event reaches this client, and get_event_detail reads it.
-5. A navigation runs: bind, set_parameter, execute start, its rois.command.completed,
-   the reached_target event at the target that was set, get_command_result, release.
+5. A navigation runs: bind, set_parameter, execute start with the command id the
+   gateway assigns, its rois.command.completed, the reached_target event at the target
+   that was set, get_command_result, release.
 6. A method outside the catalog is answered with METHOD_NOT_FOUND.
 
 Retries the connection and the search until --timeout, so it can run right after
@@ -25,7 +26,6 @@ import argparse
 import asyncio
 import json
 import sys
-import uuid
 from collections.abc import Callable
 from typing import Any
 
@@ -130,6 +130,7 @@ async def run(url: str, engine_id: str, timeout: float, event_timeout: float) ->
 
     client = Client(await connect_with_retry(url, deadline))
     try:
+        await client.call("rois.system.connect", {})
         print(f"ok   connected to {url}")
 
         # 1. The adapter registers once the gateway has read its profile.
@@ -206,14 +207,9 @@ async def run(url: str, engine_id: str, timeout: float, event_timeout: float) ->
             "rois.event.subscribe",
             {"event_type": "reached_target", "condition": ref_is(navigation)},
         )
-        command_id = f"smoke-{uuid.uuid4().hex[:12]}"
-        start = {
-            "component_ref": navigation,
-            "command_type": "start",
-            "command_id": command_id,
-            "arguments": [],
-        }
-        await client.call("rois.command.execute", {"command_unit_list": [start]})
+        start = {"component_ref": navigation, "command_type": "start", "arguments": []}
+        executed = await client.call("rois.command.execute", {"command_unit_list": [start]})
+        command_id = executed["command_unit_list"][0]["command_id"]
         await completed(client, command_id, event_timeout)
         try:
             arrival = await client.notification(

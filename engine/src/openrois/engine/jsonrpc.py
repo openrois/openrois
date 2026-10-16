@@ -5,7 +5,7 @@ RoIS operation are JSON-RPC errors, as the method catalog defines them:
 
 - JSON that does not parse is PARSE_ERROR, with a null id.
 - An object that is not a request is INVALID_REQUEST.
-- A method outside the catalog is METHOD_NOT_FOUND, every ``rois.stream.*`` included.
+- A method outside the catalog is METHOD_NOT_FOUND.
 - Params that fail the catalog model are INVALID_PARAMS, with the issues as data.
 - An engine that fails while it handles the request is INTERNAL_ERROR.
 

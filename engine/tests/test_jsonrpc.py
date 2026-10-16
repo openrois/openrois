@@ -16,8 +16,8 @@ from tests._support import Peer
 
 
 @pytest.fixture
-def peer() -> Peer:
-    return Peer(Engine("robot"))
+async def peer() -> Peer:
+    return await Peer.connected(Engine("robot"))
 
 
 async def raw_reply(peer: Peer, raw: str) -> dict[str, Any] | None:

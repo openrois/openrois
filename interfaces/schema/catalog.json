@@ -167,8 +167,5 @@
       "name": "INTERNAL_ERROR",
       "code": -32603
     }
-  ],
-  "unmodelled_method_prefixes": [
-    "rois.stream."
   ]
 }

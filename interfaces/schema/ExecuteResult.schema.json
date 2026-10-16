@@ -1,6 +1,141 @@
 {
   "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
   "$defs": {
+    "Argument": {
+      "additionalProperties": false,
+      "description": "A named argument for command execution.\n\nMaps to RoIS_HRI::Argument in the IDL.\n\nAttributes:\n    name: The argument name.\n    data_type_ref: Reference to the data type.\n    value: The argument value as a string.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "data_type_ref": {
+          "$ref": "#/$defs/RoISIdentifier"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "data_type_ref",
+        "value"
+      ],
+      "title": "Argument",
+      "type": "object"
+    },
+    "ArgumentList": {
+      "items": {
+        "$ref": "#/$defs/Argument"
+      },
+      "type": "array"
+    },
+    "Branch": {
+      "additionalProperties": false,
+      "description": "One branch of a ConcurrentCommands item: commands that run one after another.\n\nMaps to BranchType in XML-Profiles.xsd.\n\nAttributes:\n    command_list: The commands of the branch, in the order they run.",
+      "properties": {
+        "command_list": {
+          "items": {
+            "$ref": "#/$defs/CommandUnit"
+          },
+          "minItems": 1,
+          "title": "Command List",
+          "type": "array"
+        }
+      },
+      "required": [
+        "command_list"
+      ],
+      "title": "Branch",
+      "type": "object"
+    },
+    "CommandId": {
+      "type": "string"
+    },
+    "CommandUnit": {
+      "additionalProperties": false,
+      "description": "A single command within a CommandUnitSequence.\n\nMaps to CommandMessageType in XML-Profiles.xsd (CommandBaseType subtype).\n\nAttributes:\n    component_ref: The component to send the command to.\n    command_type: The command name: a standard one (start, stop, suspend, resume,\n        set_parameter) or one the component profile defines.\n    command_id: Unique identifier for this command instance. The engine a client\n        calls assigns it and ignores one the client sends. An engine passes the ids\n        it assigned on to the engines below it.\n    arguments: Optional list of arguments for the command.\n    delay_time: Optional delay in milliseconds before executing this command.",
+      "properties": {
+        "component_ref": {
+          "$ref": "#/$defs/RoISIdentifier"
+        },
+        "command_type": {
+          "description": "Command name, for example start, stop or set_parameter",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "command_id": {
+          "$ref": "#/$defs/CommandId",
+          "default": "",
+          "description": "Command instance identifier, assigned by the engine the client calls"
+        },
+        "arguments": {
+          "$ref": "#/$defs/ArgumentList"
+        },
+        "delay_time": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Delay in ms before execution"
+        }
+      },
+      "required": [
+        "component_ref",
+        "command_type"
+      ],
+      "title": "CommandUnit",
+      "type": "object"
+    },
+    "CommandUnitSequenceItem": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CommandUnit"
+        },
+        {
+          "$ref": "#/$defs/ConcurrentCommands"
+        }
+      ]
+    },
+    "ConcurrentCommands": {
+      "additionalProperties": false,
+      "description": "A group of branches that run at the same time.\n\nMaps to ConcurrentCommandsType in XML-Profiles.xsd and to the branch_list form of\nAnnex B.1. Each branch runs its commands in order, the branches run in parallel,\nand the next item of the sequence waits for every branch. The XSD form, a flat\n``command_list``, is read as one branch per command.\n\nAttributes:\n    branch_list: The branches to run in parallel.\n    delay_time: Optional delay in milliseconds before executing this group.",
+      "properties": {
+        "branch_list": {
+          "items": {
+            "$ref": "#/$defs/Branch"
+          },
+          "title": "Branch List",
+          "type": "array"
+        },
+        "delay_time": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Delay in ms before execution"
+        }
+      },
+      "required": [
+        "branch_list"
+      ],
+      "title": "ConcurrentCommands",
+      "type": "object"
+    },
+    "Integer": {
+      "type": "integer"
+    },
     "ReturnCode": {
       "description": "Return code for all RoIS operations.\n\nMaps to RoIS_HRI::ReturnCode_t in the IDL.",
       "enum": [
@@ -13,13 +148,24 @@
       ],
       "title": "ReturnCode",
       "type": "string"
+    },
+    "RoISIdentifier": {
+      "type": "string"
     }
   },
   "additionalProperties": false,
-  "description": "Result of rois.command.execute.\n\nMaps to CommandIF::execute(in command_unit_list), which has no out parameters.\n\nAttributes:\n    return_code: Whether the engine accepted the commands. Completed\n        notifications report how each command ended.",
+  "description": "Result of rois.command.execute.\n\nMaps to CommandIF::execute(in command_unit_list), which has no out parameters.\n\nAttributes:\n    return_code: Whether the engine accepted the commands. Completed\n        notifications report how each command ended.\n    command_unit_list: The sequence as the engine runs it, with the command_id it\n        assigned to every command. Empty unless return_code is OK. An OpenRoIS\n        extension.",
   "properties": {
     "return_code": {
       "$ref": "#/$defs/ReturnCode"
+    },
+    "command_unit_list": {
+      "description": "The sequence with the assigned command ids (OpenRoIS extension)",
+      "items": {
+        "$ref": "#/$defs/CommandUnitSequenceItem"
+      },
+      "title": "Command Unit List",
+      "type": "array"
     }
   },
   "required": [

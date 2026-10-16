@@ -77,6 +77,9 @@ namespace OpenRoIS.Interfaces.Profiles
     ///         'RoISIdentifier[]').
     ///     default_value: Optional default value as a string.
     ///     description: Optional human-readable description.
+    ///     read_only: Whether set_parameter may change the parameter. True for the
+    ///         parameters the spec lists only under get_parameter, such as
+    ///         ``available_encodings``. Not part of XML-Profiles.xsd.
     /// </summary>
     public sealed class ParameterProfile : IEquatable<ParameterProfile>
     {
@@ -88,20 +91,23 @@ namespace OpenRoIS.Interfaces.Profiles
         public string DefaultValue { get; }
         [JsonPropertyName("description")]
         public string Description { get; }
+        [JsonPropertyName("read_only")]
+        public bool ReadOnly { get; }
 
-        public ParameterProfile(string name, RoISIdentifierType dataTypeRef, string defaultValue = "", string description = "")
+        public ParameterProfile(string name, RoISIdentifierType dataTypeRef, string defaultValue = "", string description = "", bool readOnly = false)
         {
             Name = name;
             DataTypeRef = dataTypeRef;
             DefaultValue = defaultValue;
             Description = description;
+            ReadOnly = readOnly;
         }
 
         public bool Equals(ParameterProfile? other)
         {
             if (ReferenceEquals(other, this)) return true;
             if (other is null) return false;
-            return Equals(Name, other.Name) && Equals(DataTypeRef, other.DataTypeRef) && Equals(DefaultValue, other.DefaultValue) && Equals(Description, other.Description);
+            return Equals(Name, other.Name) && Equals(DataTypeRef, other.DataTypeRef) && Equals(DefaultValue, other.DefaultValue) && Equals(Description, other.Description) && Equals(ReadOnly, other.ReadOnly);
         }
 
         public override bool Equals(object? obj)
@@ -111,7 +117,7 @@ namespace OpenRoIS.Interfaces.Profiles
 
         public override int GetHashCode()
         {
-            return System.HashCode.Combine(Name, DataTypeRef, DefaultValue, Description);
+            return System.HashCode.Combine(Name, DataTypeRef, DefaultValue, Description, ReadOnly);
         }
 
         public static bool operator ==(ParameterProfile? left, ParameterProfile? right)
@@ -195,9 +201,13 @@ namespace OpenRoIS.Interfaces.Profiles
     /// <summary>
     /// An event message profile.
     /// 
-    /// Maps to EventMessageProfileType in XML-Profiles.xsd.
+    /// Maps to EventMessageProfileType in XML-Profiles.xsd. AudioStreaming.xml gives an
+    /// event arguments, which the XSD does not define for events, and the profile wins
+    /// (docs/rois-reference.md, section 16). A client passes the argument values in the
+    /// subscribe condition.
     /// 
-    /// Events have results (the event payload) but no arguments.
+    /// Attributes:
+    ///     arguments: The input arguments of this event.
     /// </summary>
     public sealed class EventMessageProfile : IEquatable<EventMessageProfile>
     {
@@ -205,18 +215,21 @@ namespace OpenRoIS.Interfaces.Profiles
         public string Name { get; }
         [JsonPropertyName("results")]
         public IReadOnlyList<ParameterProfile>? Results { get; }
+        [JsonPropertyName("arguments")]
+        public IReadOnlyList<ParameterProfile>? Arguments { get; }
 
-        public EventMessageProfile(string name, IReadOnlyList<ParameterProfile>? results = null)
+        public EventMessageProfile(string name, IReadOnlyList<ParameterProfile>? results = null, IReadOnlyList<ParameterProfile>? arguments = null)
         {
             Name = name;
             Results = results;
+            Arguments = arguments;
         }
 
         public bool Equals(EventMessageProfile? other)
         {
             if (ReferenceEquals(other, this)) return true;
             if (other is null) return false;
-            return Equals(Name, other.Name) && Equals(Results, other.Results);
+            return Equals(Name, other.Name) && Equals(Results, other.Results) && Equals(Arguments, other.Arguments);
         }
 
         public override bool Equals(object? obj)
@@ -226,7 +239,7 @@ namespace OpenRoIS.Interfaces.Profiles
 
         public override int GetHashCode()
         {
-            return System.HashCode.Combine(Name, Results);
+            return System.HashCode.Combine(Name, Results, Arguments);
         }
 
         public static bool operator ==(EventMessageProfile? left, EventMessageProfile? right)
@@ -238,10 +251,13 @@ namespace OpenRoIS.Interfaces.Profiles
     /// <summary>
     /// A query message profile.
     /// 
-    /// Maps to QueryMessageProfileType in XML-Profiles.xsd.
+    /// Maps to QueryMessageProfileType in XML-Profiles.xsd. AudioStreaming.xml gives a
+    /// query arguments, which the XSD does not define for queries, and the profile wins
+    /// (docs/rois-reference.md, section 16). A client passes the argument values in the
+    /// query condition, for example ``stream_id = 'audio-1'``.
     /// 
-    /// Queries have results but no arguments (the query_type and condition
-    /// are passed separately, not as message arguments).
+    /// Attributes:
+    ///     arguments: The input arguments of this query.
     /// </summary>
     public sealed class QueryMessageProfile : IEquatable<QueryMessageProfile>
     {
@@ -249,18 +265,21 @@ namespace OpenRoIS.Interfaces.Profiles
         public string Name { get; }
         [JsonPropertyName("results")]
         public IReadOnlyList<ParameterProfile>? Results { get; }
+        [JsonPropertyName("arguments")]
+        public IReadOnlyList<ParameterProfile>? Arguments { get; }
 
-        public QueryMessageProfile(string name, IReadOnlyList<ParameterProfile>? results = null)
+        public QueryMessageProfile(string name, IReadOnlyList<ParameterProfile>? results = null, IReadOnlyList<ParameterProfile>? arguments = null)
         {
             Name = name;
             Results = results;
+            Arguments = arguments;
         }
 
         public bool Equals(QueryMessageProfile? other)
         {
             if (ReferenceEquals(other, this)) return true;
             if (other is null) return false;
-            return Equals(Name, other.Name) && Equals(Results, other.Results);
+            return Equals(Name, other.Name) && Equals(Results, other.Results) && Equals(Arguments, other.Arguments);
         }
 
         public override bool Equals(object? obj)
@@ -270,7 +289,7 @@ namespace OpenRoIS.Interfaces.Profiles
 
         public override int GetHashCode()
         {
-            return System.HashCode.Combine(Name, Results);
+            return System.HashCode.Combine(Name, Results, Arguments);
         }
 
         public static bool operator ==(QueryMessageProfile? left, QueryMessageProfile? right)

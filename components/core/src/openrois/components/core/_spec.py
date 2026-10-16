@@ -14,9 +14,17 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Literal
 
-from openrois.interfaces.profiles import CommandMessageProfile, HRIComponentProfile
+from openrois.interfaces.profiles import (
+    CommandMessageProfile,
+    EventMessageProfile,
+    HRIComponentProfile,
+    QueryMessageProfile,
+)
 
 type HandlerKind = Literal["command", "query", "event", "set_parameter"]
+
+# The messages whose handlers take arguments by name.
+type MessageWithArguments = CommandMessageProfile | QueryMessageProfile | EventMessageProfile
 
 # The attribute the method decorators set on the functions they mark.
 HANDLER_ATTRIBUTE = "__rois_handler__"
@@ -112,11 +120,14 @@ def build_spec(cls: type, profile: HRIComponentProfile) -> ComponentSpec:
         if handler.name in table:
             raise ValueError(f"{owner}.{table[handler.name]} and {where} both handle the "
                              f"{handler.kind} {handler.name!r}")
+        message: MessageWithArguments
         if handler.kind == "command":
             message = next(m for m in profile.command_profiles if m.name == handler.name)
-            _check_command_parameters(where, message, parameters)
-        elif parameters:
-            raise TypeError(f"{where} must take no arguments besides self")
+        elif handler.kind == "query":
+            message = next(m for m in profile.query_profiles if m.name == handler.name)
+        else:
+            message = next(m for m in profile.event_profiles if m.name == handler.name)
+        _check_parameters(where, message, parameters)
         table[handler.name] = attribute
 
     commands, queries, events = tables["command"], tables["query"], tables["event"]
@@ -143,12 +154,12 @@ def build_spec(cls: type, profile: HRIComponentProfile) -> ComponentSpec:
     )
 
 
-def _check_command_parameters(
+def _check_parameters(
     where: str,
-    message: CommandMessageProfile,
+    message: MessageWithArguments,
     parameters: list[inspect.Parameter],
 ) -> None:
-    """A command handler takes the arguments of its command by name, and nothing else."""
+    """A handler takes the arguments of its message by name, and nothing else."""
     arguments = {a.name for a in message.arguments}
     for parameter in parameters:
         if parameter.kind is inspect.Parameter.VAR_KEYWORD:
@@ -156,5 +167,5 @@ def _check_command_parameters(
         if parameter.kind is inspect.Parameter.VAR_POSITIONAL:
             raise TypeError(f"{where} cannot take *{parameter.name}: arguments arrive by name")
         if parameter.name not in arguments:
-            raise TypeError(f"{where} takes {parameter.name!r}, which the command "
+            raise TypeError(f"{where} takes {parameter.name!r}, which the message "
                             f"{message.name!r} does not define as an argument")

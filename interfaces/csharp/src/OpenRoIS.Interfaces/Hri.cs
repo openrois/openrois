@@ -1,5 +1,5 @@
 // GENERATED FROM interfaces/schema — DO NOT EDIT
-// Source: Argument.schema.json, CommandUnit.schema.json, CommandUnitSequence.schema.json, ConcurrentCommands.schema.json, Parameter.schema.json, Result.schema.json, ReturnCode.schema.json
+// Source: Argument.schema.json, Branch.schema.json, CommandUnit.schema.json, CommandUnitSequence.schema.json, ConcurrentCommands.schema.json, Parameter.schema.json, Result.schema.json, ReturnCode.schema.json
 // Generator: scripts/Generator/Program.cs
 
 using System;
@@ -75,7 +75,9 @@ namespace OpenRoIS.Interfaces.Hri
     ///     component_ref: The component to send the command to.
     ///     command_type: The command name: a standard one (start, stop, suspend, resume,
     ///         set_parameter) or one the component profile defines.
-    ///     command_id: Unique identifier for this command instance.
+    ///     command_id: Unique identifier for this command instance. The engine a client
+    ///         calls assigns it and ignores one the client sends. An engine passes the ids
+    ///         it assigned on to the engines below it.
     ///     arguments: Optional list of arguments for the command.
     ///     delay_time: Optional delay in milliseconds before executing this command.
     /// </summary>
@@ -92,7 +94,7 @@ namespace OpenRoIS.Interfaces.Hri
         [JsonPropertyName("delay_time")]
         public int? DelayTime { get; }
 
-        public CommandUnit(string componentRef, string commandType, string commandId, IReadOnlyList<Argument>? arguments = null, int? delayTime = null)
+        public CommandUnit(string componentRef, string commandType, string commandId = "", IReadOnlyList<Argument>? arguments = null, int? delayTime = null)
         {
             ComponentRef = componentRef;
             CommandType = commandType;
@@ -125,24 +127,68 @@ namespace OpenRoIS.Interfaces.Hri
     }
 
     /// <summary>
-    /// A group of commands to be executed concurrently.
+    /// One branch of a ConcurrentCommands item: commands that run one after another.
     /// 
-    /// Maps to ConcurrentCommandsType in XML-Profiles.xsd.
+    /// Maps to BranchType in XML-Profiles.xsd.
     /// 
     /// Attributes:
-    ///     command_list: The commands to execute in parallel.
+    ///     command_list: The commands of the branch, in the order they run.
+    /// </summary>
+    public sealed class Branch : IEquatable<Branch>
+    {
+        [JsonPropertyName("command_list")]
+        public IReadOnlyList<CommandUnit> CommandList { get; }
+
+        public Branch(IReadOnlyList<CommandUnit> commandList)
+        {
+            CommandList = commandList;
+        }
+
+        public bool Equals(Branch? other)
+        {
+            if (ReferenceEquals(other, this)) return true;
+            if (other is null) return false;
+            return Equals(CommandList, other.CommandList);
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return Equals(obj as Branch);
+        }
+
+        public override int GetHashCode()
+        {
+            return System.HashCode.Combine(CommandList);
+        }
+
+        public static bool operator ==(Branch? left, Branch? right)
+            => ReferenceEquals(left, right) || (left is not null && left.Equals(right));
+        public static bool operator !=(Branch? left, Branch? right)
+            => !(left == right);
+    }
+
+    /// <summary>
+    /// A group of branches that run at the same time.
+    /// 
+    /// Maps to ConcurrentCommandsType in XML-Profiles.xsd and to the branch_list form of
+    /// Annex B.1. Each branch runs its commands in order, the branches run in parallel,
+    /// and the next item of the sequence waits for every branch. The XSD form, a flat
+    /// ``command_list``, is read as one branch per command.
+    /// 
+    /// Attributes:
+    ///     branch_list: The branches to run in parallel.
     ///     delay_time: Optional delay in milliseconds before executing this group.
     /// </summary>
     public sealed class ConcurrentCommands : IEquatable<ConcurrentCommands>, ICommandUnitSequenceItem
     {
-        [JsonPropertyName("command_list")]
-        public IReadOnlyList<CommandUnit> CommandList { get; }
+        [JsonPropertyName("branch_list")]
+        public IReadOnlyList<Branch> BranchList { get; }
         [JsonPropertyName("delay_time")]
         public int? DelayTime { get; }
 
-        public ConcurrentCommands(IReadOnlyList<CommandUnit> commandList, int? delayTime = null)
+        public ConcurrentCommands(IReadOnlyList<Branch> branchList, int? delayTime = null)
         {
-            CommandList = commandList;
+            BranchList = branchList;
             DelayTime = delayTime;
         }
 
@@ -150,7 +196,7 @@ namespace OpenRoIS.Interfaces.Hri
         {
             if (ReferenceEquals(other, this)) return true;
             if (other is null) return false;
-            return Equals(CommandList, other.CommandList) && Equals(DelayTime, other.DelayTime);
+            return Equals(BranchList, other.BranchList) && Equals(DelayTime, other.DelayTime);
         }
 
         public override bool Equals(object? obj)
@@ -160,7 +206,7 @@ namespace OpenRoIS.Interfaces.Hri
 
         public override int GetHashCode()
         {
-            return System.HashCode.Combine(CommandList, DelayTime);
+            return System.HashCode.Combine(BranchList, DelayTime);
         }
 
         public static bool operator ==(ConcurrentCommands? left, ConcurrentCommands? right)

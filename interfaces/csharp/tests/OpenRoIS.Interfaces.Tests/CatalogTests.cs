@@ -41,9 +41,8 @@ namespace OpenRoIS.Interfaces.Tests
     }
 
     [Fact]
-    public void Streaming_IsNotModelled()
+    public void Streaming_HasNoMethodsOfItsOwn()
     {
-        Assert.Contains("rois.stream.", UnmodelledMethodPrefixes.All);
         Assert.DoesNotContain(
             RoISMethodTypes.ByMethod.Keys,
             name => name.StartsWith("rois.stream.", StringComparison.Ordinal));

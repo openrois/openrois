@@ -22,7 +22,6 @@ from openrois.interfaces.catalog import (
     METHODS_BY_NAME,
     NOTIFICATIONS,
     NOTIFICATIONS_BY_NAME,
-    STREAMING_METHOD_PREFIX,
     BindAnyParams,
     BindAnyResult,
     BindParams,
@@ -82,6 +81,7 @@ from openrois.interfaces.condition import (
 from openrois.interfaces.hri import (
     Argument,
     ArgumentList,
+    Branch,
     CommandId,
     CommandType,
     CommandUnit,
@@ -128,6 +128,7 @@ __all__ = [
     # HRI core
     "Argument",
     "ArgumentList",
+    "Branch",
     "CommandUnit",
     "CommandUnitSequence",
     "CommandUnitSequenceItem",
@@ -201,7 +202,6 @@ __all__ = [
     "QueryResult",
     "ReleaseParams",
     "ReleaseResult",
-    "STREAMING_METHOD_PREFIX",
     "SearchParams",
     "SearchResult",
     "SetParameterParams",

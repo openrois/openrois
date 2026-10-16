@@ -9,7 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ExecuteResultSchema` carries `command_unit_list`, the sequence with the command ids the engine assigned, and `AUDIO_STREAMING_PROFILE` and `VIDEO_STREAMING_PROFILE` are generated into `./components`.
 - Add `SPEECH_SYNTHESIS_PROFILE` to `./components`, generated from `schema/profiles.json`. The constant is the full profile of the SpeechSynthesis type: its XML profile with the RoIS_Common messages listed first, and the RoSO function `actuation`.
+
+### Changed
+
+- **Breaking:** `command_id` is optional on a command unit, since the engine assigns it, and `ConcurrentCommandsSchema` holds `branch_list`, branches of commands that run in order. Query and event profiles gain `arguments`, and parameter profiles `read_only`.
+
+### Removed
+
+- **Breaking:** `UnmodelledMethodPrefixes`. Streaming has no methods of its own.
 
 ## [0.1.0-alpha.4] - 2026-10-08
 

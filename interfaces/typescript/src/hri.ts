@@ -1,5 +1,5 @@
 // GENERATED FROM interfaces/schema — DO NOT EDIT
-// Source: Argument.schema.json, CommandUnit.schema.json, CommandUnitSequence.schema.json, ConcurrentCommands.schema.json, Parameter.schema.json, Result.schema.json, ReturnCode.schema.json
+// Source: Argument.schema.json, Branch.schema.json, CommandUnit.schema.json, CommandUnitSequence.schema.json, ConcurrentCommands.schema.json, Parameter.schema.json, Result.schema.json, ReturnCode.schema.json
 // Generator: scripts/generate.ts
 
 import { z } from "zod";
@@ -63,7 +63,9 @@ export type Argument = z.infer<typeof ArgumentSchema>;
  *     component_ref: The component to send the command to.
  *     command_type: The command name: a standard one (start, stop, suspend, resume,
  *         set_parameter) or one the component profile defines.
- *     command_id: Unique identifier for this command instance.
+ *     command_id: Unique identifier for this command instance. The engine a client
+ *         calls assigns it and ignores one the client sends. An engine passes the ids
+ *         it assigned on to the engines below it.
  *     arguments: Optional list of arguments for the command.
  *     delay_time: Optional delay in milliseconds before executing this command.
  */
@@ -71,24 +73,41 @@ export type Argument = z.infer<typeof ArgumentSchema>;
 export const CommandUnitSchema = z.object({
   component_ref: z.string(),
   command_type: z.string(), // Command name, for example start, stop or set_parameter
-  command_id: z.string(), // Unique command instance identifier
+  command_id: z.string().default(""), // Command instance identifier, assigned by the engine the client calls
   arguments: z.array(ArgumentSchema).optional(),
   delay_time: z.number().int().nullable().default(null), // Delay in ms before execution
 }).strict();
 export type CommandUnit = z.infer<typeof CommandUnitSchema>;
 
 /**
- * A group of commands to be executed concurrently.
+ * One branch of a ConcurrentCommands item: commands that run one after another.
  * 
- * Maps to ConcurrentCommandsType in XML-Profiles.xsd.
+ * Maps to BranchType in XML-Profiles.xsd.
  * 
  * Attributes:
- *     command_list: The commands to execute in parallel.
+ *     command_list: The commands of the branch, in the order they run.
+ */
+
+export const BranchSchema = z.object({
+  command_list: z.array(CommandUnitSchema),
+}).strict();
+export type Branch = z.infer<typeof BranchSchema>;
+
+/**
+ * A group of branches that run at the same time.
+ * 
+ * Maps to ConcurrentCommandsType in XML-Profiles.xsd and to the branch_list form of
+ * Annex B.1. Each branch runs its commands in order, the branches run in parallel,
+ * and the next item of the sequence waits for every branch. The XSD form, a flat
+ * ``command_list``, is read as one branch per command.
+ * 
+ * Attributes:
+ *     branch_list: The branches to run in parallel.
  *     delay_time: Optional delay in milliseconds before executing this group.
  */
 
 export const ConcurrentCommandsSchema = z.object({
-  command_list: z.array(CommandUnitSchema),
+  branch_list: z.array(BranchSchema),
   delay_time: z.number().int().nullable().default(null), // Delay in ms before execution
 }).strict();
 export type ConcurrentCommands = z.infer<typeof ConcurrentCommandsSchema>;

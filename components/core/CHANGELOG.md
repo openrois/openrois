@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `Resource`, the base class of something several components of one adapter share, such as a robot connection or an SDK client. A component records the resources it uses with `self.uses(resource)` in its constructor. The engine opens each one before the first component that uses it connects and closes it after the last one disconnects.
+- `self.raise_status(status, message)` and `self.clear_status()` on a component and on a resource, safe from any thread. They report WARNING or ERROR, which `component_status` shows and which reaches clients as `rois.system.notify_error`. A raised ERROR makes the engine refuse the component's commands and queries until it clears.
+- `self.engine_state()`, the status of the engine that hosts the component, for a SystemInformation component's `engine_status`.
+- Query and subscribe handlers take the arguments of their message by name, as command handlers do, for example `stream_id` for `get_stream_status`. `emit(event_type, concerning={...}, **values)` names the argument values an event is about, so it reaches only the subscriptions that asked for them.
+
+### Changed
+
+- **Breaking:** `EngineBinding` gains `raise_status`, `clear_status` and `engine_status`, and its `emit` takes the argument values the event concerns. `rois_query` and `rois_subscribed` take the arguments of the message.
+
 ## [0.1.0a1] - 2026-10-08
 
 ### Added

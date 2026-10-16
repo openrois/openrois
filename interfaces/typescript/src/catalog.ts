@@ -117,13 +117,13 @@ export type DisconnectResult = z.infer<typeof DisconnectResultSchema>;
 /**
  * Params of rois.command.execute.
  * 
- * Maps to CommandIF::execute(in command_unit_list). The application names every
- * command with its own command_id, and completed notifications report each one.
- * The engine rejects a command_id it already tracks with BAD_PARAMETER.
+ * Maps to CommandIF::execute(in command_unit_list). The engine the client calls
+ * assigns every command_id and ignores the ids a client sends, and completed
+ * notifications report each command by the id the engine assigned.
  * 
  * Attributes:
  *     command_unit_list: Commands to run in order. A ConcurrentCommands item runs
- *         its commands at the same time.
+ *         its branches at the same time.
  */
 
 export const ExecuteParamsSchema = z.object({
@@ -139,10 +139,14 @@ export type ExecuteParams = z.infer<typeof ExecuteParamsSchema>;
  * Attributes:
  *     return_code: Whether the engine accepted the commands. Completed
  *         notifications report how each command ended.
+ *     command_unit_list: The sequence as the engine runs it, with the command_id it
+ *         assigned to every command. Empty unless return_code is OK. An OpenRoIS
+ *         extension.
  */
 
 export const ExecuteResultSchema = z.object({
   return_code: ReturnCodeSchema,
+  command_unit_list: z.array(CommandUnitSequenceItemSchema).optional(), // The sequence with the assigned command ids (OpenRoIS extension)
 }).strict();
 export type ExecuteResult = z.infer<typeof ExecuteResultSchema>;
 
@@ -612,6 +616,3 @@ export const JsonRpcErrorCode = {
   INVALID_PARAMS: -32602,
   INTERNAL_ERROR: -32603,
 } as const;
-
-/** Method name prefixes the catalog does not model. Engines answer them with METHOD_NOT_FOUND. */
-export const UnmodelledMethodPrefixes = ["rois.stream."] as const;

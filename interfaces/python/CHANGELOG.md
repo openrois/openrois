@@ -9,7 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ExecuteResult.command_unit_list`, an OpenRoIS extension: the sequence with the command id the engine assigned to every command.
+- `AUDIO_STREAMING_PROFILE`, `VIDEO_STREAMING_PROFILE` and their URNs in `openrois.interfaces.components`, a local copy until the profile generator writes them.
 - Add `SPEECH_SYNTHESIS_PROFILE` and `SPEECH_SYNTHESIS_URN` to `openrois.interfaces.components`. The constant is the full profile of the SpeechSynthesis type: `SpeechSynthesis.xml` with the RoIS_Common messages listed first, and the RoSO function `actuation`. A component that speaks a text, on a speaker or through an avatar's voice, declares it.
+
+### Changed
+
+- **Breaking:** `CommandUnit.command_id` defaults to empty: the engine a client calls assigns it.
+- **Breaking:** `ConcurrentCommands` holds `branch_list`, a list of `Branch`, each an ordered `command_list`. The flat `command_list` of the XSD reads as one branch per command.
+- `QueryMessageProfile` and `EventMessageProfile` gain `arguments`, and `ParameterProfile` gains `read_only`, an OpenRoIS extension.
+
+### Removed
+
+- **Breaking:** `STREAMING_METHOD_PREFIX` and the `unmodelled_method_prefixes` entry of `catalog.json`. Streaming has no methods of its own.
 
 ## [0.1.0a4] - 2026-10-08
 

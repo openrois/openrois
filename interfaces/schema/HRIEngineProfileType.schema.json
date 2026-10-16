@@ -38,7 +38,7 @@
     },
     "ParameterProfile": {
       "additionalProperties": false,
-      "description": "Describes a parameter's data type and metadata.\n\nMaps to ParameterProfileType in XML-Profiles.xsd.\n\nUsed in both message profiles (Arguments/Results) and component-level\nparameter declarations.\n\nAttributes:\n    name: The parameter name.\n    data_type_ref: Reference to the data type (e.g., 'int', 'DateTime',\n        'RoISIdentifier[]').\n    default_value: Optional default value as a string.\n    description: Optional human-readable description.",
+      "description": "Describes a parameter's data type and metadata.\n\nMaps to ParameterProfileType in XML-Profiles.xsd.\n\nUsed in both message profiles (Arguments/Results) and component-level\nparameter declarations.\n\nAttributes:\n    name: The parameter name.\n    data_type_ref: Reference to the data type (e.g., 'int', 'DateTime',\n        'RoISIdentifier[]').\n    default_value: Optional default value as a string.\n    description: Optional human-readable description.\n    read_only: Whether set_parameter may change the parameter. True for the\n        parameters the spec lists only under get_parameter, such as\n        ``available_encodings``. Not part of XML-Profiles.xsd.",
       "properties": {
         "name": {
           "title": "Name",
@@ -56,6 +56,12 @@
           "default": "",
           "title": "Description",
           "type": "string"
+        },
+        "read_only": {
+          "default": false,
+          "description": "Whether set_parameter may not change the parameter (OpenRoIS extension)",
+          "title": "Read Only",
+          "type": "boolean"
         }
       },
       "required": [

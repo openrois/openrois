@@ -17,13 +17,20 @@ from typing import Any
 from openrois.components.core import (
     CommandFailed,
     Component,
+    Resource,
     component,
     invoke,
     on_set_parameter,
     query,
     subscribe,
 )
-from openrois.interfaces.components import NAVIGATION_PROFILE, PERSON_DETECTION_PROFILE
+from openrois.interfaces.common import ComponentStatus
+from openrois.interfaces.components import (
+    AUDIO_STREAMING_PROFILE,
+    NAVIGATION_PROFILE,
+    PERSON_DETECTION_PROFILE,
+    SYSTEM_INFORMATION_PROFILE,
+)
 from openrois.interfaces.profiles import (
     CommandMessageProfile,
     ComponentFunction,
@@ -190,6 +197,149 @@ class Gripper(Component):
         return {"width": 0.08}
 
 
+#: A sensing component of our own whose watch command runs until the test ends it.
+WATCHER_PROFILE = HRIComponentProfile(
+    identifier=RoISIdentifierType(authority="OpenRoIS", code="Watcher"),
+    name="watcher",
+    function=ComponentFunction.SENSING,
+    command_profiles=[CommandMessageProfile(name="watch")],
+)
+
+
+@component(WATCHER_PROFILE)
+class Watcher(Component):
+    """A sensor that several sessions share. Each watch runs until ``done`` is set."""
+
+    def __init__(self) -> None:
+        self.done = asyncio.Event()
+        self.watching = 0
+
+    @invoke("watch")
+    async def watch(self) -> None:
+        self.watching += 1
+        try:
+            await self.done.wait()
+        finally:
+            self.watching -= 1
+
+
+#: A component type declared without a RoSO function.
+LAMP_PROFILE = HRIComponentProfile(
+    identifier=RoISIdentifierType(authority="OpenRoIS", code="Lamp"),
+    name="lamp",
+    command_profiles=[CommandMessageProfile(name="blink")],
+)
+
+
+@component(LAMP_PROFILE)
+class Lamp(Component):
+    """A lamp whose type names no RoSO function."""
+
+    @invoke("blink")
+    async def blink(self) -> None:
+        return None
+
+
+#: An actuation component whose start must begin within 50 ms of its receipt.
+ARM_PROFILE = HRIComponentProfile(
+    identifier=RoISIdentifierType(authority="OpenRoIS", code="Arm"),
+    name="arm",
+    function=ComponentFunction.ACTUATION,
+    command_profiles=[
+        CommandMessageProfile(name="start", timeout=50),
+        CommandMessageProfile(name="stop"),
+    ],
+)
+
+
+@component(ARM_PROFILE)
+class Arm(Component):
+    """An arm whose start runs for ever and takes 0.3 s to unwind when it is cancelled."""
+
+    def __init__(self) -> None:
+        self.starts = 0
+
+    @invoke("start")
+    async def start(self) -> None:
+        self.starts += 1
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            await asyncio.sleep(0.3)
+            raise
+
+    @invoke("stop")
+    async def stop(self) -> None:
+        return None
+
+
+class RobotLink(Resource):
+    """A connection to a robot that several components share.
+
+    With ``gate``, open() waits until the test sets it. With ``fail``, open() raises.
+    """
+
+    def __init__(self, *, fail: bool = False, gate: asyncio.Event | None = None) -> None:
+        self.fail = fail
+        self.gate = gate
+        self.opened = 0
+        self.closed = 0
+
+    async def open(self) -> None:
+        if self.gate is not None:
+            await self.gate.wait()
+        if self.fail:
+            raise RuntimeError("The robot SDK is missing.")
+        self.opened += 1
+
+    async def close(self) -> None:
+        self.closed += 1
+
+
+class LinkedNavigation(Navigation):
+    """A Navigation that reaches its robot through a shared RobotLink."""
+
+    def __init__(self, link: RobotLink) -> None:
+        super().__init__()
+        self.link = self.uses(link)
+
+
+class LinkedDetection(PersonDetection):
+    """A PersonDetection that reaches its robot through a shared RobotLink."""
+
+    def __init__(self, link: RobotLink) -> None:
+        super().__init__()
+        self.link = self.uses(link)
+
+
+@component(AUDIO_STREAMING_PROFILE)
+class Microphone(Component):
+    """An AudioStreaming component that records the stream ids it is asked about."""
+
+    def __init__(self) -> None:
+        self.asked: list[str] = []
+        self.watched: list[str | None] = []
+
+    @query("get_stream_status")
+    async def get_stream_status(self, stream_id: str) -> dict[str, object]:
+        self.asked.append(stream_id)
+        return {"status": "STREAMING_RUNNING"}
+
+    @subscribe("notify_stream_status")
+    async def notify_stream_status(self, stream_id: str | None = None) -> None:
+        self.watched.append(stream_id)
+
+
+@component(SYSTEM_INFORMATION_PROFILE)
+class EngineWatch(Component):
+    """A SystemInformation that reports the status of the engine that hosts it."""
+
+    @query("engine_status")
+    async def engine_status_query(self) -> dict[str, object]:
+        status: ComponentStatus = self.engine_state()
+        return {"operable_time": "2026-10-16T00:00:00+00:00", "status": status}
+
+
 # ---------------------------------------------------------------------------
 # A peer of an engine, without a socket
 # ---------------------------------------------------------------------------
@@ -207,6 +357,13 @@ class Peer:
         self.notifications: list[tuple[str, dict[str, Any]]] = []
         self.session = engine.open_session(self._notify, trusted=trusted)
         self._next_id = 0
+
+    @classmethod
+    async def connected(cls, engine: Engine, *, trusted: bool = False) -> Peer:
+        """A session that has completed rois.system.connect."""
+        peer = cls(engine, trusted=trusted)
+        assert (await peer.call("rois.system.connect"))["return_code"] == "OK"
+        return peer
 
     def _notify(self, method: str, params: BaseModel) -> None:
         self.notifications.append((method, params.model_dump(mode="json")))
@@ -248,6 +405,12 @@ class Peer:
         assert status is not None
         return status
 
+    async def execute(self, *items: Mapping[str, Any]) -> list[str]:
+        """Run an execute that must be accepted, and return the assigned ids in order."""
+        result = await self.call("rois.command.execute", command_unit_list=list(items))
+        assert result["return_code"] == "OK", result
+        return command_ids(result)
+
     async def close(self) -> None:
         await self.engine.close_session(self.session)
 
@@ -255,21 +418,38 @@ class Peer:
 def unit(
     ref: str,
     command_type: str,
-    command_id: str,
     delay_time: int | None = None,
     **arguments: str,
 ) -> dict[str, Any]:
-    """One command of an execute, as the wire writes it."""
+    """One command of an execute, as the wire writes it, without a command id."""
     return {
         "component_ref": ref,
         "command_type": command_type,
-        "command_id": command_id,
         "arguments": [
             {"name": name, "data_type_ref": "", "value": value}
             for name, value in arguments.items()
         ],
         "delay_time": delay_time,
     }
+
+
+def branches(*branch_units: list[dict[str, Any]], delay_time: int | None = None) -> dict[str, Any]:
+    """A ConcurrentCommands item: each list of commands is one branch."""
+    return {
+        "branch_list": [{"command_list": commands} for commands in branch_units],
+        "delay_time": delay_time,
+    }
+
+
+def command_ids(result: Mapping[str, Any]) -> list[str]:
+    """The command ids an execute result assigned, in the order of the sequence."""
+    ids: list[str] = []
+    for item in result["command_unit_list"]:
+        if "branch_list" in item:
+            ids.extend(c["command_id"] for b in item["branch_list"] for c in b["command_list"])
+        else:
+            ids.append(item["command_id"])
+    return ids
 
 
 # ---------------------------------------------------------------------------
@@ -312,8 +492,12 @@ class RpcClient:
         self._reader = asyncio.create_task(self._read())
 
     @classmethod
-    async def connect(cls, url: str) -> RpcClient:
-        return cls(await connect(url))
+    async def connect(cls, url: str, *, handshake: bool = True) -> RpcClient:
+        """Open a connection and, with ``handshake``, complete rois.system.connect."""
+        client = cls(await connect(url))
+        if handshake:
+            assert (await client.call("rois.system.connect"))["return_code"] == "OK"
+        return client
 
     async def _read(self) -> None:
         try:
@@ -346,6 +530,12 @@ class RpcClient:
     def sent(self, method: str) -> list[dict[str, Any]]:
         """The params of every notification of one method received so far."""
         return [m["params"] for m in self.messages if m.get("method") == method]
+
+    async def execute(self, *items: Mapping[str, Any]) -> list[str]:
+        """Run an execute that must be accepted, and return the assigned ids in order."""
+        result = await self.call("rois.command.execute", command_unit_list=list(items))
+        assert result["return_code"] == "OK", result
+        return command_ids(result)
 
     async def notification(
         self, method: str, match: Callable[[dict[str, Any]], bool] = lambda _: True
@@ -421,17 +611,33 @@ class FakeChild:
         message = {"jsonrpc": "2.0", "id": request["id"], "result": result}
         await self.connection.send(json.dumps(message))
 
+    async def answer_connect(self) -> None:
+        """Answer the rois.system.connect a parent sends before anything else."""
+        request = await self.request()
+        assert request["method"] == "rois.system.connect", request
+        await self.reply(request, {"return_code": "OK"})
+
     async def answer_profile(
         self,
         engine_id: str,
         refs: list[str] | None = None,
         sub_engine_ids: tuple[str, ...] = (),
+        profile: HRIComponentProfile | None = None,
+        *,
+        connect: bool = True,
     ) -> None:
-        """Answer the gateway's get_profile with sensing components, one by default."""
+        """Answer the gateway's get_profile with one profile for every ref.
+
+        The connect the gateway sends first is answered too, unless ``connect`` is
+        False, as for a profile read again. The profile is a sensing camera unless
+        ``profile`` names another.
+        """
+        if connect:
+            await self.answer_connect()
         request = await self.request()
         assert request["method"] == "rois.system.get_profile"
         component_ids = refs if refs is not None else [f"{engine_id}/camera"]
-        camera = PERSON_DETECTION_PROFILE.model_copy(update={"name": "camera"})
+        camera = (profile or PERSON_DETECTION_PROFILE).model_copy(update={"name": "camera"})
         await self.reply(
             request,
             {
