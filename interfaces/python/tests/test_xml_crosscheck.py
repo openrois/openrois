@@ -4,13 +4,19 @@ This test module parses the XML profile files (PersonDetection.xml, Navigation.x
 SystemInformation.xml, Reaction.xml, SpeechSynthesis.xml, RoISCommon.xml) using lxml and
 validates that the Pydantic models and the profile constants agree with the XML
 definitions: field names, data types, descriptions and default values must match.
+
+It also holds all 18 profiles to the expectations of ``_normative_expectations.py``,
+asserts the XSD gaps of the validation table as they stand, and compares the Python enums
+with the IDL enum bodies.
 """
 
 import re
+from dataclasses import replace
 
 import pytest
 from lxml import etree
 
+from openrois.interfaces.common import ComponentStatus, StreamStatus
 from openrois.interfaces.components import (
     NAVIGATION_PROFILE,
     PERSON_DETECTION_PROFILE,
@@ -20,6 +26,7 @@ from openrois.interfaces.components import (
     SPEECH_SYNTHESIS_PROFILE,
     SYSTEM_INFORMATION_PROFILE,
 )
+from openrois.interfaces.hri import ReturnCode
 from openrois.interfaces.profiles import (
     CommandMessageProfile,
     ComponentFunction,
@@ -29,6 +36,8 @@ from openrois.interfaces.profiles import (
     QueryMessageProfile,
     RoISIdentifierType,
 )
+from openrois.interfaces.service import CompletedStatus, ErrorType
+from tests import _normative_expectations as expectations
 from tests._normative import NORMATIVE_DIR, requires_normative
 
 # Every test in this module reads the normative XML profiles.
@@ -41,6 +50,7 @@ pytestmark = requires_normative
 ROIS_NS = "http://www.omg.org/spec/RoIS/20240801"
 GML_NS = "http://www.opengis.net/gml/3.2"
 XSI_NS = "http://www.w3.org/2001/XMLSchema-instance"
+XSD_NS = "http://www.w3.org/2001/XMLSchema"
 
 NAMESPACES = {
     "rois": ROIS_NS,
@@ -431,7 +441,12 @@ class TestSystemInformationXMLCrossCheck:
 # ---------------------------------------------------------------------------
 
 _ONTOLOGY_COMPONENT = "https://www.omg.org/spec/RoIS/Ontology/RoboticInteractionServiceComponentOntology/"
-_ONTOLOGY_FUNCTION = "https://www.omg.org/spec/RoSO/RoboticServiceFunctionOntology/"
+# Sensing and Actuation sit in RoboticServiceFunctionOntology; OWL.ttl puts the streaming
+# types under RoboticServiceOntology/Function (row 35).
+_ONTOLOGY_FUNCTION = (
+    r"https://www\.omg\.org/spec/RoSO/"
+    r"(?:RoboticServiceFunctionOntology/(Sensing|Actuation)|RoboticServiceOntology/(Function))"
+)
 
 
 def _ontology_function(code: str) -> ComponentFunction | None:
@@ -444,8 +459,10 @@ def _ontology_function(code: str) -> ComponentFunction | None:
     )
     if block is None:
         return None
-    parent = re.search(rf"rdfs:subClassOf <{re.escape(_ONTOLOGY_FUNCTION)}(\w+)>", block.group(1))
-    return ComponentFunction(parent.group(1).lower()) if parent else None
+    parent = re.search(rf"rdfs:subClassOf <{_ONTOLOGY_FUNCTION}>", block.group(1))
+    if parent is None:
+        return None
+    return ComponentFunction((parent.group(1) or parent.group(2)).lower())
 
 
 def _full_profile(filename: str) -> HRIComponentProfile:
@@ -499,3 +516,258 @@ def test_rois_common_urn_matches_xml() -> None:
         "SpeechSynthesis.xml",
     ):
         assert ROIS_COMMON_URN in _build_component_profile_from_xml(filename).sub_component_profiles
+
+
+# ---------------------------------------------------------------------------
+# Tests: all 18 profiles against the expectations of the validation table
+# ---------------------------------------------------------------------------
+
+_EXPECTED = {p.file: p for p in expectations.PROFILES}
+
+
+def _load(filename: str) -> etree._Element:
+    """Parse a profile, repairing in memory only the strict-parse defects on record."""
+    data = (NORMATIVE_DIR / filename).read_bytes()
+    if filename in expectations.STRICT_PARSE_DEFECTS:
+        defect, repair = expectations.STRICT_PARSE_DEFECTS[filename]
+        data = data.replace(defect, repair)
+    return etree.fromstring(data)
+
+
+def _code(element: etree._Element) -> str:
+    ref = element.find(f"{{{ROIS_NS}}}data_type_ref")
+    assert ref is not None, f"{element.get(f'{{{ROIS_NS}}}name')} has no data_type_ref"
+    return ref.get(f"{{{ROIS_NS}}}code", "")
+
+
+def _fields(element: etree._Element, tag: str) -> tuple[expectations.Field, ...]:
+    return tuple(
+        expectations.Field(child.get(f"{{{ROIS_NS}}}name", ""), _code(child))
+        for child in element.findall(f"{{{ROIS_NS}}}{tag}")
+    )
+
+
+def _read_profile(filename: str) -> expectations.Profile:
+    """The file as an expectation entry, without validation rows."""
+    root = _load(filename)
+    messages = tuple(
+        expectations.Message(
+            kind=m.get(f"{{{XSI_NS}}}type", "").removeprefix("rois:").removesuffix(
+                "MessageProfileType"
+            ),
+            name=m.get(f"{{{ROIS_NS}}}name", ""),
+            arguments=_fields(m, "Arguments"),
+            results=_fields(m, "Results"),
+        )
+        for m in root.findall(f"{{{ROIS_NS}}}MessageProfile")
+    )
+    parameters = tuple(
+        expectations.Parameter(
+            name=p.get(f"{{{ROIS_NS}}}name", ""),
+            code=_code(p),
+            default=p.get(f"{{{ROIS_NS}}}default_value"),
+        )
+        for p in root.findall(f"{{{ROIS_NS}}}ParameterProfile")
+    )
+    return expectations.Profile(
+        file=filename,
+        identifier=root.findtext(f"{{{GML_NS}}}identifier", ""),
+        name=root.findtext(f"{{{GML_NS}}}name", ""),
+        sub_profiles=tuple(
+            (s.text or "").strip() for s in root.findall(f"{{{ROIS_NS}}}SubComponentProfile")
+        ),
+        messages=messages,
+        parameters=parameters,
+    )
+
+
+def _without_rows(profile: expectations.Profile) -> expectations.Profile:
+    return replace(
+        profile,
+        messages=tuple(replace(m, rows=()) for m in profile.messages),
+        parameters=tuple(replace(p, rows=()) for p in profile.parameters),
+        rows=(),
+    )
+
+
+def _xsd_type(name: str) -> etree._Element:
+    root = etree.parse(str(NORMATIVE_DIR / "XML-Profiles.xsd")).getroot()
+    found = root.find(f"{{{XSD_NS}}}complexType[@name='{name}']")
+    assert found is not None, f"XML-Profiles.xsd has no complexType {name}"
+    return found
+
+
+class TestNormativeFiles:
+    """The normative directory holds the 18 profiles the expectations describe."""
+
+    def test_profile_files_are_the_expected_eighteen(self) -> None:
+        present = {p.name for p in NORMATIVE_DIR.glob("*.xml")} - {"Model.xml"}
+        assert len(expectations.PROFILES) == 18
+        assert present == set(expectations.PROFILE_FILES)
+
+    @pytest.mark.parametrize(
+        "filename",
+        [*expectations.PROFILE_FILES, "Model.xml", "XML-Profiles.xsd"],
+    )
+    def test_file_parses_with_lxml(self, filename: str) -> None:
+        """Every file parses strictly, except a defect on record, which must still fail.
+
+        A corrected file turns the defect assertion red: remove its entry from
+        STRICT_PARSE_DEFECTS then.
+        """
+        path = str(NORMATIVE_DIR / filename)
+        if filename in expectations.STRICT_PARSE_DEFECTS:
+            defect, _ = expectations.STRICT_PARSE_DEFECTS[filename]
+            assert defect in (NORMATIVE_DIR / filename).read_bytes()
+            with pytest.raises(etree.XMLSyntaxError):
+                etree.parse(path)
+            assert _load(filename) is not None
+        else:
+            assert etree.parse(path).getroot() is not None
+
+
+@pytest.mark.parametrize("filename", expectations.PROFILE_FILES)
+class TestProfileExpectations:
+    """Each profile file matches its expectation entry."""
+
+    def test_root_is_component_profile(self, filename: str) -> None:
+        assert _load(filename).tag == f"{{{ROIS_NS}}}HRIComponentProfile"
+
+    def test_gml_id_is_component_profile(self, filename: str) -> None:
+        """Row 34: every file uses the same gml:id, so an engine profile must rename it."""
+        assert _load(filename).get(f"{{{GML_NS}}}id") == "component_profile"
+
+    def test_identifier_code_space(self, filename: str) -> None:
+        identifier = _load(filename).find(f"{{{GML_NS}}}identifier")
+        assert identifier is not None
+        assert identifier.get("codeSpace") == "urn:ietf:rfc:2141"
+
+    def test_profile_matches_expectation(self, filename: str) -> None:
+        assert _read_profile(filename) == _without_rows(_EXPECTED[filename])
+
+    def test_sub_profile_is_rois_common_only(self, filename: str) -> None:
+        """Rows 4 and 20: RoISCommon is the only sub-profile, except where none applies."""
+        sub_profiles = _read_profile(filename).sub_profiles
+        if filename in ("SystemInformation.xml", "RoISCommon.xml"):
+            assert sub_profiles == ()
+        else:
+            assert sub_profiles == (expectations.ROIS_COMMON_REF,)
+
+
+def test_type_codes_are_exactly_the_twelve() -> None:
+    """Rows 7 and 33: the set of type codes used across the 18 profiles."""
+    used: set[str] = set()
+    for filename in expectations.PROFILE_FILES:
+        root = _load(filename)
+        used |= {
+            ref.get(f"{{{ROIS_NS}}}code", "")
+            for ref in root.iter(f"{{{ROIS_NS}}}data_type_ref")
+        }
+    assert used == expectations.TYPE_CODES
+
+
+def test_expectations_use_only_the_twelve_codes() -> None:
+    codes = {
+        f.code
+        for p in expectations.PROFILES
+        for m in p.messages
+        for f in (*m.arguments, *m.results)
+    } | {p.code for profile in expectations.PROFILES for p in profile.parameters}
+    assert codes == expectations.TYPE_CODES
+
+
+class TestXSDGapsAsTheyStand:
+    """The two XSD gaps of the validation table, asserted as they stand.
+
+    A revision of XML-Profiles.xsd that closes a gap turns its test red, so the codec
+    and section 16 are revisited rather than passing silently.
+    """
+
+    def test_arguments_declared_on_command_profiles_only(self) -> None:
+        """Row 9: the XSD gives Arguments to CommandMessageProfileType alone."""
+        for name in ("MessageProfileType", "QueryMessageProfileType", "EventMessageProfileType"):
+            elements = {e.get("name") for e in _xsd_type(name).iter(f"{{{XSD_NS}}}element")}
+            assert "Arguments" not in elements, name
+        command = {
+            e.get("name") for e in _xsd_type("CommandMessageProfileType").iter(
+                f"{{{XSD_NS}}}element"
+            )
+        }
+        assert "Arguments" in command
+
+    def test_arguments_present_on_query_and_event_profiles(self) -> None:
+        """Row 9: the streaming profiles carry Arguments on a query and an event anyway."""
+        with_arguments = {
+            (filename, m.kind, m.name)
+            for filename in expectations.PROFILE_FILES
+            for m in _read_profile(filename).messages
+            if m.arguments and m.kind != expectations.COMMAND
+        }
+        assert with_arguments == {
+            (f, kind, name)
+            for f in ("AudioStreaming.xml", "VideoStreaming.xml")
+            for kind, name in (
+                (expectations.QUERY, "get_stream_status"),
+                (expectations.EVENT, "notify_stream_status"),
+            )
+        }
+
+    def test_concurrent_commands_hold_command_list(self) -> None:
+        """Row 3: ConcurrentCommandsType holds command_list of CommandMessageType."""
+        elements = [
+            (e.get("name"), e.get("type"))
+            for e in _xsd_type("ConcurrentCommandsType").iter(f"{{{XSD_NS}}}element")
+        ]
+        assert elements == [("command_list", "rois:CommandMessageType")]
+
+    def test_branch_type_unused(self) -> None:
+        """Row 3: BranchType is declared, and only its own Branch element uses it."""
+        root = etree.parse(str(NORMATIVE_DIR / "XML-Profiles.xsd")).getroot()
+        assert _xsd_type("BranchType") is not None
+        users = [e.get("name") for e in root.iter(f"{{{XSD_NS}}}element")
+                 if e.get("type") == "rois:BranchType"]
+        refs = [e for e in root.iter(f"{{{XSD_NS}}}element") if e.get("ref") == "rois:Branch"]
+        assert users == ["Branch"]
+        assert refs == []
+
+
+# ---------------------------------------------------------------------------
+# Tests: the Python enums against the IDL enum bodies
+# ---------------------------------------------------------------------------
+
+
+def _idl_enum(filename: str, name: str) -> list[str]:
+    """The literals of an IDL enum, in order."""
+    text = (NORMATIVE_DIR / filename).read_text()
+    body = re.search(rf"\benum\s+{re.escape(name)}\s*\{{(.*?)\}}", text, re.DOTALL)
+    assert body is not None, f"{filename} declares no enum {name}"
+    return [literal.strip() for literal in body.group(1).split(",") if literal.strip()]
+
+
+_PYTHON_ENUMS = {
+    "ReturnCode": ReturnCode,
+    "ComponentStatus": ComponentStatus,
+    "StreamStatus": StreamStatus,
+    "CompletedStatus": CompletedStatus,
+    "ErrorType": ErrorType,
+}
+
+
+@pytest.mark.parametrize("enum_name", list(expectations.IDL_ENUMS))
+def test_enum_matches_idl(enum_name: str) -> None:
+    """Each enum carries the IDL literals as its values, in the IDL order."""
+    filename, idl_name = expectations.IDL_ENUMS[enum_name]
+    assert [m.value for m in _PYTHON_ENUMS[enum_name]] == _idl_enum(filename, idl_name)
+
+
+def test_return_code_keeps_unsupported() -> None:
+    """Row 2: the IDL adds UNSUPPORTED to the five codes of Table 8.1."""
+    assert "UNSUPPORTED" in _idl_enum("RoIS_HRI.idl", "ReturnCode_t")
+    assert ReturnCode.UNSUPPORTED.value == "UNSUPPORTED"
+
+
+@pytest.mark.parametrize("code", list(expectations.ROSO_FUNCTIONS))
+def test_ontology_function(code: str) -> None:
+    """Row 35: the RoSO function of each type, from both ontology namespaces of OWL.ttl."""
+    expected = expectations.ROSO_FUNCTIONS[code]
+    assert _ontology_function(code) == (ComponentFunction(expected) if expected else None)
