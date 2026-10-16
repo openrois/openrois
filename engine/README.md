@@ -40,20 +40,72 @@ pip install -e ./components/core
 | `WsServer` | WebSocket server, for a gateway |
 | `WsClient` | WebSocket client, for an adapter connecting out to a gateway |
 
+The configuration loader lives in `openrois.engine.config`:
+
+| Name | Purpose |
+|------|---------|
+| `AdapterConfig` | The settings every adapter has, subclassed with one section per component |
+| `load_adapter_config` | Load an adapter's settings from `adapter.yaml`, the environment and flags |
+| `load_config` | The loader behind it, generic over the model and the environment prefix, which the gateway uses too |
+| `ConfigError` | Raised for a file that cannot be read or settings that do not validate |
+
 ## Usage
 
 As an adapter, with a component written with `openrois-components-core`:
 
 ```python
-from openrois.engine import Engine, WsClient
+from pydantic import BaseModel
 
-engine = Engine("robot_1")
-engine.add_component("navigation", Navigation("http://192.168.0.10:8080"))
-WsClient(engine, "ws://gateway.example.com:8765").run()
+from openrois.engine import Engine, WsClient
+from openrois.engine.config import AdapterConfig, load_adapter_config
+
+
+class NavigationSettings(BaseModel):
+    speed: float = 0.5
+
+
+class RobotConfig(AdapterConfig):
+    engine_id: str = "robot_1"
+    navigation: NavigationSettings = NavigationSettings()
+
+
+config = load_adapter_config(RobotConfig)
+engine = Engine(config.engine_id)
+engine.add_component("navigation", Navigation(config.robot_address, config.navigation))
+WsClient(engine, config.gateway_url).run()
 ```
 
-The component is served as `robot_1/navigation`. `WsClient` connects the components to
-their backends, serves the gateway until Ctrl+C, and disconnects them.
+The component is served as `robot_1/navigation`. `WsClient` opens the resources the
+components share, connects the components to their backends, serves the gateway until
+Ctrl+C, and then disconnects them and closes the resources.
+
+`load_adapter_config` reads the settings in four layers, each overriding the one before:
+the defaults of the model, the YAML file named by `--config` or `OPENROIS_ADAPTER_CONFIG`,
+the environment, and the flags. The file is `adapter.yaml` by convention, never a
+profile, because a profile is what `rois.system.get_profile` returns:
+
+```yaml
+gateway_url: ws://gateway.example.com:8765
+engine_id: robot_1
+robot_address: http://192.168.0.10:8080
+log_level: info
+navigation:
+  speed: 0.8
+```
+
+The environment and the flags set only the four settings every adapter has:
+
+| Setting | Flag | Environment | Default |
+|---------|------|-------------|---------|
+| `gateway_url` | `--gateway-url` | `OPENROIS_ADAPTER_GATEWAY_URL` | `ws://127.0.0.1:8765` |
+| `engine_id` | `--engine-id` | `OPENROIS_ADAPTER_ENGINE_ID` | none, the subclass gives one |
+| `robot_address` | `--robot-address` | `OPENROIS_ADAPTER_ROBOT_ADDRESS` | none |
+| `log_level` | `--log-level` | `OPENROIS_ADAPTER_LOG_LEVEL` | `info` |
+
+The component sections come from the file only. A ROS 2 adapter shares one
+`RclpyExecutor`, from `openrois.components.core.ros2`, among its components. It is a
+resource, so the engine opens it before the components connect and closes it after they
+disconnect.
 
 As a gateway:
 
@@ -137,6 +189,20 @@ runs exactly this with configuration and signal handling.
   a new `start`, runs the `stop` handler and then aborts the running `start`. Events can
   be emitted from any thread, and `get_event_detail` reads an event until it expires. An
   event an emit names argument values for reaches the subscriptions that asked for them.
+- **RoIS_Common.** A local component whose profile includes RoISCommon gets `start`,
+  `stop`, `suspend` and `resume` by default. It is started from the moment a `start`
+  arrives until `stop`, or until that start ends other than OK, and a `start` without a
+  handler completes OK at once. On a component not started, `suspend`, `resume` and
+  `stop` complete OK and run no handler, except that a `stop` while a cancelled `start`
+  still unwinds cancels it again. `suspend` holds `start` and every other function
+  command of the component, which wait without starting, directly or in a sequence, and
+  end with TIMEOUT when their profile timeout elapses. `set_parameter` still applies at
+  once, a command already running keeps running, and the component's events are dropped
+  until `resume`, which releases the held commands. `stop` ends the suspension, and the
+  held commands end with ABORT. A handler adds to this: the `suspend` handler runs after
+  the hold, and the `resume` handler before the release. A `suspend` that fails lifts its
+  hold, and a `resume` that fails keeps it. `component_status` does not change while a
+  component is suspended. A gateway forwards the four commands and holds nothing itself.
 
 ## Transport
 
@@ -171,8 +237,8 @@ session, and reconnects with a growing delay, also when the gateway refuses it.
 
 - The engine is transport-neutral and paradigm-neutral. It reaches every component
   through the `ComponentContract`, so no ROS, DDS, gRPC, or game engine import belongs in
-  this package. `WsClient` spins the rclpy node a component keeps in `_node` when rclpy is
-  installed, without importing it otherwise.
+  this package. ROS 2 nodes are spun by `RclpyExecutor` in `openrois-components-core`,
+  a resource the components share.
 - Components own their backend connections. The engine holds no shared backend state.
 
 See [architecture](https://openrois.org/docs/concepts/architecture) and

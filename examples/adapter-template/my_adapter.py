@@ -2,7 +2,9 @@
 
 Copy this directory and fill in every ``IMPLEMENT YOUR CODE HERE`` block with calls to
 the API of your platform: an HTTP client, a gRPC stub, a ROS 2 node, a serial port. The
-three components show the kinds of component an adapter hosts:
+connection to the robot is a Resource that the three components share, and the settings
+come from ``adapter.yaml`` through the engine's adapter loader. The three components show
+the kinds of component an adapter hosts:
 
 - ``MyNavigation``: a basic RoIS component type, declared with its profile constant. It
   implements a part of the type, ``start`` and ``stop``, and the engine serves that part.
@@ -11,26 +13,32 @@ three components show the kinds of component an adapter hosts:
   do not cover.
 
 Usage:
-    python my_adapter.py [--robot-url URL] [--gateway-url URL] [--engine-id ID]
+    python my_adapter.py [--config FILE] [--robot-address URL] [--gateway-url URL]
+                         [--engine-id ID] [--log-level LEVEL]
+
+Each setting comes from the defaults of MyAdapterConfig, then ``adapter.yaml`` (named by
+``--config`` or ``OPENROIS_ADAPTER_CONFIG``), then the ``OPENROIS_ADAPTER_*`` environment
+variables, then the flags.
 """
 
 from __future__ import annotations
 
-import argparse
 import asyncio
 import logging
-import os
+import sys
 from datetime import UTC, datetime
 
 from openrois.components.core import (
     CommandFailed,
     Component,
+    Resource,
     component,
     invoke,
     query,
     subscribe,
 )
 from openrois.engine import Engine, WsClient
+from openrois.engine.config import AdapterConfig, ConfigError, load_adapter_config
 from openrois.interfaces.common import ComponentStatus
 from openrois.interfaces.components import (
     NAVIGATION_PROFILE,
@@ -47,8 +55,54 @@ from openrois.interfaces.profiles import (
     RoISIdentifierType,
 )
 from openrois.interfaces.service import CompletedStatus
+from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger("my_adapter")
+
+
+# ─── The settings ────────────────────────────────────────────
+
+
+class BatterySettings(BaseModel):
+    """The ``battery`` section of adapter.yaml."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    check_interval: float = Field(default=30.0, gt=0, description="Seconds between checks.")
+
+
+class MyAdapterConfig(AdapterConfig):
+    """The settings of the adapter: the four common ones, and one section per component
+    that has settings of its own. Only the four common ones come from the environment and
+    the flags."""
+
+    engine_id: str = "my_robot"
+    robot_address: str | None = "http://127.0.0.1:8080"
+    battery: BatterySettings = BatterySettings()
+
+
+# ─── The connection the components share ─────────────────────
+
+
+class RobotConnection(Resource):
+    """The connection to the robot. The engine opens it once, before the first component
+    that uses it connects, and closes it after the last one disconnects."""
+
+    def __init__(self, address: str) -> None:
+        self.address = address
+
+    async def open(self) -> None:
+        # IMPLEMENT YOUR CODE HERE
+        # Create the client of your platform's API. Raise only for what waiting cannot
+        # fix, such as a missing SDK: every component that uses the connection then
+        # reports ERROR. A robot that is not reachable yet is a status:
+        # self.raise_status(ComponentStatus.WARNING, "The robot is not answering.")
+        logger.info("Would connect to the robot at %s", self.address)
+
+    async def close(self) -> None:
+        # IMPLEMENT YOUR CODE HERE
+        # Close the client.
+        pass
 
 
 # ─── A basic component type ──────────────────────────────────
@@ -63,19 +117,8 @@ class MyNavigation(Component):
     ``stop`` and then cancels the running ``start``, which ends with ABORT.
     """
 
-    def __init__(self, robot_url: str) -> None:
-        self._robot_url = robot_url
-
-    async def connect(self) -> None:
-        # IMPLEMENT YOUR CODE HERE
-        # Open the connection to the robot. An exception here makes the engine report
-        # the component as ERROR.
-        logger.info("Navigation would connect to %s", self._robot_url)
-
-    async def disconnect(self) -> None:
-        # IMPLEMENT YOUR CODE HERE
-        # Close the connection to the robot.
-        pass
+    def __init__(self, robot: RobotConnection) -> None:
+        self._robot = self.uses(robot)
 
     @invoke("start")
     async def start(self) -> None:
@@ -111,8 +154,8 @@ class MyNavigation(Component):
 class MySystemInformation(Component):
     """SystemInformation: where the robot is, and since when the engine runs."""
 
-    def __init__(self, robot_url: str) -> None:
-        self._robot_url = robot_url
+    def __init__(self, robot: RobotConnection) -> None:
+        self._robot = self.uses(robot)
         self._started = datetime.now(UTC)
 
     @query("robot_position")
@@ -178,9 +221,9 @@ BATTERY_PROFILE = HRIComponentProfile(
 class Battery(Component):
     """Battery: the charge of the robot, and an event when it runs low."""
 
-    def __init__(self, robot_url: str, *, check_interval: float = 30.0) -> None:
-        self._robot_url = robot_url
-        self._check_interval = check_interval
+    def __init__(self, robot: RobotConnection, settings: BatterySettings) -> None:
+        self._robot = self.uses(robot)
+        self._check_interval = settings.check_interval
         self._monitor: asyncio.Task[None] | None = None
 
     async def disconnect(self) -> None:
@@ -221,30 +264,24 @@ class Battery(Component):
 
 def main() -> None:
     """Host the components in an engine and serve them to the gateway until Ctrl+C."""
-    parser = argparse.ArgumentParser(description="An OpenRoIS adapter for my robot.")
-    parser.add_argument(
-        "--robot-url",
-        default=os.environ.get("MY_ROBOT_URL", "http://127.0.0.1:8080"),
-        help="the API of the robot (env MY_ROBOT_URL)",
-    )
-    parser.add_argument(
-        "--gateway-url",
-        default=os.environ.get("OPENROIS_GATEWAY_URL", "ws://127.0.0.1:8765"),
-        help="the gateway to connect to (env OPENROIS_GATEWAY_URL)",
-    )
-    parser.add_argument(
-        "--engine-id",
-        default="my_robot",
-        help="the engine id, the first part of every ref, unique across the deployment",
-    )
-    args = parser.parse_args()
-    logging.basicConfig(level=logging.INFO)
+    try:
+        config = load_adapter_config(
+            MyAdapterConfig, description="An OpenRoIS adapter for my robot."
+        )
+    except ConfigError as exc:
+        print(f"my_adapter: {exc}", file=sys.stderr)
+        sys.exit(2)
+    if config.robot_address is None:
+        print("my_adapter: robot_address is not set.", file=sys.stderr)
+        sys.exit(2)
+    logging.basicConfig(level=config.log_level.upper())
 
-    engine = Engine(args.engine_id)
-    engine.add_component("navigation", MyNavigation(args.robot_url))
-    engine.add_component("system_information", MySystemInformation(args.robot_url))
-    engine.add_component("battery", Battery(args.robot_url))
-    WsClient(engine, args.gateway_url).run()
+    robot = RobotConnection(config.robot_address)
+    engine = Engine(config.engine_id)
+    engine.add_component("navigation", MyNavigation(robot))
+    engine.add_component("system_information", MySystemInformation(robot))
+    engine.add_component("battery", Battery(robot, config.battery))
+    WsClient(engine, config.gateway_url).run()
 
 
 if __name__ == "__main__":

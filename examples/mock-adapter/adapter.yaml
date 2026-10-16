@@ -1,0 +1,9 @@
+# Settings of the mock adapter. OPENROIS_ADAPTER_* environment variables and flags override
+# the four common settings. See README.md.
+
+gateway_url: ws://127.0.0.1:8765
+engine_id: mock
+log_level: info
+
+# Factor on every delay of the simulated work.
+time_scale: 1.0

@@ -25,9 +25,10 @@ services:
       context: .
       dockerfile: examples/mock-adapter/Dockerfile
     environment:
-      OPENROIS_GATEWAY_URL: ws://gateway:8765
-      # Below 1 the simulated work takes less time, for example 0.1 in CI.
-      OPENROIS_MOCK_TIME_SCALE: ${OPENROIS_MOCK_TIME_SCALE:-1}
+      OPENROIS_ADAPTER_GATEWAY_URL: ws://gateway:8765
+      # /opt/mock-adapter/adapter.fast.yaml makes the simulated work ten times faster, as
+      # in CI.
+      OPENROIS_ADAPTER_CONFIG: ${OPENROIS_ADAPTER_CONFIG:-/opt/mock-adapter/adapter.yaml}
     depends_on:
       - gateway
     # The adapter installs no signal handlers. Under an init process, SIGTERM from

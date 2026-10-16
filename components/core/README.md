@@ -62,10 +62,20 @@ component, pass its constant from `openrois.interfaces.components`, for example
 handler for a message the profile does not define fails when the class is defined.
 
 **What the engine serves.** A component may implement a part of its type. The engine
-serves the commands, queries and events the class has handlers for, plus `stop` when it
-handles `start`, and `component_status`, which the engine answers itself. The class
-above serves `start`, `stop`, `component_status` and `reached_target`, not `suspend` or
-`resume`, so a client never sees a button for them.
+serves the commands, queries and events the class has handlers for, and
+`component_status`, which the engine answers itself. A type that includes RoISCommon,
+as every basic type but SystemInformation does, always serves `start`, `stop`, `suspend`
+and `resume`, with or without handlers, and a type of your own without it serves `stop`
+when the class handles `start`. The class above serves `start`, `stop`, `suspend`,
+`resume`, `component_status` and `reached_target`, and a client never sees a button for
+a message the component does not answer.
+
+**RoIS_Common.** The engine answers the four RoIS_Common commands by default. `stop`
+cancels the running `start`, which ends with ABORT. `suspend` holds the component's
+later commands in the engine, except `set_parameter`, and drops its events, and `resume`
+releases both. On a component not started, the three complete OK and run no handler. A
+handler for any of them adds to the default and never replaces it: write one when the
+function needs more, such as pausing a detector's watcher.
 
 **Commands.** A command handler runs for as long as the command lasts, and the engine
 reports the end with `rois.command.completed`. Returning ends the command with OK, and the

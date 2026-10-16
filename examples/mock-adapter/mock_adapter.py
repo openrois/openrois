@@ -9,20 +9,21 @@ the profile constant of its type, and serves them to a gateway:
 - ``mock/system_information`` answers ``robot_position`` and ``engine_status``.
 
 Usage:
-    python mock_adapter.py [--gateway-url URL] [--engine-id ID] [--log-level LEVEL]
+    python mock_adapter.py [--config FILE] [--gateway-url URL] [--engine-id ID]
+                           [--log-level LEVEL]
 
-The flags fall back to the environment: ``OPENROIS_GATEWAY_URL`` (default
-``ws://127.0.0.1:8765``) and ``OPENROIS_MOCK_ENGINE_ID`` (default ``mock``).
-``OPENROIS_MOCK_TIME_SCALE`` multiplies every delay, for example ``0.1`` for tests that
-should not wait.
+The settings come from the engine's adapter loader: the defaults of MockConfig, then
+``adapter.yaml`` (named by ``--config`` or ``OPENROIS_ADAPTER_CONFIG``), then the
+``OPENROIS_ADAPTER_*`` environment variables, then the flags. ``time_scale`` in the file
+multiplies every delay. ``adapter.fast.yaml`` sets it to ``0.1``, for tests that should not
+wait.
 """
 
 from __future__ import annotations
 
-import argparse
 import asyncio
 import logging
-import os
+import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -38,10 +39,21 @@ from openrois.components.core import (
     subscribe,
 )
 from openrois.engine import Engine, WsClient
+from openrois.engine.config import AdapterConfig, ConfigError, load_adapter_config
 from openrois.interfaces.components import NAVIGATION_PROFILE, PERSON_DETECTION_PROFILE
 from openrois.interfaces.service import CompletedStatus
+from pydantic import Field
 
 logger = logging.getLogger("mock_adapter")
+
+
+class MockConfig(AdapterConfig):
+    """The settings of the mock adapter. It reaches no robot, so robot_address is unused."""
+
+    engine_id: str = "mock"
+    time_scale: float = Field(
+        default=1.0, gt=0, description="Factor on every delay, below 1 for faster tests."
+    )
 
 
 @dataclass(frozen=True)
@@ -175,39 +187,18 @@ def build_engine(engine_id: str = "mock", timing: Timing | None = None) -> Engin
 
 
 def main() -> None:
-    """Parse the flags and serve the gateway until Ctrl+C."""
-    parser = argparse.ArgumentParser(description="The OpenRoIS mock adapter.")
-    parser.add_argument(
-        "--gateway-url",
-        default=os.environ.get("OPENROIS_GATEWAY_URL", "ws://127.0.0.1:8765"),
-        help="the gateway to connect to (env OPENROIS_GATEWAY_URL)",
-    )
-    parser.add_argument(
-        "--engine-id",
-        default=os.environ.get("OPENROIS_MOCK_ENGINE_ID", "mock"),
-        help="the engine id, the first part of every ref (env OPENROIS_MOCK_ENGINE_ID)",
-    )
-    parser.add_argument(
-        "--log-level",
-        default="info",
-        choices=["debug", "info", "warning", "error"],
-        help="how much to log",
-    )
-    args = parser.parse_args()
-
-    scale_text = os.environ.get("OPENROIS_MOCK_TIME_SCALE", "1")
+    """Load the settings and serve the gateway until Ctrl+C."""
     try:
-        scale = float(scale_text)
-    except ValueError:
-        scale = -1.0
-    if scale <= 0:
-        parser.error(f"OPENROIS_MOCK_TIME_SCALE must be a positive number, not {scale_text!r}")
+        config = load_adapter_config(MockConfig, description="The OpenRoIS mock adapter.")
+    except ConfigError as exc:
+        print(f"mock_adapter: {exc}", file=sys.stderr)
+        sys.exit(2)
 
     logging.basicConfig(
-        level=args.log_level.upper(), format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+        level=config.log_level.upper(), format="%(asctime)s %(levelname)s %(name)s: %(message)s"
     )
-    engine = build_engine(args.engine_id, Timing().scaled(scale))
-    WsClient(engine, args.gateway_url).run()
+    engine = build_engine(config.engine_id, Timing().scaled(config.time_scale))
+    WsClient(engine, config.gateway_url).run()
 
 
 if __name__ == "__main__":

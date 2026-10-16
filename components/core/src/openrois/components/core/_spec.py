@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Literal
 
+from openrois.interfaces.components import ROIS_COMMON_PROFILE, ROIS_COMMON_URN
 from openrois.interfaces.profiles import (
     CommandMessageProfile,
     EventMessageProfile,
@@ -33,6 +34,9 @@ HANDLER_ATTRIBUTE = "__rois_handler__"
 ENGINE_COMMANDS = frozenset({"set_parameter"})
 ENGINE_QUERIES = frozenset({"component_status"})
 
+# A component whose profile includes RoISCommon serves these, handler or not.
+ROIS_COMMON_COMMANDS = frozenset(m.name for m in ROIS_COMMON_PROFILE.command_profiles)
+
 
 @dataclass(frozen=True, slots=True)
 class Handler:
@@ -49,9 +53,11 @@ class ComponentSpec:
     Attributes:
         declared: The profile the class declares, usually a profile constant.
         served: The declared profile with only the messages the class answers: the
-            commands, queries and events it has handlers for, ``stop`` when it handles
-            ``start``, and ``component_status``, which the engine answers. Every
-            parameter of the declared profile stays.
+            commands, queries and events it has handlers for, the four RoIS_Common
+            commands when the profile includes RoISCommon (the engine answers them by
+            default), otherwise ``stop`` when it handles ``start``, and
+            ``component_status``, which the engine answers. Every parameter of the
+            declared profile stays.
         commands: The method that handles each command, by command name.
         queries: The method that handles each query, by query name.
         events: The method that runs on a new subscription, by event name.
@@ -131,12 +137,15 @@ def build_spec(cls: type, profile: HRIComponentProfile) -> ComponentSpec:
         table[handler.name] = attribute
 
     commands, queries, events = tables["command"], tables["query"], tables["event"]
+    rois_common = ROIS_COMMON_URN in profile.sub_component_profiles
     served = profile.model_copy(
         update={
             "command_profiles": [
                 m
                 for m in profile.command_profiles
-                if m.name in commands or (m.name == "stop" and "start" in commands)
+                if m.name in commands
+                or (rois_common and m.name in ROIS_COMMON_COMMANDS)
+                or (m.name == "stop" and "start" in commands)
             ],
             "query_profiles": [
                 m for m in profile.query_profiles if m.name in queries or m.name in ENGINE_QUERIES

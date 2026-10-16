@@ -38,9 +38,24 @@ class StartOnly(Component):
 class TestServedProfile:
     def test_serves_only_what_the_class_implements(self) -> None:
         served = StartOnly.rois_profile()
-        assert _names(served.command_profiles) == ["start", "stop"]
         assert _names(served.query_profiles) == ["component_status"]
         assert served.event_profiles == []
+
+    def test_serves_every_rois_common_command_without_handlers(self) -> None:
+        @component(PERSON_DETECTION_PROFILE)
+        class Detector(Component):
+            @subscribe("person_detected")
+            async def person_detected(self) -> None:
+                return None
+
+        served = Detector.rois_profile()
+        assert _names(served.command_profiles) == ["start", "stop", "suspend", "resume"]
+        assert _names(StartOnly.rois_profile().command_profiles) == [
+            "start",
+            "stop",
+            "suspend",
+            "resume",
+        ]
 
     def test_keeps_the_identity_and_the_parameters(self) -> None:
         served = StartOnly.rois_profile()
@@ -49,14 +64,40 @@ class TestServedProfile:
         assert served.sub_component_profiles == NAVIGATION_PROFILE.sub_component_profiles
         assert served.parameter_profiles == NAVIGATION_PROFILE.parameter_profiles
 
-    def test_serves_stop_only_with_start(self) -> None:
-        @component(PERSON_DETECTION_PROFILE)
+    def test_without_rois_common_serves_stop_only_with_start(self) -> None:
+        # A type of its own that does not include the RoISCommon sub-profile names its
+        # commands itself, and gets no RoIS_Common default.
+        profile = HRIComponentProfile.model_validate(
+            {
+                "identifier": {"authority": "Example", "code": "Arm"},
+                "name": "arm",
+                "command_profiles": [{"name": "start"}, {"name": "stop"}, {"name": "suspend"}],
+            }
+        )
+
+        @component(profile)
         class Suspendable(Component):
             @invoke("suspend")
             async def suspend(self) -> None:
                 return None
 
+        @component(profile)
+        class Startable(Component):
+            @invoke("start")
+            async def start(self) -> None:
+                return None
+
         assert _names(Suspendable.rois_profile().command_profiles) == ["suspend"]
+        assert _names(Startable.rois_profile().command_profiles) == ["start", "stop"]
+
+    def test_system_information_serves_no_command(self) -> None:
+        @component(SYSTEM_INFORMATION_PROFILE)
+        class Info(Component):
+            @query("engine_status")
+            async def engine_status(self) -> dict[str, object]:
+                return {}
+
+        assert Info.rois_profile().command_profiles == []
 
     def test_serves_an_event_marked_with_subscribe(self) -> None:
         @component(PERSON_DETECTION_PROFILE)

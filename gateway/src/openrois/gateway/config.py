@@ -1,6 +1,7 @@
 """Gateway configuration from defaults, a YAML file, the environment and flags.
 
-Each source overrides the one before it:
+The loader is the one adapters use, in openrois.engine.config. Each source overrides the
+one before it:
 
 1. The defaults of :class:`GatewayConfig`.
 2. A YAML file, named by ``--config`` or ``OPENROIS_GATEWAY_CONFIG``.
@@ -21,22 +22,27 @@ from __future__ import annotations
 import argparse
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Literal
 
-import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from openrois.engine.config import LOG_LEVELS, ConfigError, LogLevel, check_engine_id
+from openrois.engine.config import load_config as _load_config
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-type LogLevel = Literal["debug", "info", "warning", "error"]
+__all__ = [
+    "ENV_CONFIG",
+    "ENV_PREFIX",
+    "ConfigError",
+    "GatewayConfig",
+    "LogLevel",
+    "build_parser",
+    "load_config",
+    "parse_config",
+]
 
 #: Prefix of every environment variable the gateway reads.
 ENV_PREFIX = "OPENROIS_GATEWAY_"
 
 #: The environment variable that names the YAML file.
 ENV_CONFIG = f"{ENV_PREFIX}CONFIG"
-
-
-class ConfigError(Exception):
-    """Raised when the configuration cannot be read or does not validate."""
 
 
 class GatewayConfig(BaseModel):
@@ -67,11 +73,8 @@ class GatewayConfig(BaseModel):
 
     @field_validator("engine_id")
     @classmethod
-    def _engine_id_has_no_slash(cls, value: str) -> str:
-        # Component refs are engine_id/ref, so a slash would make them ambiguous.
-        if "/" in value:
-            raise ValueError("must not contain a slash")
-        return value
+    def _engine_id_is_a_ref_part(cls, value: str) -> str:
+        return check_engine_id(value)
 
     @field_validator("log_level", mode="before")
     @classmethod
@@ -99,7 +102,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--log-level",
-        choices=["debug", "info", "warning", "error"],
+        choices=LOG_LEVELS,
         type=str.lower,
         help=f"logging threshold ({ENV_PREFIX}LOG_LEVEL, default info)",
     )
@@ -125,54 +128,17 @@ def load_config(
     Raises:
         ConfigError: If the file cannot be read or the result does not validate.
     """
-    values: dict[str, Any] = {}
-
-    config_path: Path | None = args.config
-    if config_path is None and environ.get(ENV_CONFIG):
-        config_path = Path(environ[ENV_CONFIG])
-    if config_path is not None:
-        values.update(_read_file(config_path))
-
     names = tuple(GatewayConfig.model_fields)
-    for name in names:
-        env_value = environ.get(f"{ENV_PREFIX}{name.upper()}")
-        if env_value is not None:
-            values[name] = env_value
-
-    for name in names:
-        flag_value = getattr(args, name)
-        if flag_value is not None:
-            values[name] = flag_value
-
-    try:
-        return GatewayConfig.model_validate(values)
-    except ValidationError as exc:
-        raise ConfigError(_describe(exc)) from exc
+    return _load_config(
+        GatewayConfig,
+        env_prefix=ENV_PREFIX,
+        names=names,
+        environ=environ,
+        config_file=args.config,
+        flags={name: getattr(args, name) for name in names},
+    )
 
 
 def parse_config(argv: Sequence[str], environ: Mapping[str, str]) -> GatewayConfig:
     """Parse flags and load the configuration in one call."""
     return load_config(build_parser().parse_args(list(argv)), environ)
-
-
-def _read_file(path: Path) -> dict[str, Any]:
-    try:
-        content = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except OSError as exc:
-        raise ConfigError(f"Cannot read {path}: {exc.strerror}") from exc
-    except yaml.YAMLError as exc:
-        raise ConfigError(f"{path} is not valid YAML: {exc}") from exc
-    if content is None:
-        return {}
-    if not isinstance(content, dict):
-        raise ConfigError(f"{path} must hold a mapping of settings.")
-    return {str(key): value for key, value in content.items()}
-
-
-def _describe(exc: ValidationError) -> str:
-    """One line per invalid setting, named as in the YAML file."""
-    lines = []
-    for error in exc.errors():
-        name = ".".join(str(part) for part in error["loc"]) or "config"
-        lines.append(f"{name}: {error['msg']}")
-    return "Invalid configuration:\n  " + "\n  ".join(lines)

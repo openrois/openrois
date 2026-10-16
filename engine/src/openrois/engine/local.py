@@ -7,6 +7,16 @@ resources they share, the parameter store, the running commands and their result
 subscriptions and the recent events, and the statuses raised on the components and on
 the engine with the errors they cause. It answers ``component_status`` from the
 lifecycle and the raised status of each component.
+
+It also gives every component whose profile includes RoISCommon the RoIS_Common default
+(OpenRoIS First Release, questions 8 and 9). A component is started from the moment a
+start begins until stop, or until that start ends other than OK. On a component that is
+not started, suspend, resume and stop complete OK and run no handler. suspend holds
+start and every other function command of the component, which wait without starting
+until resume, or end with TIMEOUT when their profile timeout elapses, while
+set_parameter applies at once and the component's events are dropped. stop ends the
+suspension and the held commands end with ABORT. A handler adds to this: suspend's runs
+after the hold, resume's before the release, and stop's as before.
 """
 
 from __future__ import annotations
@@ -30,6 +40,7 @@ from openrois.interfaces.catalog import (
     SubscribeResult,
 )
 from openrois.interfaces.common import ComponentStatus
+from openrois.interfaces.components import ROIS_COMMON_URN
 from openrois.interfaces.hri import Argument, CommandUnit, Parameter, Result, ReturnCode
 from openrois.interfaces.profiles import HRIComponentProfile, HRIEngineProfileType
 from openrois.interfaces.service import CompletedStatus, ErrorType, NotifyEventParams
@@ -42,6 +53,10 @@ logger = logging.getLogger(__name__)
 _RESULTS_KEPT = 4096
 
 _STATUS_QUERY = "component_status"
+
+# The RoIS_Common commands that complete OK, running no handler, on a component that is
+# not started.
+_UNSTARTED_NO_OPS = frozenset({"suspend", "resume", "stop"})
 
 # The statuses a component, a resource or the engine may raise.
 _RAISABLE = frozenset({ComponentStatus.WARNING, ComponentStatus.ERROR})
@@ -191,6 +206,15 @@ class _Start:
 
 
 @dataclass(eq=False)
+class _Suspension:
+    """One suspension of a component, which the commands it holds wait on."""
+
+    released: asyncio.Event = field(default_factory=asyncio.Event)
+    # Set by a stop: the commands held end with ABORT instead of running.
+    aborted: bool = False
+
+
+@dataclass(eq=False)
 class _Hosted:
     """One local component and what the engine keeps for it."""
 
@@ -212,6 +236,12 @@ class _Hosted:
     # Held while a start halts the start before it, so starts take turns and a start
     # never runs its handler next to the one it replaces. A stop never waits for it.
     takeover: asyncio.Lock = field(default_factory=asyncio.Lock)
+    # Whether the profile includes RoISCommon, which gives the component the default.
+    rois_common: bool = False
+    # Whether a start began since the last stop and has not failed.
+    started: bool = False
+    # The suspension in force, if any.
+    suspension: _Suspension | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -320,7 +350,15 @@ class LocalComponents:
             for p in profile.parameter_profiles
         }
         resources = list(component.rois_resources())
-        self._hosted[ref] = _Hosted(name, ref, component, profile, parameters, resources)
+        self._hosted[ref] = _Hosted(
+            name,
+            ref,
+            component,
+            profile,
+            parameters,
+            resources,
+            rois_common=ROIS_COMMON_URN in profile.sub_component_profiles,
+        )
         component.rois_bind(_Binding(self, ref))
         for resource in resources:
             if not any(known is resource for known in self._resources):
@@ -391,6 +429,8 @@ class LocalComponents:
                 except Exception:
                     logger.exception("%s could not disconnect from its backend", hosted.ref)
             hosted.state = _State.UNINITIALIZED
+            hosted.started = False
+            self._lift(hosted, aborted=True)
         for resource in reversed(self._opened):
             try:
                 await resource.close()
@@ -452,6 +492,24 @@ class LocalComponents:
         if not self._operable(hosted):
             self._keep(unit.command_id, [])
             return CompletedStatus.ERROR
+        if hosted.rois_common:
+            # A start a stop cancelled may still be unwinding. It still runs, so a
+            # second stop cancels it again rather than doing nothing.
+            unwinding = unit.command_type == "stop" and hosted.start is not None
+            if unit.command_type in _UNSTARTED_NO_OPS and not hosted.started and not unwinding:
+                self._keep(unit.command_id, [])
+                return CompletedStatus.OK
+            if unit.command_type == "suspend":
+                return await self._suspend(hosted, unit)
+            if unit.command_type == "resume":
+                return await self._resume(hosted, unit)
+            if unit.command_type != "stop":
+                held = await self._held(hosted, unit, received)
+                if held is None and not self._operable(hosted):
+                    held = CompletedStatus.ERROR
+                if held is not None:
+                    self._keep(unit.command_id, [])
+                    return held
         if unit.command_type == "start":
             return await self._start(hosted, unit, received)
         if unit.command_type == "stop":
@@ -669,10 +727,12 @@ class LocalComponents:
     ) -> None:
         """Send one event to its subscriptions and keep it for get_event_detail.
 
-        A component in ERROR holds back its events. Its subscriptions stay, and its
-        events flow again once the status clears.
+        A component in ERROR holds back its events, and so does a suspended one. Its
+        subscriptions stay, and its events flow again once the status clears or the
+        component resumes. Events held back are dropped, not replayed.
         """
-        if not self._operable(self._hosted[ref]):
+        hosted = self._hosted[ref]
+        if not self._operable(hosted) or hosted.suspension is not None:
             return
         subscriptions = [
             (subscribe_id, s)
@@ -720,6 +780,7 @@ class LocalComponents:
         it started (Table 8.21), which a handler that runs has.
         """
         results: list[Result] = []
+        status: CompletedStatus | None = None
         try:
             try:
                 results = await task
@@ -750,6 +811,13 @@ class LocalComponents:
             hosted.aborted.discard(unit.command_id)
             if hosted.start is not None and hosted.start.command_id == unit.command_id:
                 hosted.start = None
+            # A start that ends other than OK ends started, unless a newer start began.
+            if (
+                unit.command_type == "start"
+                and status is not CompletedStatus.OK
+                and hosted.start is None
+            ):
+                hosted.started = False
         self._keep(unit.command_id, results if status is CompletedStatus.OK else [])
         return status
 
@@ -764,6 +832,9 @@ class LocalComponents:
         previous = hosted.start
         current = _Start(unit.command_id)
         hosted.start = current
+        # The component counts as started from here, so a stop that arrives while this
+        # start waits for its turn aborts it.
+        hosted.started = True
         if previous is not None:
             hosted.aborted.add(previous.command_id)
         timeout = _timeout(hosted, unit.command_type)
@@ -779,6 +850,7 @@ class LocalComponents:
             hosted.aborted.discard(unit.command_id)
             if hosted.start is current:
                 hosted.start = None
+                hosted.started = False
             self._keep(unit.command_id, [])
             if isinstance(exc, asyncio.CancelledError):
                 raise
@@ -794,6 +866,7 @@ class LocalComponents:
                 hosted.aborted.discard(unit.command_id)
                 if hosted.start is current:
                     hosted.start = None
+                    hosted.started = False
         return await self._end(hosted, unit, current.task)
 
     async def _take_over(self, hosted: _Hosted, previous: _Start | None) -> None:
@@ -807,7 +880,9 @@ class LocalComponents:
             raise
 
     async def _stop(self, hosted: _Hosted, unit: CommandUnit) -> CompletedStatus:
-        """Run the stop handler at once, then cancel the latest start."""
+        """End the suspension, run the stop handler at once, then cancel the latest start."""
+        hosted.started = False
+        self._lift(hosted, aborted=True)
         current = hosted.start
         if current is not None:
             # The start ends with ABORT even if halting the backend ends it first.
@@ -816,6 +891,57 @@ class LocalComponents:
         if current is not None and current.task is not None:
             current.task.cancel()
         return status
+
+    async def _suspend(self, hosted: _Hosted, unit: CommandUnit) -> CompletedStatus:
+        """Hold the component's commands, then run the suspend handler.
+
+        A suspend that fails lifts the hold it put in force, since the component is not
+        suspended when the command says so.
+        """
+        suspension = hosted.suspension
+        if suspension is None:
+            suspension = hosted.suspension = _Suspension()
+            fresh = True
+        else:
+            fresh = False
+        status = await self._end(hosted, unit, self._begin(hosted, unit))
+        if status is not CompletedStatus.OK and fresh and hosted.suspension is suspension:
+            self._lift(hosted, aborted=False)
+        return status
+
+    async def _resume(self, hosted: _Hosted, unit: CommandUnit) -> CompletedStatus:
+        """Run the resume handler, then release the commands held, if it succeeded."""
+        status = await self._end(hosted, unit, self._begin(hosted, unit))
+        if status is CompletedStatus.OK:
+            self._lift(hosted, aborted=False)
+        return status
+
+    async def _held(
+        self, hosted: _Hosted, unit: CommandUnit, received: float
+    ) -> CompletedStatus | None:
+        """Wait while the component is suspended. None once released, else the end status.
+
+        The command never started, so its profile timeout, counted from its receipt,
+        ends it with TIMEOUT, and a stop ends it with ABORT.
+        """
+        timeout = _timeout(hosted, unit.command_type)
+        loop = asyncio.get_running_loop()
+        while (suspension := hosted.suspension) is not None:
+            remaining = None if timeout is None else received + timeout - loop.time()
+            try:
+                await asyncio.wait_for(suspension.released.wait(), remaining)
+            except TimeoutError:
+                return CompletedStatus.TIMEOUT
+            if suspension.aborted:
+                return CompletedStatus.ABORT
+        return None
+
+    def _lift(self, hosted: _Hosted, *, aborted: bool) -> None:
+        """End the suspension in force, releasing or aborting the commands it held."""
+        suspension, hosted.suspension = hosted.suspension, None
+        if suspension is not None:
+            suspension.aborted = aborted
+            suspension.released.set()
 
     async def _halt(self, hosted: _Hosted, task: asyncio.Task[list[Result]]) -> None:
         """Run the stop handler, within its timeout, then cancel a start and wait for it."""
