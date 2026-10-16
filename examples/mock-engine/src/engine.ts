@@ -13,11 +13,10 @@
  *     event type: UNSUPPORTED when none does, BAD_PARAMETER when several do.
  *   - An actuation component takes commands and parameters only from the client
  *     that bound it. Another client gets OUT_OF_RESOURCES.
- *   - The command table holds every command_id. A command_id already in it, or
- *     one that starts with the engine id and a slash like the ids the engine
- *     assigns, is answered with BAD_PARAMETER. Each command ends exactly once
- *     with a rois.command.completed notification, and get_command_result reads
- *     its results.
+ *   - The engine assigns every command_id, mock/cmd-1 for example, ignores the
+ *     ids a client sends, and returns the sequence with the ids in the execute
+ *     result. Each command ends exactly once with a rois.command.completed
+ *     notification, and get_command_result reads its results.
  *   - execute runs its items in order and waits each item's delay_time. The
  *     branches of a ConcurrentCommands item run at the same time, each branch
  *     runs its commands in order, each after its own delay_time, and the next
@@ -332,7 +331,6 @@ export class MockEngineCore {
       if (units.length === 0) {
         return failed("BAD_PARAMETER");
       }
-      const commandIds = new Set<string>();
       for (const unit of units) {
         const component = this.components.get(unit.component_ref);
         if (!component || !this.declaresCommand(component, unit.command_type)) {
@@ -344,20 +342,24 @@ export class MockEngineCore {
         if (unit.command_type === "set_parameter" && !this.knowsParameters(component, unit.arguments ?? [])) {
           return failed("BAD_PARAMETER");
         }
-        if (
-          this.commands.has(unit.command_id) ||
-          commandIds.has(unit.command_id) ||
-          unit.command_id.startsWith(`${ENGINE_ID}/`)
-        ) {
-          return failed("BAD_PARAMETER");
-        }
-        commandIds.add(unit.command_id);
       }
-      for (const commandId of commandIds) {
+      const named = (unit: CommandUnit): CommandUnit => {
+        const commandId = this.assignId("cmd");
         this.commands.set(commandId, { status: null, results: [] });
-      }
-      void this.runSequence(session, command_unit_list);
-      return ok;
+        return { ...unit, command_id: commandId };
+      };
+      const items: CommandUnitSequenceItem[] = command_unit_list.map((item) =>
+        "branch_list" in item
+          ? {
+              ...item,
+              branch_list: item.branch_list.map((branch) => ({
+                command_list: branch.command_list.map(named),
+              })),
+            }
+          : named(item),
+      );
+      void this.runSequence(session, items);
+      return { return_code: "OK", command_unit_list: items };
     },
 
     "rois.command.get_command_result": (_session, { command_id, condition }) => {
@@ -708,7 +710,7 @@ export class MockEngineCore {
   // -------------------------------------------------------------------------
 
   /** A new id the engine assigns, prefixed with the engine id like a ref: mock/sub-1. */
-  private assignId(kind: "param" | "sub" | "evt"): string {
+  private assignId(kind: "cmd" | "param" | "sub" | "evt"): string {
     return `${ENGINE_ID}/${kind}-${this.nextId++}`;
   }
 

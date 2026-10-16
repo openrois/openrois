@@ -122,12 +122,10 @@ export interface EngineProfile {
 }
 
 /**
- * One command for execute(): a CommandUnit whose `command_id` may be left out.
- * The client then names the command with a UUID.
+ * One command for execute(): a CommandUnit without its `command_id`, which the
+ * engine assigns (spec 8.2.2.2).
  */
-export type CommandUnitInput = Omit<z.input<typeof CommandUnitSchema>, "command_id"> & {
-  command_id?: string;
-};
+export type CommandUnitInput = Omit<z.input<typeof CommandUnitSchema>, "command_id">;
 
 /**
  * Commands for execute() in branches that run at the same time. Each branch runs
@@ -212,11 +210,6 @@ type AnyListener = (...args: never[]) => void;
 
 /** Event names the client emits itself, which an event type must not shadow. */
 const RESERVED_EVENTS: ReadonlySet<string> = new Set(["notification", "close", "error"]);
-
-/** Name a command. RoIS has the application name each command (IDL CommandMessage). */
-function newCommandId(): string {
-  return globalThis.crypto.randomUUID();
-}
 
 // ---------------------------------------------------------------------------
 // RoISClient
@@ -430,34 +423,23 @@ export class RoISClient extends EventEmitter {
    * Run commands in order. A ConcurrentCommands item runs its branches at the
    * same time, and each branch runs its commands in order.
    *
-   * The engine answers as soon as it accepts the commands. Each command then
-   * ends with a rois.command.completed notification carrying its command_id,
-   * and getCommandResult() reads its results.
+   * The engine answers as soon as it accepts the commands, with the command_id
+   * it assigned to each one. Each command then ends with a
+   * rois.command.completed notification carrying that command_id, which
+   * arrives after the answer, and getCommandResult() reads its results.
    *
-   * @param commandUnitList - The commands. A command without a command_id is
-   *   named with a UUID.
-   * @returns The command_id of every command, in the order the list gives them,
-   *   with the commands of a ConcurrentCommands item branch by branch.
+   * @param commandUnitList - The commands, without command ids.
+   * @returns The command_id the engine assigned to every command, in the order
+   *   the list gives them, with the commands of a ConcurrentCommands item branch
+   *   by branch.
    */
   async execute(commandUnitList: CommandUnitSequenceItemInput[]): Promise<string[]> {
-    const commandIds: string[] = [];
-    const named = (unit: CommandUnitInput) => {
-      const command_id = unit.command_id ?? newCommandId();
-      commandIds.push(command_id);
-      return { ...unit, command_id };
-    };
-    const command_unit_list = commandUnitList.map((item) =>
+    const result = await this.call(RoISMethods.Execute, { command_unit_list: commandUnitList });
+    return (result.command_unit_list ?? []).flatMap((item) =>
       "branch_list" in item
-        ? {
-            ...item,
-            branch_list: item.branch_list.map((branch) => ({
-              command_list: branch.command_list.map(named),
-            })),
-          }
-        : named(item),
+        ? item.branch_list.flatMap((branch) => branch.command_list.map((unit) => unit.command_id))
+        : [item.command_id],
     );
-    await this.call(RoISMethods.Execute, { command_unit_list });
-    return commandIds;
   }
 
   /**

@@ -34,7 +34,7 @@ interface SentRequest {
 /** A command unit of an execute request, as sent. */
 interface SentUnit {
   component_ref: string;
-  command_id: string;
+  command_id?: string;
   delay_time?: number;
   branch_list?: { command_list: SentUnit[] }[];
 }
@@ -148,7 +148,6 @@ async function answered<T>(mock: MockWebSocket, call: Promise<T>, result: unknow
   return call;
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 const headProfile = {
   identifier: { authority: "OpenRoIS", code: "Head" },
@@ -371,7 +370,7 @@ describe("getParameter() and setParameter()", () => {
 });
 
 describe("execute()", () => {
-  it("names unnamed commands with UUIDs and returns every id in order", async () => {
+  it("sends no command ids and returns the ids the engine assigned, in order", async () => {
     const { client, mock } = await connected();
     const ids = await answered(
       mock,
@@ -381,7 +380,7 @@ describe("execute()", () => {
           branch_list: [
             {
               command_list: [
-                { component_ref: "reachy_real/antennas", command_type: "start", command_id: "mine" },
+                { component_ref: "reachy_real/antennas", command_type: "start" },
                 { component_ref: "reachy_real/antennas", command_type: "stop" },
               ],
             },
@@ -390,37 +389,46 @@ describe("execute()", () => {
           delay_time: 500,
         },
       ]),
-      { return_code: "OK" },
+      {
+        return_code: "OK",
+        command_unit_list: [
+          { component_ref: "reachy_real/head", command_type: "start", command_id: "main/cmd-1" },
+          {
+            branch_list: [
+              {
+                command_list: [
+                  { component_ref: "reachy_real/antennas", command_type: "start", command_id: "main/cmd-2" },
+                  { component_ref: "reachy_real/antennas", command_type: "stop", command_id: "main/cmd-3" },
+                ],
+              },
+              {
+                command_list: [
+                  { component_ref: "reachy_sim/head", command_type: "start", command_id: "main/cmd-4" },
+                ],
+              },
+            ],
+            delay_time: 500,
+          },
+        ],
+      },
     );
 
-    expect(ids).toHaveLength(4);
-    expect(ids[0]).toMatch(UUID);
-    expect(ids[1]).toBe("mine");
-    expect(ids[2]).toMatch(UUID);
-
+    expect(ids).toEqual(["main/cmd-1", "main/cmd-2", "main/cmd-3", "main/cmd-4"]);
     const sent = mock.last.params?.command_unit_list as SentUnit[];
     expect(mock.last.method).toBe("rois.command.execute");
-    expect(sent[0]).toMatchObject({ component_ref: "reachy_real/head", command_id: ids[0] });
+    // The ids are left empty, for the engine to assign.
+    expect(sent[0]).toMatchObject({ component_ref: "reachy_real/head", command_id: "" });
     expect(sent[1].delay_time).toBe(500);
     expect(
       sent[1].branch_list?.map((branch) => branch.command_list.map((unit) => unit.command_id)),
-    ).toEqual([["mine", ids[2]], [ids[3]]]);
-  });
-
-  it("gives every unnamed command its own id", async () => {
-    const { client, mock } = await connected();
-    const unit = { component_ref: "reachy_real/head", command_type: "start" };
-    const ids = await answered(mock, client.execute([unit, unit]), { return_code: "OK" });
-    expect(ids[0]).not.toBe(ids[1]);
+    ).toEqual([["", ""], [""]]);
   });
 
   it("raises the return code when the engine refuses the commands", async () => {
     const { client, mock } = await connected();
-    const call = client.execute([
-      { component_ref: "reachy_real/head", command_type: "start", command_id: "dup" },
-    ]);
-    respond(mock, { return_code: "BAD_PARAMETER" });
-    await expect(call).rejects.toThrow("rois.command.execute failed with BAD_PARAMETER");
+    const call = client.execute([{ component_ref: "reachy_real/head", command_type: "start" }]);
+    respond(mock, { return_code: "ERROR" });
+    await expect(call).rejects.toThrow("rois.command.execute failed with ERROR");
   });
 });
 
@@ -703,8 +711,14 @@ describe("a session", () => {
     const [commandId] = await answered(
       mock,
       client.execute([{ component_ref: refs[0], command_type: "start" }]),
-      { return_code: "OK" },
+      {
+        return_code: "OK",
+        command_unit_list: [
+          { component_ref: refs[0], command_type: "start", command_id: "main/cmd-1" },
+        ],
+      },
     );
+    expect(commandId).toBe("main/cmd-1");
     notify(mock, "rois.command.completed", { command_id: commandId, status: "OK" });
     expect(completed).toHaveBeenCalledWith({ command_id: commandId, status: "OK" });
 

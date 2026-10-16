@@ -20,10 +20,10 @@ from openrois.interfaces.catalog import (
     METHODS_BY_NAME,
     NOTIFICATIONS,
     NOTIFICATIONS_BY_NAME,
-    STREAMING_METHOD_PREFIX,
     CommandIF,
     EventIF,
     ExecuteParams,
+    ExecuteResult,
     GetParameterResult,
     GetProfileResult,
     JsonRpcErrorCode,
@@ -93,8 +93,9 @@ class TestMethodTable:
         for m in METHODS:
             assert m.method == f"{NAMESPACES[m.interface]}.{m.operation}"
 
-    def test_streaming_is_not_modelled(self) -> None:
-        assert not any(m.method.startswith(STREAMING_METHOD_PREFIX) for m in METHODS)
+    def test_streaming_has_no_methods_of_its_own(self) -> None:
+        """Streaming components ride the Command, Query and Event interfaces (8.2.2.5)."""
+        assert not any(m.method.startswith("rois.stream.") for m in METHODS)
 
     def test_index_matches_table(self) -> None:
         assert set(METHODS_BY_NAME) == {m.method for m in METHODS}
@@ -191,6 +192,7 @@ class TestExecute:
         assert isinstance(first, CommandUnit)
         assert first.command_id == "nod-1"
         assert isinstance(second, ConcurrentCommands)
+        # The flat command_list of the XSD reads as one branch per command.
         assert [[c.command_id for c in b.command_list] for b in second.branch_list] == [
             ["nod-2"],
             ["nod-3"],
@@ -205,11 +207,45 @@ class TestExecute:
         with pytest.raises(ValidationError):
             ExecuteParams(command_unit_list=[])
 
-    def test_command_id_is_required_on_each_unit(self) -> None:
-        with pytest.raises(ValidationError):
-            ExecuteParams.model_validate(
-                {"command_unit_list": [{"component_ref": "r/head", "command_type": "start"}]}
-            )
+    def test_a_unit_may_leave_out_its_command_id(self) -> None:
+        """The engine assigns command ids (8.2.2.2), so a client sends none."""
+        params = ExecuteParams.model_validate(
+            {"command_unit_list": [{"component_ref": "r/head", "command_type": "start"}]}
+        )
+        first = params.command_unit_list[0]
+        assert isinstance(first, CommandUnit)
+        assert first.command_id == ""
+
+    def test_branches_run_their_commands_in_order(self) -> None:
+        params = ExecuteParams.model_validate(
+            {
+                "command_unit_list": [
+                    {
+                        "branch_list": [
+                            {
+                                "command_list": [
+                                    {"component_ref": "r/head", "command_type": "start"},
+                                    {"component_ref": "r/head", "command_type": "stop"},
+                                ]
+                            },
+                            {"command_list": [{"component_ref": "r/arm", "command_type": "start"}]},
+                        ]
+                    }
+                ]
+            }
+        )
+        group = params.command_unit_list[0]
+        assert isinstance(group, ConcurrentCommands)
+        assert [[c.command_type for c in b.command_list] for b in group.branch_list] == [
+            ["start", "stop"],
+            ["start"],
+        ]
+
+    def test_execute_result_returns_the_sequence_with_its_ids(self) -> None:
+        unit = CommandUnit(component_ref="r/head", command_type="start", command_id="gw/cmd-1")
+        result = ExecuteResult(return_code=ReturnCode.OK, command_unit_list=[unit])
+        assert ExecuteResult.model_validate_json(result.model_dump_json()) == result
+        assert ExecuteResult(return_code=ReturnCode.ERROR).command_unit_list == []
 
     def test_no_top_level_component_ref(self) -> None:
         with pytest.raises(ValidationError):
@@ -465,12 +501,12 @@ class TestCatalogDocument:
     def test_lists_the_standard_command_types(self) -> None:
         assert catalog_document()["standard_command_types"] == [c.value for c in CommandType]
 
-    def test_lists_error_codes_and_unmodelled_prefixes(self) -> None:
+    def test_lists_error_codes_and_reserves_no_prefix(self) -> None:
         document = catalog_document()
         assert document["json_rpc_error_codes"] == [
             {"name": c.name, "code": c.value} for c in JsonRpcErrorCode
         ]
-        assert document["unmodelled_method_prefixes"] == ["rois.stream."]
+        assert "unmodelled_method_prefixes" not in document
 
 
 # ---------------------------------------------------------------------------

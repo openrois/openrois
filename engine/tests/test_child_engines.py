@@ -32,6 +32,7 @@ NAV = "robot/navigation"
 
 async def test_the_adapter_path_is_asked_for_its_profile(gateway: Gateway) -> None:
     child = await FakeChild.connect(gateway)
+    await child.answer_connect()
     request = await child.request()
     assert request["method"] == "rois.system.get_profile"
     assert request["params"] == {"condition": ""}
@@ -85,7 +86,7 @@ async def test_a_changed_child_profile_is_read_again(gateway: Gateway, client: R
     await child.connection.send(
         json.dumps({"jsonrpc": "2.0", "method": "rois.system.profile_changed", "params": {}})
     )
-    await child.answer_profile("cam", refs=["cam/camera", "cam/camera_2"])
+    await child.answer_profile("cam", refs=["cam/camera", "cam/camera_2"], connect=False)
     await wait_until(lambda: len(client.sent("rois.system.profile_changed")) == 2)
     found = await client.call("rois.command.search", condition="")
     assert found["component_ref_list"] == ["cam/camera", "cam/camera_2"]
@@ -101,7 +102,7 @@ async def test_a_changed_profile_that_reuses_an_engine_id_closes_the_child(
         json.dumps({"jsonrpc": "2.0", "method": "rois.system.profile_changed", "params": {}})
     )
     await child.answer_profile(
-        "floor", refs=["floor/camera", "robot/camera"], sub_engine_ids=("robot",)
+        "floor", refs=["floor/camera", "robot/camera"], sub_engine_ids=("robot",), connect=False
     )
     code, reason = await child.closed()
     assert (code, reason) == (1008, "Engine id robot is already in use.")
@@ -117,7 +118,7 @@ async def test_a_child_that_never_answers_discovery_is_refused(gateway: Gateway)
     child = await FakeChild.connect(gateway)
     code, reason = await child.closed()
     assert code == 1008
-    assert reason == "Discovery failed with TIMEOUT."
+    assert reason == "Connect failed with TIMEOUT."
 
 
 @pytest.mark.parametrize("engine_id", ["", "lab/robot"])
@@ -189,19 +190,17 @@ async def test_a_sequence_runs_across_two_adapters(gateway: Gateway, client: Rpc
             assert (await client.call("rois.command.bind", component_ref=ref))[
                 "return_code"
             ] == "OK"
-        items = [
-            unit("robot_a/navigation", "start", "c1"),
-            unit("robot_b/gripper", "grip", "c2", force="1.5"),
-        ]
-        result = await client.call("rois.command.execute", command_unit_list=items)
-        assert result["return_code"] == "OK"
+        start, grip = await client.execute(
+            unit("robot_a/navigation", "start"),
+            unit("robot_b/gripper", "grip", force="1.5"),
+        )
         await asyncio.sleep(0.05)
         assert client.sent("rois.command.completed") == []
         navigation.arrive.set()
-        assert await client.completed("c1") == "OK"
-        assert await client.completed("c2") == "OK"
+        assert await client.completed(start) == "OK"
+        assert await client.completed(grip) == "OK"
         held = await client.call(
-            "rois.command.get_command_result", command_id="c2", condition=""
+            "rois.command.get_command_result", command_id=grip, condition=""
         )
         assert held["results"] == [{"name": "held", "data_type_ref": "bool", "value": "true"}]
     finally:
@@ -225,7 +224,7 @@ async def test_the_ids_of_a_child_name_the_engine_that_owns_them(
     assert configured["command_id"].startswith("robot/param-")
     assert await client.completed(configured["command_id"]) == "OK"
 
-    await client.call("rois.command.execute", command_unit_list=[unit(NAV, "start", "c1")])
+    await client.execute(unit(NAV, "start"))
     navigation = adapter.components["navigation"]
     assert isinstance(navigation, Navigation)
     navigation.arrive.set()
@@ -243,12 +242,10 @@ async def test_a_delay_is_waited_once_however_deep_the_component(
     adapter: Adapter, client: RpcClient
 ) -> None:
     await client.call("rois.command.bind", component_ref=NAV)
-    await client.call(
-        "rois.command.execute", command_unit_list=[unit(NAV, "stop", "c1", delay_time=300)]
-    )
     loop = asyncio.get_running_loop()
     began = loop.time()
-    assert await client.completed("c1") == "OK"
+    [stop] = await client.execute(unit(NAV, "stop", delay_time=300))
+    assert await client.completed(stop) == "OK"
     assert 0.25 <= loop.time() - began < 0.5
 
 
@@ -344,42 +341,18 @@ async def test_an_id_the_child_already_gave_out_counts_as_error(
     await wait_until(lambda: gateway.engine.child_engine_ids() == ["cam"])
     params = {"event_type": "person_detected", "condition": eq(COMPONENT_REF, "cam/camera")}
     replies = []
-    for _ in range(2):
-        pending = client.send("rois.event.subscribe", params)
-        await child.reply(
-            await child.request(), {"return_code": "OK", "subscribe_id": "cam/sub-1"}
-        )
-        replies.append(await asyncio.wait_for(pending, timeout=2.0))
+    # Two clients, since a client that subscribes again gets its own subscription back.
+    other = await RpcClient.connect(gateway.url)
+    try:
+        for subscriber in (client, other):
+            pending = subscriber.send("rois.event.subscribe", params)
+            await child.reply(
+                await child.request(), {"return_code": "OK", "subscribe_id": "cam/sub-1"}
+            )
+            replies.append(await asyncio.wait_for(pending, timeout=2.0))
+    finally:
+        await other.close()
     assert [r["result"]["return_code"] for r in replies] == ["OK", "ERROR"]
-
-
-async def test_a_command_id_taken_by_a_running_command_keeps_both_completions(
-    gateway: Gateway, adapter: Adapter, client: RpcClient
-) -> None:
-    await client.call("rois.command.bind", component_ref=NAV)
-    # The client names a command in the namespace of an engine that is not there yet.
-    started = await client.call(
-        "rois.command.execute", command_unit_list=[unit(NAV, "start", "cam/param-1")]
-    )
-    assert started["return_code"] == "OK"
-    child = await FakeChild.connect(gateway)
-    await child.answer_profile("cam")
-    await wait_until(lambda: gateway.engine.child_engine_ids() == ["robot", "cam"])
-    pending = client.send(
-        "rois.command.set_parameter", {"component_ref": "cam/camera", "parameters": []}
-    )
-    await child.reply(await child.request(), {"return_code": "OK", "command_id": "cam/param-1"})
-    assert (await asyncio.wait_for(pending, timeout=2.0))["result"]["return_code"] == "OK"
-    completed = {"command_id": "cam/param-1", "status": "OK"}
-    await child.connection.send(
-        json.dumps({"jsonrpc": "2.0", "method": "rois.command.completed", "params": completed})
-    )
-    await wait_until(lambda: len(client.sent("rois.command.completed")) == 1)
-    navigation = adapter.components["navigation"]
-    assert isinstance(navigation, Navigation)
-    navigation.arrive.set()
-    await wait_until(lambda: len(client.sent("rois.command.completed")) == 2)
-    assert client.sent("rois.command.completed") == [completed, completed]
 
 
 async def test_a_subscription_whose_reply_comes_too_late_is_ended(
@@ -454,10 +427,10 @@ async def test_a_child_that_disconnects_fails_its_running_commands(
     adapter: Adapter, client: RpcClient
 ) -> None:
     await client.call("rois.command.bind", component_ref=NAV)
-    await client.call("rois.command.execute", command_unit_list=[unit(NAV, "start", "c1")])
+    [start] = await client.execute(unit(NAV, "start"))
     await asyncio.sleep(0.05)
     await adapter.stop()
-    assert await client.completed("c1") == "ERROR"
+    assert await client.completed(start) == "ERROR"
 
 
 async def test_a_child_that_stops_replying_times_out(gateway: Gateway, client: RpcClient) -> None:
@@ -471,8 +444,9 @@ async def test_a_child_that_stops_replying_times_out(gateway: Gateway, client: R
     )
     assert status["return_code"] == "TIMEOUT"
     assert loop.time() - began >= CHILD_TIMEOUT
-    await client.call("rois.command.execute", command_unit_list=[unit("cam/camera", "start", "c1")])
-    assert await client.completed("c1") == "TIMEOUT"
+    await client.call("rois.command.bind", component_ref="cam/camera")
+    [start] = await client.execute(unit("cam/camera", "start"))
+    assert await client.completed(start) == "TIMEOUT"
 
 
 async def test_stopping_the_server_removes_every_child(gateway: Gateway, adapter: Adapter) -> None:
@@ -520,9 +494,9 @@ async def test_a_gateway_serves_the_engines_below_another_gateway(
             "rois.event.subscribe", event_type="reached_target", condition=eq(COMPONENT_REF, NAV)
         )
         assert subscribed["subscribe_id"].startswith("robot/sub-")
-        await client.call("rois.command.execute", command_unit_list=[unit(NAV, "start", "c1")])
+        [start] = await client.execute(unit(NAV, "start"))
         navigation.arrive.set()
-        assert await client.completed("c1") == "OK"
+        assert await client.completed(start) == "OK"
         event = await client.notification("rois.event.notify_event")
         assert event["subscribe_id"] == subscribed["subscribe_id"]
 
@@ -531,9 +505,9 @@ async def test_a_gateway_serves_the_engines_below_another_gateway(
         other = await RpcClient.connect(gateway.url)
         try:
             refused = await other.call(
-                "rois.command.execute", command_unit_list=[unit(NAV, "start", "c2")]
+                "rois.command.execute", command_unit_list=[unit(NAV, "start")]
             )
-            assert refused["return_code"] == "OUT_OF_RESOURCES"
+            assert refused["return_code"] == "ERROR"
         finally:
             await other.close()
     finally:

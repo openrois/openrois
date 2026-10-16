@@ -99,30 +99,20 @@ async def test_a_disconnected_client_releases_its_bindings_and_subscriptions(
         await other.close()
 
 
-async def test_a_command_of_a_client_that_left_runs_to_its_end(
+async def test_a_command_of_a_client_that_left_is_aborted(
     gateway: Gateway, adapter: Adapter, client: RpcClient
 ) -> None:
     rpc = await RpcClient.connect(gateway.url)
     await rpc.call("rois.command.bind", component_ref=NAV)
-    await rpc.call("rois.command.execute", command_unit_list=[unit(NAV, "start", "c1")])
+    [start] = await rpc.execute(unit(NAV, "start"))
+    await wait_until(lambda: start in adapter.engine._commands)
     await rpc.close()
-
-    async def status() -> str:
-        result = await client.call(
-            "rois.query.query", query_type="component_status", condition=eq(COMPONENT_REF, NAV)
-        )
-        value: str = result["results"][0]["value"]
-        return value
-
-    assert await status() == "BUSY"
-    running = await client.call("rois.command.get_command_result", command_id="c1", condition="")
-    assert running == {"return_code": "OK", "results": []}
-    navigation_of(adapter).arrive.set()
-    loop = asyncio.get_running_loop()
-    deadline = loop.time() + 2.0
-    while await status() != "READY":
-        assert loop.time() < deadline
-        await asyncio.sleep(0.01)
+    # The start is halted on the robot, and the component is free for the next client.
+    await wait_until(lambda: navigation_of(adapter).stops == 1)
+    await wait_until(lambda: adapter.engine._commands[start].status is not None)
+    assert adapter.engine._commands[start].status == "ABORT"
+    bound = await client.call("rois.command.bind", component_ref=NAV)
+    assert bound["return_code"] == "OK"
 
 
 async def test_stopping_the_server_closes_clients_with_going_away(gateway: Gateway) -> None:

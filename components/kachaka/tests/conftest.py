@@ -65,6 +65,8 @@ async def host() -> AsyncIterator[Callable[[str, Component], Any]]:
             robot.notifications.append((method, params.model_dump(mode="json")))
 
         robot.session = engine.open_session(notify, trusted=True)
+        # An engine serves a session only once it has connected, a parent included.
+        assert (await robot.call("rois.system.connect"))["return_code"] == "OK"
         return robot
 
     yield start

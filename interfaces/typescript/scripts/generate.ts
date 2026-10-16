@@ -70,7 +70,6 @@ interface CatalogDocument {
   notifications: CatalogNotification[];
   standard_command_types: string[];
   json_rpc_error_codes: { name: string; code: number }[];
-  unmodelled_method_prefixes: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -562,10 +561,6 @@ function genCatalog(catalog: CatalogDocument): string {
     lines.push(`  ${e.name}: ${e.code},`);
   }
   lines.push("} as const;");
-  lines.push("");
-  lines.push("/** Method name prefixes the catalog does not model. Engines answer them with METHOD_NOT_FOUND. */");
-  const prefixes = catalog.unmodelled_method_prefixes.map((p) => tsStr(p)).join(", ");
-  lines.push(`export const UnmodelledMethodPrefixes = [${prefixes}] as const;`);
   lines.push("");
   return lines.join("\n");
 }

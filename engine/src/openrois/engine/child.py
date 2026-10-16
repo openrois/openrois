@@ -5,9 +5,20 @@ engine. It sends the child the same catalog requests a client would send, and tu
 the child's notifications back into the engine's callbacks. The parent engine is the
 child's only client, so the child skips the bind checks the parent already made.
 
+The parent connects to the child with ``rois.system.connect`` before it reads its
+profile, as any client of an engine does.
+
 Ids stay the same end to end: refs and the ids the child assigns start with the id of
-the engine that owns the component, and command ids are named by the client. A reply
-that assigns an id outside the child's engine ids counts as ERROR.
+the engine that owns the component, and command ids are those the parent assigned. A
+reply that assigns an id outside the child's engine ids counts as ERROR.
+
+A command the parent aborts, because the session that started it released the component
+or went away, is stopped on the child when no other client of the parent still holds the
+component: the parent sends it an execute of stop on the component when its profile
+declares stop, and then releases the component on the child. An OpenRoIS child aborts
+the commands still running there on that release. Any other child is left alone after
+that, and the parent no longer waits for its completed. When other clients still hold the
+component, the parent only stops waiting, and the command runs on in the child.
 
 A request that times out may still take effect on the child. A subscription whose reply
 comes too late is ended, since nobody holds it. A command keeps running, and a parameter
@@ -23,6 +34,8 @@ from collections.abc import Awaitable, Callable, Mapping, Sequence
 from typing import Any
 
 from openrois.interfaces.catalog import (
+    ConnectParams,
+    ConnectResult,
     ExecuteParams,
     ExecuteResult,
     GetCommandResultParams,
@@ -37,6 +50,8 @@ from openrois.interfaces.catalog import (
     GetProfileResult,
     QueryParams,
     QueryResult,
+    ReleaseParams,
+    ReleaseResult,
     SetParameterParams,
     SetParameterResult,
     SubscribeParams,
@@ -44,13 +59,18 @@ from openrois.interfaces.catalog import (
     UnsubscribeParams,
     UnsubscribeResult,
 )
-from openrois.interfaces.condition import COMPONENT_REF, eq
-from openrois.interfaces.hri import CommandUnit, Parameter, ReturnCode
+from openrois.interfaces.condition import COMPONENT_REF, all_of, eq
+from openrois.interfaces.hri import Argument, CommandUnit, Parameter, ReturnCode
 from openrois.interfaces.profiles import HRIComponentProfile, HRIEngineProfileType
-from openrois.interfaces.service import CompletedParams, CompletedStatus, NotifyEventParams
+from openrois.interfaces.service import (
+    CompletedParams,
+    CompletedStatus,
+    NotifyErrorParams,
+    NotifyEventParams,
+)
 from pydantic import BaseModel, ValidationError
 
-from openrois.engine.contract import Deliver, OnCompleted
+from openrois.engine.contract import Deliver, OnError
 
 logger = logging.getLogger(__name__)
 
@@ -119,8 +139,11 @@ class ChildEngine:
         self._pending: dict[int, _Pending] = {}
         self._late: dict[int, tuple[type[BaseModel], _OnLate]] = {}
         self._running: dict[str, asyncio.Future[CompletedStatus]] = {}
-        self._on_completed: dict[str, OnCompleted] = {}
+        self._parameters: dict[str, asyncio.Future[CompletedStatus]] = {}
         self._deliveries: dict[str, Deliver] = {}
+        self._on_error: OnError | None = None
+        # Commands whose abort only stops the wait, since other clients share them.
+        self._kept: set[str] = set()
         self._tasks: set[asyncio.Task[None]] = set()
         self._profile: HRIEngineProfileType | None = None
         self._profiles: dict[str, HRIComponentProfile] = {}
@@ -134,12 +157,16 @@ class ChildEngine:
     # -- Connection ----------------------------------------------------------------------
 
     async def discover(self) -> None:
-        """Read the child's profile. Call once, after the reader has started.
+        """Connect to the child and read its profile. Call once, after the reader started.
 
         Raises:
-            ValueError: The child did not answer with a profile, or the profile names
-                an invalid engine id or a component ref no engine in it owns.
+            ValueError: The child refused the connect or did not answer with a profile,
+                or the profile names an invalid engine id or a component ref no engine
+                in it owns.
         """
+        connected = await self._request("rois.system.connect", ConnectParams(), ConnectResult)
+        if connected.return_code is not ReturnCode.OK:
+            raise ValueError(f"Connect failed with {connected.return_code.value}.")
         result = await self._request(
             "rois.system.get_profile", GetProfileParams(condition=""), GetProfileResult
         )
@@ -174,9 +201,10 @@ class ChildEngine:
             if not running.done():
                 running.set_result(CompletedStatus.ERROR)
         self._running.clear()
-        for command_id, on_completed in list(self._on_completed.items()):
-            on_completed(command_id, CompletedStatus.ERROR)
-        self._on_completed.clear()
+        for changed in self._parameters.values():
+            if not changed.done():
+                changed.set_result(CompletedStatus.ERROR)
+        self._parameters.clear()
         self._deliveries.clear()
         for task in self._tasks:
             task.cancel()
@@ -193,39 +221,58 @@ class ChildEngine:
     def engine_profile(self) -> HRIEngineProfileType | None:
         return self._profile
 
+    def on_error(self, callback: OnError) -> None:
+        self._on_error = callback
+
+    def keep_running(self, command_id: str) -> None:
+        self._kept.add(command_id)
+
     async def run(self, unit: CommandUnit) -> CompletedStatus:
-        future: asyncio.Future[CompletedStatus] = asyncio.get_running_loop().create_future()
-        self._running[unit.command_id] = future
-        # This engine waited the delay already, so the child must not wait it again.
-        command = unit.model_copy(update={"delay_time": None})
         try:
-            reply = await self._request(
-                "rois.command.execute", ExecuteParams(command_unit_list=[command]), ExecuteResult
-            )
-            if reply.return_code is not ReturnCode.OK:
-                return _REFUSED_STATUS.get(reply.return_code, CompletedStatus.ERROR)
-            return await future
+            return await self._execute(unit)
+        except asyncio.CancelledError:
+            # The parent aborts the command, so the child halts it, unless other clients
+            # of the parent still hold the component: then the command runs on.
+            if unit.command_id in self._kept:
+                self._kept.discard(unit.command_id)
+            else:
+                self._spawn(self._abort(unit))
+            raise
         finally:
-            self._running.pop(unit.command_id, None)
+            self._kept.discard(unit.command_id)
 
     async def set_parameter(
-        self,
-        ref: str,
-        parameters: Sequence[Parameter],
-        on_completed: OnCompleted,
-    ) -> SetParameterResult:
+        self, ref: str, parameters: Sequence[Parameter]
+    ) -> tuple[SetParameterResult, CompletedStatus]:
+        changed: asyncio.Future[CompletedStatus] = asyncio.get_running_loop().create_future()
+
         def record(result: SetParameterResult) -> bool:
-            if not self._owns(result.command_id) or result.command_id in self._on_completed:
+            if not self._owns(result.command_id) or result.command_id in self._parameters:
                 return False
-            self._on_completed[result.command_id] = on_completed
+            self._parameters[result.command_id] = changed
             return True
 
-        return await self._request(
+        result = await self._request(
             "rois.command.set_parameter",
             SetParameterParams(component_ref=ref, parameters=list(parameters)),
             SetParameterResult,
             record,
         )
+        if result.return_code is not ReturnCode.OK:
+            return result, CompletedStatus.ERROR
+        # The child applied the values before its reply and sends completed right after
+        # it, so the parent replies to its client only once the values are applied.
+        try:
+            async with asyncio.timeout(self._request_timeout):
+                status = await changed
+        except TimeoutError:
+            logger.warning(
+                "Child engine %s did not complete %s.", self.engine_id, result.command_id
+            )
+            status = CompletedStatus.ERROR
+        finally:
+            self._parameters.pop(result.command_id, None)
+        return result, status
 
     async def get_parameter(self, ref: str) -> GetParameterResult:
         return await self._request(
@@ -239,14 +286,16 @@ class ChildEngine:
             GetCommandResultResult,
         )
 
-    async def query(self, ref: str, query_type: str) -> QueryResult:
+    async def query(self, ref: str, query_type: str, arguments: Sequence[Argument]) -> QueryResult:
         return await self._request(
             "rois.query.query",
-            QueryParams(query_type=query_type, condition=eq(COMPONENT_REF, ref)),
+            QueryParams(query_type=query_type, condition=_condition(ref, arguments)),
             QueryResult,
         )
 
-    async def subscribe(self, ref: str, event_type: str, deliver: Deliver) -> SubscribeResult:
+    async def subscribe(
+        self, ref: str, event_type: str, arguments: Sequence[Argument], deliver: Deliver
+    ) -> SubscribeResult:
         recorded = False
 
         def record(result: SubscribeResult) -> bool:
@@ -268,7 +317,7 @@ class ChildEngine:
 
         return await self._request(
             "rois.event.subscribe",
-            SubscribeParams(event_type=event_type, condition=eq(COMPONENT_REF, ref)),
+            SubscribeParams(event_type=event_type, condition=_condition(ref, arguments)),
             SubscribeResult,
             record,
             end_late,
@@ -298,6 +347,63 @@ class ChildEngine:
 
     # -- Requests ------------------------------------------------------------------------
 
+    async def _execute(self, unit: CommandUnit) -> CompletedStatus:
+        """Send one command to the child and wait until it completes.
+
+        The child must accept the command within its timeout, from the profile, or it
+        completes with TIMEOUT: the timeout judges whether the command started.
+        """
+        future: asyncio.Future[CompletedStatus] = asyncio.get_running_loop().create_future()
+        self._running[unit.command_id] = future
+        # This engine waited the delay already, so the child must not wait it again.
+        command = unit.model_copy(update={"delay_time": None})
+        try:
+            reply = await self._request(
+                "rois.command.execute",
+                ExecuteParams(command_unit_list=[command]),
+                ExecuteResult,
+                timeout=self._start_timeout(unit),
+            )
+            if reply.return_code is not ReturnCode.OK:
+                return _REFUSED_STATUS.get(reply.return_code, CompletedStatus.ERROR)
+            return await future
+        finally:
+            self._running.pop(unit.command_id, None)
+
+    async def _abort(self, unit: CommandUnit) -> None:
+        """Stop an aborted command on the child, then release the component there."""
+        profile = self._profiles.get(unit.component_ref)
+        if profile is not None and any(m.name == "stop" for m in profile.command_profiles):
+            stop = CommandUnit(
+                component_ref=unit.component_ref,
+                command_type="stop",
+                command_id=f"{unit.command_id}/stop",
+            )
+            try:
+                async with asyncio.timeout(self._request_timeout):
+                    await self._execute(stop)
+            except TimeoutError:
+                logger.warning(
+                    "Child engine %s did not complete the stop of %s.",
+                    self.engine_id,
+                    unit.component_ref,
+                )
+        await self._request(
+            "rois.command.release", ReleaseParams(component_ref=unit.component_ref), ReleaseResult
+        )
+
+    def _start_timeout(self, unit: CommandUnit) -> float:
+        """How long the child has to accept a command: the request timeout, or less."""
+        profile = self._profiles.get(unit.component_ref)
+        message = None
+        if profile is not None:
+            message = next(
+                (m for m in profile.command_profiles if m.name == unit.command_type), None
+            )
+        if message is None or not message.timeout:
+            return self._request_timeout
+        return min(self._request_timeout, message.timeout / 1000)
+
     async def _request[R: BaseModel](
         self,
         method: str,
@@ -305,14 +411,17 @@ class ChildEngine:
         result_type: type[R],
         on_reply: Callable[[R], bool] | None = None,
         on_late: Callable[[R], None] | None = None,
+        *,
+        timeout: float | None = None,
     ) -> R:
         """Send one request and wait for its reply.
 
         ``on_reply`` runs when an OK reply arrives, before the next message from the
         child is handled, and turns the reply into ERROR by returning False. A child
-        that fails answers ERROR, and one that is too slow answers TIMEOUT. ``on_late``
-        runs when an OK reply arrives after the caller stopped waiting, because of the
-        timeout or because the caller was cancelled.
+        that fails answers ERROR, and one that is too slow answers TIMEOUT, after
+        ``timeout`` seconds or the request timeout. ``on_late`` runs when an OK reply
+        arrives after the caller stopped waiting, because of the timeout or because the
+        caller was cancelled.
         """
         failed = result_type.model_validate({"return_code": ReturnCode.ERROR})
         if not self._open:
@@ -329,7 +438,7 @@ class ChildEngine:
         }
         try:
             await self._send(json.dumps(message))
-            async with asyncio.timeout(self._request_timeout):
+            async with asyncio.timeout(timeout if timeout is not None else self._request_timeout):
                 reply = await future
         except TimeoutError:
             logger.warning("Child engine %s did not answer %s in time.", self.engine_id, method)
@@ -409,11 +518,10 @@ class ChildEngine:
             if method == "rois.command.completed":
                 completed = CompletedParams.model_validate(params)
                 running = self._running.get(completed.command_id)
-                if running is not None:
-                    if not running.done():
-                        running.set_result(completed.status)
-                elif (callback := self._on_completed.pop(completed.command_id, None)) is not None:
-                    callback(completed.command_id, completed.status)
+                if running is None:
+                    running = self._parameters.get(completed.command_id)
+                if running is not None and not running.done():
+                    running.set_result(completed.status)
             elif method == "rois.event.notify_event":
                 event = NotifyEventParams.model_validate(params)
                 deliver = self._deliveries.get(event.subscribe_id)
@@ -422,11 +530,25 @@ class ChildEngine:
             elif method == "rois.system.profile_changed":
                 self._spawn(self._rediscover())
             elif method == "rois.system.notify_error":
-                logger.warning("Child engine %s reported an error: %s", self.engine_id, params)
+                self._spawn(self._pass_error(NotifyErrorParams.model_validate(params)))
         except ValidationError:
             logger.warning(
                 "Child engine %s sent a %s outside the catalog.", self.engine_id, method
             )
+
+    async def _pass_error(self, error: NotifyErrorParams) -> None:
+        """Pass an error of the child up, with the component its detail names.
+
+        The error id stays the child's, so get_error_detail routes back to it. An error
+        whose detail names no component of the child is an error of the engine.
+        """
+        if self._on_error is None or not self._owns(error.error_id):
+            return
+        detail = await self.error_detail(error.error_id)
+        ref = next((r.value for r in detail.results if r.name == "component_ref"), "")
+        if ref not in self._profiles:
+            ref = ""
+        self._on_error(ref, error.error_id, error.error_type)
 
     # -- Profile -------------------------------------------------------------------------
 
@@ -480,6 +602,11 @@ class ChildEngine:
         task = asyncio.ensure_future(coroutine)
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
+
+
+def _condition(ref: str, arguments: Sequence[Argument]) -> str:
+    """The condition that selects one component of the child and gives the arguments."""
+    return all_of(eq(COMPONENT_REF, ref), *(eq(a.name, a.value) for a in arguments))
 
 
 def _is_ok(reply: BaseModel) -> bool:

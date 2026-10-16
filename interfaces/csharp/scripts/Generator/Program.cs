@@ -619,15 +619,6 @@ internal static class Program
         }
         sb.AppendLine("    }");
         sb.AppendLine();
-        sb.AppendLine("    /// <summary>Method name prefixes the catalog does not model. Engines answer them with METHOD_NOT_FOUND.</summary>");
-        sb.AppendLine("    public static class UnmodelledMethodPrefixes");
-        sb.AppendLine("    {");
-        var prefixes = catalog["unmodelled_method_prefixes"]!.AsArray()
-            .Select(p => $"\"{p!.GetValue<string>()}\"");
-        sb.AppendLine("        /// <summary>Every unmodelled prefix.</summary>");
-        sb.AppendLine($"        public static readonly IReadOnlyList<string> All = new[] {{ {string.Join(", ", prefixes)} }};");
-        sb.AppendLine("    }");
-        sb.AppendLine();
     }
 
     // -----------------------------------------------------------------------

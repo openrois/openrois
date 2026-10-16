@@ -183,8 +183,8 @@ class TestDeclarationErrors:
                 async def start(self, target: str) -> None:
                     return None
 
-    def test_queries_take_no_arguments(self) -> None:
-        with pytest.raises(TypeError, match="no arguments"):
+    def test_a_query_takes_only_the_arguments_of_its_profile(self) -> None:
+        with pytest.raises(TypeError, match="does not define as an argument"):
 
             @component(SYSTEM_INFORMATION_PROFILE)
             class Positioned(Component):

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** the gateway runs the engine of `openrois-engine` with the behavior of its next release. A client sends `rois.system.connect` first, binds every component it commands, reads the command ids of an `execute` from its result, and runs `ConcurrentCommands` as branches. Binds, command ids and the abort of a client's commands when it releases a component or goes away are held at the gateway for every child engine.
+- The smoke script, `gateway/scripts/smoke.py`, connects first and reads the command id the gateway assigns.
+
 ## [0.1.0a1] - 2026-10-08
 
 ### Added

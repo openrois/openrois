@@ -138,17 +138,18 @@ describe("a session through the SDK", () => {
         branch_list: [
           {
             command_list: [
-              { component_ref: person, command_type: "suspend", command_id: "b1", delay_time: 20 },
-              { component_ref: person, command_type: "resume", command_id: "b2" },
+              { component_ref: person, command_type: "suspend", delay_time: 20 },
+              { component_ref: person, command_type: "resume" },
             ],
           },
-          { command_list: [{ component_ref: person, command_type: "start", command_id: "b3" }] },
+          { command_list: [{ component_ref: person, command_type: "start" }] },
         ],
       },
     ]);
-    expect(ids).toEqual(["b1", "b2", "b3"]);
+    expect(ids).toHaveLength(3);
+    const [b1, b2, b3] = ids;
     await expect.poll(() => completed.length).toBe(3);
-    expect(completed).toEqual(["b3", "b1", "b2"]);
+    expect(completed).toEqual([b3, b1, b2]);
     await client.disconnect();
   });
 

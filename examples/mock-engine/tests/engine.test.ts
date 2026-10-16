@@ -245,110 +245,107 @@ describe("parameters", () => {
 // ---------------------------------------------------------------------------
 
 describe("execute", () => {
-  const unit = (component_ref: string, command_type: string, command_id: string) => ({
+  const unit = (component_ref: string, command_type: string) => ({
     component_ref,
     command_type,
-    command_id,
+    command_id: "",
     arguments: [],
     delay_time: null,
   });
+
+  /** The command ids an execute result assigned, branch by branch. */
+  type Assigned = { command_id?: string };
+  type AssignedItem = Assigned | { branch_list: readonly { command_list: readonly Assigned[] }[] };
+  const idsOf = (result: { command_unit_list?: readonly AssignedItem[] }): string[] =>
+    (result.command_unit_list ?? []).flatMap((item) =>
+      "branch_list" in item
+        ? item.branch_list.flatMap((branch) => branch.command_list.map((u) => u.command_id ?? ""))
+        : [item.command_id ?? ""],
+    );
 
   it("runs items in order and the branches of a group together", async () => {
     const engine = start();
     const a = client("a");
     const result = engine.handle(a, "rois.command.execute", {
       command_unit_list: [
-        unit(PERSON, "start", "c1"),
+        unit(PERSON, "start"),
         {
           branch_list: [
-            { command_list: [unit(PERSON, "suspend", "c2")] },
-            { command_list: [unit(PERSON, "resume", "c3")] },
+            { command_list: [unit(PERSON, "suspend")] },
+            { command_list: [unit(PERSON, "resume")] },
           ],
           delay_time: 5,
         },
       ],
     });
     expect(result.return_code).toBe("OK");
+    const [c1, c2, c3] = idsOf(result);
     await until(() => paramsOf(a, "rois.command.completed").length === 3);
     const ids = paramsOf(a, "rois.command.completed").map((p) => p.command_id);
-    expect(ids[0]).toBe("c1");
-    expect(ids.slice(1).sort()).toEqual(["c2", "c3"]);
+    expect(ids[0]).toBe(c1);
+    expect(ids.slice(1).sort()).toEqual([c2, c3].sort());
   });
 
-  it("answers BAD_PARAMETER for a command_id already in the table", async () => {
-    const engine = start();
-    const a = client("a");
-    engine.handle(a, "rois.command.execute", { command_unit_list: [unit(PERSON, "start", "same")] });
-    const again = engine.handle(a, "rois.command.execute", { command_unit_list: [unit(PERSON, "stop", "same")] });
-    expect(again.return_code).toBe("BAD_PARAMETER");
-    const twice = engine.handle(a, "rois.command.execute", {
-      command_unit_list: [unit(PERSON, "start", "x"), unit(PERSON, "stop", "x")],
-    });
-    expect(twice.return_code).toBe("BAD_PARAMETER");
-  });
-
-  it("answers BAD_PARAMETER for a command_id in the namespace of the engine", () => {
+  it("assigns every command_id and ignores the ids a client sends", () => {
     const result = start().handle(client("a"), "rois.command.execute", {
-      command_unit_list: [unit(PERSON, "start", "mock/param-1")],
+      command_unit_list: [{ ...unit(PERSON, "start"), command_id: "mine" }, unit(PERSON, "stop")],
     });
-    expect(result.return_code).toBe("BAD_PARAMETER");
+    const ids = idsOf(result);
+    expect(ids).toHaveLength(2);
+    expect(ids[0]).toMatch(/^mock\/cmd-/);
+    expect(ids[1]).toMatch(/^mock\/cmd-/);
+    expect(ids[0]).not.toBe(ids[1]);
   });
 
   it("waits the delay_time of each command of a group", async () => {
     const engine = start();
     const a = client("a");
-    engine.handle(a, "rois.command.execute", {
+    const result = engine.handle(a, "rois.command.execute", {
       command_unit_list: [
         {
           branch_list: [
-            { command_list: [unit(PERSON, "suspend", "c1")] },
-            { command_list: [{ ...unit(PERSON, "resume", "c2"), delay_time: 30 }] },
+            { command_list: [unit(PERSON, "suspend")] },
+            { command_list: [{ ...unit(PERSON, "resume"), delay_time: 30 }] },
           ],
           delay_time: null,
         },
       ],
     });
     await until(() => paramsOf(a, "rois.command.completed").length === 2);
-    expect(paramsOf(a, "rois.command.completed").map((p) => p.command_id)).toEqual(["c1", "c2"]);
+    expect(paramsOf(a, "rois.command.completed").map((p) => p.command_id)).toEqual(idsOf(result));
   });
 
   it("runs the commands of a branch in order", async () => {
     const engine = start();
     const a = client("a");
-    engine.handle(a, "rois.command.execute", {
+    const result = engine.handle(a, "rois.command.execute", {
       command_unit_list: [
         {
           branch_list: [
             {
-              command_list: [
-                { ...unit(PERSON, "suspend", "c1"), delay_time: 30 },
-                unit(PERSON, "resume", "c2"),
-              ],
+              command_list: [{ ...unit(PERSON, "suspend"), delay_time: 30 }, unit(PERSON, "resume")],
             },
-            { command_list: [unit(PERSON, "start", "c3")] },
+            { command_list: [unit(PERSON, "start")] },
           ],
           delay_time: null,
         },
       ],
     });
+    const [c1, c2, c3] = idsOf(result);
     await until(() => paramsOf(a, "rois.command.completed").length === 3);
-    expect(paramsOf(a, "rois.command.completed").map((p) => p.command_id)).toEqual([
-      "c3",
-      "c1",
-      "c2",
-    ]);
+    expect(paramsOf(a, "rois.command.completed").map((p) => p.command_id)).toEqual([c3, c1, c2]);
   });
 
   it("answers UNSUPPORTED for a command the component does not declare", () => {
     const result = start().handle(client("a"), "rois.command.execute", {
-      command_unit_list: [unit(SYSTEM, "start", "c1")],
+      command_unit_list: [unit(SYSTEM, "start")],
     });
     expect(result.return_code).toBe("UNSUPPORTED");
   });
 
   it("needs the bind of an actuation component", () => {
     const result = start().handle(client("a"), "rois.command.execute", {
-      command_unit_list: [unit(NAV, "start", "n1")],
+      command_unit_list: [unit(NAV, "start")],
     });
     expect(result.return_code).toBe("OUT_OF_RESOURCES");
   });
@@ -363,14 +360,14 @@ describe("execute", () => {
     const a = client("a");
     engine.handle(a, "rois.command.bind", { component_ref: NAV });
     engine.handle(a, "rois.event.subscribe", { event_type: "reached_target", condition: "" });
-    engine.handle(a, "rois.command.execute", { command_unit_list: [unit(NAV, "start", "n1")] });
+    const [n1] = idsOf(engine.handle(a, "rois.command.execute", { command_unit_list: [unit(NAV, "start")] }));
 
     const status = engine.handle(a, "rois.query.query", { query_type: "component_status", condition: componentRef(NAV) });
     expect(status.results?.[0].value).toBe("BUSY");
 
     await until(() => paramsOf(a, "rois.command.completed").length === 1);
-    expect(paramsOf(a, "rois.command.completed")[0]).toEqual({ command_id: "n1", status: "OK" });
-    const results = engine.handle(a, "rois.command.get_command_result", { command_id: "n1", condition: "" });
+    expect(paramsOf(a, "rois.command.completed")[0]).toEqual({ command_id: n1, status: "OK" });
+    const results = engine.handle(a, "rois.command.get_command_result", { command_id: n1, condition: "" });
     expect(results.results).toEqual([{ name: "target", data_type_ref: "string", value: "home" }]);
 
     const event = paramsOf(a, "rois.event.notify_event")[0];
@@ -385,13 +382,13 @@ describe("execute", () => {
     const engine = start();
     const a = client("a");
     engine.handle(a, "rois.command.bind", { component_ref: NAV });
-    engine.handle(a, "rois.command.execute", { command_unit_list: [unit(NAV, "start", "n1")] });
-    engine.handle(a, "rois.command.execute", { command_unit_list: [unit(NAV, "stop", "n2")] });
+    const [n1] = idsOf(engine.handle(a, "rois.command.execute", { command_unit_list: [unit(NAV, "start")] }));
+    const [n2] = idsOf(engine.handle(a, "rois.command.execute", { command_unit_list: [unit(NAV, "stop")] }));
 
     await until(() => paramsOf(a, "rois.command.completed").length === 2);
     expect(paramsOf(a, "rois.command.completed")).toEqual([
-      { command_id: "n1", status: "ABORT" },
-      { command_id: "n2", status: "OK" },
+      { command_id: n1, status: "ABORT" },
+      { command_id: n2, status: "OK" },
     ]);
   });
 
@@ -399,16 +396,18 @@ describe("execute", () => {
     const engine = start();
     const a = client("a");
     engine.handle(a, "rois.command.bind", { component_ref: NAV });
-    engine.handle(a, "rois.command.execute", {
-      command_unit_list: [unit(NAV, "start", "n1"), unit(PERSON, "start", "c2")],
-    });
-    engine.handle(a, "rois.command.execute", { command_unit_list: [unit(NAV, "stop", "n3")] });
+    const [n1, c2] = idsOf(
+      engine.handle(a, "rois.command.execute", {
+        command_unit_list: [unit(NAV, "start"), unit(PERSON, "start")],
+      }),
+    );
+    const [n3] = idsOf(engine.handle(a, "rois.command.execute", { command_unit_list: [unit(NAV, "stop")] }));
 
     await until(() => paramsOf(a, "rois.command.completed").length === 3);
     const statuses = Object.fromEntries(
       paramsOf(a, "rois.command.completed").map((p) => [p.command_id, p.status]),
     );
-    expect(statuses).toEqual({ n1: "ABORT", c2: "ABORT", n3: "OK" });
+    expect(statuses).toEqual({ [n1]: "ABORT", [c2]: "ABORT", [n3]: "OK" });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(paramsOf(a, "rois.command.completed")).toHaveLength(3);
   });
@@ -441,9 +440,11 @@ describe("get_command_result", () => {
     expect(engine.handle(a, "rois.command.get_command_result", { command_id: "nope", condition: "" }).return_code).toBe(
       "BAD_PARAMETER",
     );
-    engine.handle(a, "rois.command.execute", { command_unit_list: [{ ...unitOf(PERSON), command_id: "c1" }] });
+    const executed = engine.handle(a, "rois.command.execute", { command_unit_list: [unitOf(PERSON)] });
+    const unit = executed.command_unit_list?.[0];
+    const commandId = unit && "command_id" in unit ? (unit.command_id ?? "") : "";
     expect(
-      engine.handle(a, "rois.command.get_command_result", { command_id: "c1", condition: "component_ref = 'x'" })
+      engine.handle(a, "rois.command.get_command_result", { command_id: commandId, condition: "component_ref = 'x'" })
         .return_code,
     ).toBe("BAD_PARAMETER");
   });

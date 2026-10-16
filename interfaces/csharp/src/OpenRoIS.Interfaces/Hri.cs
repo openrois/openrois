@@ -75,7 +75,9 @@ namespace OpenRoIS.Interfaces.Hri
     ///     component_ref: The component to send the command to.
     ///     command_type: The command name: a standard one (start, stop, suspend, resume,
     ///         set_parameter) or one the component profile defines.
-    ///     command_id: Unique identifier for this command instance.
+    ///     command_id: Unique identifier for this command instance. The engine a client
+    ///         calls assigns it and ignores one the client sends. An engine passes the ids
+    ///         it assigned on to the engines below it.
     ///     arguments: Optional list of arguments for the command.
     ///     delay_time: Optional delay in milliseconds before executing this command.
     /// </summary>
@@ -92,7 +94,7 @@ namespace OpenRoIS.Interfaces.Hri
         [JsonPropertyName("delay_time")]
         public int? DelayTime { get; }
 
-        public CommandUnit(string componentRef, string commandType, string commandId, IReadOnlyList<Argument>? arguments = null, int? delayTime = null)
+        public CommandUnit(string componentRef, string commandType, string commandId = "", IReadOnlyList<Argument>? arguments = null, int? delayTime = null)
         {
             ComponentRef = componentRef;
             CommandType = commandType;

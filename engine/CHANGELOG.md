@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** a session must send `rois.system.connect` before anything else. Every other request before it, and after `disconnect`, is answered with ERROR. A parent engine connects to each child engine before it reads its profile.
+- **Breaking:** every Command interface operation needs a bind from the calling session, on every component it names. `execute` refuses a sequence that names an unbound component with ERROR before anything runs, and `get_parameter` and `set_parameter` on an unbound component answer ERROR. An actuation component takes one bind at a time, and a second session gets OUT_OF_RESOURCES. Sensing and function components, and components declared without a RoSO function, take one bind per session, so several applications share them.
+- **Breaking:** `release` drops the caller's bind and aborts the caller's commands still running on that component, which complete with ABORT. `disconnect`, and a client connection that closes, release every bind and subscription of the session and abort every sequence it had running. A running `start` is halted with the component's `stop` handler. Other sessions' binds and commands are untouched. A gateway holds one bind in each child engine for all its clients, so it halts an aborted command in the child, with `stop` and then `release`, only when no other client still holds the component, and otherwise the command runs on there.
+- **Breaking:** the engine a client calls assigns every command id, as `engine_id/cmd-1`, and ignores the ids a client sends. The `execute` result carries the sequence with the assigned ids, and every `rois.command.completed` names them. A parent engine names the ids itself, and the engines below it reuse them.
+- **Breaking:** a `ConcurrentCommands` item holds branches: the branches run at the same time, each branch runs its commands in order, and the next item waits for every branch. A flat `command_list` still reads as one branch per command. A command that ends other than OK aborts the rest of its branch and every item after it.
+- **Breaking:** the `timeout` of a command profile judges only whether the command started, counted from its receipt (Table 8.21). A command not started in time, such as a `start` still waiting for the start before it to unwind, or a command a child engine does not accept in time, completes with TIMEOUT. A command that started runs as long as its handler does.
+- **Breaking:** `set_parameter` applies the values before it replies, and then sends `rois.command.completed`, so a command sent after the reply sees them, through a gateway too. A parameter the profile marks `read_only`, or one it does not list, is refused with BAD_PARAMETER and none of the values is applied. Inside `execute`, a `set_parameter` command behaves the same.
+- **Breaking:** `component_status` is answered for the asking session. BUSY means another session holds the bind of an actuation component, and no longer that a command runs. A component is UNINITIALIZED until its resources are open and it has connected, and a raised ERROR comes above a raised WARNING, which comes above the lifecycle.
+- **Breaking:** a second `subscribe` with the same event type and condition from the same session returns the existing `subscribe_id`.
+- **Breaking:** the component contract changed. `set_parameter` returns the result and how the change ended, `query` and `subscribe` take the arguments of the message, a source receives an error callback through `on_error`, and cancelling `run` aborts the command. `LocalComponent` gains `rois_resources`, and `rois_query` and `rois_subscribed` take arguments.
+
+### Added
+
+- Errors and statuses, design C. A component raises WARNING or ERROR with `raise_status` and withdraws it with `clear_status`, and so does a resource it shares with other components. Each raise that changes what a component reports is an error: the engine assigns it an id such as `robot/err-4`, sends `rois.system.notify_error` with COMPONENT_INTERNAL_ERROR, or COMPONENT_NOT_RESPONDING when a resource raised it, and answers `get_error_detail` with `component_ref`, `status`, `message` and `time` until the status clears. The error goes to the sessions that hold a bind or a subscription on the component, and to a parent engine, which passes it up under the same id. A raised ERROR refuses the component's commands and queries and holds back its events until it clears.
+- `Engine.raise_status` and `Engine.clear_status`, for an error of the engine itself. It reaches every connected session as ENGINE_INTERNAL_ERROR, and a SystemInformation component reports it as `engine_status`.
+- Resources: the engine opens each resource the local components share once, before the first component that uses it connects, and closes it after the last one has disconnected. A resource whose `open()` fails leaves its components in ERROR, never connected.
+- Arguments on queries and events. A query or a subscribe gives the arguments of its message in the condition, for example `stream_id = 'audio-1'` for `get_stream_status`, and the engine passes them to the component. An event a component emits about some argument values reaches the subscriptions whose arguments match them.
+
+### Removed
+
+- **Breaking:** the `rois.stream.*` reservation. Streaming components carry their messages on the Command, Query and Event interfaces, and a `rois.stream.*` method is as unknown as any other name outside the catalog.
+
 ## [0.1.0a1] - 2026-10-08
 
 ### Added

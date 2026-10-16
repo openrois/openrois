@@ -55,7 +55,7 @@
     },
     "CommandUnit": {
       "additionalProperties": false,
-      "description": "A single command within a CommandUnitSequence.\n\nMaps to CommandMessageType in XML-Profiles.xsd (CommandBaseType subtype).\n\nAttributes:\n    component_ref: The component to send the command to.\n    command_type: The command name: a standard one (start, stop, suspend, resume,\n        set_parameter) or one the component profile defines.\n    command_id: Unique identifier for this command instance.\n    arguments: Optional list of arguments for the command.\n    delay_time: Optional delay in milliseconds before executing this command.",
+      "description": "A single command within a CommandUnitSequence.\n\nMaps to CommandMessageType in XML-Profiles.xsd (CommandBaseType subtype).\n\nAttributes:\n    component_ref: The component to send the command to.\n    command_type: The command name: a standard one (start, stop, suspend, resume,\n        set_parameter) or one the component profile defines.\n    command_id: Unique identifier for this command instance. The engine a client\n        calls assigns it and ignores one the client sends. An engine passes the ids\n        it assigned on to the engines below it.\n    arguments: Optional list of arguments for the command.\n    delay_time: Optional delay in milliseconds before executing this command.",
       "properties": {
         "component_ref": {
           "$ref": "#/$defs/RoISIdentifier"
@@ -67,7 +67,8 @@
         },
         "command_id": {
           "$ref": "#/$defs/CommandId",
-          "description": "Unique command instance identifier"
+          "default": "",
+          "description": "Command instance identifier, assigned by the engine the client calls"
         },
         "arguments": {
           "$ref": "#/$defs/ArgumentList"
@@ -87,8 +88,7 @@
       },
       "required": [
         "component_ref",
-        "command_type",
-        "command_id"
+        "command_type"
       ],
       "title": "CommandUnit",
       "type": "object"
@@ -141,7 +141,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Params of rois.command.execute.\n\nMaps to CommandIF::execute(in command_unit_list). The application names every\ncommand with its own command_id, and completed notifications report each one.\nThe engine rejects a command_id it already tracks with BAD_PARAMETER.\n\nAttributes:\n    command_unit_list: Commands to run in order. A ConcurrentCommands item runs\n        its commands at the same time.",
+  "description": "Params of rois.command.execute.\n\nMaps to CommandIF::execute(in command_unit_list). The engine the client calls\nassigns every command_id and ignores the ids a client sends, and completed\nnotifications report each command by the id the engine assigned.\n\nAttributes:\n    command_unit_list: Commands to run in order. A ConcurrentCommands item runs\n        its branches at the same time.",
   "properties": {
     "command_unit_list": {
       "description": "Commands to run in order",

@@ -98,11 +98,49 @@ subscription, for example to start a detector, and may do nothing. `self.emit` s
 event with its results by name, and is safe to call from any thread, for example a ROS 2
 callback.
 
+**Arguments of queries and events.** Some queries and events take arguments, such as the
+`stream_id` of `get_stream_status` and `notify_stream_status`. A client gives them in the
+condition, and the handler and the `@subscribe` method take them by name. An event about
+one stream names its values when it is emitted, so it reaches the subscriptions for that
+stream only:
+
+```python
+    self.emit("notify_stream_status", concerning={"stream_id": stream_id}, status=status)
+```
+
+**Status.** A component reports trouble with `self.raise_status(ComponentStatus.WARNING,
+"The battery is low.")` or with ERROR, and withdraws it with `self.clear_status()`. Clients
+see it in `component_status` and receive `rois.system.notify_error`. While ERROR is
+raised, the engine refuses the component's commands and queries. Both methods are safe to
+call from any thread.
+
+**Shared resources.** A connection that several components of one adapter share, such as
+one robot SDK client, is a `Resource`. The adapter builds it and hands it to each
+component, which records it with `self.uses(resource)`. The engine opens it before the
+first of them connects and closes it after the last one disconnects, and a status the
+resource raises reaches every component that uses it:
+
+```python
+class RobotConnection(Resource):
+    async def open(self) -> None:
+        self.client = RobotClient(self._host)
+
+    async def close(self) -> None:
+        await self.client.disconnect()
+
+
+@component(SPEECH_SYNTHESIS_PROFILE)
+class Speech(Component):
+    def __init__(self, robot: RobotConnection) -> None:
+        self._robot = self.uses(robot)
+```
+
 ## API
 
 | Name | Purpose |
 |------|---------|
-| `Component` | Base class of a component: `parameters`, `emit`, `ref`, `connect()`, `disconnect()` |
+| `Component` | Base class of a component: `parameters`, `emit`, `ref`, `connect()`, `disconnect()`, `uses`, `raise_status`, `clear_status`, `engine_state` |
+| `Resource` | Base class of what several components share: `open()`, `close()`, `raise_status`, `clear_status` |
 | `@component(profile)` | Declare the component type, checked against the handlers |
 | `@invoke(command_type)` | Mark the handler of a command |
 | `@query(query_type)` | Mark the handler of a query |

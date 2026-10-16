@@ -19,8 +19,10 @@ Every ``condition`` is a string in the OpenRoIS subset of CQL2-Text, defined in
 openrois.interfaces.condition. Selection conditions filter on ``component_ref`` and
 ``component_type``.
 
-The Streaming interface (``rois.stream.*``) is not modelled. An engine answers those
-methods with JsonRpcErrorCode.METHOD_NOT_FOUND.
+Streaming has no methods of its own. The AudioStreaming and VideoStreaming
+components carry their messages on the Command, Query and Event interfaces (spec
+8.2.2.5), so a ``rois.stream.*`` method is as unknown as any other name outside the
+catalog.
 
 Source: OMG RoIS Framework 2.0, RoIS_HRI.idl
 """
@@ -57,10 +59,6 @@ from openrois.interfaces.service import (
     ProfileChangedParams,
 )
 
-# Prefix of the Streaming interface methods, which the catalog does not model.
-STREAMING_METHOD_PREFIX = "rois.stream."
-
-
 # ---------------------------------------------------------------------------
 # JSON-RPC error codes
 # ---------------------------------------------------------------------------
@@ -74,8 +72,7 @@ class JsonRpcErrorCode(IntEnum):
 
     PARSE_ERROR: The message is not valid JSON.
     INVALID_REQUEST: The message is not a valid JSON-RPC request.
-    METHOD_NOT_FOUND: The method is not in the catalog, including every
-        ``rois.stream.*`` method.
+    METHOD_NOT_FOUND: The method is not in the catalog.
     INVALID_PARAMS: The params do not validate against the method's params model.
     INTERNAL_ERROR: The engine failed while handling the request.
     """
@@ -426,13 +423,13 @@ class SetParameterResult(BaseModel):
 class ExecuteParams(BaseModel):
     """Params of rois.command.execute.
 
-    Maps to CommandIF::execute(in command_unit_list). The application names every
-    command with its own command_id, and completed notifications report each one.
-    The engine rejects a command_id it already tracks with BAD_PARAMETER.
+    Maps to CommandIF::execute(in command_unit_list). The engine the client calls
+    assigns every command_id and ignores the ids a client sends, and completed
+    notifications report each command by the id the engine assigned.
 
     Attributes:
         command_unit_list: Commands to run in order. A ConcurrentCommands item runs
-            its commands at the same time.
+            its branches at the same time.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
@@ -451,11 +448,18 @@ class ExecuteResult(BaseModel):
     Attributes:
         return_code: Whether the engine accepted the commands. Completed
             notifications report how each command ended.
+        command_unit_list: The sequence as the engine runs it, with the command_id it
+            assigned to every command. Empty unless return_code is OK. An OpenRoIS
+            extension.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
 
     return_code: ReturnCode
+    command_unit_list: list[CommandUnitSequenceItem] = Field(
+        default_factory=list,
+        description="The sequence with the assigned command ids (OpenRoIS extension)",
+    )
 
 
 class GetCommandResultParams(BaseModel):
@@ -890,6 +894,13 @@ class Extension:
 
 EXTENSIONS: tuple[Extension, ...] = (
     Extension(
+        "ExecuteResult",
+        "command_unit_list",
+        "The engine assigns the command ids (spec 8.2.2.2, Annex B.2), and the client "
+        "needs them to match each completed notification and to read results. It "
+        "realizes the inout command_unit_list that Figure 8.5 draws for execute.",
+    ),
+    Extension(
         "GetProfileResult",
         "component_profiles",
         "A client discovers at run time what each component instance supports, "
@@ -951,5 +962,4 @@ def catalog_document() -> dict[str, object]:
         ],
         "standard_command_types": [c.value for c in CommandType],
         "json_rpc_error_codes": [{"name": c.name, "code": c.value} for c in JsonRpcErrorCode],
-        "unmodelled_method_prefixes": [STREAMING_METHOD_PREFIX],
     }

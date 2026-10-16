@@ -84,49 +84,74 @@ runs exactly this with configuration and signal handling.
 
 ## What the Engine Does
 
+- **Sessions.** A session sends `rois.system.connect` before anything else, and every
+  other request before it, or after `disconnect`, is answered with ERROR. `disconnect`,
+  or a connection that closes, releases the binds and subscriptions of the session and
+  aborts every sequence it had running.
 - **Refs and ids.** Every ref is `engine_id/name`, owned by the engine that hosts the
-  component. The ids an engine assigns, for subscriptions, events and set_parameter
-  commands, start with its engine id too, so every engine in the hierarchy routes them
-  back to their owner, and a service application or an agent can tell where each one
-  came from. Engine ids are unique across the hierarchy.
+  component. The ids an engine assigns, for commands, subscriptions, events, errors and
+  set_parameter commands, start with its engine id too, so every engine in the hierarchy
+  routes them back to their owner, and a service application or an agent can tell where
+  each one came from. Engine ids are unique across the hierarchy. The engine a client
+  calls assigns every command id of an `execute` and returns the sequence with them, and
+  the engines below reuse them.
 - **Conditions.** search, bind_any, get_profile, query and subscribe select components
   with the CQL2-Text subset of `openrois.interfaces.condition`. get_profile lists the
-  child engines as sub profiles, trimmed to the components a condition selects.
-- **Bindings.** Only actuation components are reserved. A command or a set_parameter on
-  an actuation component needs the binding of the session that sends it. A parent engine
-  checked the bindings before it forwarded a request, so the session of a parent is
-  trusted. Clients therefore connect to the top engine of a hierarchy, which holds the
-  bindings for every engine below it.
+  child engines as sub profiles, trimmed to the components a condition selects. The
+  condition of a query or a subscribe also gives the arguments of its message, for
+  example `stream_id = 'audio-1'`.
+- **Binds.** `execute`, `get_parameter` and `set_parameter` need a bind from the calling
+  session on every component they name, and answer ERROR without it. An actuation
+  component takes one bind at a time, and a second session gets OUT_OF_RESOURCES. Any
+  other component, one declared without a RoSO function included, takes one bind per
+  session. `release` drops the caller's bind and aborts its commands still running on
+  the component. A parent engine checked the binds before it forwarded a request, so the
+  session of a parent is trusted. Clients therefore connect to the top engine of a
+  hierarchy, which holds the binds for every engine below it. To abort a command on a
+  child engine, the parent sends it a `stop` of the component and then a `release`, but
+  only when no other client of the parent still holds the component.
 - **execute.** The engine checks the whole sequence before it answers: UNSUPPORTED for a
-  command no component serves, OUT_OF_RESOURCES for a missing binding, BAD_PARAMETER for
-  arguments that do not fit the profile, and for a command id that is empty, reused, or
-  starts with the id of an engine and a slash. It then runs the items in order, waits
-  each `delay_time`, and runs the commands of a `ConcurrentCommands` item at the same
-  time, each after its own `delay_time`. Each engine sends a child one command at a
-  time, with the delay already waited. A command that ends other than OK stops the
-  sequence, and the commands after it complete with ABORT. Every command sends one
-  `rois.command.completed`, to the session that started it.
-- **Local components.** The engine stores the parameters, filled from the profile
-  defaults, and answers `get_parameter` and `component_status` itself: UNINITIALIZED
-  until the component has connected, ERROR when `connect()` failed, BUSY while a command
-  runs, READY otherwise. A command ends with TIMEOUT past the timeout of its profile. A
-  `stop`, or a new `start`, runs the `stop` handler and then aborts the running `start`.
-  Events can be emitted from any thread, and `get_event_detail` reads an event until it
-  expires.
+  command no component serves, ERROR for a component the session has not bound, and
+  BAD_PARAMETER for arguments that do not fit the profile. It then runs the items in
+  order, waits each `delay_time`, and runs the branches of a `ConcurrentCommands` item at
+  the same time, each branch in order and each command after its own `delay_time`. Each
+  engine sends a child one command at a time, with the delay already waited. A command
+  that ends other than OK stops its branch and the items after it, whose commands
+  complete with ABORT. Every command sends one `rois.command.completed`, to the session
+  that started it.
+- **Parameters.** `set_parameter` applies the values before it replies and then sends
+  `rois.command.completed`. A parameter the profile marks `read_only`, or one it does not
+  list, is refused with BAD_PARAMETER, and none of the values is applied.
+- **Status and errors.** The engine answers `component_status` for the asking session:
+  BUSY when another session holds an actuation component, UNINITIALIZED until the
+  component's resources are open and it has connected, and WARNING or ERROR as the
+  component or one of its resources raised it, ERROR above WARNING above the lifecycle.
+  Each raise that changes what a component reports sends `rois.system.notify_error` to
+  the sessions with a bind or a subscription on it, and `get_error_detail` reads its
+  `component_ref`, `status`, `message` and `time` until it clears. A raised ERROR refuses
+  the component's commands and queries and holds back its events. `Engine.raise_status`
+  reports an error of the engine itself to every connected session.
+- **Local components.** The engine opens the resources the components share, stores the
+  parameters, filled from the profile defaults, and answers `get_parameter` itself. A
+  command not started within the timeout of its profile ends with TIMEOUT. A `stop`, or
+  a new `start`, runs the `stop` handler and then aborts the running `start`. Events can
+  be emitted from any thread, and `get_event_detail` reads an event until it expires. An
+  event an emit names argument values for reaches the subscriptions that asked for them.
 
 ## Transport
 
 `WsServer` serves child engines and clients on one port:
 
-- A connection on the path `/adapter` is a child engine. The server reads its profile
-  with `rois.system.get_profile` and adds it to the engine. A child whose profile names an
+- A connection on the path `/adapter` is a child engine. The server connects to it with
+  `rois.system.connect`, reads its profile with `rois.system.get_profile` and adds it to
+  the engine. A child whose profile names an
   empty or slashed engine id, an engine id already in the hierarchy, or a ref no engine of
   the child owns, is closed with code 1008 and the reason. A child that sends
   `rois.system.profile_changed` is read again, and a changed profile that breaks these
   rules closes the child the same way. A reply that assigns an id outside the child's
   engine ids, or one the child already gave out, counts as ERROR.
 - A connection on any other path is a client with its own session. When it disconnects,
-  its bindings and subscriptions are released.
+  its binds and subscriptions are released and its sequences aborted.
 - Each request runs in its own task, so a slow request does not hold up the others, and
   replies are matched to requests by id. A reply always goes out before the notifications
   it causes, such as the completion of a set_parameter.

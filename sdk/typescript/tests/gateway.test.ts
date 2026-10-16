@@ -164,6 +164,7 @@ suite("a gateway with the mock adapter", () => {
     await session(async (live) => {
       const { client } = live;
       await client.bind(NAVIGATION);
+      await client.bind(DETECTION);
       const ids = await client.execute([
         { component_ref: DETECTION, command_type: "start" },
         {
@@ -176,6 +177,7 @@ suite("a gateway with the mock adapter", () => {
       const statuses = await Promise.all(ids.map((id) => live.completion(id)));
       expect(statuses).toEqual(["OK", "OK", "OK"]);
       await client.release(NAVIGATION);
+      await client.release(DETECTION);
     });
   }, TIMEOUT);
 
@@ -207,12 +209,16 @@ suite("a gateway with the mock adapter", () => {
     });
   }, TIMEOUT);
 
-  it("refuses a command id in the namespace of an engine", async () => {
-    await session(async ({ client }) => {
-      const refused = client.execute([
-        { component_ref: DETECTION, command_type: "start", command_id: `${engineId}/mine` },
+  it("assigns every command id at the gateway", async () => {
+    await session(async (live) => {
+      await live.client.bind(DETECTION);
+      const [commandId = ""] = await live.client.execute([
+        { component_ref: DETECTION, command_type: "start" },
       ]);
-      await expect(refused).rejects.toThrow(RoISError);
+      expect(commandId).not.toBe("");
+      expect(commandId.startsWith(`${engineId}/`)).toBe(false);
+      expect(await live.completion(commandId)).toBe("OK");
+      await live.client.release(DETECTION);
     });
-  });
+  }, TIMEOUT);
 });
