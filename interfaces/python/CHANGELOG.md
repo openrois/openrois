@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0a5] - 2026-10-16
+
 ### Added
 
 - `ExecuteResult.command_unit_list`, an OpenRoIS extension: the sequence with the command id the engine assigned to every command. It realizes the inout of execute that Figure 8.5 draws.
@@ -99,7 +101,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `test_schema_drift.py` to verify committed schemas match Pydantic output (CI guard).
 - Cross-check types against `PersonDetection.xml`, `Navigation.xml`, `SystemInformation.xml` and validate against `XML-Profiles.xsd`.
 
-[unreleased]: https://github.com/openrois/openrois/compare/interfaces-v0.1.0-alpha.4...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/interfaces-v0.1.0-alpha.5...HEAD
+[0.1.0a5]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.5
 [0.1.0a4]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.4
 [0.1.0a3]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.3
 [0.1.0a2]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.2

@@ -11,7 +11,7 @@ Use it to develop clients and to exercise a gateway end to end.
 | Ref | Profile | Function | Behavior |
 |-----|---------|----------|----------|
 | `mock/person_detection` | `OMG::PersonDetection` | sensing | Emits `person_detected` every five seconds, counting zero to three persons in turn |
-| `mock/navigation` | `OMG::Navigation` | actuation | `start` drives to the first of `target_positions` for three seconds, reports `BUSY`, then emits `reached_target` |
+| `mock/navigation` | `OMG::Navigation` | actuation | `start` drives to the first of `target_positions` for three seconds, then emits `reached_target` |
 | `mock/system_information` | `OMG::SystemInformation` | | Answers `robot_position` with the robot at the origin, and `engine_status` |
 
 The person detection and navigation components take the RoIS_Common commands (`start`,

@@ -172,8 +172,10 @@ runs exactly this with configuration and signal handling.
   complete with ABORT. Every command sends one `rois.command.completed`, to the session
   that started it.
 - **Parameters.** `set_parameter` applies the values before it replies and then sends
-  `rois.command.completed`. A parameter the profile marks `read_only`, or one it does not
-  list, is refused with BAD_PARAMETER, and none of the values is applied.
+  `rois.command.completed`. A parameter the profile marks `read_only`, one it does not
+  list, a value that does not fit its type, or values the component's
+  `@on_set_parameter` hook refuses answer BAD_PARAMETER with no command id, and none of
+  the values is applied. Inside `execute`, a hook refusal ends that command with ERROR.
 - **Status and errors.** The engine answers `component_status` for the asking session:
   BUSY when another session holds an actuation component, UNINITIALIZED until the
   component's resources are open and it has connected, and WARNING or ERROR as the
@@ -258,8 +260,11 @@ connected over WebSockets.
 
 ## Status
 
-Alpha, pre-1.0, unstable API. Re-subscription after an adapter reconnects and health
-endpoints are planned for [Phase 5](https://openrois.org/docs/project/roadmap).
+Alpha, pre-1.0, unstable API. The engine implements the RoIS interfaces, profiles and
+common messages (CP1 to CP3) as
+[rois-reference §16](../docs/rois-reference.md#16-known-normative-divergences) records
+them, without a conformance claim. It does not yet load XML-declared profiles at run time.
+Re-subscription after an adapter reconnects and health endpoints are planned for [Phase 5](https://openrois.org/docs/project/roadmap).
 
 ## License
 

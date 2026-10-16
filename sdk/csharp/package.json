@@ -12,7 +12,7 @@
 		"name": "OpenRoIS Community",
 		"url": "https://github.com/openrois/openrois"
 	},
-	"changelogUrl": "https://github.com/openrois/openrois/blob/main/sdk/CHANGELOG.md",
+	"changelogUrl": "https://github.com/openrois/openrois/blob/main/sdk/csharp/CHANGELOG.md",
 	"documentationUrl": "https://github.com/openrois/openrois#readme",
 	"licensesUrl": "https://github.com/openrois/openrois/blob/main/LICENSE"
 }

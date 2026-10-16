@@ -19,10 +19,13 @@
 >
 > **Status:** Alpha, pre-1.0, unstable API. The type pipeline with the RoIS method
 > catalog, the recursive engine (`openrois-engine`), the gateway process
-> (`openrois-gateway`), the component SDK (`openrois-components-core`), reference
-> components, and the TypeScript SDK are built, and a Docker Compose stack runs the
-> gateway with a simulated robot behind it. The C# client SDK, the Streaming Interface,
-> authentication, and media streaming are in progress or planned. This document
+> (`openrois-gateway`), the component SDK (`openrois-components-core`) and the TypeScript
+> SDK are built, and a Docker Compose stack runs the gateway with a simulated robot behind
+> it. The engine implements the RoIS interfaces, profiles and common messages (CP1 to CP3)
+> as [rois-reference §16](rois-reference.md#16-known-normative-divergences) records them,
+> without a conformance claim. Each robot's components live in its adapter repository,
+> such as the Reachy Mini adapter. The C# client SDK, a Python client SDK,
+> authentication, and WebRTC media are in progress or planned. This document
 > describes the target architecture and marks features that are not implemented yet.
 
 ---
@@ -164,7 +167,11 @@ Streaming interface layered on the others.
 | Command | App to Engine, async execution | `search`, `bind`, `bind_any`, `release`, `get_parameter`, `set_parameter`, `execute`, `get_command_result` |
 | Query | App to Engine, synchronous | `query` |
 | Event | Engine to App, async notifications | `subscribe`, `unsubscribe`, `get_event_detail`, `notify_event` |
-| Streaming | Two-way stream control | `connect_stream`, `disconnect_stream`, `suspend_stream`, `resume_stream`, `query_stream_status`, `notify_stream_status` |
+| Streaming | Two-way stream control | `connect_stream`, `disconnect_stream`, `suspend_stream`, `resume_stream`, `get_stream_status`, `notify_stream_status` |
+
+The Streaming operations belong to the AudioStreaming and VideoStreaming components, and
+their messages ride the Command, Query and Event interfaces. OpenRoIS serves them that
+way, with no stream methods of their own (§9.2).
 
 ### 2.4 Command Execution Model
 
@@ -173,10 +180,13 @@ three-step reservation pattern:
 
 1. **Bind**: `search(condition)` returns candidate `component_ref`s, then
    `bind(component_ref)` reserves one. Optionally `get_parameter` / `set_parameter`.
-2. **Execute**: `execute(command_unit_list)` sends a command message and returns a
-   `command_id` immediately. The operation runs asynchronously. Completion arrives
-   via `completed(command_id, status)`. Detailed results via
-   `get_command_result(command_id)`.
+   In OpenRoIS every Command operation needs a bind, and how many applications may hold
+   one follows the component's RoSO function: one at a time for an actuation component,
+   one per application for a sensing or function component.
+2. **Execute**: `execute(command_unit_list)` sends a command message, and the engine
+   assigns and returns a `command_id` for every command at once. The operation runs
+   asynchronously. Completion arrives via `completed(command_id, status)`. Detailed
+   results via `get_command_result(command_id)`.
 3. **Release**: `release(component_ref)` frees the component.
 
 The `command_unit_list` can express **sequential and parallel** command operations
@@ -390,18 +400,23 @@ it. The TypeScript proof of concept has been removed, with its last version at t
 
 The adapter process owns three concerns:
 
-1. **Component hosting**: the adapter script creates its components, each configured
-   through the arguments of its constructor, and adds them with `Engine.add_component`.
-   The engine calls `connect()` on each component when it starts and `disconnect()` when
-   it stops.
+1. **Component hosting**: the adapter script reads its settings from `adapter.yaml`,
+   the environment and its flags with `load_adapter_config`, creates its components,
+   each configured through the arguments of its constructor, and adds them with
+   `Engine.add_component`. The engine calls `connect()` on each component when it starts
+   and `disconnect()` when it stops.
 2. **Gateway connection**: the `WsClient` connects to the gateway on the `/adapter` path
-   and sends no registration message. The gateway reads the adapter's profile with
-   `rois.system.get_profile`, the same request a client sends, checks its engine ids and
-   refs, and from then on forwards the calls for its components. The adapter reconnects
-   with a growing delay when the connection drops.
+   and sends no registration message. The gateway connects with `rois.system.connect`
+   and reads the adapter's profile with `rois.system.get_profile`, the requests a client
+   sends, checks its engine ids and refs, and from then on forwards the calls for its
+   components. The adapter reconnects with a growing delay when the connection drops.
 3. **Backend bridge**: each component owns its connection to its backend (rclpy, gRPC,
-   IPC, or a cloud API), created in `connect()` and closed in `disconnect()`. When a
-   component keeps an rclpy node, the `WsClient` spins it in a background thread.
+   IPC, or a cloud API), created in `connect()` and closed in `disconnect()`, unless it
+   shares a `Resource` with other components of the adapter, such as one robot
+   connection. The adapter builds the resource, and the engine opens it before those
+   components connect, closes it after they disconnect, and reports its status as
+   theirs. ROS 2 components share an `RclpyExecutor`, the resource that spins their
+   nodes.
 
 The adapter is an engine. It answers the RoIS calls for its local components and serves
 the gateway through a trusted session: the gateway checked the bindings before it
@@ -429,7 +444,7 @@ flowchart TB
         Auth["Auth<br/>JWT / RBAC (planned)"]
         Session["Sessions"]
         WSServer["WebSocket Server<br/>JSON-RPC 2.0"]
-        Router["RoIS Router<br/>SystemIF, CommandIF, QueryIF, EventIF, StreamingIF (planned)"]
+        Router["RoIS Router<br/>SystemIF, CommandIF, QueryIF, EventIF"]
     end
 
     subgraph L3["Adapters (Sub HRI Engines)"]
@@ -466,7 +481,7 @@ control-plane router when acting as the main engine without local components.
 | Sub HRI Engine | Engine (hosted by an adapter) | Hosts local components, owns data-plane transport |
 | HRI Component | Component hosted by an adapter | Translation layer: RoIS calls to backend calls |
 | Service Application | Client SDK (TypeScript or C#) | Drives robot scenarios via RoIS interfaces |
-| RoIS interfaces (SystemIF, CommandIF, QueryIF, EventIF, StreamingIF) | JSON-RPC 2.0 methods over WebSocket | Service application to gateway boundary (control plane) |
+| RoIS interfaces (SystemIF, CommandIF, QueryIF, EventIF), with streaming as two components | JSON-RPC 2.0 methods over WebSocket | Service application to gateway boundary (control plane) |
 | Main HRI Engine to sub HRI Engine | The same JSON-RPC 2.0 methods, sent by the parent engine | Gateway to adapter boundary (control plane) |
 | (no spec term) | Component contract (`ComponentContract`) | Inside an engine: its own components and its child engines behind one interface |
 
@@ -486,8 +501,8 @@ enforcement point for security. It:
   adapter connects, changes, or disconnects.
 - Filters `search()` and `query()` results and guards `bind()` and `execute()`
   per the caller's authorization scope (planned).
-- Brokers media descriptor exchange via the RoIS Streaming Interface, never
-  touching media data (planned).
+- Brokers media descriptor exchange through the parameters and commands of the
+  streaming components, never touching media data (planned).
 
 ---
 
@@ -507,18 +522,23 @@ classDiagram
         +profiles()
         +engine_profile()
         +run(unit) CompletedStatus
-        +set_parameter(ref, parameters, on_completed)
+        +on_error(callback)
+        +keep_running(command_id)
+        +set_parameter(ref, parameters)
         +get_parameter(ref)
         +command_result(command_id)
-        +query(ref, query_type)
-        +subscribe(ref, event_type, deliver)
+        +query(ref, query_type, arguments)
+        +subscribe(ref, event_type, arguments, deliver)
         +unsubscribe(subscribe_id)
         +event_detail(event_id)
         +error_detail(error_id)
     }
 
     class LocalComponents {
+        +shared resources
         +parameter store
+        +raised statuses and errors
+        +RoIS_Common default
         +component status
         +command timeouts
         +recent events
@@ -535,8 +555,10 @@ classDiagram
 ```
 
 `LocalComponents` is the local implementation. It hosts the components of the engine's
-process, stores their parameters, answers `component_status` from their state, applies
-the timeout of each command, and keeps recent events for `get_event_detail`.
+process, opens and closes the resources they share, stores their parameters, answers
+`component_status` from their state and their raised status, serves the RoIS_Common
+default, applies the timeout of each command, and keeps recent events for
+`get_event_detail`.
 `ChildEngine` is the remote implementation. It reaches a child engine with the same
 catalog requests a client sends, and relays the child's notifications. The engine calls
 the contract. It does not know which implementation it is calling. The contract lives
@@ -554,12 +576,13 @@ and sequencing stay in the engine, so no source implements them again.
 
 | RoIS operations | Answered by the engine | Behind the contract |
 |-----------------|------------------------|---------------------|
-| `search`, `bind`, `bind_any`, `release`, `get_profile` | Selection, bindings, profile aggregation | `profiles()`, `engine_profile()` |
+| `connect`, `disconnect` | Sessions | Nothing: the engine releases the session's binds and subscriptions and aborts its commands |
+| `search`, `bind`, `bind_any`, `release`, `get_profile` | Selection, bindings by RoSO function, profile aggregation | `profiles()`, `engine_profile()` |
 | `execute`, `get_command_result` | Sequences, command table | `run()`, `command_result()` |
 | `set_parameter`, `get_parameter` | Bindings, parameter types | `set_parameter()`, `get_parameter()` |
 | `query` | Selection of one component | `query()` |
 | `subscribe`, `unsubscribe`, `get_event_detail` | Selection, subscriptions per session | `subscribe()`, `unsubscribe()`, `event_detail()` |
-| `get_error_detail` | Id routing | `error_detail()` |
+| `get_error_detail`, `notify_error` | Id routing, the sessions an error concerns | `on_error()`, `error_detail()` |
 
 ### 6.3 What Stays Out of the Contract
 
@@ -641,12 +664,15 @@ Publication to the registries is planned.
 
 ### 7.3 Profiles and Values
 
-The interfaces packages hold the full profile of each basic component type they model
-as a constant, for example `NAVIGATION_PROFILE`: the XML profile with the messages of
+The Python and TypeScript interfaces packages hold the full profile of each of the 18
+standard profiles as a constant, for example `NAVIGATION_PROFILE`, generated from the XML
+profiles and `OWL.ttl`: the XML profile with the messages of
 the RoIS_Common profile it includes, listed first, and the RoSO function of the type. A
 component declares the constant of its type and implements a part of it. The engine
 serves only the messages the component implements, so a client never sees an operation
-the component does not answer.
+the component does not answer. The Python package also reads and writes RoIS XML
+profiles and command unit sequences, and its declaration API writes the XML profile of a
+component type of your own.
 
 RoIS carries every value of a `Result`, a `Parameter`, and an `Argument` with its type
 named in `data_type_ref`. OpenRoIS writes each value as a string by its type:
@@ -679,7 +705,7 @@ flowchart TB
     subgraph SDKs["Client SDKs"]
         direction LR
         TS["TypeScript SDK<br/>Web service applications<br/>(primary client)"]
-        CSharp["C# SDK<br/>Unity service applications<br/>(primary client, in progress)"]
+        CSharp["C# SDK<br/>Unity service applications<br/>(secondary client, in progress)"]
     end
 
     SDKs -->|"WebSocket + JSON-RPC 2.0"| Gateway["Gateway"]
@@ -708,19 +734,17 @@ const status = await client.query("component_status", target);
 client.on("reached_target", (event) => console.log(event.results));
 await client.subscribe("reached_target", target);
 
-// Reserve, configure, command, wait for the command to end, release.
+// Bind, configure, command, wait for the command to end, release.
 await client.bind(nav);
 await client.setParameter(nav, [
   { name: "target_positions", data_type_ref: "string[]", value: '["kitchen"]' },
 ]);
-const commandId = crypto.randomUUID();
-const ended = new Promise<string>((resolve) => {
-  client.on("rois.command.completed", ({ command_id, status }) => {
-    if (command_id === commandId) resolve(status);
-  });
-});
-await client.execute([{ component_ref: nav, command_type: "start", command_id: commandId }]);
-console.log("navigation ended:", await ended);
+const statuses = new Map<string, string>();
+client.on("rois.command.completed", ({ command_id, status }) => statuses.set(command_id, status));
+// The engine assigns the command ids and returns them. Its completed notifications
+// arrive after the answer and name those ids.
+const [commandId] = await client.execute([{ component_ref: nav, command_type: "start" }]);
+// ... later: statuses.get(commandId) is "OK" once the navigation has ended.
 await client.release(nav);
 
 await client.disconnect();
@@ -739,7 +763,7 @@ Key characteristics:
   `OPENROIS_GATEWAY_URL` set, against a live gateway with the mock adapter behind it.
 - Reconnection is planned.
 
-### 8.2 C# SDK for Unity (Primary Client, in Progress)
+### 8.2 C# SDK for Unity (Secondary Client, in Progress)
 
 The C# SDK (`OpenRoIS.Sdk` / `org.openrois.sdk`) targets Unity service
 applications. Its JSON-RPC 2.0 layer is available. The high-level client shown
@@ -810,17 +834,25 @@ WsClient(engine, "ws://gateway.example.com:8765").run()
 Clients then see `robot_1/navigation`. Key characteristics:
 
 - A component declares the profile constant of its type and implements a part of it.
-  The engine serves only what it implements, plus `stop` with `start` and
-  `component_status`.
+  The engine serves what it implements, `component_status`, and the four RoIS_Common
+  commands, which work without handlers: `suspend` holds the component's commands and
+  drops its events, `resume` releases them, and `stop` cancels a running `start`.
 - A command handler runs for as long as the command lasts. A `stop`, or a new `start`,
   cancels a running `start`, which ends with ABORT. `CommandFailed` ends a command with
   another status.
+- A component reports WARNING or ERROR with `raise_status`, which reaches the clients
+  concerned as `rois.system.notify_error`. Components that share a robot connection
+  share a `Resource`, which the engine opens, closes and reports for them.
 - Parameter values arrive in `self.parameters`, converted from their profile types, and
-  `@on_set_parameter` applies new values to the backend or refuses them.
+  `@on_set_parameter` applies new values to the backend or refuses them, which answers
+  the client BAD_PARAMETER.
 - Built on the same Pydantic types that are the source of truth for the entire project,
   so no type bridge is needed.
-- Async-first (asyncio), with ROS 2 nodes spun in a background thread by the
-  `WsClient`.
+- Async-first (asyncio), with ROS 2 nodes spun in a background thread by a shared
+  `RclpyExecutor`.
+- An adapter reads its settings from `adapter.yaml`, the environment and its flags
+  through `AdapterConfig`. The Reachy Mini adapter, with its
+  `openrois.components.reachy_mini` package, is the complete example.
 - A Python client for scripting and end-to-end testing is planned.
 
 ### 8.4 SDK Interface Mapping
@@ -834,7 +866,7 @@ will have the same methods (in progress).
 | CommandIF | `search(condition?)`, `bind(ref)`, `bindAny(condition?)`, `release(ref)`, `getParameter(ref)`, `setParameter(ref, parameters)`, `execute(commandUnitList)`, `getCommandResult(commandId, condition?)` | `rois.command.completed` |
 | QueryIF | `query(queryType, condition?)` | None |
 | EventIF | `subscribe(eventType, condition?)`, `unsubscribe(subscribeId)`, `getEventDetail(eventId, condition?)` | `rois.event.notify_event` |
-| StreamingIF | Planned | Planned |
+| Streaming (AudioStreaming, VideoStreaming) | `execute`, `query`, `subscribe` on the streaming components | `rois.event.notify_event` |
 
 The notifications come directly from `ServiceApplicationBase` in the specification:
 `notify_error`, `completed`, and `notify_event`. `rois.system.profile_changed` is an
@@ -869,8 +901,11 @@ rois.command.*    CommandIF:  search, bind, bind_any, release, get_parameter,
                               set_parameter, execute, get_command_result
 rois.query.*      QueryIF:    query
 rois.event.*      EventIF:    subscribe, unsubscribe, get_event_detail
-rois.stream.*     Streaming:  planned
 ```
+
+Streaming has no namespace: the AudioStreaming and VideoStreaming components take their
+stream commands through `execute`, answer `get_stream_status` through `query`, and send
+`notify_stream_status` as an event.
 
 Notifications from the engine (no `id` field):
 
@@ -883,13 +918,16 @@ rois.system.profile_changed   no params (OpenRoIS extension)
 
 OpenRoIS adds to the specification only where an addition serves a real need, changes
 nothing the specification defines, and can be ignored by a client that does not know it.
-Four extensions exist: `component_profiles` in the `get_profile` result, the RoSO
-`function` of a component profile, the `results` payload of `notify_event`, and the
+Six extensions exist: `command_unit_list` in the `execute` result, `component_profiles`
+in the `get_profile` result, the RoSO `function` of a component profile, `read_only` on a
+parameter profile, the `results` payload of `notify_event`, and the
 `rois.system.profile_changed` notification.
 
 ### 9.2 Methods, Params, and Results
 
-A `condition` may be left out, which is the empty condition: no filter.
+A `condition` may be left out, which is the empty condition: no filter. A session sends
+`rois.system.connect` first, and every other request before it, or after `disconnect`,
+answers ERROR.
 
 #### System Interface (`rois.system.*`)
 
@@ -910,7 +948,7 @@ A `condition` may be left out, which is the empty condition: no filter.
 | `rois.command.release` | `{component_ref}` | `{return_code}` |
 | `rois.command.get_parameter` | `{component_ref}` | `{return_code, parameters}` |
 | `rois.command.set_parameter` | `{component_ref, parameters}` | `{return_code, command_id}` |
-| `rois.command.execute` | `{command_unit_list}` | `{return_code}` |
+| `rois.command.execute` | `{command_unit_list}` | `{return_code, command_unit_list}` |
 | `rois.command.get_command_result` | `{command_id, condition}` | `{return_code, results}` |
 
 #### Query Interface (`rois.query.*`)
@@ -927,13 +965,15 @@ A `condition` may be left out, which is the empty condition: no filter.
 | `rois.event.unsubscribe` | `{subscribe_id}` | `{return_code}` |
 | `rois.event.get_event_detail` | `{event_id, condition}` | `{return_code, results}` |
 
-The Streaming Interface is planned. Until then, an engine answers any `rois.stream.*`
-method with the JSON-RPC error `METHOD_NOT_FOUND`.
+An engine answers any `rois.stream.*` method, like any other name outside the catalog,
+with the JSON-RPC error `METHOD_NOT_FOUND`.
 
 As in the IDL, `query` and `subscribe` name no component: their `condition` selects the
-one component that declares the query or event type. `execute` names its components
-inside `command_unit_list`, and the client assigns each command's `command_id`. The
-TypeScript SDK fills in a UUID when the caller leaves one out.
+one component that declares the query or event type, and gives the arguments of the
+message, for example `stream_id = 'a1'`. `execute` names its components inside
+`command_unit_list`. The engine assigns each command's `command_id` and returns the
+sequence with the ids filled in, the inout of the specification's Figure 8.5.
+`get_parameter`, `set_parameter` and `execute` need a bind on every component they name.
 
 ### 9.3 Core Data Types on the Wire
 
@@ -953,16 +993,21 @@ by `notify_event`):
 {"name": "target_positions", "data_type_ref": "string[]", "value": "[\"kitchen\"]"}
 ```
 
-**CommandUnit** and **ConcurrentCommands** (the items of a `command_unit_list`, as
-`CommandUnitSequenceType` in `XML-Profiles.xsd` defines them, with `delay_time` in
-milliseconds):
+**CommandUnit** and **ConcurrentCommands** (the items of a `command_unit_list`, with
+`delay_time` in milliseconds). A client sends a command without a `command_id`, and the
+`execute` result returns it with the id the engine assigned:
 
 ```json
-{"component_ref": "robot_1/navigation", "command_type": "start", "command_id": "c2", "arguments": [], "delay_time": 0}
+{"component_ref": "robot_1/navigation", "command_type": "start", "arguments": [], "delay_time": 0}
 ```
 
+A `ConcurrentCommands` item holds branches that run in parallel, each an ordered
+`command_list`, as Annex B.1 of the specification shows. A flat `command_list`, the form
+of `XML-Profiles.xsd`, reads as one branch per command
+([rois-reference §16](rois-reference.md#16-known-normative-divergences), item 2):
+
 ```json
-{"command_list": [{"component_ref": "robot_1/navigation", "command_type": "start", "command_id": "c4"}], "delay_time": 0}
+{"branch_list": [{"command_list": [{"component_ref": "robot_1/navigation", "command_type": "start"}]}], "delay_time": 0}
 ```
 
 **Conditions** are written in a subset of CQL2-Text: comparisons with `=` or `LIKE`
@@ -970,9 +1015,10 @@ joined by `AND`, over the properties `component_ref` and `component_type`, for e
 `component_type = 'urn:x-rois:def:component:OMG::PersonDetection'`.
 
 **Refs and ids**: every `component_ref` is fully qualified as `engine_id/ref`, for
-example `robot_1/navigation`. The ids an engine assigns, for subscriptions, events,
-errors, and `set_parameter` commands, start with that engine's id in the same way, for
-example `robot_1/sub-1`, so they stay unique through every gateway above it.
+example `robot_1/navigation`. The ids an engine assigns, for commands, subscriptions,
+events, errors, and `set_parameter` commands, start with that engine's id in the same
+way, for example `gateway/cmd-1` or `robot_1/sub-1`, so they stay unique through every
+gateway above it.
 
 **ReturnCode** values: `OK`, `ERROR`, `BAD_PARAMETER`, `UNSUPPORTED`,
 `OUT_OF_RESOURCES`, `TIMEOUT`.
@@ -1043,21 +1089,13 @@ event only.
 {"jsonrpc": "2.0", "id": 3, "result": {"return_code": "OK", "subscribe_id": "robot_1/sub-1"}}
 ```
 
-#### Step 4: Start the PersonDetection Component
+#### Step 4: Bind and Start the PersonDetection Component
 
-PersonDetection is a sensing component, so it needs no bind before commands.
+Every command needs a bind. PersonDetection is a sensing component, so every session may
+hold one, and the engine assigns the command id.
 
 ```json
-{
-  "jsonrpc": "2.0",
-  "id": 4,
-  "method": "rois.command.execute",
-  "params": {
-    "command_unit_list": [
-      {"component_ref": "robot_1/person_detection", "command_type": "start", "command_id": "c1", "arguments": []}
-    ]
-  }
-}
+{"jsonrpc": "2.0", "id": 4, "method": "rois.command.bind", "params": {"component_ref": "robot_1/person_detection"}}
 ```
 
 ```json
@@ -1065,7 +1103,33 @@ PersonDetection is a sensing component, so it needs no bind before commands.
 ```
 
 ```json
-{"jsonrpc": "2.0", "method": "rois.command.completed", "params": {"command_id": "c1", "status": "OK"}}
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "method": "rois.command.execute",
+  "params": {
+    "command_unit_list": [
+      {"component_ref": "robot_1/person_detection", "command_type": "start", "arguments": []}
+    ]
+  }
+}
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "result": {
+    "return_code": "OK",
+    "command_unit_list": [
+      {"component_ref": "robot_1/person_detection", "command_type": "start", "command_id": "gateway/cmd-1", "arguments": [], "delay_time": 0}
+    ]
+  }
+}
+```
+
+```json
+{"jsonrpc": "2.0", "method": "rois.command.completed", "params": {"command_id": "gateway/cmd-1", "status": "OK"}}
 ```
 
 #### Step 5: The Engine Sends a person_detected Event
@@ -1089,22 +1153,24 @@ PersonDetection is a sensing component, so it needs no bind before commands.
 
 #### Step 6: Bind Navigation and Set the Target
 
-Navigation is an actuation component: commands and parameter changes need the binding.
+Navigation is an actuation component: one session at a time holds its bind, and a
+second session gets OUT_OF_RESOURCES.
 
 ```json
-{"jsonrpc": "2.0", "id": 5, "method": "rois.command.bind", "params": {"component_ref": "robot_1/navigation"}}
+{"jsonrpc": "2.0", "id": 6, "method": "rois.command.bind", "params": {"component_ref": "robot_1/navigation"}}
 ```
 
 ```json
-{"jsonrpc": "2.0", "id": 5, "result": {"return_code": "OK"}}
+{"jsonrpc": "2.0", "id": 6, "result": {"return_code": "OK"}}
 ```
 
-`set_parameter` is a command of its own. The engine assigns its id and completes it.
+`set_parameter` is a command of its own. The engine applies the values before it
+replies, assigns its id, and then completes it.
 
 ```json
 {
   "jsonrpc": "2.0",
-  "id": 6,
+  "id": 7,
   "method": "rois.command.set_parameter",
   "params": {
     "component_ref": "robot_1/navigation",
@@ -1116,7 +1182,7 @@ Navigation is an actuation component: commands and parameter changes need the bi
 ```
 
 ```json
-{"jsonrpc": "2.0", "id": 6, "result": {"return_code": "OK", "command_id": "robot_1/param-3"}}
+{"jsonrpc": "2.0", "id": 7, "result": {"return_code": "OK", "command_id": "robot_1/param-3"}}
 ```
 
 ```json
@@ -1128,31 +1194,40 @@ Navigation is an actuation component: commands and parameter changes need the bi
 ```json
 {
   "jsonrpc": "2.0",
-  "id": 7,
+  "id": 8,
   "method": "rois.event.subscribe",
   "params": {"event_type": "reached_target", "condition": "component_ref = 'robot_1/navigation'"}
 }
 ```
 
 ```json
-{"jsonrpc": "2.0", "id": 7, "result": {"return_code": "OK", "subscribe_id": "robot_1/sub-4"}}
+{"jsonrpc": "2.0", "id": 8, "result": {"return_code": "OK", "subscribe_id": "robot_1/sub-4"}}
 ```
 
 ```json
 {
   "jsonrpc": "2.0",
-  "id": 8,
+  "id": 9,
   "method": "rois.command.execute",
   "params": {
     "command_unit_list": [
-      {"component_ref": "robot_1/navigation", "command_type": "start", "command_id": "c2", "arguments": []}
+      {"component_ref": "robot_1/navigation", "command_type": "start", "arguments": []}
     ]
   }
 }
 ```
 
 ```json
-{"jsonrpc": "2.0", "id": 8, "result": {"return_code": "OK"}}
+{
+  "jsonrpc": "2.0",
+  "id": 9,
+  "result": {
+    "return_code": "OK",
+    "command_unit_list": [
+      {"component_ref": "robot_1/navigation", "command_type": "start", "command_id": "gateway/cmd-2", "arguments": [], "delay_time": 0}
+    ]
+  }
+}
 ```
 
 #### Step 8: The Robot Arrives
@@ -1177,7 +1252,7 @@ The component emits `reached_target`, and the command completes.
 ```
 
 ```json
-{"jsonrpc": "2.0", "method": "rois.command.completed", "params": {"command_id": "c2", "status": "OK"}}
+{"jsonrpc": "2.0", "method": "rois.command.completed", "params": {"command_id": "gateway/cmd-2", "status": "OK"}}
 ```
 
 #### Step 9: Query the Robot Position
@@ -1185,7 +1260,7 @@ The component emits `reached_target`, and the command completes.
 ```json
 {
   "jsonrpc": "2.0",
-  "id": 9,
+  "id": 10,
   "method": "rois.query.query",
   "params": {
     "query_type": "robot_position",
@@ -1197,7 +1272,7 @@ The component emits `reached_target`, and the command completes.
 ```json
 {
   "jsonrpc": "2.0",
-  "id": 9,
+  "id": 10,
   "result": {
     "return_code": "OK",
     "results": [
@@ -1211,20 +1286,22 @@ The component emits `reached_target`, and the command completes.
 
 #### Step 10: Release and Disconnect
 
-```json
-{"jsonrpc": "2.0", "id": 10, "method": "rois.command.release", "params": {"component_ref": "robot_1/navigation"}}
-```
+`disconnect` would also release the binds and subscriptions the session still holds.
 
 ```json
-{"jsonrpc": "2.0", "id": 10, "result": {"return_code": "OK"}}
-```
-
-```json
-{"jsonrpc": "2.0", "id": 11, "method": "rois.system.disconnect", "params": {}}
+{"jsonrpc": "2.0", "id": 11, "method": "rois.command.release", "params": {"component_ref": "robot_1/navigation"}}
 ```
 
 ```json
 {"jsonrpc": "2.0", "id": 11, "result": {"return_code": "OK"}}
+```
+
+```json
+{"jsonrpc": "2.0", "id": 12, "method": "rois.system.disconnect", "params": {}}
+```
+
+```json
+{"jsonrpc": "2.0", "id": 12, "result": {"return_code": "OK"}}
 ```
 
 ### 9.5 Error Handling
@@ -1261,17 +1338,24 @@ request (`-32600`), an unknown method (`-32601`), params that fail validation
 ```
 
 A command that runs and fails completes with a status other than `OK`, for example
-`{"command_id": "c2", "status": "ERROR"}` in `rois.command.completed`. The catalog also
-defines `rois.system.notify_error`, which carries an `error_id` and an `error_type`, and
-`get_error_detail`, which reads the details of an error. The engines report no errors
-this way yet (planned).
+`{"command_id": "gateway/cmd-2", "status": "ERROR"}` in `rois.command.completed`. A
+component, a resource or an engine that raises WARNING or ERROR sends
+`rois.system.notify_error`, with an `error_id` such as `robot_1/err-6` and an
+`error_type` of the specification, to the sessions that hold a bind or a subscription on
+the component, or to every session for an engine error. `get_error_detail` returns the
+`component_ref`, `status`, `message` and `time` of the error until it clears:
+
+```json
+{"jsonrpc": "2.0", "method": "rois.system.notify_error", "params": {"error_id": "robot_1/err-6", "error_type": "COMPONENT_INTERNAL_ERROR"}}
+```
 
 ### 9.6 Command Sequences
 
 A `command_unit_list` runs its items in order. An item is a single command or a
-`ConcurrentCommands` group, whose commands run at the same time, each after its own
-`delay_time`. For example, on an engine that also hosts `robot_1/reaction`, a client
-that has bound both actuation components, `robot_1/navigation` and `robot_1/reaction`,
+`ConcurrentCommands` group of branches: the branches run at the same time, each branch
+runs its commands in order, each after its own `delay_time`, and the next item waits
+for every branch. For example, on an engine that also hosts `robot_1/reaction`, a client
+that has bound `robot_1/person_detection`, `robot_1/navigation` and `robot_1/reaction`
 sends:
 
 ```json
@@ -1281,11 +1365,11 @@ sends:
   "method": "rois.command.execute",
   "params": {
     "command_unit_list": [
-      {"component_ref": "robot_1/person_detection", "command_type": "start", "command_id": "c3"},
+      {"component_ref": "robot_1/person_detection", "command_type": "start"},
       {
-        "command_list": [
-          {"component_ref": "robot_1/navigation", "command_type": "start", "command_id": "c4"},
-          {"component_ref": "robot_1/reaction", "command_type": "start", "command_id": "c5", "delay_time": 500}
+        "branch_list": [
+          {"command_list": [{"component_ref": "robot_1/navigation", "command_type": "start"}]},
+          {"command_list": [{"component_ref": "robot_1/reaction", "command_type": "start", "delay_time": 500}]}
         ]
       }
     ]
@@ -1294,10 +1378,12 @@ sends:
 ```
 
 In this example, PersonDetection starts first. When it completes with `OK`, Navigation
-starts, and Reaction starts 500 ms later. The engine checks the whole sequence before it
-answers: every ref, every binding, every command type, and every command id. A command
-that ends other than `OK` stops the sequence, and the commands of the later items
-complete with `ABORT` without running. Every command completes exactly once, with one
+starts, and Reaction starts 500 ms later. The engine checks the whole sequence before
+anything runs: every ref, every bind, every command type, and every argument. It assigns
+the three command ids and returns them in the `execute` result. A command that ends
+other than `OK` stops the rest of its branch and every later item, whose commands
+complete with `ABORT` without running. A command that has not started within the
+`timeout` of its profile completes with `TIMEOUT`. Every command completes exactly once, with one
 `rois.command.completed` to the client that sent it.
 
 ### 9.7 Complete Session as a Sequence Diagram
@@ -1322,8 +1408,11 @@ sequenceDiagram
     Robot-->>GW: {subscribe_id: "robot_1/sub-1"}
     GW-->>Client: {subscribe_id: "robot_1/sub-1"}
 
-    Client->>GW: rois.command.execute [start c1]
-    GW-->>Client: {return_code: "OK"}
+    Client->>GW: rois.command.bind {component_ref: "robot_1/person_detection"}
+    GW-->>Client: {return_code: "OK"} (the gateway holds the client's bind)
+
+    Client->>GW: rois.command.execute [start]
+    GW-->>Client: {return_code: "OK", command_unit_list: [start c1]}
     GW->>Robot: rois.command.execute [start c1]
     Robot-->>GW: rois.command.completed {c1, OK}
     GW-->>Client: rois.command.completed {c1, OK}
@@ -1332,7 +1421,7 @@ sequenceDiagram
     GW-->>Client: rois.event.notify_event {number: 2}
 
     Client->>GW: rois.command.bind {component_ref: "robot_1/navigation"}
-    GW-->>Client: {return_code: "OK"} (the gateway holds the binding)
+    GW-->>Client: {return_code: "OK"} (the gateway holds the client's bind)
 
     Client->>GW: rois.command.set_parameter {target_positions}
     GW->>Robot: rois.command.set_parameter
@@ -1341,8 +1430,8 @@ sequenceDiagram
     Robot-->>GW: rois.command.completed {robot_1/param-3, OK}
     GW-->>Client: rois.command.completed {robot_1/param-3, OK}
 
-    Client->>GW: rois.command.execute [start c2]
-    GW-->>Client: {return_code: "OK"}
+    Client->>GW: rois.command.execute [start]
+    GW-->>Client: {return_code: "OK", command_unit_list: [start c2]}
     GW->>Robot: rois.command.execute [start c2]
     Robot-->>GW: rois.event.notify_event {reached_target}
     GW-->>Client: rois.event.notify_event {reached_target}
@@ -1518,10 +1607,10 @@ flowchart LR
         direction TB
         C1["set_parameter(encoding, transport)"]
         C2["set_parameter(ICE candidates)"]
-        C3["connect_stream()"]
+        C3["execute(connect_stream)"]
         C4["notify_stream_status(RUNNING)"]
-        C5["suspend_stream() / resume_stream()"]
-        C6["disconnect_stream()"]
+        C5["execute(suspend_stream / resume_stream)"]
+        C6["execute(disconnect_stream)"]
     end
 
     subgraph Data["WebRTC Media (out of RoIS scope)"]
@@ -1543,7 +1632,10 @@ flowchart LR
 ```
 
 WebRTC signaling is handled by the application layer. The gateway brokers media
-descriptor exchange via the RoIS streaming interface but never touches media data.
+descriptor exchange through the parameters and commands of the AudioStreaming and
+VideoStreaming components, which ride the Command, Query and Event interfaces, but never
+touches media data. The engine serves both profiles today. No streaming component ships
+yet, and the WebRTC mapping above is planned.
 
 An important distinction the specification preserves: Speech Synthesis is a
 **command** component (text to robot speaker locally), not a stream. Audio and Video
@@ -1554,7 +1646,7 @@ WebRTC.
 
 - **Fleet of 1 to 3 robots**: peer-to-peer WebRTC is sufficient.
 - **Larger fleets**: route media through a Selective Forwarding Unit (mediasoup,
-  LiveKit). The RoIS streaming control interface is identical either way. The SFU is
+  LiveKit). The RoIS streaming control messages are identical either way. The SFU is
   an implementation detail of the gateway, not the engine.
 
 ---
@@ -1724,7 +1816,7 @@ non-canonical, and valid per the spec.
 
 Components are distributed as packages (e.g., `openrois.components.reachy_mini`, from
 the Reachy Mini adapter of the openrois organization). When a component supports
-multiple backends (e.g., gRPC and ROS 2, as Coarobo's Kachaka package does), the package ships one
+multiple backends (e.g., gRPC and ROS 2, as the Kachaka adapter maintained by Coarobo does), the package ships one
 class per backend: `GrpcNavigation` and `Ros2Navigation`. Both declare
 `@component(NAVIGATION_PROFILE)`. The adapter imports the one it needs. Selection happens
 at import time, not at runtime. No factory, no Protocol, no runtime selection.
@@ -1760,11 +1852,11 @@ details and open decisions.
 | 1 | Engine and Sub HRI Engine | TypeScript proof of concept, child engines, mock components | done |
 | 2 | Adapter Framework and Components | component framework, reference components, real robot adapter | done |
 | 3 | Client SDKs and First Demonstration | TypeScript SDK and web client done, C# SDK in progress, exit tag `v0.1.0` | in progress |
-| 4 | Recursive Engine in Python | the Python engine on the RoIS method catalog is the only dispatch implementation | done |
+| 4 | Recursive Engine in Python | the Python engine on the RoIS method catalog is the only dispatch implementation | in progress |
 | 5 | Hardening the Engine | graceful shutdown, reconnection, package loading, health endpoints | planned |
-| 6 | Gateway Process | `openrois-gateway` from `Engine` + `WsServer`, Docker Compose quickstart | done |
+| 6 | Gateway Process | `openrois-gateway` from `Engine` + `WsServer`, Docker Compose quickstart | in progress |
 | 7 | Adapter Process | a packaged adapter process that builds its components from a configuration | planned |
-| 8 | Open Reference Platform and Mixed Paradigm | reference platform on open hardware, paradigm-neutrality proof | planned |
+| 8 | Open Reference Platform and Mixed Paradigm | reference platform on open hardware, paradigm-neutrality proof | in progress |
 | 9 | Auth, Security, Media | parallelizable after Phase 7 | planned |
 | 10 | Full Component Library | all 17 basic components, packages published, `v1.0` | planned |
 | 11 | Component Registry and Hub | post-1.0, adoption-gated | after 1.0 |
@@ -1795,12 +1887,17 @@ Pre-1.0 releases are Alpha, unstable API. Do not use in production until v1.0.
 
 The type pipeline with the RoIS method catalog, the recursive Python engine
 (`openrois-engine`), the gateway process (`openrois-gateway`), the component SDK
-(`openrois-components-core`), reference components, and the TypeScript SDK are built. A
+(`openrois-components-core`), and the TypeScript SDK are built. The engine implements the
+RoIS interfaces, profiles and common messages (CP1 to CP3) as
+[rois-reference §16](rois-reference.md#16-known-normative-divergences) records them. A
 Docker Compose stack runs the gateway with a mock adapter behind it, and the TypeScript
-SDK runs full sessions against it. The first end-to-end demonstration, a web application
+SDK runs full sessions against it. Each robot's components live in its adapter
+repository: the Reachy Mini adapter of the openrois organization is the reference
+example, and Coarobo maintains a Kachaka adapter. The first end-to-end demonstration, a web application
 driving a physical robot over gRPC, ran on the earlier TypeScript proof of concept. The
 next one, a physical robot and a virtual agent behind one gateway on the Reachy Mini
-reference platform, is Phase 8. The C# client SDK is in progress.
+reference platform, is Phase 8, and the Reachy Mini adapter is built. The C# client SDK
+is in progress, and a Python client SDK is planned.
 
 ---
 
@@ -1856,7 +1953,7 @@ service without rewriting the scenario logic.
 
 ### 17.3 OpenRoIS and Unity
 
-Unity is a primary client platform for service applications. The C# SDK targets
+Unity is a secondary client platform for service applications. The C# SDK targets
 Unity 6.5 and later through UPM, and the C# interfaces package targets `netstandard2.1`,
 which runs on both Mono (Unity 6.3 and later) and CoreCLR (Unity 6.8). The same types
 also work outside Unity (any .NET runtime). The gateway runs as a separate process. A
@@ -1873,8 +1970,12 @@ An implementation claiming RoIS conformance shall:
   (it need not implement every basic component).
 - Handle component profiles described as XML files and the messages defined therein.
 
-OpenRoIS targets full conformance. When the normative files are available, the test
-suite cross-checks the method catalog against the IDL and the profiles against the XML
+OpenRoIS targets full conformance and makes no conformance claim yet. The engine
+implements the interfaces, profiles and common messages (CP1 to CP3), with the
+exceptions that [rois-reference §16](rois-reference.md#16-known-normative-divergences)
+records, and reads and writes the XML profiles. It does not yet load XML-declared
+profiles at run time, so the fourth point is open. When the normative files are
+available, the test suite cross-checks the method catalog against the IDL and the profiles against the XML
 profiles and `XML-Profiles.xsd`. A
 conformance test suite that asserts behavior against the specification's interfaces
 and profiles, run against every adapter, is planned.

@@ -24,11 +24,11 @@ Until version 1.0, all releases are **alpha, with an unstable API**.
 | **1** | Engine and sub HRI Engine proof of concept | done |
 | **2** | Adapter framework and reference components | done |
 | **3** | Client SDKs and first end-to-end demonstration | in progress |
-| **4** | Recursive engine in Python | done |
+| **4** | Recursive engine in Python | in progress |
 | **5** | Hardening the engine | planned |
-| **6** | Gateway process | done |
+| **6** | Gateway process | in progress |
 | **7** | Adapter process | planned |
-| **8** | Open reference platform and mixed paradigms | planned |
+| **8** | Open reference platform and mixed paradigms | in progress |
 | **9** | Authentication, security, and media | planned |
 | **10** | Full component library (`v1.0`) | planned |
 | **11** | Component registry and Hub | after 1.0 |
@@ -56,9 +56,12 @@ concept has been removed from the repository. Its last version is at tag
 ### Phase 2: Adapter Framework and Reference Components (Done)
 
 The decorator-based component framework (`@component`, `@query`, `@invoke`,
-`@subscribe`), component-owned backend connections, and reference `Navigation` and
-`SystemInformation` components for the Preferred Robotics Kachaka with gRPC and ROS 2
-backends.
+`@subscribe`), component-owned backend connections, and the first reference components,
+`Navigation` and `SystemInformation` for the Preferred Robotics Kachaka with gRPC and
+ROS 2 backends. Each robot's components have since moved to its adapter repository: the
+Kachaka components to the Kachaka adapter maintained by Coarobo, and the reference
+example is now `openrois.components.reachy_mini` in openrois-adapter-reachy-mini. The
+monorepo keeps the component SDK and the common components.
 
 ### Phase 3: Client SDKs and First End-to-End Demonstration (In Progress)
 
@@ -72,17 +75,23 @@ high-level client does not yet.
 
 **Exit criteria:** tagged release `v0.1.0`.
 
-### Phase 4: Recursive Engine in Python (Done)
+### Phase 4: Recursive Engine in Python (In Progress)
 
 **Done:** the `openrois-engine` package with the recursive `Engine` on the RoIS method
 catalog of `openrois-interfaces`, its `LocalComponents` and `ChildEngine` sources, and
 the `WsServer` and `WsClient`. A gateway discovers its child engines with
-`rois.system.get_profile`, runs command sequences across them, and routes every id to the
-engine that owns it. A test suite runs the engine in process and over real sockets,
-including a gateway under a gateway. The mock adapter, the Kachaka components and the
-adapter template run on it, and the TypeScript SDK runs its sessions against it.
+`rois.system.get_profile`, runs command sequences across them, and routes every id to
+the engine that owns it. The engine implements the RoIS interfaces, profiles and common
+messages (CP1 to CP3) as [rois-reference
+§16](rois-reference.md#16-known-normative-divergences) records them: sessions, binds by
+RoSO function, engine-assigned command ids, branches, timeouts, the RoIS_Common default
+and the error channel. A test suite runs the engine in process and over real sockets,
+including a gateway under a gateway. The mock adapter, the adapter template and the
+Reachy Mini and Kachaka adapters run on it, and the TypeScript SDK runs its sessions
+against it.
 
-Released as `openrois-engine` 0.1.0a1, together with `openrois-components-core` 0.1.0a1.
+**In progress:** the first release of `openrois-engine` with `openrois-components-core`,
+once the Reachy Mini adapter has run the full workflow on them end to end.
 
 **Exit criteria:** the Python engine is the only dispatch implementation in the
 repository. The TypeScript proof of concept is removed, with its last version at tag
@@ -90,10 +99,13 @@ repository. The TypeScript proof of concept is removed, with its last version at
 
 ### Phase 5: Hardening the Engine (Planned)
 
-Graceful shutdown, reconnection behavior, loading component packages from a local path
-or a Git URL, and minimal health and status endpoints.
+The gateway already stops gracefully, and `WsClient` reconnects with backoff. Still to
+come: notifying sessions when an engine stops, re-subscription after an adapter
+reconnects, a hook for the moment a component loses its last bind, loading XML-declared
+profiles at run time, loading component packages from a local path or a Git URL, and
+minimal health and status endpoints.
 
-### Phase 6: Gateway Process (Done)
+### Phase 6: Gateway Process (In Progress)
 
 **Done:** the `openrois-gateway` package, a standalone gateway process composed from
 `Engine` and `WsServer`, with configuration from a YAML file, the environment and flags,
@@ -101,20 +113,30 @@ logging, and a graceful stop on SIGTERM and SIGINT. Its container image, and a D
 Compose file that starts it with the mock adapter, checked end to end by a smoke script on
 the RoIS method catalog. Docker Compose is the one-command quickstart.
 
-Released as `openrois-gateway` 0.1.0a1.
+**In progress:** the first release of `openrois-gateway`, together with the engine.
 
 ### Phase 7: Adapter Process (Planned)
 
 A packaged adapter process, like the gateway process, that builds the components of a
 robot from a configuration and serves them with `Engine` and `WsClient`, so an adapter
-needs no hand-written script.
+needs no hand-written script. The groundwork exists: `AdapterConfig` and the loader that
+reads `adapter.yaml`, the environment and the flags.
 
-### Phase 8: Open Reference Platform and Mixed Paradigms (Planned)
+### Phase 8: Open Reference Platform and Mixed Paradigms (In Progress)
 
-A reference platform based on the open-source Pollen Robotics Reachy Mini, shipped with
-OpenRoIS so that anyone can run the full stack on affordable, openly documented hardware.
-A demonstration of a physical robot and a virtual agent behind one gateway, controlled by
-one application that does not know which is which.
+**In progress:** the Reachy Mini adapter,
+[openrois-adapter-reachy-mini](https://github.com/openrois/openrois-adapter-reachy-mini),
+serves a real or simulated Reachy Mini with PersonDetection, Reaction, SpeechSynthesis
+and SystemInformation from `openrois.components.reachy_mini`, configured by
+`adapter.yaml`. Its end-to-end check of the whole RoIS workflow, from `connect` through
+binds, a branched `execute`, events, `notify_error` and the daemon's return to
+`disconnect`, passed against Pollen's simulator on October 16, 2026. Still to come: a run
+on the hardware and the mixed demonstration.
+
+**Goal:** a reference platform based on the open-source Pollen Robotics Reachy Mini,
+shipped with OpenRoIS so that anyone can run the full stack on affordable, openly
+documented hardware. A demonstration of a physical robot and a virtual agent behind one
+gateway, controlled by one application that does not know which is which.
 
 Completing this phase starts the transfer of OpenRoIS to a neutral open-source
 foundation.
@@ -122,8 +144,8 @@ foundation.
 ### Phase 9: Authentication, Security, and Media (Planned)
 
 JWT authentication at the WebSocket upgrade, role-based authorization per RoIS
-operation, the RoIS Streaming Interface with WebRTC media, and DDS Security for ROS 2
-based adapters.
+operation, WebRTC media for the AudioStreaming and VideoStreaming components, and DDS
+Security for ROS 2 based adapters.
 
 ### Phase 10: Full Component Library (Planned)
 
@@ -172,9 +194,10 @@ catalog, rather than one shared library bridged across languages.
 
 ## 5. Contributing
 
-Many items above can be picked up in parallel, and components for new robots are the
-natural entry point. See [CONTRIBUTING.md](../CONTRIBUTING.md), or open an issue to
-propose a change to the roadmap.
+Many items above can be picked up in parallel, and an adapter for a new robot, with its
+components in its own repository, is the natural entry point. See
+[CONTRIBUTING.md](../CONTRIBUTING.md), or open an issue to propose a change to the
+roadmap.
 
 ---
 

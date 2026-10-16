@@ -120,7 +120,9 @@ cd gateway && pytest && mypy && ruff check src/ tests/ scripts/
 ## Status
 
 Alpha, pre-1.0, unstable API. The gateway answers the RoIS method catalog that the
-TypeScript SDK and the HRI client speak. Health endpoints and a compose healthcheck are
+TypeScript SDK and the HRI client speak, with the RoIS behavior of CP1 to CP3 that
+[`openrois-engine`](../engine/README.md) implements, and makes no conformance claim.
+Authentication is planned for Phase 9, so the gateway binds to loopback by default. Health endpoints and a compose healthcheck are
 planned for [Phase 5](https://openrois.org/docs/project/roadmap).
 
 ## License

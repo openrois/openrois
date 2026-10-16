@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A client for the RoIS behavior of `openrois-engine`: connect first, bind every component you command, read the command ids from the `execute` result, and match `rois.command.completed` by them.
 - `RoISClient`, a client for an OpenRoIS engine over WebSocket, for browsers and Node.js. It has one method per operation of the RoIS method catalog, each taking the IDL parameters in IDL order and returning the out parameters:
   - System: `RoISClient.connect(url)`, `disconnect()`, `getProfile(condition?)` and `getErrorDetail(errorId, condition?)`.
   - Command: `search(condition?)`, `bind(ref)`, `bindAny(condition?)`, `release(ref)`, `getParameter(ref)`, `setParameter(ref, parameters)`, `execute(commandUnitList)` and `getCommandResult(commandId, condition?)`.
@@ -21,3 +22,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The builders for CQL2-Text conditions from `@openrois/interfaces`: `componentRef`, `componentType`, `componentTypeUrn`, `eq`, `like`, `allOf` and `quote`, with the property names `COMPONENT_REF` and `COMPONENT_TYPE`.
 - `WebSocketTransport` (`@openrois/sdk/transport`), with request and connect timeouts, a custom WebSocket factory, and the `ConnectionError`, `RequestTimeoutError` and `RpcError` errors.
 - The JSON-RPC 2.0 envelope schemas and `JsonRpcErrorCode` (`@openrois/sdk/jsonrpc`).
+
+[unreleased]: https://github.com/openrois/openrois/tree/dev/sdk/typescript

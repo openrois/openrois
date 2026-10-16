@@ -66,8 +66,9 @@ queries, commands and events.
 | `Battery` | `MyOrganization::Battery`, declared with its own `BATTERY_PROFILE` | A type of your own, with a query, an event emitted by a monitor that the first subscription starts, and a parameter |
 
 The engine does the rest for every component: it stores the parameters from the profile
-defaults, answers `component_status`, reserves actuation components for the client that
-binds them, reports the end of each command with `rois.command.completed`, and serves the
+defaults, answers `component_status`, holds the binds (one session at a time on an actuation
+component, every session that asks on the others), serves the RoIS_Common commands,
+reports the end of each command with `rois.command.completed`, and serves the
 part of each profile the class implements. A connection that several components share is
 a `Resource`, which each records with `self.uses(...)`. A connection only one component
 needs can be opened in its `connect()` and closed in its `disconnect()`. Components that
@@ -77,7 +78,7 @@ nodes.
 See [`components/core`](../../components/core/README.md) for the decorators and
 [`examples/mock-adapter`](../mock-adapter/README.md) for an adapter that runs as is.
 
-## Keep It Conformant
+## Stay Within RoIS
 
 Use the basic RoIS component types where one fits, through their profile constants in
 `openrois.interfaces.components`. A component type of your own is valid RoIS (section 12

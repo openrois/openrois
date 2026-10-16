@@ -6,7 +6,7 @@ adapter up before the robot is ready, and as templates for platform-specific pac
 
 | Component | Provides |
 |-----------|----------|
-| `MockSystemInformation` | Queries `robot_position` (the origin, identified by the engine id) and `engine_status` (always `READY`) |
+| `MockSystemInformation` | Queries `robot_position` (the origin, identified by the engine id) and `engine_status` (the status of the engine that hosts it) |
 
 More will be added with the full component library in
 [Phase 10](https://openrois.org/docs/project/roadmap).

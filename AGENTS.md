@@ -14,13 +14,17 @@ What exists today:
 | Area | Directory | State |
 |------|-----------|-------|
 | RoIS interface types (Python, JSON Schema, TypeScript, C#) | `interfaces/` | Available |
-| Recursive engine, WebSocket server and client | `engine/` | Available, hardening |
+| Recursive engine with the RoIS behavior of CP1 to CP3, WebSocket server and client | `engine/` | Available, hardening |
 | Gateway process (`openrois-gateway`) | `gateway/` | Available |
-| Adapter SDK (component framework) and reference components | `components/` | Available |
+| Component and adapter SDK, and the common components | `components/` | Available |
 | TypeScript client SDK | `sdk/typescript/` | Available |
 | C# client SDK for Unity | `sdk/csharp/` | JSON-RPC layer only, client in progress |
 | Examples: mock engine, mock adapter, web client, adapter template | `examples/` | Available |
 | Hub management application | `apps/hub/` | Not started, scaffold only |
+
+Each robot's components live in its adapter repository, not here. The reference example
+is `openrois.components.reachy_mini` in openrois-adapter-reachy-mini (openrois
+organization). The Kachaka components live in the Kachaka adapter maintained by Coarobo.
 
 See [docs/roadmap.md](docs/roadmap.md) for what comes next, and
 [openrois.org](https://openrois.org/) for the living documentation.

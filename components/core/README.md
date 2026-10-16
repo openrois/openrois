@@ -172,7 +172,10 @@ cd components/core && pytest && mypy && ruff check src/ tests/
 ## Status
 
 Alpha, pre-1.0, unstable API. The engine that hosts components written with this SDK,
-`openrois-engine`, answers the RoIS method catalog.
+`openrois-engine`, answers the RoIS method catalog with the behavior of CP1 to CP3. A
+hook for the moment a component loses its last bind is planned. The Reachy Mini
+adapter, [openrois-adapter-reachy-mini](https://github.com/openrois/openrois-adapter-reachy-mini),
+is a complete example of components written with this SDK.
 
 ## License
 

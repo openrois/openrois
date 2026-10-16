@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openrois-components-common"
-version = "0.1.0a2"
+version = "0.1.0a1"
 description = "Platform-independent OpenRoIS components with simulated data"
 readme = "README.md"
 license = "Apache-2.0"

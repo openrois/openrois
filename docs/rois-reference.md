@@ -4,7 +4,8 @@
 >
 > - **OMG Document Number:** formal/26-06-03 (June 2026)
 > - **Normative reference:** <https://www.omg.org/spec/RoIS/2.0>
-> - **Machine-readable files:** <https://www.omg.org/spec/RoIS/2.0#docs-normative-machine>
+> - **Machine-readable files:** <https://www.omg.org/spec/RoIS/2.0#docs-normative-machine>,
+>   the 20250801 set at <https://www.omg.org/spec/RoIS/20250801/>
 > - **Copyright:** JARA, ETRI, KAR, and Object Management Group, Inc.
 
 This document summarizes and explains the specification that the machine-readable
@@ -78,7 +79,8 @@ there?", "approach the person").
 
 ## 3. Conformance
 
-An implementation claiming conformance shall:
+Clause 2 of the specification states what an implementation claiming conformance
+shall do:
 
 - Provide the interfaces described in **§8.2 RoIS Interface**.
 - Support the message data structures described in **§8.3 RoIS Profiles**.
@@ -86,6 +88,13 @@ An implementation claiming conformance shall:
   implements* (it need not implement every basic component).
 - Handle component profiles described as **XML files** (the XML-Profile PSM
   machine-readable files) and the messages defined therein.
+
+**OpenRoIS makes no conformance claim.** It implements the interfaces of §8.2, the
+profiles of §8.3 and the common messages of §8.4 (conformance points CP1 to CP3), as
+§16 records them, and it reads and writes the XML profiles. A claim waits until all
+four points are closed, and the engine does not yet load XML-declared profiles at run
+time. §17 describes how OpenRoIS implements what the specification leaves to the
+platform.
 
 ---
 
@@ -95,7 +104,7 @@ An implementation claiming conformance shall:
 |------|---------|
 | **HRI** | Human-Robot Interaction. |
 | **HRI Component** | An abstract object that uses sensors/actuators to provide a specific HRI function (person detection, speech, etc.). Internal structure is encapsulated. |
-| **Basic HRI Component** | An HRI Component providing a *commonly implemented* HRI function. 15+ are defined normatively. |
+| **Basic HRI Component** | An HRI Component providing a *commonly implemented* HRI function. Table 8-36 lists 17, each with an XML profile, although the terms of clause 4 still say 15. |
 | **User-defined HRI Component** | Any HRI Component providing a function beyond the basic set. |
 | **HRI Engine** | An object that **manages** HRI Components and mediates their functions to service applications. A physical unit. |
 | **Service Application** | Software that controls HRI Components (via the HRI Engine) to implement a robot scenario. |
@@ -166,7 +175,8 @@ interfaces, plus a Streaming interface layered on the others.
 ### 7.1 Return Codes (`ReturnCode_t`)
 
 `OK`, `ERROR`, `BAD_PARAMETER`, `UNSUPPORTED`, `OUT_OF_RESOURCES`, `TIMEOUT`.
-`UNSUPPORTED` is in the IDL but not in the specification's return code table (§16).
+`UNSUPPORTED` is in the IDL but not in the specification's return code table (§16,
+item 5).
 
 Each PSM may map these to return codes or exceptions.
 
@@ -188,8 +198,8 @@ three-step reservation pattern:
    `bind(component_ref)`. Or `bind_any(condition)` lets the engine auto-select.
    Optionally `get_parameter`/`set_parameter`.
 2. **Execute** - `execute(command_unit_list)` sends a command message. The
-   specification text says the engine returns a `command_id` immediately, while the
-   IDL has the application name each command (§16). The operation runs
+   engine assigns a `command_id` to every command and returns it (§16, item 1). The
+   operation runs
    asynchronously. Completion arrives via `completed(command_id, status)`. Detailed
    results via `get_command_result(command_id, …)`.
 3. **Release** - `release(component_ref)` frees the component.
@@ -223,7 +233,8 @@ encoding/transport), `suspend_stream`/`resume_stream`, `disconnect_stream`. The
 engine may asynchronously push `notify_stream_status` to suspend/resume/close.
 Transport and encoding details are out of RoIS scope. Stream status values:
 `STREAMING_NOT_RUNNING`, `STREAMING_NOT_CONNECTED`, `STREAMING_RUNNING`,
-`STREAMING_SUSPENDED`, `STREAMING_RESUMED`.
+`STREAMING_SUSPENDED`, `STREAMING_RESUMED`. OpenRoIS serves streaming through the two
+streaming components instead (§17.1).
 
 ---
 
@@ -413,251 +424,217 @@ The spec's PSMs correspond to the OMG machine-readable files at
 
 ## 16. Known Normative Divergences
 
-The normative files and the specification text occasionally disagree. Where the IDL
-and an XML profile conflict, the OpenRoIS implementation follows the **XML profile**
-(the authoritative component-profile PSM), with one recorded exception (item 4). Where
-the specification text and the IDL conflict, it follows the IDL. Known divergences:
+The specification text and its machine-readable files disagree in places. When they
+do, OpenRoIS applies one order of precedence: the XML profiles and `XML-Profiles.xsd`
+decide the wire, the specification text decides behavior, the IDL fills gaps, and the
+hpp headers break ties. Every exception OpenRoIS makes is an entry below, and nowhere
+else. Each entry gives what the specification says, what the files say, and what
+OpenRoIS does.
 
-1. **Navigation `target_position` vs `target_positions`**: The IDL
-   (`RoIS_Navigation.idl`) declares the parameter as `target_position` (singular),
-   while the XML profile (`Navigation.xml`) uses `target_positions` (plural). The
-   implementation uses `target_positions` (XML profile).
+The sources are formal/26-06-03 and the 20250801 machine-readable set. The entries
+come from the October 2026 validation table, which checked every normative file
+against the 2.0-beta2 document. They keep that table's row numbers (V1 to V36) and its
+2.0-beta2 figure and table numbers. formal/26-06-03 writes the numbers with a hyphen
+(Table 8-15), and entries F1 and F2 cite it directly. With `OPENROIS_NORMATIVE_DIR`
+set, `interfaces/python/tests/_normative_expectations.py` checks the files against
+these entries.
 
-2. **Navigation `reached_target` event**: The IDL `Navigation::Event` interface is
-   empty (inherits from `RoIS_Common::Event` but defines no methods). The XML profile
-   defines a `reached_target` event with `target` (string) and `is_final_target`
-   (bool) results. The implementation includes `NavigationReachedTargetEvent`
-   (XML profile).
+1. **`execute` returns the command ids** (V1; Figures 8.5 and 8.10, Table 8.3;
+   `RoIS_HRI.idl`).
+   Spec: `execute` takes `command_unit_list` as inout, and the engine assigns a
+   `command_id` to every command it receives.
+   Files: the IDL declares the list `in` only, and the XSD requires a `command_id` on
+   every command message.
+   OpenRoIS: the engine assigns every id and returns the list with the ids filled in,
+   as `ExecuteResult.command_unit_list` (§17.3). That field realizes the inout of
+   Figure 8.5.
 
-3. **`ConcurrentCommands` structure**: The XSD defines `ConcurrentCommandsType` with
-   a `command_list` of `CommandMessageType` (a flat list of commands executed
-   concurrently). A `BranchType` is defined in the XSD but is not used by
-   `ConcurrentCommandsType`. Earlier versions of this reference described
-   `ConcurrentCommands` as holding `Branch`es. This has been corrected to match the
-   XSD.
+2. **`ConcurrentCommands` and branches** (V3, F2; Figure 8.11, Tables 8.15 and 8.16,
+   Annex B.1, and Table 8-15 of formal/26-06-03; `XML-Profiles.xsd`).
+   Spec: `ConcurrentCommands` holds a `branch_list` of `Branch`, each a sequential
+   `command_list`. formal/26-06-03 renames the attribute `command list` in Table 8-15
+   but still types it `Branch`, and keeps `branch_list` in Annex B.1.
+   Files: `ConcurrentCommandsType` holds a `command_list` of `CommandMessageType`, and
+   `BranchType` is declared but never used.
+   OpenRoIS: runs the branches in parallel and each branch in order, and reads a flat
+   `command_list` as one-command branches. The codec reads both forms and writes the
+   XSD form. Its tests use the complete Annex B.1 example of 2.0-beta2, because the
+   formal example stops after the first branch.
 
-4. **Reaction `reaction_ref`**: `RoIS_Reaction.idl` takes a list in
-   `set_parameter(in RoIS_IdentifierList reaction_ref)` and returns one identifier in
-   `get_parameter(out RoIS_Identifier reaction_ref, …)`. `Reaction.xml` declares the
-   `reaction_ref` parameter as a single `RoISIdentifier`, and `available_reactions` as a
-   query message, while the IDL returns it from `get_parameter`. The implementation
-   follows the IDL operation signatures (`ReactionSetParameter`,
-   `ReactionGetParameterResult`). This is the exception to the XML profile rule: the
-   profile does not say how a `set_parameter` call carries several reactions, and the
-   IDL does. The `REACTION_PROFILE` constant is a profile, so it follows `Reaction.xml`.
+3. **Arguments on queries and events** (V9; Table 8.56, Figure 8.28;
+   `AudioStreaming.xml`, `VideoStreaming.xml`, `XML-Profiles.xsd`).
+   Spec: `notify_stream_status` lists `stream_id`, `timestamp` and `status` as its
+   arguments.
+   Files: the streaming profiles put `stream_id` under `Arguments` of a query and an
+   event, and the XSD declares `Arguments` on command message profiles only.
+   OpenRoIS: query and event profiles carry an arguments list. The condition of a
+   query or a subscription gives the argument values (§17.9).
 
-5. **`UNSUPPORTED` return code**: The IDL `ReturnCode_t` has six values, including
-   `UNSUPPORTED`. The return code table of the specification text (Table 8.1 in the
-   2.0-beta2 document) lists five and omits `UNSUPPORTED`. The implementation follows
-   the IDL.
+4. **`get_stream_status`** (V8; Table 8.6 against Table 8.56, Figures 8.9 and 8.28;
+   `AudioStreaming.xml`).
+   Spec: Table 8.6 names the query `query_stream_status`, while Table 8.56 and both
+   figures name it `get_stream_status`.
+   Files: `get_stream_status`.
+   OpenRoIS: `get_stream_status`.
 
-6. **`execute` and `command_id`**: The specification text (Command Interface, §8.2.2.2
-   in the 2.0-beta2 document) says the engine returns a `command_id` when it receives
-   `execute()`. The IDL operation
-   `execute(in CommandUnitSequence command_unit_list)` has no out parameter, and every
-   command message in the XSD carries a required `command_id`. The implementation
-   follows the IDL and the XSD: the application names each command, and `completed`
-   and `get_command_result` use that name.
+5. **The `UNSUPPORTED` return code** (Table 8-1 of formal/26-06-03; `RoIS_HRI.idl`).
+   Spec: Table 8-1 lists five return codes and has no `UNSUPPORTED`.
+   Files: the IDL `ReturnCode_t` has six values, including `UNSUPPORTED`.
+   OpenRoIS: returns `UNSUPPORTED` for an operation a component does not offer, such
+   as an unknown command type or a query that no component serves.
 
-7. **`Component_Status` and `Component_Status_t`**: `RoISCommon.xml` types the result of
-   `component_status` as `Component_Status`, the enumeration, and `SystemInformation.xml`
-   types the `status` result of `engine_status` the same way. `RoIS_Common.hpp` declares
-   `component_status(Component_Status& status)`. `RoIS_Common.idl` declares
-   `component_status(out Component_Status_t status)` with
-   `typedef long Component_Status_t`, a number. The implementation follows the XML
-   profiles: a status travels as the enumerator name, for example `READY`.
+6. **Several sub-component profiles** (V4; Figure 8.12, Table 8.34;
+   `XML-Profiles.xsd`).
+   Spec: `sub_component` is 0..1, and "only one item may be defined".
+   Files: `SubComponentProfile` is 0..unbounded. Every standard profile except
+   SystemInformation and RoISCommon itself names RoISCommon and nothing else.
+   OpenRoIS: the reader accepts several, and the writer emits what the component
+   declares.
 
-8. **SystemInformation and RoIS_Common**: `RoIS_System_Information.idl` derives its
-   `Query` interface from `RoIS_Common::Query`, which declares `component_status`.
-   `SystemInformation.xml` includes no RoIS_Common profile and lists only
-   `robot_position` and `engine_status`. The implementation follows the XML profile:
-   SystemInformation has no `component_status` query and no RoIS_Common commands.
+7. **`Component_Status` and `Component_Status_t`** (`RoISCommon.xml`,
+   `SystemInformation.xml`, `RoIS_Common.idl`, `RoIS_Common.hpp`).
+   Spec: the result of `component_status` is a `Component_Status` enumeration.
+   Files: the XML profiles and the hpp use the enumeration. The IDL declares
+   `out Component_Status_t status` with `typedef long Component_Status_t`, a number.
+   OpenRoIS: a status travels as the enumerator name, for example `READY`.
 
-9. **SpeechSynthesis `character` and the voice lists**: `RoIS_Speech_Synthesis.idl`
-   types `character` as a `RoIS_Identifier`, spells the SSML parameter `SSML_text`, and
-   returns `synthesizable_languages` and a `RoIS_IdentifierList` named
-   `synthesizable_characters` from `get_parameter`. `SpeechSynthesis.xml` types
-   `character` as a `string`, names the parameter `ssml_text`, and offers the languages
-   and the voices as the `synthesizable_languages` and `available_voices` queries, whose
-   `string[]` results are `languages` and `characters`. The implementation follows the
-   XML profile: `SPEECH_SYNTHESIS_PROFILE` is `SpeechSynthesis.xml` with the RoIS_Common
-   messages it includes.
+8. **`HRIComponent` in an engine profile** (V6; Annex A.4; `XML-Profiles.xsd`).
+   Spec: the values are URNs such as
+   `urn:x-rois:def:HRIComponent:ATR::PersonDetection`.
+   Files: `HRIComponent` is typed `xsd:ID`, which forbids colons and must be unique in
+   the document, so the specification's own engine profile example does not validate.
+   OpenRoIS: treats `HRIComponent` as a plain string and does not run full XSD
+   validation on engine profiles.
 
-### Draft: entries from the October 2026 validation pass
+9. **Type codes** (V7, V33; Annex A, Annex B.2; all 18 profiles).
+   Spec: `data_type_ref` codes are URNs such as `urn:x-rois:def:DataType:ATR::Integer`.
+   Files: short codes in twelve spellings, ten once case is ignored: `string`,
+   `String`, `int`, `bool`, `string[]`, `String[]`, `int[]`, `RoISIdentifier`,
+   `RoISIdentifier[]`, `DateTime`, `Component_Status` and `Stream_Status`.
+   OpenRoIS: keeps the codes verbatim, maps these to value forms (§17.6) without regard
+   to case, and passes unknown codes through as strings.
 
-These entries come from the check of every normative file against the rendered pages
-of the 2.0-beta2 PDF. Each names its row of that validation table. They are drafts:
-the consolidation of section 16 folds them in with the items above, and where an entry
-and an item above disagree (V1 and item 6, V3 and item 3, V26 and item 4) the entry is
-the decided behavior. The precedence behind them: the XML profiles and the XSD decide
-the wire, the specification text decides behavior, the IDL fills gaps, the hpp breaks
-ties. `interfaces/python/tests/_normative_expectations.py` holds the files to these
-entries.
+10. **Every profile has the same `gml:id`** (V34; Annex A.3; all 18 profiles).
+    Spec: one profile per document, each with its own `gml:id`.
+    Files: every file uses `gml:id="component_profile"`.
+    OpenRoIS: the engine profile writer gives every embedded component profile a unique
+    `gml:id`.
 
-- **V1. `execute` returns the command ids** (Figure 8.10, Table 8.3, Figure 8.5;
-  `RoIS_HRI.idl`).
-  Spec: `execute` takes `command_unit_list` as inout, and the reply carries the command
-  ids the engine assigned.
-  Files: the IDL declares the list as `in` only.
-  OpenRoIS: follows the figure; the engine assigns every `command_id` and returns the
-  sequence with the ids filled in.
+11. **The 20250801 file set and the 20240801 namespace** (F1; formal/26-06-03;
+    `https://www.omg.org/spec/RoIS/20250801/`).
+    Spec: the machine-readable files are published under
+    `https://www.omg.org/spec/RoIS/20250801/`.
+    Files: every profile, and the `targetNamespace` of `XML-Profiles.xsd`, still
+    declare `http://www.omg.org/spec/RoIS/20240801`.
+    OpenRoIS: reads `http://www.omg.org/spec/RoIS/20250801` as an alias of the
+    `20240801` namespace, and writes `20240801`.
 
-- **V3. `ConcurrentCommands` and branches** (Figure 8.11, Tables 8.15 and 8.16, Annex
-  B.1; `XML-Profiles.xsd`).
-  Spec: `ConcurrentCommands` holds a `branch_list` of `Branch`, each a sequential
-  `command_list`.
-  Files: `ConcurrentCommandsType` holds a `command_list` of `CommandMessageType`
-  directly; `BranchType` is declared and never used.
-  OpenRoIS: runs branches in parallel and each branch in order; a flat `command_list`
-  reads as one-command branches. The codec reads both forms and writes the XSD form.
+12. **The FaceLocalization namespace** (V36; Annex A; `FaceLocalization.xml`).
+    Spec: every profile is in the namespace `http://www.omg.org/spec/RoIS/20240801`.
+    Files: `FaceLocalization.xml` declares that namespace with a trailing space, which
+    a strict XML parser rejects as an invalid URI.
+    OpenRoIS: strips the surrounding whitespace from the namespace URI before parsing.
 
-- **V4. Several sub-component profiles** (Figure 8.12, Table 8.34;
-  `XML-Profiles.xsd`).
-  Spec: `sub_component` is 0..1, "only one item may be defined".
-  Files: `SubComponentProfile` is 0..unbounded; every standard profile but
-  SystemInformation and RoISCommon itself names RoISCommon only.
-  OpenRoIS: the reader accepts several; the writer emits what the component declares.
+13. **SystemInformation** (V20; Table 8.41, Figure 8.13; `SystemInformation.xml`,
+    `RoIS_System_Information.idl`).
+    Spec: SystemInformation has no RoIS_Common messages, and `engine_status` returns
+    the status and the operable time as a List<DateTime>.
+    Files: the XML profile includes no RoISCommon and types `operable_time` as a
+    single `DateTime`. The IDL derives its `Query` from `RoIS_Common::Query` and keeps
+    the list.
+    OpenRoIS: no `component_status` and no RoIS_Common commands on SystemInformation,
+    and a single `DateTime` on the wire.
 
-- **V6. `HRIComponent` in an engine profile** (Annex A.4; `XML-Profiles.xsd`).
-  Spec: the values are URNs such as `urn:x-rois:def:HRIComponent:ATR::PersonDetection`.
-  Files: `HRIComponent` is typed `xsd:ID`, which forbids colons and must be unique in the
-  document, so the spec's own engine profile example does not validate.
-  OpenRoIS: treats `HRIComponent` as a plain string and does not run full XSD validation
-  on engine profiles.
+14. **Navigation parameters and event** (V13; Table 8.53, Figure 8.25;
+    `Navigation.xml`, `RoIS_Navigation.idl`).
+    Spec: `target_position` List<Data> [RLS], mandatory, and `time_limit`
+    UnlimitedNatural, optional. There is no event.
+    Files: `target_positions` `string[]`, `time_limit` `int` with default `0`, and a
+    `reached_target` event with the results `target` and `is_final_target`. The IDL
+    spells the parameter `target_position` and its `Event` interface is empty.
+    OpenRoIS: `target_positions` as a list of strings carrying the RLS data, and the
+    `reached_target` event.
 
-- **V7. Type codes are short codes, not URNs** (Annex A, Annex B.2; the profiles).
-  Spec: `data_type_ref` codes are URNs such as `urn:x-rois:def:DataType:ATR::Integer`.
-  Files: short codes with inconsistent case, such as `string`, `String`, `int`,
-  `DateTime`.
-  OpenRoIS: keeps codes verbatim, maps the known codes to Python types (V33) and passes
-  unknown codes through as strings.
+15. **Localization defaults and position data** (V22; Tables 8.43, 8.46 and 8.48; the
+    three localization profiles).
+    Spec: the detection threshold and the minimum interval are optional, and the
+    position data is List<Data> [RLS].
+    Files: `position_data` is typed `String[]`, and both parameters carry
+    `default_value=""` on an `int`.
+    OpenRoIS: an empty `default_value` means no default, and RLS data travels as
+    strings.
 
-- **V8. `get_stream_status`** (Table 8.6 against Table 8.56, Figures 8.9 and 8.28;
-  `AudioStreaming.xml`).
-  Spec: Table 8.6 names the query `query_stream_status`; Table 8.56 and both figures
-  name it `get_stream_status`.
-  Files: `get_stream_status`.
-  OpenRoIS: `get_stream_status`.
+16. **SpeechRecognition names** (V24; Table 8.49, Figure 8.21;
+    `SpeechRecognition.xml`, `RoIS_Speech_Recognition.idl`).
+    Spec: `set_parameter` takes `languages`, `grammer` and `rule`, and `get_parameter`
+    also returns the recognizable languages.
+    Files: the parameters `rule`, `languages` (default `"jp"`) and `grammar`, and a
+    `recognizable_languages` query.
+    OpenRoIS: the XML names. The default `"jp"` is not an ISO 639-1 code, and the
+    profile keeps it verbatim without validation.
 
-- **V9. Arguments on queries and events** (Table 8.56, Figure 8.28;
-  `AudioStreaming.xml`, `VideoStreaming.xml`, `XML-Profiles.xsd`).
-  Spec: `notify_stream_status` lists `stream_id`, `timestamp` and `status` as arguments.
-  Files: the profiles put `stream_id` under `Arguments` and `timestamp` and `status`
-  under `Results`, on `get_stream_status` and `notify_stream_status`; the XSD declares
-  `Arguments` on command message profiles only.
-  OpenRoIS: query and event profiles carry an arguments list; the subscription condition
-  selects the stream and the event detail returns `timestamp` and `status`.
+17. **`recognizable_gestures` is read-only** (V25; Table 8.50, Figure 8.22;
+    `GestureRecognition.xml`).
+    Spec: `recognizable_gestures` comes from `get_parameter` only, and there is no
+    `set_parameter`.
+    Files: `recognizable_gestures` is a ParameterProfile, which reads as settable.
+    OpenRoIS: a read-only parameter (§17.3), and `set_parameter` on it answers
+    `BAD_PARAMETER`. The same rule applies to `available_encodings` and
+    `available_transports` of the streaming components.
 
-- **V11. SpeechSynthesis voices and languages** (Table 8.51, Figure 8.23;
-  `SpeechSynthesis.xml`, `RoIS_Speech_Synthesis.idl`).
-  Spec: `get_parameter` also returns `synthesizable_languages` (Set<String>) and
-  `synthesizable_characters` (Set<RoIS_Identifier>); `character` is a RoIS_Identifier.
-  Files: two queries, `synthesizable_languages` (result `languages`) and
-  `available_voices` (result `characters`); `character` is a `string`.
-  OpenRoIS: the queries as named in the XML; `get_parameter` returns the five
-  parameters.
+18. **Reaction `reaction_ref`** (V26; Table 8.52, Figure 8.24; `Reaction.xml`,
+    `RoIS_Reaction.idl`).
+    Spec: `set_parameter` takes a single reaction ref, and `get_parameter` returns
+    `available_reactions` and the reaction ref.
+    Files: the XML has `reaction_ref` as the only parameter, a single `RoISIdentifier`,
+    and `available_reactions` as a query. The IDL takes a list of refs in
+    `set_parameter`.
+    OpenRoIS: a single `reaction_ref`, and the `available_reactions` query.
 
-- **V13. Navigation parameters and event** (Table 8.53, Figure 8.25; `Navigation.xml`).
-  Spec: `target_position` List<Data> [RLS], mandatory; `time_limit` UnlimitedNatural,
-  optional; no event method.
-  Files: `target_positions` `string[]`; `time_limit` `int` with default `0`; an event
-  `reached_target` with results `target` and `is_final_target`.
-  OpenRoIS: `target_positions` as a list of strings (RLS data serialized);
-  `reached_target` stays.
+19. **SpeechSynthesis voices and languages** (V11; Table 8.51, Figure 8.23;
+    `SpeechSynthesis.xml`, `RoIS_Speech_Synthesis.idl`).
+    Spec: `get_parameter` also returns `synthesizable_languages` and
+    `synthesizable_characters`, and `character` is a RoIS_Identifier.
+    Files: the XML has two queries, `synthesizable_languages` (result `languages`) and
+    `available_voices` (result `characters`), types `character` as a `string` and
+    spells `ssml_text`. The IDL spells `SSML_text`.
+    OpenRoIS: the XML profile. `get_parameter` returns the five parameters, and the
+    lists come from the two queries.
 
-- **V20. SystemInformation `operable_time`** (Table 8.41, Figure 8.13;
-  `SystemInformation.xml`, `RoIS_System_Information.idl`).
-  Spec: no RoIS_Common methods; `engine_status` returns status and operable time as a
-  List<DateTime>.
-  Files: no RoISCommon sub-profile; `operable_time` is a single `DateTime`; the IDL has
-  the list.
-  OpenRoIS: a single `DateTime` on the wire.
+20. **The ontology parent of the streaming components** (V35; Table 8.40 and the
+    Table 8-39 IRIs; `OWL.ttl`).
+    Spec: AudioStreaming and VideoStreaming sit under Function, and the other basic
+    components under Sensing or Actuation.
+    Files: `OWL.ttl` places the streaming types under
+    `https://www.omg.org/spec/RoSO/RoboticServiceOntology/Function`, while Sensing and
+    Actuation are in `https://www.omg.org/spec/RoSO/RoboticServiceFunctionOntology/`, a
+    different namespace.
+    OpenRoIS: the profile generator reads the function from `OWL.ttl` alone and matches
+    both namespaces. The streaming components are Function, and the function sets the
+    bind cardinality (§17.8).
 
-- **V22. Localization defaults and position data** (Tables 8.43, 8.46, 8.48; the three
-  localization profiles).
-  Spec: detection threshold and minimum interval, both optional; position data
-  List<Data> [RLS].
-  Files: `position_data` typed `String[]`; both parameters carry `default_value=""` on an
-  `int`.
-  OpenRoIS: an empty `default_value` means no default; RLS data travels as strings.
+21. **Command-result, event-detail and error-detail profiles** (Figure 8.12;
+    `XML-Profiles.xsd`, all 18 profiles).
+    Spec: Figure 8.12 draws profile types for command results, event details and error
+    details.
+    Files: neither the XSD nor any profile file defines them.
+    OpenRoIS: follows the XSD and does not model them. `get_command_result`,
+    `get_event_detail` and `get_error_detail` return plain result lists (§17.10).
 
-- **V24. SpeechRecognition names** (Table 8.49, Figure 8.21; `SpeechRecognition.xml`,
-  `RoIS_Speech_Recognition.idl`).
-  Spec: `set_parameter` takes `languages`, `grammer` and `rule`; `get_parameter` also
-  returns recognizable languages.
-  Files: parameters `rule`, `languages` (default `"jp"`) and `grammar`;
-  `recognizable_languages` is a query.
-  OpenRoIS: the XML names (`grammar`, the query). The default `"jp"` is not an ISO 639-1
-  code; the profile keeps it verbatim and the engine does not validate it.
-
-- **V25. `recognizable_gestures` is read-only** (Table 8.50, Figure 8.22;
-  `GestureRecognition.xml`).
-  Spec: `get_parameter` only, returning recognizable gestures; no `set_parameter`.
-  Files: `recognizable_gestures` is a ParameterProfile, so it is settable in form.
-  OpenRoIS: a read-only parameter; `set_parameter` on it is refused with
-  `BAD_PARAMETER`, the same rule as `available_encodings` and `available_transports` of
-  the streaming components.
-
-- **V26. Reaction `reaction_ref`** (Table 8.52, Figure 8.24; `Reaction.xml`,
-  `RoIS_Reaction.idl`).
-  Spec: `set_parameter` takes a single reaction ref; `get_parameter` returns
-  `available_reactions` and the reaction ref.
-  Files: `available_reactions` is a query and `reaction_ref` the only parameter; the IDL
-  takes a list of reaction refs in `set_parameter`.
-  OpenRoIS: a single `reaction_ref` and the query as named.
-
-- **V33. The type codes in use** (Annex A, all tables; all 18 profiles).
-  Spec: type codes are URNs.
-  Files: twelve spellings in use, ten codes once case is ignored: `string`, `String`,
-  `int`, `bool`, `string[]`, `String[]`, `int[]`, `RoISIdentifier`, `RoISIdentifier[]`,
-  `DateTime`, `Component_Status`, `Stream_Status`.
-  OpenRoIS: this is the mapping table the codec ships, case-insensitive on `string`.
-
-- **V34. Every profile has the same `gml:id`** (Annex A.3; all 18 profiles).
-  Spec: one profile per document, each with its own `gml:id`.
-  Files: every file uses `gml:id="component_profile"`.
-  OpenRoIS: the engine profile writer gives every embedded component profile a unique
-  `gml:id`.
-
-- **V35. The ontology parent of the streaming components** (Table 8.40; `OWL.ttl`).
-  Spec: AudioStreaming and VideoStreaming sit under Function, and the other basic
-  components under Sensing or Actuation.
-  Files: `OWL.ttl` places the streaming types under
-  `https://www.omg.org/spec/RoSO/RoboticServiceOntology/Function`, while Sensing and
-  Actuation are in `https://www.omg.org/spec/RoSO/RoboticServiceFunctionOntology/`, a
-  different ontology namespace.
-  OpenRoIS: reads the function from both namespaces; the streaming components are
-  Function, which sets the bind cardinality to one bind per session.
-
-- **V36. FaceLocalization namespace** (Annex A; `FaceLocalization.xml`).
-  Spec: every profile is in the namespace `http://www.omg.org/spec/RoIS/20240801`.
-  Files: `FaceLocalization.xml` declares `xmlns:rois` with a trailing space,
-  `"http://www.omg.org/spec/RoIS/20240801 "`, which a strict XML parser rejects as an
-  invalid URI.
-  OpenRoIS: the reader strips the surrounding whitespace from that namespace URI before
-  parsing, and reads the file as the RoIS namespace.
-
-The two entries below come from the check of the formal specification (formal/26-06-03)
-and the 20250801 file set against 2.0-beta2. They have no row in the validation table,
-which keeps its 2.0-beta2 numbering.
-
-- **F1. The 20250801 file set and the 20240801 namespace** (formal/26-06-03;
-  `https://www.omg.org/spec/RoIS/20250801/`).
-  Spec: the machine-readable files are published under
-  `https://www.omg.org/spec/RoIS/20250801/`.
-  Files: every profile and the `targetNamespace` of `XML-Profiles.xsd` still declare
-  `http://www.omg.org/spec/RoIS/20240801`.
-  OpenRoIS: treats `http://www.omg.org/spec/RoIS/20250801` as an alias of the
-  `20240801` namespace when reading.
-
-- **F2. `ConcurrentCommands` in the formal text** (Table 8-15 of formal/26-06-03; Annex
-  B.1; `XML-Profiles.xsd`).
-  Spec: Table 8-15 renames the attribute from `branch list` to `command list` and still
-  types it `Branch`; Annex B.1 keeps `branch_list`, and its example is truncated after
-  the first branch while Figure B.1 shows commands A to F.
-  Files: `ConcurrentCommandsType` holds a `command_list` of `CommandMessageType`.
-  OpenRoIS: unchanged from V3. The codec reads both forms and writes the XSD form; its
-  tests use the complete Annex B.1 example of 2.0-beta2.
+22. **Withdrawn: `set_parameter` performs the action** (Tables 8.3, 8.14, 8.37 and 8.51
+    to 8.55, Annex B.2, §8.2.2.5).
+    Spec: the tables of the actuation components read as if a component acts "by
+    specifying" its parameters, with `set_parameter` as its only command method. Table
+    8.3 says `set_parameter` "sets parameters of the bound HRI Component", Table 8.14
+    makes a `set_parameter` command message operate like that operation, and Table 8.37
+    gives `start` "start the functionality of the HRI Component".
+    Files: every standard profile but SystemInformation includes RoISCommon, with
+    `start`, `stop`, `suspend` and `resume`, beside the component's own parameters.
+    OpenRoIS: an October 9 ruling that `set_parameter` performs the action was withdrawn
+    on October 15. `set_parameter` configures the component and completes when the
+    values apply. `start` runs the functionality with the values the component holds,
+    and completes when that run ends for an actuation component, or once it runs for a
+    sensing one. `stop` ends it and aborts a running action.
 
 ---
 
@@ -666,8 +643,8 @@ which keeps its 2.0-beta2 numbering.
 This section describes OpenRoIS, not the specification. It records the choices
 OpenRoIS makes where the specification leaves them to the platform-specific model, and
 the few places where it adds to the specification. The interfaces packages
-(`interfaces/`) define all of it, and the Python engine, the gateway, the TypeScript SDK
-and the mock engine implement it.
+(`interfaces/`) define all of it, and the Python engine, the gateway, the component SDK
+and the TypeScript SDK implement it.
 
 ### 17.1 Wire Binding
 
@@ -676,9 +653,11 @@ messages, over WebSocket between processes.
 
 - Each operation of the System, Command, Query and Event interfaces is a JSON-RPC
   method named `rois.<interface>.<operation>`, with `system`, `command`, `query` and
-  `event` as the interface names, for example `rois.command.bind_any`. The Streaming
-  interface is not modelled yet (planned). An engine answers any `rois.stream.*` method
-  with the JSON-RPC error `METHOD_NOT_FOUND`.
+  `event` as the interface names, for example `rois.command.bind_any`.
+- Streaming has no interface of its own. AudioStreaming and VideoStreaming are ordinary
+  components with the RoSO function `function`, and their stream status comes through
+  the `get_stream_status` query and the `notify_stream_status` event. An engine answers
+  any `rois.stream.*` method with the JSON-RPC error `METHOD_NOT_FOUND`.
 - The `in` parameters of an operation are the method's `params`, named as in the IDL.
   The `result` holds `return_code` and one field per `out` parameter.
 - A RoIS failure is a normal result whose `return_code` is not `OK`, with its out fields
@@ -725,8 +704,10 @@ XSD plus the registered extensions.
 
 | Extension | Where | Need it serves |
 |-----------|-------|----------------|
+| `command_unit_list` | `rois.command.execute` result | The client learns the ids the engine assigned (§17.7), to match each `completed` notification and read results. It realizes the inout `command_unit_list` that Figure 8.5 draws (§16, item 1). |
 | `component_profiles` | `rois.system.get_profile` result | A client learns what each component instance supports, including user-defined components with no published profile. The XSD engine profile names its components by ref only. The UML model links it to its component profiles by reference, and this map carries each referenced profile once, keyed by fully qualified ref. |
 | `function` | `HRIComponentProfile` | The engine and clients know which components need a bind before commands. The values `actuation`, `sensing` and `function` are the RoSO classes that `OWL.ttl` assigns to the basic components (§11). |
+| `read_only` | `ParameterProfile` | The specification lists some parameters under `get_parameter` only, but the XML profiles declare them as ParameterProfiles, which reads as settable. The engine refuses `set_parameter` on them with `BAD_PARAMETER` (§16, item 17). |
 | `results` | `rois.event.notify_event` params | The event payload. Without it, every event costs a `get_event_detail` round trip. `get_event_detail` still returns the payload until the event expires. |
 | `rois.system.profile_changed` | Notification with no params | The specification gives a client no way to learn that components joined or left, other than polling `get_profile`. |
 
@@ -769,16 +750,15 @@ comparison  = property ( "=" / "LIKE" ) literal
   differ by ref.
 - An engine profile's `component_ids` lists every component reachable through that
   engine, including those of its child engines, which `sub_profiles` also list.
-- The interfaces packages hold the full profile of each basic component type they model
-  as a constant, for example `NAVIGATION_PROFILE`: the XML profile with the messages of
-  the RoIS_Common profile it includes, listed first, and the RoSO function of the type.
-  A component declares the constant of its type and implements a part of it. Its profile
-  in `get_profile` lists only the messages it implements, so a client never sees an
-  operation the component does not answer. `ROIS_COMMON_PROFILE`,
-  `NAVIGATION_PROFILE`, `PERSON_DETECTION_PROFILE`, `REACTION_PROFILE`,
-  `SPEECH_SYNTHESIS_PROFILE` and `SYSTEM_INFORMATION_PROFILE` exist so far.
-  `openrois.interfaces.components` defines them, and `interfaces/schema/profiles.json`
-  carries them to the TypeScript package.
+- The Python and TypeScript interfaces packages hold the full profile of each of the 18
+  standard profiles as a constant, for example `NAVIGATION_PROFILE`: the XML profile
+  with the messages of the RoIS_Common profile it includes, listed first, and the RoSO
+  function of the type. A component declares the constant of its type and implements a
+  part of it. Its profile in `get_profile` lists only the messages it implements, so a
+  client never sees an operation the component does not answer. The constants are
+  generated from the XML profiles and `OWL.ttl`. `openrois.interfaces.components`
+  defines them, and `interfaces/schema/profiles.json` carries them to the TypeScript
+  package.
 - The XSD types `HRIComponent` as `xsd:ID`: a name without `/` that appears once per
   document. Fully qualified refs contain `/`, and a parent profile repeats the refs of
   its sub profiles. Neither matters in the JSON form, where a ref is a plain string. An
@@ -805,25 +785,129 @@ engine refuses a parameter value that does not fit its type with `BAD_PARAMETER`
 
 ### 17.7 Commands, Ids and Status
 
-- `execute` runs its items in order. It waits each item's `delay_time` before the item
-  starts, and runs the commands of a `ConcurrentCommands` item at the same time, each
-  after its own `delay_time`. An engine that forwards a command to a child engine waits
+- **Ids.** The engine assigns the id of every command it receives, as
+  `engine_id/cmd-N`, and returns the sequence with the ids filled in
+  (`ExecuteResult.command_unit_list`, §16 item 1). An id a client sends is ignored. A
+  trusted parent engine, such as a gateway forwarding to its adapter, names the ids
+  itself, and the child engine reuses them. From a parent, a missing, repeated or
+  already tracked id answers `BAD_PARAMETER`.
+- **Other engine ids.** The ids an engine assigns for subscriptions, events, errors and
+  `set_parameter` commands also start with the engine id, like refs:
+  `reachy_real/sub-1`. They stay the same through every gateway above that engine and
+  never collide across engines. Clients treat them as opaque strings.
+- **Checks before anything runs.** `execute` answers `UNSUPPORTED` for a command type
+  the component does not offer, `ERROR` when the session has not bound every
+  component the sequence names (§17.8), and `BAD_PARAMETER` for an empty sequence or
+  arguments that do not fit the profile. Nothing in a refused sequence runs.
+- **Order and branches.** `execute` runs its items in order and waits each item's
+  `delay_time` before the item starts. The branches of a `ConcurrentCommands` item
+  run in parallel and each branch runs in order. A flat `command_list` is one branch
+  per command (§16 item 2). An engine that forwards a command to a child engine waits
   the delay itself, so the delay counts once.
-- Every command completes exactly once, with one `rois.command.completed` notification
-  to the client that sent it. `get_command_result` reads its results afterwards.
-- A command that ends with a status other than `OK` stops the sequence. The commands of
-  the later items complete with `ABORT` and never run, so a step that depends on an
-  earlier one does not run after it failed.
-- An engine refuses a `command_id` it already tracks with `BAD_PARAMETER`, and one that
-  starts with the id of an engine and a slash, since those ids are the engines' own.
-- The ids an engine assigns, for subscriptions, events, errors and `set_parameter`
-  commands, start with the id of that engine, like refs: `reachy_real/sub-1`. They stay
-  the same through every gateway above that engine, never collide across engines, and
-  tell a service application or an agent which engine an id belongs to. Clients treat
-  them as opaque strings.
-- An engine answers `component_status` for each component whose profile includes it. A
-  component is `UNINITIALIZED` until it is ready to take commands, `ERROR` when it could
-  not start, `BUSY` while one of its commands runs, and `READY` otherwise.
+- **Failure.** A command that ends with a status other than `OK` stops the rest of its
+  branch and every later item: those commands complete with `ABORT` and never run.
+  The other branches of the same item run to their end.
+- **Completion.** Every command completes exactly once, with one
+  `rois.command.completed` notification to the session that sent it.
+  `get_command_result` reads its results afterwards.
+- **Timeout.** The `timeout` of a command message profile, in milliseconds, judges only
+  whether the command started, counted from its receipt (Table 8.21). A command that
+  started runs for as long as its handler does. One that has not started when the
+  timeout elapses, because it waits behind another command, a suspension or a child
+  engine, completes with `TIMEOUT`.
+- **`set_parameter`.** The engine checks and applies the values before it replies, then
+  replies `OK` with an engine-assigned `command_id`, and `rois.command.completed`
+  follows the reply. An unknown parameter, a read-only one (§17.3), a value that does
+  not fit its type, or values the component's hook refuses answer `BAD_PARAMETER`
+  with no command id, and the old values stay. Inside `execute`, the same checks
+  refuse the sequence with `BAD_PARAMETER`, and a hook refusal ends that command with
+  `ERROR`.
+- **RoIS_Common.** Every component whose profile includes RoISCommon serves `start`,
+  `stop`, `suspend` and `resume` without handlers. A component is started from the
+  moment a start begins until `stop`, or until that start ends other than `OK`. A
+  `start` without a handler completes `OK` at once. On a component that is not started,
+  `suspend`, `resume` and `stop` complete `OK` and run no handler. `suspend` holds the
+  component's later commands, which wait without starting until `resume` or time out,
+  while `set_parameter` still applies and the component's events are dropped. `stop`
+  ends the suspension, and the held commands complete with `ABORT`. A component that
+  serves RoISCommon therefore never answers `UNSUPPORTED` to these four, and it
+  overrides any of them when its function needs more. An override adds to this
+  default: a suspend handler runs after the hold, a resume handler before the release.
+  A suspend whose handler fails lifts its hold. `component_status` does not change
+  while a component is suspended, since Table 8.38 has no suspended state.
+- **`component_status`.** The answer is for the asking session. A component is
+  `UNINITIALIZED` until its resources are open, `ERROR` when they could not open, and
+  `BUSY` when another session holds its actuation bind (§17.8). A raised status
+  outranks the lifecycle, `ERROR` above `WARNING` above `UNINITIALIZED`. Otherwise the
+  component is `READY`, also while its commands run. A shared component is never
+  `BUSY` through binds.
+
+### 17.8 Sessions and Binds
+
+- **Connect gating.** Every request before `rois.system.connect`, and after
+  `rois.system.disconnect`, answers `ERROR`. That includes requests from a trusted
+  parent engine. A gateway connects to each child engine before it reads its profile.
+- **Binds on every component.** `get_parameter`, `set_parameter` and `execute` need a
+  bind on every component they name, through `bind` or `bind_any`. The gateway checks
+  the binds for its child engines too.
+- **Cardinality by RoSO function.** The `function` of a component profile (§17.3)
+  sets how many sessions may hold it. An `actuation` component takes one bind at a
+  time, so a bind from another session answers `OUT_OF_RESOURCES`. A `sensing` or
+  `function` component, and a component with no function, takes one bind per session,
+  shared by every session. Binding again from the holder is `OK`. `bind_any` reserves
+  a component the session can bind under these rules.
+- **`release`.** It drops the caller's bind and aborts the caller's commands on that
+  component, which complete with `ABORT`, so the next session cannot take an actuator
+  mid-motion. Other sessions' binds and commands on a shared component are untouched.
+- **`disconnect`.** It releases the session's binds, ends its subscriptions and aborts
+  its sequences. A running command ends at once with its backend halted, and later
+  items never run.
+- **Through a gateway.** The gateway checks its clients' binds itself and reaches each
+  child engine through a trusted session, which the child does not check again. That
+  session holds one bind in the child for all the gateway's clients, so the gateway
+  applies these rules itself. When a client's command in a child is aborted and that
+  client was the last one holding the component, the gateway sends the child `stop`,
+  when the profile declares it, and then `release`. On a shared
+  component with other holders, the gateway only stops waiting for that command, and
+  the command runs on in the child.
+
+### 17.9 Events
+
+- `subscribe` from a session that already holds a subscription with the same event
+  type and condition returns that subscription's id. Another session gets its own id.
+  `unsubscribe` of an unknown or removed id answers `OK`.
+- `rois.event.notify_event` carries the event's results (§17.3), and
+  `get_event_detail` returns them until the event expires.
+- **Arguments.** A query or an event profile may declare arguments (§16 item 3). A
+  query takes their values from `=` comparisons in its condition, for example
+  `stream_id = 'a1'`. A property that is neither a component property (§17.4) nor an
+  argument, or a `LIKE` on an argument, answers `BAD_PARAMETER`.
+- **Filtering.** A subscription whose condition names argument values receives only
+  the events that concern those values. A subscription without them receives every
+  event of its type, and an event that concerns no particular value reaches every
+  subscription.
+
+### 17.10 Errors
+
+- **Raising.** A component, a resource or the engine raises `WARNING` or `ERROR` with a
+  message, and clears it when the cause is gone. A raise that changes what the
+  component reports sends `rois.system.notify_error`. A raise that changes nothing,
+  and clearing, send nothing.
+- **Error types.** The `error_type` is one of the specification's:
+  `ENGINE_INTERNAL_ERROR`, `COMPONENT_INTERNAL_ERROR`, `COMPONENT_NOT_RESPONDING` and
+  `USER_DEFINED_ERROR`.
+- **Who is told.** A component's error goes to the sessions that hold a bind on it or a
+  subscription to it, and to the trusted parent engine, with the `error_type`
+  `COMPONENT_INTERNAL_ERROR`. A resource's error is one error per component that uses
+  it, with `COMPONENT_NOT_RESPONDING`. An engine's error goes to every connected
+  session, with `ENGINE_INTERNAL_ERROR`. Through a gateway, an adapter's errors reach
+  the gateway's clients the same way.
+- **Detail.** The `error_id` is `engine_id/err-N`. `get_error_detail` returns the
+  `component_ref`, the `status`, the `message` and the `time` until the status is
+  cleared, and `BAD_PARAMETER` after.
+- **Effect.** While a component has `ERROR` raised, its commands complete with `ERROR`
+  without running, its queries answer `ERROR`, and its events are held back.
+
 
 ---
 

@@ -67,19 +67,30 @@ robots and virtual agents alike.
   interface, whether the component runs in its own process or behind a child engine.
   ROS 2, gRPC, game engines, and cloud APIs stay inside components, so adding a paradigm
   never touches the core.
-- **JSON-RPC 2.0 over WebSocket.** Every operation of the five RoIS interfaces maps to
-  a namespaced method (`rois.system.*`, `rois.command.*`, `rois.query.*`,
-  `rois.event.*`, `rois.stream.*`). The control plane works from browsers and across
-  the internet. The Streaming Interface is planned.
+- **JSON-RPC 2.0 over WebSocket.** Every operation of the System, Command, Query and
+  Event interfaces maps to a namespaced method (`rois.system.*`, `rois.command.*`,
+  `rois.query.*`, `rois.event.*`). Streaming is the AudioStreaming and VideoStreaming
+  components, whose messages ride the same interfaces. The control plane works from
+  browsers and across the internet.
+- **The RoIS behavior, not only the types.** The engine implements the interfaces,
+  profiles and common messages of RoIS (conformance points CP1 to CP3) as
+  [rois-reference §16](docs/rois-reference.md#16-known-normative-divergences) records
+  them: sessions that connect first, binds whose cardinality follows each component's
+  RoSO function, command ids the engine assigns, parallel branches, command timeouts,
+  the RoIS_Common commands for every component, and errors pushed with `notify_error`.
+  OpenRoIS makes no conformance claim yet.
 - **Single source of truth for types.** RoIS types are authored once as Python
   Pydantic models, exported to JSON Schema, and generated into TypeScript and C#.
-  Tests check the models against the normative RoIS XML profiles and schema.
+  An XML codec reads and writes RoIS component and engine profiles, and all 18 standard
+  profiles ship as constants. Tests check the models against the normative RoIS XML
+  profiles and schema.
 - **Profile-driven applications.** Clients discover components, queries, commands, and
   events from the engine profile at runtime, so one application works with any robot
   behind the gateway.
 - **Decorator-based components.** Adapter authors declare a component with
-  `@component`, `@query`, `@invoke`, and `@subscribe`, and write only the code that
-  talks to their robot.
+  `@component`, `@query`, `@invoke`, `@subscribe` and `@on_set_parameter`, share a robot
+  connection between components as a `Resource`, read their settings from
+  `adapter.yaml`, and write only the code that talks to their robot.
 
 ## Architecture
 
@@ -163,12 +174,16 @@ const status = await client.query("component_status", target);
 client.on("reached_target", (event) => console.log(event.results));
 await client.subscribe("reached_target", target);
 
-// Reserve an actuation component, command it, then release it.
+// Bind the component, configure it, command it, then release it. Every command
+// operation needs a bind, and the engine assigns the command ids.
 await client.bind(nav);
 await client.setParameter(nav, [
   { name: "target_positions", data_type_ref: "string[]", value: '["kitchen"]' },
 ]);
-await client.execute([{ component_ref: nav, command_type: "start" }]);
+const [commandId] = await client.execute([{ component_ref: nav, command_type: "start" }]);
+client.on("rois.command.completed", ({ command_id, status }) => {
+  if (command_id === commandId) console.log("navigation ended:", status);
+});
 await client.release(nav);
 
 await client.disconnect();
@@ -204,8 +219,9 @@ class Navigation(Component):
         pass  # start emits the event when the robot arrives.
 ```
 
-The engine stores the parameters, answers `component_status`, and reports the end of each
-command with `rois.command.completed`. Host the component in an engine and connect it to
+The engine stores the parameters, answers `component_status`, serves `stop`, `suspend`
+and `resume` from the RoIS_Common default, and reports the end of each command with
+`rois.command.completed`. Host the component in an engine and connect it to
 the gateway:
 
 ```python
@@ -219,24 +235,38 @@ WsClient(engine, "ws://gateway.example.com:8765").run()
 Clients see the component as `robot_1/navigation`.
 
 See [`examples/adapter-template`](examples/adapter-template) for a complete starting
-point.
+point, with a shared `Resource` and settings from `adapter.yaml`.
+
+### Robot Adapters
+
+Each robot's components live in its adapter repository, not in this one. The reference
+adapter is [openrois-adapter-reachy-mini](https://github.com/openrois/openrois-adapter-reachy-mini),
+which serves a Pollen Robotics Reachy Mini, real or simulated, with PersonDetection,
+Reaction, SpeechSynthesis and SystemInformation from its
+`openrois.components.reachy_mini` package. Coarobo maintains an adapter for the Kachaka
+robot.
 
 ## Project Status
 
-OpenRoIS is **alpha, pre-1.0, with an unstable API**. The foundations are in place and
-demonstrated with a physical robot. The rest of the RoIS surface is being built in the
-open.
+OpenRoIS is **alpha, pre-1.0, with an unstable API**. The engine implements the RoIS
+interfaces, profiles and common messages (CP1 to CP3), with the exceptions that
+[rois-reference §16](docs/rois-reference.md#16-known-normative-divergences) records, and
+makes no conformance claim. The rest of the RoIS surface is being built in the open.
 
 | Area | Status |
 |------|--------|
-| RoIS interface types (Python, JSON Schema, TypeScript, C#) | Available |
-| Recursive engine, WebSocket server and client, and adapter SDK (Python) | Available, hardening |
+| RoIS interface types (Python, JSON Schema, TypeScript, C#) and the XML profile codec (Python) | Available |
+| Recursive engine with the RoIS behavior of CP1 to CP3, WebSocket server and client | Available, hardening |
+| Component and adapter SDK (Python): decorators, resources, RoIS_Common default, `adapter.yaml` | Available |
 | Gateway process, container image, and Docker Compose with a mock adapter | Available |
 | TypeScript client SDK and web inspector | Available |
-| C# client SDK for Unity | In progress |
-| Open reference platform based on the Pollen Robotics Reachy Mini | Planned |
+| C# client SDK for Unity | In progress (JSON-RPC layer) |
+| Python client SDK | Planned |
+| Open reference platform based on the Pollen Robotics Reachy Mini | In progress, in openrois-adapter-reachy-mini |
+| Loading XML-declared component profiles at run time | Planned |
 | Authentication (JWT) and authorization (RBAC) | Planned |
-| Streaming Interface with WebRTC media | Planned |
+| Streaming: AudioStreaming and VideoStreaming profiles | Available, no streaming component ships yet |
+| WebRTC media for the streaming components | Planned |
 | Packages on PyPI, npm, NuGet, and the Unity Package Manager | Planned |
 | All 17 basic RoIS HRI Components (v1.0) | Planned |
 
@@ -250,8 +280,8 @@ openrois/
 ├── engine/              Recursive Engine, WebSocket server and client (openrois-engine)
 ├── gateway/             Gateway process and container image (openrois-gateway)
 ├── components/
-│   ├── core/            Component decorators and result helpers (openrois-components-core)
-│   └── common/          Platform-independent components
+│   ├── core/            Component SDK: decorators, resources, RoIS_Common default (openrois-components-core)
+│   └── common/          Common components: a mock SystemInformation (openrois-components-common)
 ├── sdk/
 │   ├── typescript/      Client SDK for web and Node.js (@openrois/sdk)
 │   └── csharp/          Client SDK for Unity (OpenRoIS.Sdk, in progress)
@@ -288,7 +318,9 @@ generated files by hand.
 | C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
 | TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` |
 | Mock engine | `examples/mock-engine` | `npm install`, `npm test` |
-| Engine | `engine` | `pytest`, `ruff check src/ tests/` |
+| Engine | `engine` | `pytest`, `mypy`, `ruff check src/ tests/` |
+| Component SDK | `components/core` | `pytest`, `mypy`, `ruff check src/ tests/` |
+| Common components | `components/common` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Gateway | `gateway` | `pytest`, `mypy`, `ruff check src/ tests/ scripts/` |
 
 [`AGENTS.md`](AGENTS.md) documents the conventions and the generation pipeline in
@@ -296,10 +328,10 @@ detail.
 
 ## Contributing
 
-Contributions are welcome. Reference components for new robots are the natural entry
-point, and the [roadmap](docs/roadmap.md) lists work items that can be taken up in
-parallel. Please read the [contributing guide](CONTRIBUTING.md) before opening a pull
-request.
+Contributions are welcome. An adapter for a new robot, with its components in its own
+repository, is the natural entry point, and the [roadmap](docs/roadmap.md) lists work
+items that can be taken up in parallel. Please read the [contributing
+guide](CONTRIBUTING.md) before opening a pull request.
 
 ## Citation
 

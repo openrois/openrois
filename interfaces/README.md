@@ -40,23 +40,27 @@ TypeScript `index.ts` barrels.
 
 | Package | Language | Version | Role |
 |---------|----------|---------|------|
-| `openrois-interfaces` | Python 3.12+ | 0.1.0a4 | Source of truth |
-| `@openrois/interfaces` | TypeScript (ESM) | 0.1.0-alpha.4 | Generated |
-| `OpenRoIS.Interfaces` | C# (netstandard2.1) | 0.1.0-alpha.4 | Generated |
+| `openrois-interfaces` | Python 3.12+ | 0.1.0a5 | Source of truth |
+| `@openrois/interfaces` | TypeScript (ESM) | 0.1.0-alpha.5 | Generated |
+| `OpenRoIS.Interfaces` | C# (netstandard2.1) | 0.1.0-alpha.5 | Generated |
 
 None are published yet. Install them from a clone, as each package README describes.
 
 ## What Is Covered
 
 The framework types are complete: return codes, results, parameters, arguments, command
-units, and component and engine profiles, with the profile constants of the basic
-components the package models.
+units with branches, and component and engine profiles, with the profile constants of all
+18 standard profiles. The Python package also reads and writes RoIS XML: component
+profiles, engine profiles and bundles, and command unit sequences, in the
+`XML-Profiles.xsd` form. Its declaration API (`ComponentDeclaration`, `Param`, `Command`,
+`Query`, `Event`) declares the profile of a component type of your own and writes it as
+XML.
 
 The method catalog covers the service side. It has a params and a result model for every
 method of SystemIF, CommandIF, QueryIF and EventIF, the method names, the notifications an
 engine sends to a service application, the standard command names, and the JSON-RPC error
-codes, generated from one table in `schema/catalog.json`. The Streaming interface is not
-modelled.
+codes, generated from one table in `schema/catalog.json`. Streaming has no interface of its
+own: the AudioStreaming and VideoStreaming profiles carry it over the other four.
 
 OpenRoIS adds to RoIS in a few places, for example the component profiles in the
 `get_profile` result and the `rois.system.profile_changed` notification. Every addition is
@@ -68,27 +72,27 @@ Every `condition` is a string in a subset of CQL2-Text (OGC 21-065r2), for examp
 `component_ref = 'reachy_real/head'`. The Python `condition` module and its TypeScript
 port parse, match and build conditions.
 
-Profile constants exist for 5 of the 17 basic RoIS HRI Components and for the RoIS_Common
-profile they include, and typed per-component message models for 4 of them:
+Profile constants exist for all 17 basic RoIS HRI Components and for the RoIS_Common
+profile they include, from `AUDIO_STREAMING_PROFILE` to `VIDEO_STREAMING_PROFILE`, in
+Python and TypeScript. The C# package does not have them yet. Typed per-component message
+models exist for 4 components:
 
-| Component | Profile constant | Typed messages |
-|-----------|------------------|----------------|
-| RoIS_Common | `ROIS_COMMON_PROFILE` | |
-| `PersonDetection` | `PERSON_DETECTION_PROFILE` | Event `person_detected`, `component_status` |
-| `Navigation` | `NAVIGATION_PROFILE` | Command `set_parameter`, Query `get_parameter`, Event `reached_target`, `component_status` |
-| `Reaction` | `REACTION_PROFILE` | Command `set_parameter`, Query `get_parameter`, `component_status` |
-| `SpeechSynthesis` | `SPEECH_SYNTHESIS_PROFILE` | |
-| `SystemInformation` | `SYSTEM_INFORMATION_PROFILE` | Queries `robot_position`, `engine_status` |
+| Component | Typed messages |
+|-----------|----------------|
+| `PersonDetection` | Event `person_detected`, `component_status` |
+| `Navigation` | Command `set_parameter`, Query `get_parameter`, Event `reached_target`, `component_status` |
+| `Reaction` | Command `set_parameter`, Query `get_parameter`, `component_status` |
+| `SystemInformation` | Queries `robot_position`, `engine_status` |
 
 A profile constant is the full profile of the type: its XML profile with the RoIS_Common
 messages it includes, and its RoSO function. A component declares the constant of its type
 and implements a part of it, and the engine serves the part it implements. The Python
-package defines the constants and exports them to `schema/profiles.json`, from which the
-TypeScript constants are generated.
+package generates the constants from the XML profiles and `OWL.ttl`, and exports them to
+`schema/profiles.json`, from which the TypeScript constants are generated.
 
 Components without a typed model still work: they carry generic `Result` lists validated
-against their declared profile. The remaining components arrive with the full component
-library in [Phase 10](https://openrois.org/docs/project/roadmap).
+against their declared profile. Typed models for the other components arrive with the
+full component library in [Phase 10](https://openrois.org/docs/project/roadmap).
 
 ## Traceability
 

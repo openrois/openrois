@@ -273,13 +273,11 @@ layers align with the RoIS specification.
 ## 5. Client & Service Application SDK
 
 The SDK mirrors the RoIS interfaces `SystemIF`, `CommandIF`, `QueryIF`, and `EventIF`
-defined in the normative IDL (`RoIS_HRI.idl` and `RoIS_Service.idl`). `StreamingIF` is
-planned. The Streaming Interface is layered on the others: it uses
-`set_parameter` and `get_parameter` from the Command Interface for encoding and
-transport negotiation, and `notify_stream_status` is delivered through the Event
-Interface mechanism. But it is a first-class interface with its own operations
-(`connect_stream`, `disconnect_stream`, `suspend_stream`, `resume_stream`,
-`query_stream_status`).
+defined in the normative IDL (`RoIS_HRI.idl` and `RoIS_Service.idl`). Streaming needs no
+interface of its own: the AudioStreaming and VideoStreaming components take their
+`connect_stream`, `suspend_stream`, `resume_stream` and `disconnect_stream` commands
+through `execute`, answer `get_stream_status` through `query`, and send
+`notify_stream_status` as an event ([§13](#13-control-plane-vs-data-plane-streaming)).
 
 The TypeScript SDK (`@openrois/sdk`) is the client for web service applications.
 `RoISClient` has one method per operation of the method catalog, each taking the
@@ -293,7 +291,6 @@ RoISClient
 │            getParameter() · setParameter() · execute() · getCommandResult()
 ├─ Query     query()
 ├─ Event     subscribe() · unsubscribe() · getEventDetail()
-└─ Streaming planned
 ```
 
 Developer experience (TypeScript / web, primary client):
@@ -319,14 +316,12 @@ await client.bind(nav);
 await client.setParameter(nav, [
   { name: "target_positions", data_type_ref: "string[]", value: '["kitchen"]' },
 ]);
-const commandId = crypto.randomUUID();
-const ended = new Promise<string>((resolve) => {
-  client.on("rois.command.completed", ({ command_id, status }) => {
-    if (command_id === commandId) resolve(status);
-  });
-});
-await client.execute([{ component_ref: nav, command_type: "start", command_id: commandId }]);
-console.log("navigation ended:", await ended);
+const statuses = new Map<string, string>();
+client.on("rois.command.completed", ({ command_id, status }) => statuses.set(command_id, status));
+// The engine assigns the command ids and returns them. Its completed notifications
+// arrive after the answer and name those ids.
+const [commandId] = await client.execute([{ component_ref: nav, command_type: "start" }]);
+// ... later: statuses.get(commandId) is "OK" once the navigation has ended.
 await client.release(nav);
 
 await client.disconnect();
@@ -367,10 +362,15 @@ behind a child engine. What the engine does is the same for every component:
 |---------|----------------------|
 | Selection | Matches the conditions of `search`, `bind_any`, `get_profile`, `query` and `subscribe`, written in the CQL2-Text subset of OpenRoIS |
 | Profiles | Serves the profile of each component and lists each child engine as a sub profile, trimmed to the components a condition selects |
-| Bindings | Reserves actuation components for the session that binds them. A command or a parameter change on an actuation component needs that binding |
-| Command sequences | Checks a whole `execute` before it answers, runs the items in order with their `delay_time`, runs the commands of a `ConcurrentCommands` item at the same time, stops at the first command that ends other than OK, and completes the commands after it with ABORT |
-| Command table | Refuses a command id it already tracks, sends every `rois.command.completed` once to the session that started the command, and asks the source that ran a command for its results |
+| Sessions | Answers every request before `connect` with ERROR. `disconnect` releases the session's binds and subscriptions and aborts its running sequences |
+| Bindings | Needs a bind from the calling session for every Command operation on any component. How many sessions may hold a bind follows the RoSO function: an actuation component takes one bind at a time, a sensing or function component one per session. `release` drops the caller's bind and aborts its commands there |
+| Command sequences | Checks a whole `execute` before anything runs, runs the items in order with their `delay_time`, runs the branches of a `ConcurrentCommands` item in parallel and each branch in order, and completes everything after a command that ends other than OK with ABORT. A command that has not started within its profile `timeout` completes with TIMEOUT |
+| Command table | Assigns every command id and returns it from `execute`, sends every `rois.command.completed` once to the session that started the command, and asks the source that ran a command for its results |
+| Errors | Sends `rois.system.notify_error` when a component, a resource or the engine raises WARNING or ERROR, to the sessions concerned, and answers `get_error_detail` until the status is cleared |
 | Ids | Remembers the source of every subscription and command, and sends each event and error id back to the engine that assigned it, by the engine id the id starts with |
+
+[rois-reference.md §17](rois-reference.md#17-how-openrois-implements-rois) gives each of
+these rules in full.
 
 Using one engine class for the gateway, the adapter and a middle tier eliminates
 dispatch logic duplication and keeps them in lockstep as the RoIS protocol evolves. The
@@ -431,10 +431,12 @@ URL path.
 
 ### What the Engine Does NOT Do
 
-- No media streaming. Media is handled by streaming components and WebRTC,
-  outside the gateway's control plane.
-- No WebRTC signaling (SDP, ICE) in the current implementation. The RoIS
-  streaming interface will broker descriptor exchange in the future.
+- No media streaming. Streaming is the AudioStreaming and VideoStreaming components,
+  whose messages ride the Command, Query and Event interfaces like any other
+  component's. The media itself travels outside the control plane
+  ([§13](#13-control-plane-vs-data-plane-streaming)).
+- No WebRTC signaling (SDP, ICE) in the current implementation. No streaming component
+  ships yet.
 - No paradigm-specific knowledge. The engine never imports DDS, gRPC, ROS,
   or any game engine library. It sees only the component contract.
 - No network I/O of its own. The engine is a library. The gateway provides the
@@ -504,7 +506,7 @@ before it forwarded a request, so the child does not check them again.
 ### What the Sub HRI Engine Does NOT Do
 
 - Media streaming (in the current architecture). No camera capture, no audio
-  capture, no GStreamer. Media is a future concern for the streaming interface.
+  capture, no GStreamer. Media is a future concern for the streaming components.
 - WebRTC. No `RTCPeerConnection`, no SDP, no ICE.
 - Gateway protocol knowledge. The sub HRI Engine speaks RoIS JSON-RPC to the gateway
   over the control plane. It does not know about other sub HRI Engines, clients, or
@@ -583,6 +585,14 @@ OpenRoIS defines four distinct contracts at four boundaries:
 
 ## 9. Components
 
+The monorepo ships the component SDK (`openrois-components-core`) and the common
+components (`openrois-components-common`, today a mock SystemInformation). Each robot's
+components live in its adapter repository. The reference example is
+`openrois.components.reachy_mini`, from
+[openrois-adapter-reachy-mini](https://github.com/openrois/openrois-adapter-reachy-mini)
+in the openrois organization. The Kachaka components live in the Kachaka adapter of the
+Coarobo organization.
+
 A **host** is anything that provides components: a robot, an avatar process, or a
 bank of services. Each host exposes one **sub HRI Engine** plus its components. Most
 components inherit the `Command` / `Query` / `Event` interfaces from
@@ -604,32 +614,49 @@ profile, for example `NAVIGATION_PROFILE`, and `@invoke`, `@query`, `@subscribe`
 The **implementation** is the functional implementation behind the interface (the
 spec calls this the "functional implementation"). It does the actual work in the
 data plane: gRPC call to a robot, Nav2 action, Whisper transcription, YOLO inference.
-Each component owns its own connection to its backend, created in `connect()` and
-torn down in `disconnect()`. The engine calls `connect()` on each component
-when it starts, and `disconnect()` when it stops. `Component` provides both as methods
-that do nothing, so a component overrides only what it needs.
+The engine calls `connect()` on each component when it starts, and `disconnect()` when
+it stops. `Component` provides both as methods that do nothing, so a component
+overrides only what it needs.
 
 The adapter is a thin container. It hosts a sub HRI Engine (the engine with local
-components), adds the component instances with `Engine.add_component`, and serves them
-to the gateway. It does not create shared backends, does not hold shared client
-references, and does not manage connection state. This makes components truly
-plug-and-play: import, configure, play. A component can be moved between
-adapters without changes because it does not depend on adapter internals.
+components), builds the component instances and the resources they share, adds the
+components with `Engine.add_component`, and serves them to the gateway. Its settings
+come from `adapter.yaml`, the environment and its flags, through `AdapterConfig`.
 
-### Component-Owned Connections
+### Connections and Resources
 
 Each component takes its configuration as arguments of its constructor and owns its
-state from there. Each component owns its own connection to its backend, created in
-`connect()` and torn down in `disconnect()`. The adapter has no shared state. Components are
-plug-and-play: import, configure, play.
+connection to its backend, created in `connect()` and torn down in `disconnect()`,
+unless it shares a **resource** with other components of the same adapter: one robot
+connection, one ROS 2 node, one SDK client.
+
+- **The adapter builds the resource.** A resource is a subclass of `Resource` with
+  `open()` and `close()`. The adapter creates one and passes it to every component that
+  needs it, and each component records it with `uses()` in its constructor.
+- **The engine opens and closes it.** The engine opens every resource a component uses
+  before the component connects, once however many components use it, and closes it
+  after the last of them disconnects. A component is `UNINITIALIZED` until its
+  resources are open. A resource whose `open()` fails puts every component that uses it
+  in `ERROR`, and they never connect.
+- **The engine reports it.** A resource raises `WARNING` or `ERROR` with
+  `raise_status()`, from any thread, when its backend goes away, and clears it with
+  `clear_status()`. The status becomes the status of every component that uses the
+  resource, and each of them sends one `notify_error`. A robot that is not there yet is
+  a status, not a failure, so the adapter and the robot can start in any order.
+
+`RclpyExecutor` is the shared rclpy spin thread that the ROS 2 components of an adapter
+use in the same way. A component that shares nothing still owns its connection and
+needs no resource. Either way, a component can move between adapters without changes,
+because it depends on no adapter internals.
 
 ### Partial Spec Implementation
 
-A component may implement a subset of the RoIS normative interface for its
-component type. The normative IDL, XML, and HPP define the full interface, but a
-robot or use case may not need all operations. For example, a robot without
-pause/resume capability implements `start()` and `stop()`, and the engine answers
-`UNSUPPORTED` for `suspend()` and `resume()`. The component declares the full profile of
+A component may implement a subset of the RoIS normative interface for its component
+type. The normative IDL, XML, and HPP define the full interface, but a robot or use case
+may not need all operations. A component that serves RoISCommon gets all four common
+commands from the engine without handlers: `suspend` holds its queued commands and drops
+its events, `resume` releases them, and `stop` cancels a running `start`. It writes a
+handler only where its function needs more. The component declares the full profile of
 its type, and the profile the engine serves (returned by `get_profile()`) lists exactly
 the queries, commands, and events the class implements.
 
@@ -849,21 +876,27 @@ for raw data (data plane).
 
 ## 13. Control Plane vs. Data Plane (Streaming)
 
-The Streaming Interface is the clearest example of the control plane / data plane
-split. RoIS defines **only the streaming control plane**: `connect_stream`,
-`suspend_stream`, `resume_stream`, `disconnect_stream`, `notify_stream_status`, and
-the `Stream_Status` enum from `RoIS_Common.idl`. The media data plane is out of
-scope, which makes **WebRTC** a natural fit for the data plane.
+Streaming is the clearest example of the control plane / data plane split. RoIS
+defines **only the streaming control plane**, as two basic components, AudioStreaming
+and VideoStreaming (spec 8.2.2.5, 8.4.18 and 8.4.19). Their messages ride the ordinary
+interfaces: `connect_stream`, `suspend_stream`, `resume_stream` and
+`disconnect_stream` are command messages sent with `execute`, `get_stream_status` is a
+query and `notify_stream_status` an event, both with a `stream_id` argument, and
+`Stream_Status` comes from `RoIS_Common.idl`. OpenRoIS has no separate stream interface:
+the engine serves the two profiles like any other, binds them as RoSO `function`
+components (one bind per session) and answers `rois.stream.*` with `METHOD_NOT_FOUND`.
+The media data plane is out of scope, which makes **WebRTC** a natural fit for it. No
+streaming component ships yet, and the WebRTC mapping below is planned.
 
 ```
-        RoIS Streaming Control (in scope)        WebRTC Media (out of RoIS scope)
-        ───────────────────────────────         ───────────────────────────────
-        set_parameter(encoding, transport)  ↔   SDP offer/answer negotiation
-        set_parameter(ice candidates)       ↔   ICE / trickle ICE
-        connect_stream()                    ↔   RTCPeerConnection open
-        notify_stream_status(RUNNING)       ↔   iceconnectionstate = connected
-        suspend_stream() / resume_stream()  ↔   RTCRtpSender.track.enabled = false/true
-        disconnect_stream()                 ↔   pc.close()
+        RoIS Streaming Control (in scope)             WebRTC Media (out of RoIS scope)
+        ───────────────────────────────────          ───────────────────────────────
+        set_parameter(encoding, transport)       ↔   SDP offer/answer negotiation
+        set_parameter(ice candidates)            ↔   ICE / trickle ICE
+        execute(connect_stream)                  ↔   RTCPeerConnection open
+        notify_stream_status(RUNNING)            ↔   iceconnectionstate = connected
+        execute(suspend_stream / resume_stream)  ↔   RTCRtpSender.track.enabled = false/true
+        execute(disconnect_stream)               ↔   pc.close()
 ```
 
 WebRTC **signaling travels over the existing WebSocket** RoIS connection (passed as
@@ -880,7 +913,7 @@ Important distinction the spec preserves:
 
 - **Fleet of 1-3 robots**: peer-to-peer WebRTC is sufficient.
 - **Larger fleets**: route media through a **Selective Forwarding Unit** (mediasoup,
-  LiveKit). The RoIS streaming control interface is identical either way. The SFU is
+  LiveKit). The RoIS streaming control messages are identical either way. The SFU is
   an implementation detail of the gateway.
 
 ---
@@ -995,7 +1028,7 @@ Because the gateway filters at `search()`, robots outside a caller's scope are
 | `CommandIF` | `search`, `bind`, `bindAny`, `release`, `getParameter`, `setParameter`, `execute`, `getCommandResult` | Selection, bindings, sequences, command table | `run()`, `set_parameter()`, `get_parameter()`, `command_result()` |
 | `QueryIF` | `query` | Selection of one component | `query()` |
 | `EventIF` | `subscribe`, `unsubscribe`, `getEventDetail` | Selection, subscriptions per session | `subscribe()`, `unsubscribe()`, `event_detail()` |
-| `StreamingIF` (planned) | Planned | Planned | Stream control, with media over WebRTC |
+| Streaming (AudioStreaming, VideoStreaming) | `execute`, `query`, `subscribe` | The same as any component, bound one per session | Stream control through the component's commands, with media over WebRTC (planned) |
 | `ServiceApplicationBase` (`completed`, `notify_event`, `notify_error`) | Notifications | Sends each notification to the session it belongs to | `on_completed` and `deliver` callbacks |
 
 ---
@@ -1006,25 +1039,31 @@ Because the gateway filters at `search()`, robots outside a caller's scope are
 
 ```
 Web App                  Gateway                 Sub HRI Engine (gRPC)    Robot
+  │ connect()                │                         │                    │
+  │ ───────────────────────► │                         │                    │
+  │ ◄─────── OK ──────────── │                         │                    │
   │ bind(robot_1/navigation) │                         │                    │
-  │ ───────────────────────► │ (holds the binding)     │                    │
+  │ ───────────────────────► │ (holds the bind)        │                    │
   │ ◄─────── OK ──────────── │                         │                    │
   │ subscribe(reached_target)│                         │                    │
   │ ───────────────────────► │ ─ rois.event.subscribe ►│                    │
   │ ◄── robot_1/sub-1 ────── │ ◄───────────────────────│                    │
-  │ execute([start c1])      │                         │                    │
-  │ ───────────────────────► │ (checks the sequence)   │                    │
-  │ ◄─────── OK ──────────── │ ─ execute([start c1]) ─►│ ─ gRPC call ─────► │
+  │ execute([start])         │                         │                    │
+  │ ───────────────────────► │ (checks, assigns c1)    │                    │
+  │ ◄── OK, [start c1] ───── │ ─ execute([start c1]) ─►│ ─ gRPC call ─────► │
   │                          │                         │ ◄─ arrived ─────── │
   │ ◄── notify_event ─────── │ ◄─ notify_event ────────│                    │
   │ ◄── completed(c1, OK) ── │ ◄─ completed(c1, OK) ───│                    │
 ```
+
+The gateway assigns `c1` (`gateway/cmd-1`), and the sub HRI Engine reuses it.
 
 ### 17.2 Profile-Driven Discovery
 
 ```
 Web App                  Gateway                 Sub HRI Engine
   │                          │ ◄── connects on /adapter │
+  │                          │ ── connect ────────────► │
   │                          │ ── get_profile ────────► │
   │                          │ ◄── profile ──────────── │
   │ ◄── profile_changed ──── │ (checks the engine ids)  │
@@ -1046,7 +1085,7 @@ Web App                         Gateway                    Robot
   │ set_parameter(SDP offer, ICE) │                            │
   │ ────────────────────────────► │  negotiate via webrtcbin   │
   │ ◄──── set_parameter(SDP answer)│ ◄──────────────────────────│
-  │ connect_stream()              │                            │
+  │ execute(connect_stream)       │                            │
   │ ────────────────────────────► │                            │
   │ ═══════ WebRTC media (SRTP) ══╪════════════════════════════│
   │ ◄── notify_stream_status(RUNNING) ─                         │
@@ -1064,7 +1103,7 @@ openrois/
 ├── interfaces/    # Shared types: single source of truth (Python to JSON Schema to C#/TS)
 ├── engine/        # Engine library: recursive Engine, LocalComponents, ChildEngine, WsServer, WsClient (openrois-engine)
 ├── gateway/       # Gateway process and container image (openrois-gateway)
-├── components/    # Component framework and reference components (per robot platform)
+├── components/    # Component SDK (core) and common components
 ├── sdk/           # Client SDKs (TypeScript, C#)
 ├── examples/      # Mock engine, mock adapter, web client, adapter template
 ├── apps/          # Product applications (Hub visualizer, planned)
@@ -1076,7 +1115,7 @@ openrois/
 | `interfaces/` | Type pipeline. Pydantic models are the source of truth. JSON Schema is the canonical wire contract. C# and TypeScript types are generated. |
 | `engine/` | Engine library (`openrois-engine`). Recursive RoIS dispatch logic: one `Engine` class used by both the gateway and adapters, plus `WsServer` and `WsClient`. Zero media and zero paradigm-specific imports. |
 | `gateway/` | Gateway process (`openrois-gateway`). Composes `Engine` and `WsServer` into the process that hosts the Main HRI Engine, with configuration, logging, a graceful stop, and a container image. |
-| `components/` | The component framework (`openrois-components-core`) and reference components per robot platform. |
+| `components/` | The component SDK (`openrois-components-core`) and the common components (`openrois-components-common`). |
 | `sdk/` | Client SDKs: TypeScript for web and Node.js, C# for Unity (in progress). |
 | `examples/` | Reference implementations and templates for testing and onboarding. |
 | `apps/` | Product applications: the Hub (a gateway visualizer, planned). |
@@ -1084,8 +1123,9 @@ openrois/
 
 Adapters for specific robots live in separate repositories. They consume the
 SDK and component packages. The adapter repository owns the adapter script, its
-configuration, and any user-defined components. Packaged components live in the
-monorepo under `components/` and are installed as dependencies.
+configuration, and its robot's components, for example `openrois.components.reachy_mini`
+in openrois-adapter-reachy-mini. Only the component SDK and the common components live
+in the monorepo under `components/`.
 
 ---
 
