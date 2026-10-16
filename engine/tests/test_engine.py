@@ -122,8 +122,9 @@ async def test_get_profile_lists_every_component_with_the_profile_it_serves(
         "resume",
     ]
     assert [q["name"] for q in navigation["query_profiles"]] == ["component_status"]
+    # PersonDetection includes RoISCommon, so it serves all four commands, handler or not.
     eyes = result["component_profiles"][EYES]
-    assert [c["name"] for c in eyes["command_profiles"]] == ["start", "stop"]
+    assert [c["name"] for c in eyes["command_profiles"]] == ["start", "stop", "suspend", "resume"]
 
 
 async def test_a_condition_selects_components(robot: Robot) -> None:
@@ -271,12 +272,15 @@ async def test_get_command_result_needs_a_known_id_and_an_empty_filter(robot: Ro
 
 async def test_command_failed_ends_the_command_with_its_status(robot: Robot) -> None:
     await bound(robot, NAV)
+    # On a navigation not started, suspend would be a no-op that runs no handler.
+    await robot.client.execute(unit(NAV, "start"))
     [suspend] = await robot.client.execute(unit(NAV, "suspend"))
     assert await robot.client.completed(suspend) == "OUT_OF_RESOURCES"
 
 
 async def test_any_other_exception_ends_the_command_with_error(robot: Robot) -> None:
     await bound(robot, NAV)
+    await robot.client.execute(unit(NAV, "start"))
     [resume] = await robot.client.execute(unit(NAV, "resume"))
     assert await robot.client.completed(resume) == "ERROR"
 
@@ -432,6 +436,7 @@ async def test_the_commands_of_a_concurrent_item_run_together(robot: Robot) -> N
 
 async def test_a_failed_command_aborts_the_rest_of_the_sequence(robot: Robot) -> None:
     await bound(robot, NAV, GRIP)
+    await robot.client.execute(unit(NAV, "start"))
     items = (
         unit(NAV, "suspend"),
         unit(GRIP, "grip", force="1.0"),

@@ -579,6 +579,8 @@ async def test_item_5_a_failure_aborts_the_rest_of_its_branch_and_the_later_unit
     robot: Robot,
 ) -> None:
     client = await bind(robot.client, NAV, GRIP)
+    # A started navigation runs its failing suspend handler.
+    await client.execute(unit(NAV, "start"))
     failed, skipped, other, later = await client.execute(
         branches(
             [unit(NAV, "suspend"), unit(GRIP, "grip", force="1.0")],

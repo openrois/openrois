@@ -1,0 +1,10 @@
+# Settings of the adapter. OPENROIS_ADAPTER_* environment variables and flags override the
+# four common settings at the top. The sections below them belong to the components.
+
+gateway_url: ws://127.0.0.1:8765
+engine_id: my_robot
+robot_address: http://127.0.0.1:8080
+log_level: info
+
+battery:
+  check_interval: 30

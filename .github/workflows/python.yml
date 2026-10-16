@@ -83,11 +83,11 @@ jobs:
         python-version: ["3.12", "3.13"]
         package: [core, common, kachaka]
         include:
-          # The OpenRoIS packages each one needs, installed from the tree. The Kachaka
-          # tests run its components in an engine, against stand-ins for the gRPC API
-          # and rclpy.
+          # The OpenRoIS packages each one needs, installed from the tree. The core and
+          # Kachaka tests run components in an engine, against stand-ins for rclpy and
+          # the gRPC API.
           - package: core
-            needs-packages: -e interfaces/python
+            needs-packages: -e interfaces/python -e engine
           - package: common
             needs-packages: -e interfaces/python -e components/core
           - package: kachaka
@@ -154,7 +154,7 @@ jobs:
     needs: [engine, components, gateway]
     env:
       # The mock adapter simulates its work ten times faster than in real time.
-      OPENROIS_MOCK_TIME_SCALE: "0.1"
+      OPENROIS_ADAPTER_CONFIG: /opt/mock-adapter/adapter.fast.yaml
     steps:
       - uses: actions/checkout@v7
 

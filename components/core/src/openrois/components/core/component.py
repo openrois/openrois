@@ -267,8 +267,10 @@ class Component:
     ) -> list[Result]:
         """Run one command until it completes, and return its results.
 
-        ``stop`` without a handler returns at once: the engine aborts the running
-        command itself.
+        A served command without a handler returns at once. That is ``stop`` alongside
+        ``start``, and the four RoIS_Common commands of a profile that includes
+        RoISCommon: the engine holds, releases and aborts commands itself, and a start
+        without a handler is done once it begins.
 
         Raises:
             CommandFailed: The handler ended the command with another status.

@@ -1,0 +1,8 @@
+# The mock adapter with its simulated work ten times faster, for CI and tests that should
+# not wait. Select it with OPENROIS_ADAPTER_CONFIG or --config.
+
+gateway_url: ws://127.0.0.1:8765
+engine_id: mock
+log_level: info
+
+time_scale: 0.1

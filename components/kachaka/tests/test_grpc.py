@@ -38,9 +38,10 @@ async def navigation(host: Host, target: str = "kitchen") -> Any:
     return robot
 
 
-def test_serves_start_stop_and_reached_target() -> None:
+def test_serves_the_rois_common_commands_and_reached_target() -> None:
+    # Navigation includes RoISCommon, so the engine answers suspend and resume by default.
     profile = GrpcNavigation.rois_profile()
-    assert [c.name for c in profile.command_profiles] == ["start", "stop"]
+    assert [c.name for c in profile.command_profiles] == ["start", "stop", "suspend", "resume"]
     assert [e.name for e in profile.event_profiles] == ["reached_target"]
 
 

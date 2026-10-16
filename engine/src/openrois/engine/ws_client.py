@@ -7,13 +7,15 @@ every request it forwards, so the adapter serves it through a trusted session.
 
 The lifecycle is:
 
-1. ``engine.start()`` connects the local components to their backends, once.
-2. A component that keeps an rclpy node in ``_node`` gets it spun in a background
-   thread, when rclpy is installed.
-3. The client connects and answers the requests of the gateway, each in its own task,
+1. ``engine.start()`` opens the resources and connects the local components to their
+   backends, once.
+2. The client connects and answers the requests of the gateway, each in its own task,
    until the connection closes. It then reconnects with a growing delay.
-4. On cancellation, ``engine.stop()`` cancels the running commands and disconnects the
-   components, and then the rclpy thread stops.
+3. On cancellation, ``engine.stop()`` cancels the running commands, disconnects the
+   components and closes the resources.
+
+ROS 2 nodes are spun by a resource, ``RclpyExecutor`` in openrois-components-core, so the
+client knows nothing of ROS 2.
 """
 
 from __future__ import annotations
@@ -21,9 +23,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-import threading
 from functools import partial
-from typing import Any
 
 from websockets.asyncio.client import ClientConnection, connect
 from websockets.exceptions import ConnectionClosed, InvalidHandshake
@@ -57,8 +57,6 @@ class WsClient:
         self._engine = engine
         url = gateway_url.rstrip("/")
         self._url = url if url.endswith(ADAPTER_PATH) else url + ADAPTER_PATH
-        self._rclpy_thread: threading.Thread | None = None
-        self._rclpy_executor: Any = None
 
     def run(self) -> None:
         """Serve the gateway until Ctrl+C, reconnecting whenever the connection drops."""
@@ -73,7 +71,6 @@ class WsClient:
         """
         loop = asyncio.get_running_loop()
         await self._engine.start()
-        self._maybe_start_rclpy()
         delay = _RECONNECT_INITIAL_DELAY
         try:
             while True:
@@ -93,10 +90,7 @@ class WsClient:
                 await asyncio.sleep(delay)
                 delay = min(delay * 1.5, _RECONNECT_MAX_DELAY)
         finally:
-            # The engine stops first, while the rclpy nodes still spin, so a component
-            # that halts its robot over ROS 2 on cancellation gets its requests out.
             await self._engine.stop()
-            self._maybe_stop_rclpy()
             logger.info("WsClient stopped")
 
     async def _connect(self) -> ClientConnection:
@@ -126,37 +120,3 @@ class WsClient:
                 connection.close_code,
                 connection.close_reason,
             )
-
-    # -- rclpy threading -----------------------------------------------------------------
-
-    def _maybe_start_rclpy(self) -> None:
-        """Spin the rclpy nodes of the components in a background thread, if any."""
-        nodes = [
-            node
-            for component in self._engine.local_components()
-            if (node := getattr(component, "_node", None)) is not None
-        ]
-        if not nodes:
-            return
-        try:
-            from rclpy.executors import MultiThreadedExecutor
-        except ImportError:
-            logger.debug("rclpy is not installed, so no ROS 2 node is spun")
-            return
-        self._rclpy_executor = MultiThreadedExecutor()
-        for node in nodes:
-            self._rclpy_executor.add_node(node)
-        self._rclpy_thread = threading.Thread(
-            target=self._rclpy_executor.spin, daemon=True, name="rclpy-spin"
-        )
-        self._rclpy_thread.start()
-        logger.info("Spinning %d rclpy nodes in a background thread", len(nodes))
-
-    def _maybe_stop_rclpy(self) -> None:
-        """Stop the rclpy background thread if it was started."""
-        if self._rclpy_executor is not None:
-            self._rclpy_executor.shutdown()
-            self._rclpy_executor = None
-        if self._rclpy_thread is not None:
-            self._rclpy_thread.join(timeout=5.0)
-            self._rclpy_thread = None

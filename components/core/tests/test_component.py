@@ -143,15 +143,23 @@ class TestCommands:
         navigation, _ = _bound_navigation()
         assert await navigation.rois_command("stop") == []
 
-    async def test_a_command_the_class_does_not_serve(self) -> None:
+    @pytest.mark.parametrize("command_type", ["start", "stop", "suspend", "resume"])
+    async def test_rois_common_without_a_handler_returns_at_once(self, command_type: str) -> None:
+        # The engine holds, releases and aborts on its own, and a default start is done
+        # once it begins.
         @component(NAVIGATION_PROFILE)
-        class StartOnly(Component):
-            @invoke("start")
-            async def start(self) -> None:
-                return None
+        class Bare(Component):
+            pass
 
-        with pytest.raises(ValueError, match="'suspend'"):
-            await StartOnly().rois_command("suspend")
+        assert await Bare().rois_command(command_type) == []
+
+    async def test_a_command_the_class_does_not_serve(self) -> None:
+        @component(TestArgumentsAndResults.PROFILE)
+        class Silent(Component):
+            pass
+
+        with pytest.raises(ValueError, match="'say'"):
+            await Silent().rois_command("say")
 
     def test_command_failed_never_ends_ok(self) -> None:
         with pytest.raises(ValueError):
