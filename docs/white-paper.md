@@ -1722,8 +1722,9 @@ non-canonical, and valid per the spec.
 
 ### 14.3 Component Packages and Multiple Backends
 
-Components are distributed as packages (e.g., `openrois.components.kachaka`). When a
-component supports multiple backends (e.g., gRPC and ROS 2), the package ships one
+Components are distributed as packages (e.g., `openrois.components.reachy_mini`, from
+the Reachy Mini adapter of the openrois organization). When a component supports
+multiple backends (e.g., gRPC and ROS 2, as Coarobo's Kachaka package does), the package ships one
 class per backend: `GrpcNavigation` and `Ros2Navigation`. Both declare
 `@component(NAVIGATION_PROFILE)`. The adapter imports the one it needs. Selection happens
 at import time, not at runtime. No factory, no Protocol, no runtime selection.

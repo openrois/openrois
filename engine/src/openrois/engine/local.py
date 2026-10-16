@@ -58,6 +58,15 @@ _STATUS_QUERY = "component_status"
 # not started.
 _UNSTARTED_NO_OPS = frozenset({"suspend", "resume", "stop"})
 
+
+class _Refused(Enum):
+    """A component's parameter hook refused new values."""
+
+    REFUSED = "refused"
+
+
+_REFUSED = _Refused.REFUSED
+
 # The statuses a component, a resource or the engine may raise.
 _RAISABLE = frozenset({ComponentStatus.WARNING, ComponentStatus.ERROR})
 
@@ -486,9 +495,10 @@ class LocalComponents:
         hosted = self._hosted[unit.component_ref]
         if unit.command_type == "set_parameter":
             parameters = [_parameter(hosted, a.name, a.value) for a in unit.arguments]
-            status = await self._apply(hosted, parameters)
+            applied = await self._apply(hosted, parameters)
             self._keep(unit.command_id, [])
-            return status
+            # Inside an execute the command already runs, so a refusal ends it with ERROR.
+            return CompletedStatus.ERROR if applied is _REFUSED else applied
         if not self._operable(hosted):
             self._keep(unit.command_id, [])
             return CompletedStatus.ERROR
@@ -520,9 +530,13 @@ class LocalComponents:
         self, ref: str, parameters: Sequence[Parameter]
     ) -> tuple[SetParameterResult, CompletedStatus]:
         hosted = self._hosted[ref]
+        status = await self._apply(hosted, parameters)
+        if status is _REFUSED:
+            # The component's hook refused the values: the request is answered
+            # BAD_PARAMETER (Table 8.1) and no command runs.
+            return SetParameterResult(return_code=ReturnCode.BAD_PARAMETER), CompletedStatus.ERROR
         command_id = self._new_id("param")
         self._keep(command_id, [])
-        status = await self._apply(hosted, parameters)
         return SetParameterResult(return_code=ReturnCode.OK, command_id=command_id), status
 
     async def get_parameter(self, ref: str) -> GetParameterResult:
@@ -960,16 +974,20 @@ class LocalComponents:
         except Exception:
             logger.exception("%s failed to stop", hosted.ref)
 
-    async def _apply(self, hosted: _Hosted, parameters: Sequence[Parameter]) -> CompletedStatus:
-        """Run the parameter hook and store the new values if it accepts them."""
+    async def _apply(
+        self, hosted: _Hosted, parameters: Sequence[Parameter]
+    ) -> CompletedStatus | _Refused:
+        """Run the parameter hook and store the new values if it accepts them.
+
+        _REFUSED when the hook refused them, and the old values stay.
+        """
         if not self._operable(hosted):
             return CompletedStatus.ERROR
         try:
             await hosted.component.rois_set_parameters(parameters)
         except Exception as exc:
-            status = _failure_status(exc)
             logger.warning("%s refused new parameter values: %s", hosted.ref, exc)
-            return status
+            return _REFUSED
         for parameter in parameters:
             hosted.parameters[parameter.name] = _parameter(hosted, parameter.name, parameter.value)
         return CompletedStatus.OK

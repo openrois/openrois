@@ -169,7 +169,8 @@ over WebSocket, and the gateway discovers its components by reading its profile.
 Components come from two sources:
 
 - **Community components**: shipped in component packages (e.g.,
-  `openrois.components.kachaka`). These implement commonly used functions for
+  `openrois.components.reachy_mini`, from the Reachy Mini adapter of the openrois
+  organization). These implement commonly used functions for
   specific robot models to facilitate adoption.
 - **Adapter-local components**: created by adapter authors in their adapter's
   component directory. These are for custom behavior, experimental features, or

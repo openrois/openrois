@@ -517,7 +517,10 @@ async def test_a_refused_value_keeps_the_old_one(robot: Robot) -> None:
         component_ref=NAV,
         parameters=[{"name": "routing_policy", "data_type_ref": "string", "value": "distance"}],
     )
-    assert await client.completed(result["command_id"]) == "ERROR"
+    # The hook refused the values, so set_parameter answers BAD_PARAMETER (Table 8.1)
+    # and no command runs.
+    assert result["return_code"] == "BAD_PARAMETER"
+    assert result["command_id"] == ""
     stored = await client.call("rois.command.get_parameter", component_ref=NAV)
     assert {"name": "routing_policy", "data_type_ref": "string", "value": "time"} in stored[
         "parameters"
