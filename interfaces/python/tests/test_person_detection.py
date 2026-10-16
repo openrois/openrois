@@ -3,7 +3,7 @@
 import pytest
 
 from openrois.interfaces.common import ComponentStatus
-from openrois.interfaces.components.person_detection import (
+from openrois.interfaces.components import (
     PERSON_DETECTION_URN,
     PersonDetectedEvent,
     PersonDetectionStatusResult,

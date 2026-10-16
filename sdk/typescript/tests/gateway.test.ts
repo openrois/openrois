@@ -167,9 +167,9 @@ suite("a gateway with the mock adapter", () => {
       const ids = await client.execute([
         { component_ref: DETECTION, command_type: "start" },
         {
-          command_list: [
-            { component_ref: DETECTION, command_type: "suspend" },
-            { component_ref: NAVIGATION, command_type: "suspend" },
+          branch_list: [
+            { command_list: [{ component_ref: DETECTION, command_type: "suspend" }] },
+            { command_list: [{ component_ref: NAVIGATION, command_type: "suspend" }] },
           ],
         },
       ]);

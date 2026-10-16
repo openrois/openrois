@@ -18,11 +18,12 @@
  *     assigns, is answered with BAD_PARAMETER. Each command ends exactly once
  *     with a rois.command.completed notification, and get_command_result reads
  *     its results.
- *   - execute runs its items in order, waits each item's delay_time, and runs
- *     the commands of a ConcurrentCommands item at the same time, each after its
- *     own delay_time. When a command ends with a status other than OK, the
- *     sequence stops: the commands of the items after it complete with ABORT and
- *     never run.
+ *   - execute runs its items in order and waits each item's delay_time. The
+ *     branches of a ConcurrentCommands item run at the same time, each branch
+ *     runs its commands in order, each after its own delay_time, and the next
+ *     item waits for every branch. When a command ends with a status other than
+ *     OK, the sequence stops: the rest of its branch and the commands of the
+ *     items after it complete with ABORT and never run.
  *   - The ids the engine assigns, for subscriptions, events and set_parameter
  *     commands, start with the engine id, like refs: mock/sub-1.
  *   - Navigation start ends after a while with the reached_target event, and
@@ -154,9 +155,14 @@ function names(messages: readonly { name: string }[] | undefined): string[] {
   return (messages ?? []).map((message) => message.name);
 }
 
-/** The commands of one item of an execute: a command, or the commands of a group. */
+/** The branches of one item of an execute: one for a command, those of a group. */
+function branchesOf(item: CommandUnitSequenceItem): readonly (readonly CommandUnit[])[] {
+  return "branch_list" in item ? item.branch_list.map((branch) => branch.command_list) : [[item]];
+}
+
+/** The commands of one item of an execute, branch by branch. */
 function unitsOf(item: CommandUnitSequenceItem): readonly CommandUnit[] {
-  return "command_list" in item ? item.command_list : [item];
+  return branchesOf(item).flat();
 }
 
 // ---------------------------------------------------------------------------
@@ -518,23 +524,19 @@ export class MockEngineCore {
   // -------------------------------------------------------------------------
 
   /**
-   * Run the items of an execute in order, the commands of one item at the same time.
-   * A command that ends other than OK stops the sequence, and the commands of the
-   * later items complete with ABORT.
+   * Run the items of an execute in order, the branches of one item at the same time
+   * and the commands of a branch in order. A command that ends other than OK stops
+   * the sequence: the rest of its branch and the commands of the later items
+   * complete with ABORT.
    */
   private async runSequence(session: Session, items: readonly CommandUnitSequenceItem[]): Promise<void> {
     for (const [index, item] of items.entries()) {
       if (item.delay_time) {
         await this.wait(item.delay_time);
       }
-      const grouped = "command_list" in item;
+      const grouped = "branch_list" in item;
       const statuses = await Promise.all(
-        unitsOf(item).map(async (unit) => {
-          if (grouped && unit.delay_time) {
-            await this.wait(unit.delay_time);
-          }
-          return this.runCommand(session, unit);
-        }),
+        branchesOf(item).map((branch) => this.runBranch(session, branch, grouped)),
       );
       if (statuses.some((status) => status !== "OK")) {
         for (const unit of items.slice(index + 1).flatMap(unitsOf)) {
@@ -543,6 +545,27 @@ export class MockEngineCore {
         return;
       }
     }
+  }
+
+  /** Run the commands of a branch in order, and resolve with the first status other than OK. */
+  private async runBranch(
+    session: Session,
+    branch: readonly CommandUnit[],
+    grouped: boolean,
+  ): Promise<CompletedStatus> {
+    for (const [index, unit] of branch.entries()) {
+      if (grouped && unit.delay_time) {
+        await this.wait(unit.delay_time);
+      }
+      const status = await this.runCommand(session, unit);
+      if (status !== "OK") {
+        for (const rest of branch.slice(index + 1)) {
+          this.complete(session, rest.command_id, "ABORT");
+        }
+        return status;
+      }
+    }
+    return "OK";
   }
 
   /** Run one command until it completes, and resolve with its status. */

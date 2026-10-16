@@ -31,6 +31,25 @@
       },
       "type": "array"
     },
+    "Branch": {
+      "additionalProperties": false,
+      "description": "One branch of a ConcurrentCommands group: commands that run in order.\n\nMaps to BranchType in XML-Profiles.xsd, which ConcurrentCommandsType does not use.\nAnnex B.1 and Tables 8.15 and 8.16 of the specification give ConcurrentCommands a\nbranch_list of branches, and OpenRoIS follows them (docs/rois-reference.md, section\n16).\n\nAttributes:\n    command_list: The commands of the branch, run one after the other.",
+      "properties": {
+        "command_list": {
+          "items": {
+            "$ref": "#/$defs/CommandUnit"
+          },
+          "minItems": 1,
+          "title": "Command List",
+          "type": "array"
+        }
+      },
+      "required": [
+        "command_list"
+      ],
+      "title": "Branch",
+      "type": "object"
+    },
     "CommandId": {
       "type": "string"
     },
@@ -82,13 +101,13 @@
     }
   },
   "additionalProperties": false,
-  "description": "A group of commands to be executed concurrently.\n\nMaps to ConcurrentCommandsType in XML-Profiles.xsd.\n\nAttributes:\n    command_list: The commands to execute in parallel.\n    delay_time: Optional delay in milliseconds before executing this group.",
+  "description": "A group of branches executed in parallel.\n\nMaps to ConcurrentCommandsType in XML-Profiles.xsd, with the branch_list of Annex\nB.1. The branches run at the same time, each branch runs its commands in order, and\nthe next unit of the sequence waits for every branch.\n\nThe XSD form, a flat command_list, is read as one-command branches.\n\nAttributes:\n    branch_list: The branches to run in parallel.\n    delay_time: Optional delay in milliseconds before executing this group.",
   "properties": {
-    "command_list": {
+    "branch_list": {
       "items": {
-        "$ref": "#/$defs/CommandUnit"
+        "$ref": "#/$defs/Branch"
       },
-      "title": "Command List",
+      "title": "Branch List",
       "type": "array"
     },
     "delay_time": {
@@ -105,7 +124,7 @@
     }
   },
   "required": [
-    "command_list"
+    "branch_list"
   ],
   "title": "ConcurrentCommands",
   "type": "object"

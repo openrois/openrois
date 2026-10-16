@@ -160,6 +160,8 @@ class TestXSDParameterProfile:
         # XSD has: name, default_value, description (attributes)
         # Plus data_type_ref (element)
         xsd_attrs_with_element = xsd_attrs | {"data_type_ref"}
+        extensions = {e.field for e in EXTENSIONS if e.model == "ParameterProfile"}
+        model_fields -= extensions
         assert model_fields == xsd_attrs_with_element, (
             f"ParameterProfile fields {model_fields} != XSD attrs+elements {xsd_attrs_with_element}"
         )
@@ -294,6 +296,7 @@ class TestXSDHRIEngineProfileType:
 # Field to XSD element. "gml:" marks an element of the gml:IdentifiedObjectType base.
 _ENGINE_PROFILE_ELEMENTS = {
     "identifier": "gml:identifier",
+    "name": "gml:name",
     "sub_profiles": "SubProfile",
     "component_ids": "HRIComponent",
     "parameter_profiles": "ParameterProfile",
@@ -360,9 +363,9 @@ class TestXSDCommandUnitSequence:
         """CommandUnit should have 'delay_time' field (XSD: delay_time from CommandBaseType)."""
         assert "delay_time" in CommandUnit.model_fields
 
-    def test_concurrent_commands_has_command_list(self) -> None:
-        """ConcurrentCommands should have 'command_list' field (XSD: command_list)."""
-        assert "command_list" in ConcurrentCommands.model_fields
+    def test_concurrent_commands_has_branch_list(self) -> None:
+        """ConcurrentCommands holds branch_list (Annex B.1), not the flat XSD command_list."""
+        assert "branch_list" in ConcurrentCommands.model_fields
 
     def test_concurrent_commands_has_delay_time(self) -> None:
         """ConcurrentCommands should have 'delay_time' field (XSD: delay_time from CommandBaseType)."""

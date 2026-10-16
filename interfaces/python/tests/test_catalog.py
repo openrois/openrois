@@ -191,7 +191,10 @@ class TestExecute:
         assert isinstance(first, CommandUnit)
         assert first.command_id == "nod-1"
         assert isinstance(second, ConcurrentCommands)
-        assert [c.command_id for c in second.command_list] == ["nod-2", "nod-3"]
+        assert [[c.command_id for c in b.command_list] for b in second.branch_list] == [
+            ["nod-2"],
+            ["nod-3"],
+        ]
 
     def test_round_trip(self) -> None:
         unit = CommandUnit(component_ref="r/head", command_type="start", command_id="c1")

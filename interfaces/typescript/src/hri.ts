@@ -1,5 +1,5 @@
 // GENERATED FROM interfaces/schema — DO NOT EDIT
-// Source: Argument.schema.json, CommandUnit.schema.json, CommandUnitSequence.schema.json, ConcurrentCommands.schema.json, Parameter.schema.json, Result.schema.json, ReturnCode.schema.json
+// Source: Argument.schema.json, Branch.schema.json, CommandUnit.schema.json, CommandUnitSequence.schema.json, ConcurrentCommands.schema.json, Parameter.schema.json, Result.schema.json, ReturnCode.schema.json
 // Generator: scripts/generate.ts
 
 import { z } from "zod";
@@ -78,17 +78,38 @@ export const CommandUnitSchema = z.object({
 export type CommandUnit = z.infer<typeof CommandUnitSchema>;
 
 /**
- * A group of commands to be executed concurrently.
+ * One branch of a ConcurrentCommands group: commands that run in order.
  * 
- * Maps to ConcurrentCommandsType in XML-Profiles.xsd.
+ * Maps to BranchType in XML-Profiles.xsd, which ConcurrentCommandsType does not use.
+ * Annex B.1 and Tables 8.15 and 8.16 of the specification give ConcurrentCommands a
+ * branch_list of branches, and OpenRoIS follows them (docs/rois-reference.md, section
+ * 16).
  * 
  * Attributes:
- *     command_list: The commands to execute in parallel.
+ *     command_list: The commands of the branch, run one after the other.
+ */
+
+export const BranchSchema = z.object({
+  command_list: z.array(CommandUnitSchema),
+}).strict();
+export type Branch = z.infer<typeof BranchSchema>;
+
+/**
+ * A group of branches executed in parallel.
+ * 
+ * Maps to ConcurrentCommandsType in XML-Profiles.xsd, with the branch_list of Annex
+ * B.1. The branches run at the same time, each branch runs its commands in order, and
+ * the next unit of the sequence waits for every branch.
+ * 
+ * The XSD form, a flat command_list, is read as one-command branches.
+ * 
+ * Attributes:
+ *     branch_list: The branches to run in parallel.
  *     delay_time: Optional delay in milliseconds before executing this group.
  */
 
 export const ConcurrentCommandsSchema = z.object({
-  command_list: z.array(CommandUnitSchema),
+  branch_list: z.array(BranchSchema),
   delay_time: z.number().int().nullable().default(null), // Delay in ms before execution
 }).strict();
 export type ConcurrentCommands = z.infer<typeof ConcurrentCommandsSchema>;

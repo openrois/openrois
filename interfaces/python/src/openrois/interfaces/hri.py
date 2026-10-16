@@ -25,8 +25,9 @@ Design decisions:
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # ---------------------------------------------------------------------------
 # Enumerations
@@ -220,20 +221,52 @@ class CommandUnit(BaseModel):
     delay_time: Integer | None = Field(default=None, description="Delay in ms before execution")
 
 
-class ConcurrentCommands(BaseModel):
-    """A group of commands to be executed concurrently.
+class Branch(BaseModel):
+    """One branch of a ConcurrentCommands group: commands that run in order.
 
-    Maps to ConcurrentCommandsType in XML-Profiles.xsd.
+    Maps to BranchType in XML-Profiles.xsd, which ConcurrentCommandsType does not use.
+    Annex B.1 and Tables 8.15 and 8.16 of the specification give ConcurrentCommands a
+    branch_list of branches, and OpenRoIS follows them (docs/rois-reference.md, section
+    16).
 
     Attributes:
-        command_list: The commands to execute in parallel.
+        command_list: The commands of the branch, run one after the other.
+    """
+
+    model_config = {"frozen": True, "extra": "forbid"}
+
+    command_list: list[CommandUnit] = Field(min_length=1)
+
+
+class ConcurrentCommands(BaseModel):
+    """A group of branches executed in parallel.
+
+    Maps to ConcurrentCommandsType in XML-Profiles.xsd, with the branch_list of Annex
+    B.1. The branches run at the same time, each branch runs its commands in order, and
+    the next unit of the sequence waits for every branch.
+
+    The XSD form, a flat command_list, is read as one-command branches.
+
+    Attributes:
+        branch_list: The branches to run in parallel.
         delay_time: Optional delay in milliseconds before executing this group.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
 
-    command_list: list[CommandUnit]
+    branch_list: list[Branch]
     delay_time: Integer | None = Field(default=None, description="Delay in ms before execution")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _flat_command_list(cls, data: Any) -> Any:
+        if not isinstance(data, dict) or "command_list" not in data:
+            return data
+        if "branch_list" in data:
+            raise ValueError("Give either branch_list or command_list, not both")
+        flat = {k: v for k, v in data.items() if k != "command_list"}
+        flat["branch_list"] = [{"command_list": [unit]} for unit in data["command_list"]]
+        return flat
 
 
 # A single item in a CommandUnitSequence — either a CommandUnit or a ConcurrentCommands group.

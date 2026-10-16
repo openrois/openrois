@@ -50,14 +50,817 @@
                   "codebook_ref": "",
                   "version": ""
                 },
-                "default_value": "",
-                "description": ""
+                "default_value": null,
+                "description": "",
+                "read_only": false
               }
-            ]
+            ],
+            "arguments": []
           }
         ],
         "event_profiles": [],
         "parameter_profiles": []
+      }
+    },
+    {
+      "name": "AUDIO_STREAMING_PROFILE",
+      "profile": {
+        "identifier": {
+          "authority": "OMG",
+          "code": "AudioStreaming",
+          "codebook_ref": "",
+          "version": ""
+        },
+        "name": "audio_streaming",
+        "function": "function",
+        "sub_component_profiles": [
+          "urn:x-rois:def:Component:OMG::RoISCommon"
+        ],
+        "command_profiles": [
+          {
+            "name": "start",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "stop",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "suspend",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "resume",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "connect_stream",
+            "results": [
+              {
+                "name": "stream_id",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "String",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "the ID of the stream",
+                "read_only": false
+              }
+            ],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "disconnect_stream",
+            "results": [],
+            "arguments": [
+              {
+                "name": "stream_id",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "String",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "the ID of the stream",
+                "read_only": false
+              }
+            ],
+            "timeout": null
+          },
+          {
+            "name": "suspend_stream",
+            "results": [],
+            "arguments": [
+              {
+                "name": "stream_id",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "String",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "the ID of the stream",
+                "read_only": false
+              }
+            ],
+            "timeout": null
+          },
+          {
+            "name": "resume_stream",
+            "results": [],
+            "arguments": [
+              {
+                "name": "stream_id",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "String",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "the ID of the stream",
+                "read_only": false
+              }
+            ],
+            "timeout": null
+          }
+        ],
+        "query_profiles": [
+          {
+            "name": "component_status",
+            "results": [
+              {
+                "name": "status",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "Component_Status",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          },
+          {
+            "name": "get_stream_status",
+            "results": [
+              {
+                "name": "status",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "Stream_Status",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "",
+                "read_only": false
+              }
+            ],
+            "arguments": [
+              {
+                "name": "stream_id",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "String",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "the ID of the stream",
+                "read_only": false
+              }
+            ]
+          }
+        ],
+        "event_profiles": [
+          {
+            "name": "notify_stream_status",
+            "results": [
+              {
+                "name": "timestamp",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "DateTime",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "time when status changed",
+                "read_only": false
+              },
+              {
+                "name": "status",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "Stream_Status",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "status of the stream",
+                "read_only": false
+              }
+            ],
+            "arguments": [
+              {
+                "name": "stream_id",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "String",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "the ID of the stream",
+                "read_only": false
+              }
+            ]
+          }
+        ],
+        "parameter_profiles": [
+          {
+            "name": "encoding_parameters",
+            "data_type_ref": {
+              "authority": "",
+              "code": "String",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "parameters to encode the audio stream",
+            "read_only": false
+          },
+          {
+            "name": "transport_parameters",
+            "data_type_ref": {
+              "authority": "",
+              "code": "String",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "parameters to transport the audio stream",
+            "read_only": false
+          },
+          {
+            "name": "available_encodings",
+            "data_type_ref": {
+              "authority": "",
+              "code": "String",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "available parameters to encode the audio stream",
+            "read_only": true
+          },
+          {
+            "name": "available_transports",
+            "data_type_ref": {
+              "authority": "",
+              "code": "String",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "available parameters to transport the audio stream",
+            "read_only": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "FACE_DETECTION_PROFILE",
+      "profile": {
+        "identifier": {
+          "authority": "OMG",
+          "code": "FaceDetection",
+          "codebook_ref": "",
+          "version": ""
+        },
+        "name": "face_detecter",
+        "function": "sensing",
+        "sub_component_profiles": [
+          "urn:x-rois:def:Component:OMG::RoISCommon"
+        ],
+        "command_profiles": [
+          {
+            "name": "start",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "stop",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "suspend",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "resume",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          }
+        ],
+        "query_profiles": [
+          {
+            "name": "component_status",
+            "results": [
+              {
+                "name": "status",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "Component_Status",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          }
+        ],
+        "event_profiles": [
+          {
+            "name": "face_detected",
+            "results": [
+              {
+                "name": "number",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "int",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "number of detected faces",
+                "read_only": false
+              },
+              {
+                "name": "timestamp",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "DateTime",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "time when measuered",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          }
+        ],
+        "parameter_profiles": []
+      }
+    },
+    {
+      "name": "FACE_LOCALIZATION_PROFILE",
+      "profile": {
+        "identifier": {
+          "authority": "OMG",
+          "code": "FaceLocalization",
+          "codebook_ref": "",
+          "version": ""
+        },
+        "name": "face_localizer",
+        "function": "sensing",
+        "sub_component_profiles": [
+          "urn:x-rois:def:Component:OMG::RoISCommon"
+        ],
+        "command_profiles": [
+          {
+            "name": "start",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "stop",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "suspend",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "resume",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          }
+        ],
+        "query_profiles": [
+          {
+            "name": "component_status",
+            "results": [
+              {
+                "name": "status",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "Component_Status",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          }
+        ],
+        "event_profiles": [
+          {
+            "name": "face_localized",
+            "results": [
+              {
+                "name": "face_ref",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "RoISIdentifier[]",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "list of face IDs",
+                "read_only": false
+              },
+              {
+                "name": "timestamp",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "DateTime",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "time when measured",
+                "read_only": false
+              },
+              {
+                "name": "position_data",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "String[]",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "position of detected faces in comma seperated double values [x, y, th]",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          }
+        ],
+        "parameter_profiles": [
+          {
+            "name": "detection_threshold",
+            "data_type_ref": {
+              "authority": "",
+              "code": "int",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "threshold for displacement, for event notification",
+            "read_only": false
+          },
+          {
+            "name": "minimum_interval",
+            "data_type_ref": {
+              "authority": "",
+              "code": "int",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "minimul interval to kept between event notifications",
+            "read_only": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "FOLLOW_PROFILE",
+      "profile": {
+        "identifier": {
+          "authority": "OMG",
+          "code": "Follow",
+          "codebook_ref": "",
+          "version": ""
+        },
+        "name": "follower",
+        "function": "actuation",
+        "sub_component_profiles": [
+          "urn:x-rois:def:Component:OMG::RoISCommon"
+        ],
+        "command_profiles": [
+          {
+            "name": "start",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "stop",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "suspend",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "resume",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          }
+        ],
+        "query_profiles": [
+          {
+            "name": "component_status",
+            "results": [
+              {
+                "name": "status",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "Component_Status",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          }
+        ],
+        "event_profiles": [],
+        "parameter_profiles": [
+          {
+            "name": "target_object_ref",
+            "data_type_ref": {
+              "authority": "",
+              "code": "RoISIdentifier",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "ID of the object/person to follow",
+            "read_only": false
+          },
+          {
+            "name": "distance",
+            "data_type_ref": {
+              "authority": "",
+              "code": "int",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "minimum distance between target and the robot",
+            "read_only": false
+          },
+          {
+            "name": "time_limit",
+            "data_type_ref": {
+              "authority": "",
+              "code": "int",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "time limit to cancel following in case if target is lost",
+            "read_only": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "GESTURE_RECOGNITION_PROFILE",
+      "profile": {
+        "identifier": {
+          "authority": "OMG",
+          "code": "GestureRecognition",
+          "codebook_ref": "",
+          "version": ""
+        },
+        "name": "gesture_recognizer",
+        "function": "sensing",
+        "sub_component_profiles": [
+          "urn:x-rois:def:Component:OMG::RoISCommon"
+        ],
+        "command_profiles": [
+          {
+            "name": "start",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "stop",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "suspend",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "resume",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          }
+        ],
+        "query_profiles": [
+          {
+            "name": "component_status",
+            "results": [
+              {
+                "name": "status",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "Component_Status",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          }
+        ],
+        "event_profiles": [
+          {
+            "name": "gesture_recognized",
+            "results": [
+              {
+                "name": "gesture_ref",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "RoISIdentifier[]",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "list of gesture IDs",
+                "read_only": false
+              },
+              {
+                "name": "timestamp",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "DateTime",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "time when measured",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          }
+        ],
+        "parameter_profiles": [
+          {
+            "name": "recognizable_gestures",
+            "data_type_ref": {
+              "authority": "",
+              "code": "RoISIdentifier[]",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "list of gesture IDs this recognizer can recognize",
+            "read_only": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "MOVE_PROFILE",
+      "profile": {
+        "identifier": {
+          "authority": "OMG",
+          "code": "Move",
+          "codebook_ref": "",
+          "version": ""
+        },
+        "name": "move",
+        "function": "actuation",
+        "sub_component_profiles": [
+          "urn:x-rois:def:Component:OMG::RoISCommon"
+        ],
+        "command_profiles": [
+          {
+            "name": "start",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "stop",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "suspend",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "resume",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          }
+        ],
+        "query_profiles": [
+          {
+            "name": "component_status",
+            "results": [
+              {
+                "name": "status",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "Component_Status",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          }
+        ],
+        "event_profiles": [],
+        "parameter_profiles": [
+          {
+            "name": "line",
+            "data_type_ref": {
+              "authority": "",
+              "code": "int[]",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "distance in mm and orientation in deg",
+            "read_only": false
+          },
+          {
+            "name": "curve",
+            "data_type_ref": {
+              "authority": "",
+              "code": "int[]",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "radius in mm and direction in deg",
+            "read_only": false
+          },
+          {
+            "name": "time",
+            "data_type_ref": {
+              "authority": "",
+              "code": "int",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "time for motion",
+            "read_only": false
+          }
+        ]
       }
     },
     {
@@ -112,10 +915,12 @@
                   "codebook_ref": "",
                   "version": ""
                 },
-                "default_value": "",
-                "description": ""
+                "default_value": null,
+                "description": "",
+                "read_only": false
               }
-            ]
+            ],
+            "arguments": []
           }
         ],
         "event_profiles": [
@@ -130,8 +935,9 @@
                   "codebook_ref": "",
                   "version": ""
                 },
-                "default_value": "",
-                "description": "reached target destination"
+                "default_value": null,
+                "description": "reached target destination",
+                "read_only": false
               },
               {
                 "name": "is_final_target",
@@ -141,10 +947,12 @@
                   "codebook_ref": "",
                   "version": ""
                 },
-                "default_value": "",
-                "description": "if it is final destination point"
+                "default_value": null,
+                "description": "if it is final destination point",
+                "read_only": false
               }
-            ]
+            ],
+            "arguments": []
           }
         ],
         "parameter_profiles": [
@@ -156,8 +964,9 @@
               "codebook_ref": "",
               "version": ""
             },
-            "default_value": "",
-            "description": "navigation target positions"
+            "default_value": null,
+            "description": "navigation target positions",
+            "read_only": false
           },
           {
             "name": "time_limit",
@@ -168,7 +977,8 @@
               "version": ""
             },
             "default_value": "0",
-            "description": "intended time limit to complete navigation"
+            "description": "intended time limit to complete navigation",
+            "read_only": false
           },
           {
             "name": "routing_policy",
@@ -179,7 +989,8 @@
               "version": ""
             },
             "default_value": "time",
-            "description": "routing policy: 'time' priority or 'distance' priority"
+            "description": "routing policy: 'time' priority or 'distance' priority",
+            "read_only": false
           }
         ]
       }
@@ -236,10 +1047,12 @@
                   "codebook_ref": "",
                   "version": ""
                 },
-                "default_value": "",
-                "description": ""
+                "default_value": null,
+                "description": "",
+                "read_only": false
               }
-            ]
+            ],
+            "arguments": []
           }
         ],
         "event_profiles": [
@@ -254,8 +1067,9 @@
                   "codebook_ref": "",
                   "version": ""
                 },
-                "default_value": "",
-                "description": "number of detected persons"
+                "default_value": null,
+                "description": "number of detected persons",
+                "read_only": false
               },
               {
                 "name": "timestamp",
@@ -265,13 +1079,242 @@
                   "codebook_ref": "",
                   "version": ""
                 },
-                "default_value": "",
-                "description": "time when measuered"
+                "default_value": null,
+                "description": "time when measuered",
+                "read_only": false
               }
-            ]
+            ],
+            "arguments": []
           }
         ],
         "parameter_profiles": []
+      }
+    },
+    {
+      "name": "PERSON_IDENTIFICATION_PROFILE",
+      "profile": {
+        "identifier": {
+          "authority": "OMG",
+          "code": "PersonIdentification",
+          "codebook_ref": "",
+          "version": ""
+        },
+        "name": "person_identifier",
+        "function": "sensing",
+        "sub_component_profiles": [
+          "urn:x-rois:def:Component:OMG::RoISCommon"
+        ],
+        "command_profiles": [
+          {
+            "name": "start",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "stop",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "suspend",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "resume",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          }
+        ],
+        "query_profiles": [
+          {
+            "name": "component_status",
+            "results": [
+              {
+                "name": "status",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "Component_Status",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          }
+        ],
+        "event_profiles": [
+          {
+            "name": "person_identified",
+            "results": [
+              {
+                "name": "person_ref",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "RoISIdentifier[]",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "list of person IDs",
+                "read_only": false
+              },
+              {
+                "name": "timestamp",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "DateTime",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "time when measuered",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          }
+        ],
+        "parameter_profiles": []
+      }
+    },
+    {
+      "name": "PERSON_LOCALIZATION_PROFILE",
+      "profile": {
+        "identifier": {
+          "authority": "OMG",
+          "code": "PersonLocalization",
+          "codebook_ref": "",
+          "version": ""
+        },
+        "name": "person_localizer",
+        "function": "sensing",
+        "sub_component_profiles": [
+          "urn:x-rois:def:Component:OMG::RoISCommon"
+        ],
+        "command_profiles": [
+          {
+            "name": "start",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "stop",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "suspend",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "resume",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          }
+        ],
+        "query_profiles": [
+          {
+            "name": "component_status",
+            "results": [
+              {
+                "name": "status",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "Component_Status",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          }
+        ],
+        "event_profiles": [
+          {
+            "name": "person_localized",
+            "results": [
+              {
+                "name": "person_ref",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "RoISIdentifier[]",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "list of person IDs",
+                "read_only": false
+              },
+              {
+                "name": "timestamp",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "DateTime",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "time when measured",
+                "read_only": false
+              },
+              {
+                "name": "position_data",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "String[]",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "position of detected persons in comma seperated double values [x, y, th]",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          }
+        ],
+        "parameter_profiles": [
+          {
+            "name": "detection_threshold",
+            "data_type_ref": {
+              "authority": "",
+              "code": "int",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "threshold for displacement, for event notification",
+            "read_only": false
+          },
+          {
+            "name": "minimum_interval",
+            "data_type_ref": {
+              "authority": "",
+              "code": "int",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "minimul interval to kept between event notifications",
+            "read_only": false
+          }
+        ]
       }
     },
     {
@@ -326,10 +1369,12 @@
                   "codebook_ref": "",
                   "version": ""
                 },
-                "default_value": "",
-                "description": ""
+                "default_value": null,
+                "description": "",
+                "read_only": false
               }
-            ]
+            ],
+            "arguments": []
           },
           {
             "name": "available_reactions",
@@ -342,10 +1387,12 @@
                   "codebook_ref": "",
                   "version": ""
                 },
-                "default_value": "",
-                "description": "list of available reaction IDs, this robot can perform"
+                "default_value": null,
+                "description": "list of available reaction IDs, this robot can perform",
+                "read_only": false
               }
-            ]
+            ],
+            "arguments": []
           }
         ],
         "event_profiles": [],
@@ -358,8 +1405,422 @@
               "codebook_ref": "",
               "version": ""
             },
-            "default_value": "",
-            "description": "Reaction type as ID"
+            "default_value": null,
+            "description": "Reaction type as ID",
+            "read_only": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "SOUND_DETECTION_PROFILE",
+      "profile": {
+        "identifier": {
+          "authority": "OMG",
+          "code": "SoundDetection",
+          "codebook_ref": "",
+          "version": ""
+        },
+        "name": "sound_detecter",
+        "function": "sensing",
+        "sub_component_profiles": [
+          "urn:x-rois:def:Component:OMG::RoISCommon"
+        ],
+        "command_profiles": [
+          {
+            "name": "start",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "stop",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "suspend",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "resume",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          }
+        ],
+        "query_profiles": [
+          {
+            "name": "component_status",
+            "results": [
+              {
+                "name": "status",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "Component_Status",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          }
+        ],
+        "event_profiles": [
+          {
+            "name": "sound_detected",
+            "results": [
+              {
+                "name": "number",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "int",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "number of sound sources",
+                "read_only": false
+              },
+              {
+                "name": "timestamp",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "DateTime",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "time when measuered",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          }
+        ],
+        "parameter_profiles": []
+      }
+    },
+    {
+      "name": "SOUND_LOCALIZATION_PROFILE",
+      "profile": {
+        "identifier": {
+          "authority": "OMG",
+          "code": "SoundLocalization",
+          "codebook_ref": "",
+          "version": ""
+        },
+        "name": "sound_localizer",
+        "function": "sensing",
+        "sub_component_profiles": [
+          "urn:x-rois:def:Component:OMG::RoISCommon"
+        ],
+        "command_profiles": [
+          {
+            "name": "start",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "stop",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "suspend",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "resume",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          }
+        ],
+        "query_profiles": [
+          {
+            "name": "component_status",
+            "results": [
+              {
+                "name": "status",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "Component_Status",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          }
+        ],
+        "event_profiles": [
+          {
+            "name": "sound_localized",
+            "results": [
+              {
+                "name": "sound_ref",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "RoISIdentifier[]",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "list of sound source IDs",
+                "read_only": false
+              },
+              {
+                "name": "timestamp",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "DateTime",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "time when measured",
+                "read_only": false
+              },
+              {
+                "name": "position_data",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "String[]",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "position of detected sources in comma seperated double values [x, y, th]",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          }
+        ],
+        "parameter_profiles": [
+          {
+            "name": "detection_threshold",
+            "data_type_ref": {
+              "authority": "",
+              "code": "int",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "threshold for displacement, for event notification",
+            "read_only": false
+          },
+          {
+            "name": "minimum_interval",
+            "data_type_ref": {
+              "authority": "",
+              "code": "int",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "minimul interval to kept between event notifications",
+            "read_only": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "SPEECH_RECOGNITION_PROFILE",
+      "profile": {
+        "identifier": {
+          "authority": "OMG",
+          "code": "SpeechRecognition",
+          "codebook_ref": "",
+          "version": ""
+        },
+        "name": "speech_recognizer",
+        "function": "sensing",
+        "sub_component_profiles": [
+          "urn:x-rois:def:Component:OMG::RoISCommon"
+        ],
+        "command_profiles": [
+          {
+            "name": "start",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "stop",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "suspend",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "resume",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          }
+        ],
+        "query_profiles": [
+          {
+            "name": "component_status",
+            "results": [
+              {
+                "name": "status",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "Component_Status",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          },
+          {
+            "name": "recognizable_languages",
+            "results": [
+              {
+                "name": "languages",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "string[]",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "ISO639-1 languages the speech recognizer can recognize",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          }
+        ],
+        "event_profiles": [
+          {
+            "name": "speech_input_started",
+            "results": [
+              {
+                "name": "timestamp",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "DateTime",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "time when speech input started",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          },
+          {
+            "name": "speech_input_finished",
+            "results": [
+              {
+                "name": "timestamp",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "DateTime",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "time when speech nput ended",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          },
+          {
+            "name": "speech_recognized",
+            "results": [
+              {
+                "name": "recognized_text",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "string[]",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "list of recognized sentence or word utterances",
+                "read_only": false
+              },
+              {
+                "name": "timestamp",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "DateTime",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "time when recognition completed",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          }
+        ],
+        "parameter_profiles": [
+          {
+            "name": "rule",
+            "data_type_ref": {
+              "authority": "",
+              "code": "string",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": "default",
+            "description": "Specifies active rule in the grammer",
+            "read_only": false
+          },
+          {
+            "name": "languages",
+            "data_type_ref": {
+              "authority": "",
+              "code": "string[]",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": "jp",
+            "description": "ISO639-1 languages the speech recognizer will recognize",
+            "read_only": false
+          },
+          {
+            "name": "grammar",
+            "data_type_ref": {
+              "authority": "",
+              "code": "string",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": "default",
+            "description": "Specifies grammar for the speech recognizer",
+            "read_only": false
           }
         ]
       }
@@ -416,10 +1877,12 @@
                   "codebook_ref": "",
                   "version": ""
                 },
-                "default_value": "",
-                "description": ""
+                "default_value": null,
+                "description": "",
+                "read_only": false
               }
-            ]
+            ],
+            "arguments": []
           },
           {
             "name": "synthesizable_languages",
@@ -432,10 +1895,12 @@
                   "codebook_ref": "",
                   "version": ""
                 },
-                "default_value": "",
-                "description": "list of available languages"
+                "default_value": null,
+                "description": "list of available languages",
+                "read_only": false
               }
-            ]
+            ],
+            "arguments": []
           },
           {
             "name": "available_voices",
@@ -448,10 +1913,12 @@
                   "codebook_ref": "",
                   "version": ""
                 },
-                "default_value": "",
-                "description": "list of available voice characters"
+                "default_value": null,
+                "description": "list of available voice characters",
+                "read_only": false
               }
-            ]
+            ],
+            "arguments": []
           }
         ],
         "event_profiles": [],
@@ -464,8 +1931,9 @@
               "codebook_ref": "",
               "version": ""
             },
-            "default_value": "",
-            "description": "speech text in plain text"
+            "default_value": null,
+            "description": "speech text in plain text",
+            "read_only": false
           },
           {
             "name": "ssml_text",
@@ -475,8 +1943,9 @@
               "codebook_ref": "",
               "version": ""
             },
-            "default_value": "",
-            "description": "speech text in SSML text"
+            "default_value": null,
+            "description": "speech text in SSML text",
+            "read_only": false
           },
           {
             "name": "volume",
@@ -487,7 +1956,8 @@
               "version": ""
             },
             "default_value": "50",
-            "description": "Volume"
+            "description": "Volume",
+            "read_only": false
           },
           {
             "name": "language",
@@ -498,7 +1968,8 @@
               "version": ""
             },
             "default_value": "en",
-            "description": "Language of the speech"
+            "description": "Language of the speech",
+            "read_only": false
           },
           {
             "name": "character",
@@ -509,7 +1980,8 @@
               "version": ""
             },
             "default_value": "default",
-            "description": "character of the voice"
+            "description": "character of the voice",
+            "read_only": false
           }
         ]
       }
@@ -539,8 +2011,9 @@
                   "codebook_ref": "",
                   "version": ""
                 },
-                "default_value": "",
-                "description": "position of robot or its parts in comma seperated double values [x, y, th]"
+                "default_value": null,
+                "description": "position of robot or its parts in comma seperated double values [x, y, th]",
+                "read_only": false
               },
               {
                 "name": "robot_ref",
@@ -550,8 +2023,9 @@
                   "codebook_ref": "",
                   "version": ""
                 },
-                "default_value": "",
-                "description": "List of robot IDs"
+                "default_value": null,
+                "description": "List of robot IDs",
+                "read_only": false
               },
               {
                 "name": "timestamp",
@@ -561,10 +2035,12 @@
                   "codebook_ref": "",
                   "version": ""
                 },
-                "default_value": "",
-                "description": "timestamp of measurement"
+                "default_value": null,
+                "description": "timestamp of measurement",
+                "read_only": false
               }
-            ]
+            ],
+            "arguments": []
           },
           {
             "name": "engine_status",
@@ -577,8 +2053,9 @@
                   "codebook_ref": "",
                   "version": ""
                 },
-                "default_value": "",
-                "description": "Operable time of the HRI Engine that includes this basic component"
+                "default_value": null,
+                "description": "Operable time of the HRI Engine that includes this basic component",
+                "read_only": false
               },
               {
                 "name": "status",
@@ -588,14 +2065,280 @@
                   "codebook_ref": "",
                   "version": ""
                 },
-                "default_value": "",
-                "description": "Status information of this engine"
+                "default_value": null,
+                "description": "Status information of this engine",
+                "read_only": false
               }
-            ]
+            ],
+            "arguments": []
           }
         ],
         "event_profiles": [],
         "parameter_profiles": []
+      }
+    },
+    {
+      "name": "VIDEO_STREAMING_PROFILE",
+      "profile": {
+        "identifier": {
+          "authority": "OMG",
+          "code": "VideoStreaming",
+          "codebook_ref": "",
+          "version": ""
+        },
+        "name": "video_streaming",
+        "function": "function",
+        "sub_component_profiles": [
+          "urn:x-rois:def:Component:OMG::RoISCommon"
+        ],
+        "command_profiles": [
+          {
+            "name": "start",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "stop",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "suspend",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "resume",
+            "results": [],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "connect_stream",
+            "results": [
+              {
+                "name": "stream_id",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "String",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "the ID of the stream",
+                "read_only": false
+              }
+            ],
+            "arguments": [],
+            "timeout": null
+          },
+          {
+            "name": "disconnect_stream",
+            "results": [],
+            "arguments": [
+              {
+                "name": "stream_id",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "String",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "the ID of the stream",
+                "read_only": false
+              }
+            ],
+            "timeout": null
+          },
+          {
+            "name": "suspend_stream",
+            "results": [],
+            "arguments": [
+              {
+                "name": "stream_id",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "String",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "the ID of the stream",
+                "read_only": false
+              }
+            ],
+            "timeout": null
+          },
+          {
+            "name": "resume_stream",
+            "results": [],
+            "arguments": [
+              {
+                "name": "stream_id",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "String",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "the ID of the stream",
+                "read_only": false
+              }
+            ],
+            "timeout": null
+          }
+        ],
+        "query_profiles": [
+          {
+            "name": "component_status",
+            "results": [
+              {
+                "name": "status",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "Component_Status",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "",
+                "read_only": false
+              }
+            ],
+            "arguments": []
+          },
+          {
+            "name": "get_stream_status",
+            "results": [
+              {
+                "name": "status",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "Stream_Status",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "",
+                "read_only": false
+              }
+            ],
+            "arguments": [
+              {
+                "name": "stream_id",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "String",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "the ID of the stream",
+                "read_only": false
+              }
+            ]
+          }
+        ],
+        "event_profiles": [
+          {
+            "name": "notify_stream_status",
+            "results": [
+              {
+                "name": "timestamp",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "DateTime",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "time when status changed",
+                "read_only": false
+              },
+              {
+                "name": "status",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "Stream_Status",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "status of the stream",
+                "read_only": false
+              }
+            ],
+            "arguments": [
+              {
+                "name": "stream_id",
+                "data_type_ref": {
+                  "authority": "",
+                  "code": "String",
+                  "codebook_ref": "",
+                  "version": ""
+                },
+                "default_value": null,
+                "description": "the ID of the stream",
+                "read_only": false
+              }
+            ]
+          }
+        ],
+        "parameter_profiles": [
+          {
+            "name": "encoding_parameters",
+            "data_type_ref": {
+              "authority": "",
+              "code": "String",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "parameters to encode the audio stream",
+            "read_only": false
+          },
+          {
+            "name": "transport_parameters",
+            "data_type_ref": {
+              "authority": "",
+              "code": "String",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "parameters to transport the audio stream",
+            "read_only": false
+          },
+          {
+            "name": "available_encodings",
+            "data_type_ref": {
+              "authority": "",
+              "code": "String",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "available parameters to encode the audio stream",
+            "read_only": true
+          },
+          {
+            "name": "available_transports",
+            "data_type_ref": {
+              "authority": "",
+              "code": "String",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "default_value": null,
+            "description": "available parameters to transport the audio stream",
+            "read_only": true
+          }
+        ]
       }
     }
   ]

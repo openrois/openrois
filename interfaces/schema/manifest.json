@@ -3,6 +3,7 @@
   "modules": {
     "hri": [
       "Argument.schema.json",
+      "Branch.schema.json",
       "CommandUnit.schema.json",
       "CommandUnitSequence.schema.json",
       "ConcurrentCommands.schema.json",

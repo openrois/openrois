@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Test-only stand-in for the GML 3.2 schema that XML-Profiles.xsd imports from
+  schemas.opengis.net. It declares only what the RoIS profiles use: the gml:id
+  attribute, gml:identifier with its codeSpace, and gml:name. The tests resolve the
+  import to this file so that schema validation needs no network.
+-->
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            xmlns:gml="http://www.opengis.net/gml/3.2"
+            targetNamespace="http://www.opengis.net/gml/3.2"
+            elementFormDefault="qualified"
+            attributeFormDefault="qualified">
+
+  <xsd:attribute name="id" type="xsd:ID"/>
+
+  <xsd:complexType name="CodeWithAuthorityType">
+    <xsd:simpleContent>
+      <xsd:extension base="xsd:string">
+        <xsd:attribute name="codeSpace" type="xsd:anyURI" use="required" form="unqualified"/>
+      </xsd:extension>
+    </xsd:simpleContent>
+  </xsd:complexType>
+
+  <xsd:complexType name="CodeType">
+    <xsd:simpleContent>
+      <xsd:extension base="xsd:string">
+        <xsd:attribute name="codeSpace" type="xsd:anyURI" form="unqualified"/>
+      </xsd:extension>
+    </xsd:simpleContent>
+  </xsd:complexType>
+
+  <xsd:element name="identifier" type="gml:CodeWithAuthorityType"/>
+  <xsd:element name="name" type="gml:CodeType"/>
+
+  <xsd:complexType name="IdentifiedObjectType" abstract="true">
+    <xsd:sequence>
+      <xsd:element ref="gml:identifier"/>
+      <xsd:element ref="gml:name" minOccurs="0" maxOccurs="unbounded"/>
+    </xsd:sequence>
+    <xsd:attribute ref="gml:id" use="required"/>
+  </xsd:complexType>
+</xsd:schema>

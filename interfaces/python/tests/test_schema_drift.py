@@ -44,6 +44,7 @@ from openrois.interfaces.components.system_information import (
 )
 from openrois.interfaces.hri import (
     Argument,
+    Branch,
     CommandUnit,
     CommandUnitSequence,
     ConcurrentCommands,
@@ -80,6 +81,7 @@ MODELS: list[type[BaseModel]] = [
     Result,
     Parameter,
     Argument,
+    Branch,
     CommandUnit,
     ConcurrentCommands,
     CommandUnitSequence,

@@ -102,11 +102,15 @@ describe("CommandUnitSequenceSchema", () => {
     const seq = CommandUnitSequenceSchema.parse({
       command_unit_list: [
         {
-          command_list: [
+          branch_list: [
             {
-              component_ref: "robot/nav",
-              command_type: "start",
-              command_id: "cmd-1",
+              command_list: [
+                {
+                  component_ref: "robot/nav",
+                  command_type: "start",
+                  command_id: "cmd-1",
+                },
+              ],
             },
           ],
         },

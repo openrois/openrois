@@ -907,6 +907,13 @@ EXTENSIONS: tuple[Extension, ...] = (
         "Without the payload, every event costs a get_event_detail round trip.",
     ),
     Extension(
+        "ParameterProfile",
+        "read_only",
+        "The specification lists some parameters only under get_parameter, but the XML "
+        "profiles declare them as ParameterProfiles, which reads as settable. The engine "
+        "refuses set_parameter on them.",
+    ),
+    Extension(
         "ProfileChangedParams",
         None,
         "The specification gives a client no way to learn that components joined or "

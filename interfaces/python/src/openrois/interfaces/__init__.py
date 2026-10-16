@@ -82,6 +82,7 @@ from openrois.interfaces.condition import (
 from openrois.interfaces.hri import (
     Argument,
     ArgumentList,
+    Branch,
     CommandId,
     CommandType,
     CommandUnit,
@@ -131,6 +132,7 @@ __all__ = [
     "CommandUnit",
     "CommandUnitSequence",
     "CommandUnitSequenceItem",
+    "Branch",
     "ConcurrentCommands",
     "ConditionT",
     "DateTime",

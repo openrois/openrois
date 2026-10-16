@@ -253,13 +253,19 @@ describe("execute", () => {
     delay_time: null,
   });
 
-  it("runs items in order and the commands of a group together", async () => {
+  it("runs items in order and the branches of a group together", async () => {
     const engine = start();
     const a = client("a");
     const result = engine.handle(a, "rois.command.execute", {
       command_unit_list: [
         unit(PERSON, "start", "c1"),
-        { command_list: [unit(PERSON, "suspend", "c2"), unit(PERSON, "resume", "c3")], delay_time: 5 },
+        {
+          branch_list: [
+            { command_list: [unit(PERSON, "suspend", "c2")] },
+            { command_list: [unit(PERSON, "resume", "c3")] },
+          ],
+          delay_time: 5,
+        },
       ],
     });
     expect(result.return_code).toBe("OK");
@@ -294,13 +300,43 @@ describe("execute", () => {
     engine.handle(a, "rois.command.execute", {
       command_unit_list: [
         {
-          command_list: [unit(PERSON, "suspend", "c1"), { ...unit(PERSON, "resume", "c2"), delay_time: 30 }],
+          branch_list: [
+            { command_list: [unit(PERSON, "suspend", "c1")] },
+            { command_list: [{ ...unit(PERSON, "resume", "c2"), delay_time: 30 }] },
+          ],
           delay_time: null,
         },
       ],
     });
     await until(() => paramsOf(a, "rois.command.completed").length === 2);
     expect(paramsOf(a, "rois.command.completed").map((p) => p.command_id)).toEqual(["c1", "c2"]);
+  });
+
+  it("runs the commands of a branch in order", async () => {
+    const engine = start();
+    const a = client("a");
+    engine.handle(a, "rois.command.execute", {
+      command_unit_list: [
+        {
+          branch_list: [
+            {
+              command_list: [
+                { ...unit(PERSON, "suspend", "c1"), delay_time: 30 },
+                unit(PERSON, "resume", "c2"),
+              ],
+            },
+            { command_list: [unit(PERSON, "start", "c3")] },
+          ],
+          delay_time: null,
+        },
+      ],
+    });
+    await until(() => paramsOf(a, "rois.command.completed").length === 3);
+    expect(paramsOf(a, "rois.command.completed").map((p) => p.command_id)).toEqual([
+      "c3",
+      "c1",
+      "c2",
+    ]);
   });
 
   it("answers UNSUPPORTED for a command the component does not declare", () => {

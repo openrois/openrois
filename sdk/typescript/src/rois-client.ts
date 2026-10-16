@@ -129,12 +129,15 @@ export type CommandUnitInput = Omit<z.input<typeof CommandUnitSchema>, "command_
   command_id?: string;
 };
 
-/** Commands for execute() that run at the same time. */
+/**
+ * Commands for execute() in branches that run at the same time. Each branch runs
+ * its commands in order, and the next item waits for every branch.
+ */
 export type ConcurrentCommandsInput = Omit<
   z.input<typeof ConcurrentCommandsSchema>,
-  "command_list"
+  "branch_list"
 > & {
-  command_list: CommandUnitInput[];
+  branch_list: { command_list: CommandUnitInput[] }[];
 };
 
 /** One item of the command_unit_list that execute() takes. */
@@ -424,8 +427,8 @@ export class RoISClient extends EventEmitter {
   }
 
   /**
-   * Run commands in order. A ConcurrentCommands item runs its commands at the
-   * same time.
+   * Run commands in order. A ConcurrentCommands item runs its branches at the
+   * same time, and each branch runs its commands in order.
    *
    * The engine answers as soon as it accepts the commands. Each command then
    * ends with a rois.command.completed notification carrying its command_id,
@@ -434,7 +437,7 @@ export class RoISClient extends EventEmitter {
    * @param commandUnitList - The commands. A command without a command_id is
    *   named with a UUID.
    * @returns The command_id of every command, in the order the list gives them,
-   *   with the commands of a ConcurrentCommands item in their list order.
+   *   with the commands of a ConcurrentCommands item branch by branch.
    */
   async execute(commandUnitList: CommandUnitSequenceItemInput[]): Promise<string[]> {
     const commandIds: string[] = [];
@@ -444,8 +447,13 @@ export class RoISClient extends EventEmitter {
       return { ...unit, command_id };
     };
     const command_unit_list = commandUnitList.map((item) =>
-      "command_list" in item
-        ? { ...item, command_list: item.command_list.map(named) }
+      "branch_list" in item
+        ? {
+            ...item,
+            branch_list: item.branch_list.map((branch) => ({
+              command_list: branch.command_list.map(named),
+            })),
+          }
         : named(item),
     );
     await this.call(RoISMethods.Execute, { command_unit_list });
