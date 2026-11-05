@@ -9,19 +9,27 @@ both and it is a middle tier, which is how OpenRoIS composes into a hierarchy wi
 second implementation.
 
 The engine answers the RoIS method catalog of
-[`openrois-interfaces`](../interfaces/python/README.md), the same 16 methods and 4
+[`openrois-interfaces`](https://github.com/openrois/openrois/blob/dev/interfaces/python/README.md), the same 16 methods and 4
 notifications at every level. A parent engine reaches a child engine with the requests a
 client would send.
 
 ## Install
 
-Not published to PyPI yet. From a clone of the repository:
+Alpha, pre-1.0, unstable API.
 
 ```bash
-pip install -e ./interfaces/python -e ./engine
+pip install openrois-engine
 ```
 
-Components are written with [`openrois-components-core`](../components/core/README.md):
+Or from a clone of the repository:
+
+```bash
+pip install -e ./engine
+```
+
+Components are written with
+[`openrois-components-core`](https://github.com/openrois/openrois/blob/dev/components/core/README.md),
+which is not published to PyPI yet. From a clone of the repository:
 
 ```bash
 pip install -e ./components/core
@@ -131,7 +139,7 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-The standalone gateway process, `openrois-gateway` in [`gateway/`](../gateway/README.md),
+The standalone gateway process, `openrois-gateway` in [`gateway/`](https://github.com/openrois/openrois/blob/dev/gateway/README.md),
 runs exactly this with configuration and signal handling.
 
 ## What the Engine Does
@@ -250,7 +258,7 @@ rationale.
 ## Test
 
 ```bash
-pip install -e ./interfaces/python -e ./components/core -e "./engine[dev]"
+pip install -e ./components/core -e "./engine[dev]"
 cd engine && pytest && mypy && ruff check src/ tests/
 ```
 
@@ -262,7 +270,7 @@ connected over WebSockets.
 
 Alpha, pre-1.0, unstable API. The engine implements the RoIS interfaces, profiles and
 common messages (CP1 to CP3) as
-[rois-reference §16](../docs/rois-reference.md#16-known-normative-divergences) records
+[rois-reference §16](https://github.com/openrois/openrois/blob/dev/docs/rois-reference.md#16-known-normative-divergences) records
 them, without a conformance claim. It does not yet load XML-declared profiles at run time.
 Re-subscription after an adapter reconnects and health endpoints are planned for [Phase 5](https://openrois.org/docs/project/roadmap).
 

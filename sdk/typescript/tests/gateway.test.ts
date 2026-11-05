@@ -176,6 +176,16 @@ suite("a gateway with the mock adapter", () => {
       ]);
       const statuses = await Promise.all(ids.map((id) => live.completion(id)));
       expect(statuses).toEqual(["OK", "OK", "OK"]);
+      // A suspension outlives the bind, so stop the shared components for the next tests.
+      const stopped = await client.execute([
+        {
+          branch_list: [
+            { command_list: [{ component_ref: DETECTION, command_type: "stop" }] },
+            { command_list: [{ component_ref: NAVIGATION, command_type: "stop" }] },
+          ],
+        },
+      ]);
+      await Promise.all(stopped.map((id) => live.completion(id)));
       await client.release(NAVIGATION);
       await client.release(DETECTION);
     });

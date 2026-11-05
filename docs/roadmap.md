@@ -90,8 +90,9 @@ including a gateway under a gateway. The mock adapter, the adapter template and 
 Reachy Mini and Kachaka adapters run on it, and the TypeScript SDK runs its sessions
 against it.
 
-**In progress:** the first release of `openrois-engine` with `openrois-components-core`,
-once the Reachy Mini adapter has run the full workflow on them end to end.
+**In progress:** the `0.1.0` release of `openrois-engine` with `openrois-components-core`,
+once the Reachy Mini adapter has run the full workflow on them end to end. Until then the
+engine ships as alpha pre-releases, tagged `engine-v0.1.0-alpha.N`.
 
 **Exit criteria:** the Python engine is the only dispatch implementation in the
 repository. The TypeScript proof of concept is removed, with its last version at tag
