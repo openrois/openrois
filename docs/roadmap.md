@@ -91,8 +91,9 @@ Reachy Mini and Kachaka adapters run on it, and the TypeScript SDK runs its sess
 against it.
 
 **In progress:** the `0.1.0` release of `openrois-engine` with `openrois-components-core`,
-once the Reachy Mini adapter has run the full workflow on them end to end. Until then the
-engine ships as alpha pre-releases, tagged `engine-v0.1.0-alpha.N`.
+once the Reachy Mini adapter has run the full workflow on them end to end. Until then both
+ship as alpha pre-releases, tagged `engine-v0.1.0-alpha.N` and
+`components-core-v0.1.0-alpha.N`.
 
 **Exit criteria:** the Python engine is the only dispatch implementation in the
 repository. The TypeScript proof of concept is removed, with its last version at tag

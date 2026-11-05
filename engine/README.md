@@ -28,11 +28,10 @@ pip install -e ./engine
 ```
 
 Components are written with
-[`openrois-components-core`](https://github.com/openrois/openrois/blob/dev/components/core/README.md),
-which is not published to PyPI yet. From a clone of the repository:
+[`openrois-components-core`](https://github.com/openrois/openrois/blob/dev/components/core/README.md):
 
 ```bash
-pip install -e ./components/core
+pip install openrois-components-core
 ```
 
 ## Public API

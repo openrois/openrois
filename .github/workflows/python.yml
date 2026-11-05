@@ -84,10 +84,11 @@ jobs:
         python-version: ["3.12", "3.13"]
         package: [core, common]
         include:
-          # The OpenRoIS packages each one needs, installed from the tree. The core
-          # tests run components in an engine, against a stand-in for rclpy.
+          # The OpenRoIS packages each one needs from the tree. The rest come from
+          # PyPI: the core tests run components in openrois-engine, against a stand-in
+          # for rclpy.
           - package: core
-            needs-packages: -e interfaces/python -e engine
+            needs-packages: ""
           - package: common
             needs-packages: -e interfaces/python -e components/core
     defaults:
