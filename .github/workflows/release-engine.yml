@@ -49,9 +49,9 @@ jobs:
           python-version: "3.12"
 
       - name: Install
-        # The tests run components written with openrois-components-core, which is not
-        # on PyPI yet, so the packages install from the tree.
-        run: python -m pip install -e interfaces/python -e components/core -e "engine[dev]"
+        # The interfaces come from PyPI. The tests run components written with
+        # openrois-components-core, which is not on PyPI yet, so it installs from the tree.
+        run: python -m pip install -e components/core -e "engine[dev]"
 
       - name: Lint
         working-directory: engine

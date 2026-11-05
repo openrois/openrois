@@ -24,7 +24,7 @@ pip install openrois-engine
 Or from a clone of the repository:
 
 ```bash
-pip install -e ./interfaces/python -e ./engine
+pip install -e ./engine
 ```
 
 Components are written with
@@ -258,7 +258,7 @@ rationale.
 ## Test
 
 ```bash
-pip install -e ./interfaces/python -e ./components/core -e "./engine[dev]"
+pip install -e ./components/core -e "./engine[dev]"
 cd engine && pytest && mypy && ruff check src/ tests/
 ```
 
