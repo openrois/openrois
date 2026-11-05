@@ -9,14 +9,27 @@ parameters, answers `component_status`, tracks its commands and serves the part 
 profile it implements.
 
 This is what an adapter author imports. It has no transport and no robot in it, and it
-depends on [`openrois-interfaces`](../../interfaces/python/README.md) only.
+depends on [`openrois-interfaces`](https://github.com/openrois/openrois/blob/dev/interfaces/python/README.md) only.
 
 ## Install
 
-Not published to PyPI yet. From a clone of the repository:
+Alpha, pre-1.0, unstable API.
 
 ```bash
-pip install -e ./interfaces/python -e ./components/core
+pip install openrois-components-core
+```
+
+Or from a clone of the repository:
+
+```bash
+pip install -e ./components/core
+```
+
+Components run in an engine,
+[`openrois-engine`](https://github.com/openrois/openrois/blob/dev/engine/README.md):
+
+```bash
+pip install openrois-engine
 ```
 
 ## Write a Component
@@ -165,7 +178,7 @@ authors.
 ## Test
 
 ```bash
-pip install -e ./interfaces/python -e "./components/core[dev]"
+pip install -e "./components/core[dev]"
 cd components/core && pytest && mypy && ruff check src/ tests/
 ```
 
