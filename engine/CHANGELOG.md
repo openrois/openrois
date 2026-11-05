@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0a1] - 2026-11-05
+
 ### Added
 
 - `Engine`, the recursive RoIS HRI Engine. It answers the 16 methods and 4 notifications of the RoIS method catalog for the components it hosts in its process and for those of its child engines, so one class serves an adapter, a gateway and a middle tier. It implements the RoIS interfaces, profiles and common messages (CP1 to CP3) as section 16 of `docs/rois-reference.md` records them, without a conformance claim.
@@ -29,5 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `WsClient`, which connects an adapter to a gateway, serves it through a trusted session, and reconnects with a delay that grows from 1 to 30 seconds. Components that talk ROS 2 share an `RclpyExecutor` from `openrois-components-core`, a resource the engine opens before they connect and closes after they disconnect.
 - The adapter configuration loader, `openrois.engine.config`. An adapter declares its settings as a subclass of `AdapterConfig`, with one section per component, and `load_adapter_config` reads them from the defaults, then `adapter.yaml` (named by `--config` or `OPENROIS_ADAPTER_CONFIG`), then the environment, then the flags, each overriding the one before. The environment and the flags set only `gateway_url`, `engine_id`, `robot_address` and `log_level`, as `OPENROIS_ADAPTER_*` variables and `--gateway-url`, `--engine-id`, `--robot-address` and `--log-level`. An unreadable file or an invalid setting raises `ConfigError`, which names each invalid setting. `load_config` is the loader behind it, for any model and environment prefix, and the gateway reads its own settings with it.
 - Type information for every public name (`py.typed`), checked with mypy in strict mode.
+- `openrois-interfaces` 0.1.0a5 or later is required, because the engine reads the `Branch` model that release introduced.
 
-[unreleased]: https://github.com/openrois/openrois/tree/dev/engine
+[unreleased]: https://github.com/openrois/openrois/compare/engine-v0.1.0-alpha.1...HEAD
+[0.1.0a1]: https://github.com/openrois/openrois/releases/tag/engine-v0.1.0-alpha.1

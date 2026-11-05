@@ -1,0 +1,84 @@
+name: Release engine
+
+# Publishes openrois-engine to PyPI when an engine-v* tag is pushed, for example
+# engine-v0.1.0-alpha.2. PyPI uses trusted publishing (OIDC), so no long-lived token is
+# stored in the repository.
+
+on:
+  push:
+    tags: ["engine-v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-engine-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check-version:
+    name: Tag matches the package version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compare the tag with pyproject.toml
+        # The tag carries the npm form (0.1.0-alpha.2), and PyPI normalizes it to
+        # 0.1.0a2, as for the interfaces tags.
+        run: |
+          tag="${GITHUB_REF_NAME#engine-v}"
+          py_version=$(python3 -c "import tomllib;print(tomllib.load(open('engine/pyproject.toml','rb'))['project']['version'])")
+          py_expected=$(python3 -c "import re,sys;print(re.sub(r'-alpha\.', 'a', sys.argv[1]))" "$tag")
+          if [ "$py_version" != "$py_expected" ]; then
+            echo "::error::Tag $tag, PyPI $py_version (expected $py_expected)"
+            exit 1
+          fi
+
+  pypi:
+    name: PyPI
+    needs: check-version
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        # The tests run components written with openrois-components-core, which is not
+        # on PyPI yet, so the packages install from the tree.
+        run: python -m pip install -e interfaces/python -e components/core -e "engine[dev]"
+
+      - name: Lint
+        working-directory: engine
+        run: ruff check src/ tests/
+
+      - name: Type check
+        working-directory: engine
+        run: mypy
+
+      - name: Test
+        working-directory: engine
+        run: pytest
+
+      - name: Build
+        working-directory: engine
+        run: |
+          python -m pip install build
+          python -m build
+
+      - name: The wheel installs from PyPI
+        # This resolves openrois-interfaces from the registry, so a floor that PyPI
+        # cannot satisfy stops the release before anything is uploaded.
+        run: |
+          python -m venv /tmp/clean
+          /tmp/clean/bin/pip install engine/dist/*.whl
+          /tmp/clean/bin/python -c "import openrois.engine"
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: engine/dist
