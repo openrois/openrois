@@ -139,7 +139,7 @@ The inspector reads the engine profile and renders every component it finds, wit
 queries, parameters, commands, and events: `mock/navigation`, `mock/person_detection`
 and `mock/system_information`, served by the mock adapter, an engine of its own below the
 gateway. Nothing in the client is specific to the components on the other side.
-`python services/gateway/scripts/smoke.py` checks the same stack from the command line.
+`python testing/conformance/wire_check.py` checks the same stack from the command line.
 
 To develop a client without Docker, run the gateway and the
 [mock adapter](testing/mock-adapter/README.md) as Python processes.
@@ -290,7 +290,8 @@ openrois/
 │   ├── hri-client/      Profile-driven web inspector for any RoIS engine
 │   └── adapter-template/  Starting point for a new robot adapter
 ├── testing/
-│   └── mock-adapter/    Adapter with simulated components
+│   ├── mock-adapter/    Adapter with simulated components
+│   └── conformance/     The scenario list for clients of a gateway
 ├── docs/                White paper, architecture, roadmap, RoIS reference
 └── compose.yaml         The gateway with the mock adapter, in Docker Compose
 ```

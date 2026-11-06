@@ -1,12 +1,14 @@
 """A mock adapter: three simulated components on the Python engine.
 
-It hosts three simulated components under the engine id ``mock``, each declared with
-the profile constant of its type, and serves them to a gateway:
+It hosts simulated components under the engine id ``mock``, the first three declared
+with the profile constant of their type, and serves them to a gateway:
 
 - ``mock/person_detection`` reports zero to three persons every five seconds.
 - ``mock/navigation`` drives to the first of its ``target_positions`` in three seconds
   and reports ``reached_target``.
 - ``mock/system_information`` answers ``robot_position`` and ``engine_status``.
+- ``mock/fault`` is a test fixture. Its commands make the error and the profile change
+  that the conformance list checks, so a client triggers them with a plain ``execute``.
 
 Usage:
     python mock_adapter.py [--config FILE] [--gateway-url URL] [--engine-id ID]
@@ -40,7 +42,9 @@ from openrois.components.core import (
 )
 from openrois.engine import Engine, WsClient
 from openrois.engine.config import AdapterConfig, ConfigError, load_adapter_config
+from openrois.interfaces.common import ComponentStatus
 from openrois.interfaces.components import NAVIGATION_PROFILE, PERSON_DETECTION_PROFILE
+from openrois.interfaces.declaration import Command, ComponentDeclaration
 from openrois.interfaces.service import CompletedStatus
 from pydantic import Field
 
@@ -176,13 +180,53 @@ class MockNavigation(Component):
         await asyncio.sleep(self._timing.command)
 
 
-def build_engine(engine_id: str = "mock", timing: Timing | None = None) -> Engine:
-    """The engine of the mock adapter, with its three components."""
+#: How long mock/fault holds an error, and how long the peer engine stays, in seconds.
+FAULT_HOLD = 1.0
+
+TEST_FAULT_PROFILE = ComponentDeclaration(
+    identifier="urn:x-rois:def:component:OpenRoIS::TestFault",
+    name="test_fault",
+    function="function",
+    commands=(Command("raise_error"), Command("peer_join")),
+    sub_profiles=(),
+).profile()
+
+
+@component(TEST_FAULT_PROFILE)
+class MockFault(Component):
+    """Makes an error, or a profile change, on request."""
+
+    def __init__(self, gateway_url: str) -> None:
+        self._gateway_url = gateway_url
+
+    @invoke("raise_error")
+    async def raise_error(self) -> None:
+        self.raise_status(ComponentStatus.ERROR, "raised on request")
+        # An engine refuses every command of a component in ERROR, so no command could
+        # clear this one.
+        asyncio.get_running_loop().call_later(FAULT_HOLD, self.clear_status)
+
+    @invoke("peer_join")
+    async def peer_join(self) -> None:
+        # A second engine joins the gateway and leaves it, which leaves this one alone.
+        peer = asyncio.create_task(WsClient(Engine("mock_peer"), self._gateway_url).run_async())
+        await asyncio.sleep(FAULT_HOLD)
+        peer.cancel()
+        await asyncio.gather(peer, return_exceptions=True)
+
+
+def build_engine(
+    engine_id: str = "mock",
+    timing: Timing | None = None,
+    gateway_url: str = "ws://127.0.0.1:8765",
+) -> Engine:
+    """The engine of the mock adapter, with its components."""
     timing = timing or Timing()
     engine = Engine(engine_id)
     engine.add_component("person_detection", MockPersonDetection(timing))
     engine.add_component("navigation", MockNavigation(timing))
     engine.add_component("system_information", MockSystemInformation())
+    engine.add_component("fault", MockFault(gateway_url))
     return engine
 
 
@@ -197,7 +241,9 @@ def main() -> None:
     logging.basicConfig(
         level=config.log_level.upper(), format="%(asctime)s %(levelname)s %(name)s: %(message)s"
     )
-    engine = build_engine(config.engine_id, Timing().scaled(config.time_scale))
+    engine = build_engine(
+        config.engine_id, Timing().scaled(config.time_scale), config.gateway_url
+    )
     WsClient(engine, config.gateway_url).run()
 
 

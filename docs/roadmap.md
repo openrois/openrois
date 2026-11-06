@@ -111,8 +111,8 @@ minimal health and status endpoints.
 **Done:** the `openrois-gateway` package, a standalone gateway process composed from
 `Engine` and `WsServer`, with configuration from a YAML file, the environment and flags,
 logging, and a graceful stop on SIGTERM and SIGINT. Its container image, and a Docker
-Compose file that starts it with the mock adapter, checked end to end by a smoke script on
-the RoIS method catalog. Docker Compose is the one-command quickstart.
+Compose file that starts it with the mock adapter, checked end to end by the conformance
+list on the RoIS method catalog. Docker Compose is the one-command quickstart.
 
 **In progress:** the first release of `openrois-gateway`, together with the engine.
 

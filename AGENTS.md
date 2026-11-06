@@ -20,7 +20,7 @@ What exists today:
 | TypeScript client SDK | `sdk/typescript/` | Available |
 | Unity SDK | `sdk/unity/` | JSON-RPC layer only, client in progress |
 | Examples: web client, adapter template | `examples/` | Available |
-| Test fixture: mock adapter | `testing/` | Available |
+| Test fixtures: mock adapter, conformance list | `testing/` | Available |
 | Hub management application | `apps/hub/` | Not started, scaffold only |
 
 Each robot's components live in its adapter repository, not here. The reference example
@@ -70,7 +70,7 @@ its description. The IDL and XSD cross-check tests fail on any other addition.
 | TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test` |
 | C# types | `interfaces/csharp` | `dotnet build src/OpenRoIS.Interfaces`, `dotnet test tests/OpenRoIS.Interfaces.Tests` |
 | Engine | `engine` | `pip install -e ../components/core -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
-| Gateway | `services/gateway` | `pip install -e ../../interfaces/python -e ../../engine -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/ scripts/` |
+| Gateway | `services/gateway` | `pip install -e ../../interfaces/python -e ../../engine -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | Component SDK | `components/core` | `pip install -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | Common components | `components/common` | `pip install -e ../../interfaces/python -e ../core -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway) |

@@ -326,7 +326,7 @@ ran.
 | C# types | `interfaces/csharp` | `dotnet build src/OpenRoIS.Interfaces`, `dotnet test tests/OpenRoIS.Interfaces.Tests` |
 | TypeScript SDK | `sdk/typescript` | `npm run build`, `npm test`, and with `OPENROIS_GATEWAY_URL=ws://127.0.0.1:8765` against the Compose stack |
 | Engine | `engine` | `pytest`, `mypy`, `ruff check src/ tests/` |
-| Gateway | `services/gateway` | `pytest`, `mypy`, `ruff check src/ tests/ scripts/` |
+| Gateway | `services/gateway` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Component SDK | `components/core` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Common components | `components/common` | `pytest`, `mypy`, `ruff check src/ tests/` |
 
