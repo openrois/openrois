@@ -554,9 +554,12 @@ class Engine:
             return SubscribeResult(return_code=picked)
         ref, source, arguments, condition = picked
         key = (params.event_type, condition)
-        for subscribe_id, entry in self._subscriptions.items():
-            if entry.session_id == session.id and entry.key == key:
-                return SubscribeResult(return_code=ReturnCode.OK, subscribe_id=subscribe_id)
+        # A parent engine has one session here for all its clients and keeps their
+        # subscriptions apart itself, so each of its requests is a new subscription.
+        if not session.trusted:
+            for subscribe_id, entry in self._subscriptions.items():
+                if entry.session_id == session.id and entry.key == key:
+                    return SubscribeResult(return_code=ReturnCode.OK, subscribe_id=subscribe_id)
         result = await source.subscribe(
             ref, params.event_type, arguments, self._deliverer(session)
         )

@@ -316,6 +316,31 @@ async def test_the_reply_to_subscribe_comes_before_the_first_event(
         await ticking.stop()
 
 
+async def test_two_clients_subscribe_to_one_event_of_a_child(
+    gateway: Gateway, client: RpcClient
+) -> None:
+    # The child sees one trusted session for every client of the gateway.
+    eyes = {"eyes": PersonDetection(ticking=True)}
+    ticking = await start_adapter(gateway.url, gateway, "robot", eyes)
+    other = await RpcClient.connect(gateway.url)
+    params = {"event_type": "person_detected", "condition": eq(COMPONENT_REF, "robot/eyes")}
+    event = "rois.event.notify_event"
+    try:
+        first = await client.call("rois.event.subscribe", **params)
+        second = await other.call("rois.event.subscribe", **params)
+        assert first["return_code"] == second["return_code"] == "OK"
+        assert first["subscribe_id"] != second["subscribe_id"]
+        await client.notification(event, lambda p: p["subscribe_id"] == first["subscribe_id"])
+        await other.notification(event, lambda p: p["subscribe_id"] == second["subscribe_id"])
+
+        await client.call("rois.event.unsubscribe", subscribe_id=first["subscribe_id"])
+        received = len(other.sent(event))
+        await wait_until(lambda: len(other.sent(event)) > received)
+    finally:
+        await other.close()
+        await ticking.stop()
+
+
 async def test_an_id_outside_the_child_counts_as_error(
     gateway: Gateway, client: RpcClient
 ) -> None:
