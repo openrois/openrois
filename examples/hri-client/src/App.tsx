@@ -14,7 +14,7 @@ function App() {
   // Counts the clicks on Connect, so a click retries the same URL.
   const [attempt, setAttempt] = useState(0);
 
-  const { client, state, error } = useRoISClient(connectedUrl, attempt);
+  const { client, state, error, commandStatuses } = useRoISClient(connectedUrl, attempt);
   const connected = state === "connected";
   const { profile, error: profileError } = useProfile(connected ? client : null);
 
@@ -94,6 +94,7 @@ function App() {
                   key={engineId}
                   engineId={engineId}
                   client={client}
+                  commandStatuses={commandStatuses}
                   componentRefs={refs}
                   componentProfiles={profiles}
                 />

@@ -76,11 +76,11 @@ jobs:
         run: python testing/conformance/wire_check.py --timeout 120
 
       - name: Install the TypeScript SDK
-        # The SDK depends on the TypeScript interfaces in the tree, which are built
-        # first.
+        # The SDK takes the interfaces from npm, so the tree goes over them here, and a
+        # change in the tree is tested before it is published.
         run: |
           (cd interfaces/typescript && npm ci && npm run build)
-          (cd sdk/typescript && npm ci)
+          (cd sdk/typescript && npm ci && npm install ../../interfaces/typescript --no-save)
 
       - name: SDK sessions against the gateway
         working-directory: sdk/typescript

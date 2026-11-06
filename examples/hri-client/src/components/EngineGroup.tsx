@@ -1,10 +1,12 @@
 import type { RoISClient } from "@openrois/sdk";
 import type { HRIComponentProfile } from "@openrois/interfaces";
+import type { CommandStatuses } from "../hooks/useRoISClient";
 import { ComponentPanel } from "./ComponentPanel";
 
 interface EngineGroupProps {
   engineId: string;
   client: RoISClient | null;
+  commandStatuses: CommandStatuses;
   componentRefs: string[];
   componentProfiles: HRIComponentProfile[];
 }
@@ -18,6 +20,7 @@ interface EngineGroupProps {
 export function EngineGroup({
   engineId,
   client,
+  commandStatuses,
   componentRefs,
   componentProfiles,
 }: EngineGroupProps) {
@@ -34,6 +37,7 @@ export function EngineGroup({
           <ComponentPanel
             key={ref}
             client={client}
+            commandStatuses={commandStatuses}
             componentRef={ref}
             profile={componentProfiles[i]}
           />

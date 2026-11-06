@@ -1,5 +1,5 @@
 /**
- * Unit tests for transport.ts -- WebSocket transport layer.
+ * Unit tests for transport.ts, the WebSocket transport layer.
  *
  * Uses a MockWebSocket class to simulate the gateway without a real server.
  * The mock tracks sent messages, lets tests trigger incoming messages, and
@@ -16,13 +16,15 @@ import {
   ConnectionError,
   RequestTimeoutError,
   RpcError,
-  WS_READY_STATE,
   type WebSocketLike,
 } from "../src/transport";
 import { JsonRpcErrorCode, JSONRPC_VERSION } from "../src/jsonrpc";
 
+/** The readyState values of the WebSocket API. */
+const READY_STATE = { CONNECTING: 0, OPEN: 1, CLOSED: 3 } as const;
+
 // ---------------------------------------------------------------------------
-// MockWebSocket -- simulates the gateway side for testing
+// MockWebSocket: simulates the gateway side for testing
 // ---------------------------------------------------------------------------
 
 /**
@@ -38,7 +40,7 @@ import { JsonRpcErrorCode, JSONRPC_VERSION } from "../src/jsonrpc";
  * accessible through mock.sent (array of parsed JSON objects).
  */
 class MockWebSocket implements WebSocketLike {
-  readyState: number = WS_READY_STATE.CONNECTING;
+  readyState: number = READY_STATE.CONNECTING;
 
   onopen: ((event: { type: string }) => void) | null = null;
   onclose: ((event: { code: number; reason: string; type: string }) => void) | null = null;
@@ -51,6 +53,9 @@ class MockWebSocket implements WebSocketLike {
   /** Raw string messages sent by the transport. */
   sentRaw: string[] = [];
 
+  /** How many times the transport closed this socket. */
+  closeCalls: number = 0;
+
   send(data: string): void {
     this.sentRaw.push(data);
     try {
@@ -61,14 +66,15 @@ class MockWebSocket implements WebSocketLike {
   }
 
   close(_code?: number, _reason?: string): void {
-    this.readyState = WS_READY_STATE.CLOSED;
+    this.closeCalls += 1;
+    this.readyState = READY_STATE.CLOSED;
   }
 
   // --- Test helpers: simulate server-side events ---
 
   /** Simulate a successful connection. */
   simulateOpen(): void {
-    this.readyState = WS_READY_STATE.OPEN;
+    this.readyState = READY_STATE.OPEN;
     this.onopen?.({ type: "open" });
   }
 
@@ -80,7 +86,7 @@ class MockWebSocket implements WebSocketLike {
 
   /** Simulate the connection closing. */
   simulateClose(code: number = 1000, reason: string = ""): void {
-    this.readyState = WS_READY_STATE.CLOSED;
+    this.readyState = READY_STATE.CLOSED;
     this.onclose?.({ code, reason, type: "close" });
   }
 
@@ -219,6 +225,70 @@ describe("WebSocketTransport", () => {
       expect(transport.state).toBe(TransportState.DISCONNECTED);
     });
 
+    it("closes the socket when the connection times out", async () => {
+      let socket: MockWebSocket | undefined;
+      const transport = new WebSocketTransport({
+        connectTimeout: 500,
+        webSocketFactory: () => (socket = new MockWebSocket()),
+      });
+      const opened = vi.fn();
+      transport.on("open", opened);
+
+      const connectPromise = transport.connect("ws://test-gateway:8765");
+      vi.advanceTimersByTime(600);
+      await expect(connectPromise).rejects.toThrow("timed out");
+
+      expect(socket?.closeCalls).toBe(1);
+      // A handshake that ends late changes nothing.
+      socket?.simulateOpen();
+      expect(opened).not.toHaveBeenCalled();
+      expect(transport.state).toBe(TransportState.DISCONNECTED);
+    });
+
+    it("rejects with ConnectionError when close() runs first, and reports no close", async () => {
+      const { transport, getMock } = createTestTransport({ connectTimeout: 500 });
+      const closed = vi.fn();
+      transport.on("close", closed);
+
+      const connectPromise = transport.connect("ws://test-gateway:8765");
+      const socket = getMock();
+      transport.close();
+
+      await expect(connectPromise).rejects.toThrow(ConnectionError);
+      await expect(connectPromise).rejects.toThrow("closed by client");
+      expect(socket.closeCalls).toBe(1);
+      expect(closed).not.toHaveBeenCalled();
+      expect(transport.state).toBe(TransportState.DISCONNECTED);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it("keeps the next connection when close() ended the attempt before it", async () => {
+      const { transport, connectAndOpen } = createTestTransport({ connectTimeout: 500 });
+      const closed = vi.fn();
+      transport.on("close", closed);
+
+      const abandoned = transport.connect("ws://test-gateway:8765");
+      transport.close();
+      await expect(abandoned).rejects.toThrow(ConnectionError);
+
+      const socket = await connectAndOpen();
+      vi.advanceTimersByTime(600);
+
+      expect(transport.state).toBe(TransportState.CONNECTED);
+      expect(socket.closeCalls).toBe(0);
+      expect(closed).not.toHaveBeenCalled();
+    });
+
+    it("rejects when the runtime has no global WebSocket and no factory is given", async () => {
+      vi.stubGlobal("WebSocket", undefined);
+      const transport = new WebSocketTransport();
+
+      await expect(transport.connect("ws://test-gateway:8765")).rejects.toThrow(ConnectionError);
+      await expect(transport.connect("ws://test-gateway:8765")).rejects.toThrow("webSocketFactory");
+      expect(transport.state).toBe(TransportState.DISCONNECTED);
+      vi.unstubAllGlobals();
+    });
+
     it("rejects if called while already connected", async () => {
       const { transport, connectAndOpen } = createTestTransport();
 
@@ -242,7 +312,7 @@ describe("WebSocketTransport", () => {
   });
 
   // -----------------------------------------------------------------------
-  // send() -- request/response correlation
+  // send(): request/response correlation
   // -----------------------------------------------------------------------
 
   describe("send()", () => {
@@ -408,6 +478,26 @@ describe("WebSocketTransport", () => {
       expect(secondResult).toHaveProperty("results");
     });
 
+    it("matches an error reply by id when it overtakes a result", async () => {
+      const { transport, connectAndOpen } = createTestTransport();
+      const mock = await connectAndOpen();
+
+      const first = transport.send("rois.command.search", { condition: "" });
+      const second = transport.send("rois.command.fly", {});
+
+      mock.simulateMessage(errorResponse(
+        "req-2",
+        JsonRpcErrorCode.METHOD_NOT_FOUND,
+        "Method not found: rois.command.fly",
+      ));
+      mock.simulateMessage(successResponse("req-1", { return_code: "OK" }));
+
+      const [answered, refused] = await Promise.allSettled([first, second]);
+      expect(answered).toEqual({ status: "fulfilled", value: { return_code: "OK" } });
+      expect(refused.status).toBe("rejected");
+      expect((refused as PromiseRejectedResult).reason).toBeInstanceOf(RpcError);
+    });
+
     it("handles many concurrent in-flight requests", async () => {
       const { transport, connectAndOpen } = createTestTransport();
       const mock = await connectAndOpen();
@@ -452,42 +542,20 @@ describe("WebSocketTransport", () => {
       });
     });
 
-    it("emits a method-specific event for targeted listeners", async () => {
+    it("emits a notification only as 'notification', whatever its method", async () => {
       const { transport, connectAndOpen } = createTestTransport();
       const mock = await connectAndOpen();
-      const eventHandler = vi.fn();
-      const completedHandler = vi.fn();
-      transport.on("rois.event.notify_event", eventHandler);
-      transport.on("rois.command.completed", completedHandler);
+      const closed = vi.fn();
+      const faults = vi.fn();
+      transport.on("close", closed);
+      transport.on("error", faults);
 
-      // Send a person_detected notification.
-      mock.simulateMessage(notification("rois.event.notify_event", {
-        event_id: "evt-001",
-        event_type: "person_detected",
-      }));
+      mock.simulateMessage(notification("close", { code: 1000 }));
+      mock.simulateMessage(notification("error", { message: "fake" }));
 
-      // Send a command completed notification.
-      mock.simulateMessage(notification("rois.command.completed", {
-        command_id: "cmd-001",
-        status: "OK",
-      }));
-
-      expect(eventHandler).toHaveBeenCalledOnce();
-      expect(completedHandler).toHaveBeenCalledOnce();
-    });
-
-    it("emits a notify_error notification", async () => {
-      const { transport, connectAndOpen } = createTestTransport();
-      const mock = await connectAndOpen();
-      const handler = vi.fn();
-      transport.on("rois.system.notify_error", handler);
-
-      mock.simulateMessage(notification("rois.system.notify_error", {
-        error_id: "err-001",
-        error_type: "COMPONENT_NOT_RESPONDING",
-      }));
-
-      expect(handler).toHaveBeenCalledOnce();
+      expect(closed).not.toHaveBeenCalled();
+      expect(faults).not.toHaveBeenCalled();
+      expect(transport.state).toBe(TransportState.CONNECTED);
     });
   });
 
@@ -527,6 +595,56 @@ describe("WebSocketTransport", () => {
       await expect(pendingPromise).rejects.toThrow("closed by client");
     });
 
+    it.each([
+      ["a code the WebSocket API keeps for itself", 1001, "leaving"],
+      ["a code below the range", 2999, ""],
+      ["a code above the range", 5000, ""],
+      ["a reason over the limit", 1000, "r".repeat(124)],
+      ["a reason over the limit in bytes only", 1000, "é".repeat(62)],
+    ])("throws on %s and changes nothing", async (_name, code, reason) => {
+      const { transport, connectAndOpen } = createTestTransport();
+      const mock = await connectAndOpen();
+      const closed = vi.fn();
+      transport.on("close", closed);
+      const pendingPromise = transport.send("rois.command.search", { condition: "" });
+
+      expect(() => transport.close(code, reason)).toThrow(TransportError);
+
+      expect(mock.closeCalls).toBe(0);
+      expect(transport.state).toBe(TransportState.CONNECTED);
+      expect(closed).not.toHaveBeenCalled();
+      mock.simulateMessage(successResponse("req-1", { return_code: "OK" }));
+      await expect(pendingPromise).resolves.toEqual({ return_code: "OK" });
+    });
+
+    it.each([
+      [3000, "r".repeat(123)],
+      [4999, ""],
+    ])("closes with code %i and a reason at the limit", async (code, reason) => {
+      const { transport, connectAndOpen } = createTestTransport();
+      const mock = await connectAndOpen();
+
+      transport.close(code, reason);
+
+      expect(mock.closeCalls).toBe(1);
+      expect(transport.state).toBe(TransportState.DISCONNECTED);
+    });
+
+    it("leaves the state alone when the socket throws anyway", async () => {
+      const { transport, connectAndOpen } = createTestTransport();
+      const mock = await connectAndOpen();
+      const closed = vi.fn();
+      transport.on("close", closed);
+      mock.close = () => {
+        throw new Error("socket failed");
+      };
+
+      expect(() => transport.close()).toThrow("socket failed");
+
+      expect(transport.state).toBe(TransportState.CONNECTED);
+      expect(closed).not.toHaveBeenCalled();
+    });
+
     it("is a no-op when already disconnected", () => {
       const { transport } = createTestTransport();
       expect(transport.state).toBe(TransportState.DISCONNECTED);
@@ -534,6 +652,79 @@ describe("WebSocketTransport", () => {
       // Should not throw.
       transport.close();
       expect(transport.state).toBe(TransportState.DISCONNECTED);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Timers
+  // -----------------------------------------------------------------------
+
+  describe("timers", () => {
+    it("leaves none after a result and after an error reply", async () => {
+      const { transport, connectAndOpen } = createTestTransport();
+      const mock = await connectAndOpen();
+
+      const answered = transport.send("rois.command.search", { condition: "" });
+      const refused = transport.send("rois.command.fly", {});
+      expect(vi.getTimerCount()).toBe(2);
+      mock.simulateMessage(successResponse("req-1", { return_code: "OK" }));
+      expect(vi.getTimerCount()).toBe(1);
+      mock.simulateMessage(errorResponse("req-2", JsonRpcErrorCode.METHOD_NOT_FOUND, "No"));
+
+      expect(vi.getTimerCount()).toBe(0);
+      await Promise.allSettled([answered, refused]);
+    });
+
+    it("leaves none after close()", async () => {
+      const { transport, connectAndOpen } = createTestTransport();
+      await connectAndOpen();
+
+      const pendingPromise = transport.send("rois.command.search", { condition: "" });
+      transport.close();
+
+      expect(vi.getTimerCount()).toBe(0);
+      await expect(pendingPromise).rejects.toThrow(ConnectionError);
+    });
+
+    it("leaves none after a dropped connection", async () => {
+      const { transport, connectAndOpen } = createTestTransport();
+      const mock = await connectAndOpen();
+
+      const pendingPromise = transport.send("rois.command.search", { condition: "" });
+      mock.simulateClose(1006, "");
+
+      expect(vi.getTimerCount()).toBe(0);
+      await expect(pendingPromise).rejects.toThrow(ConnectionError);
+    });
+
+    it("keeps a session open past the connect timeout", async () => {
+      const { transport, connectAndOpen } = createTestTransport({ connectTimeout: 500 });
+      const closed = vi.fn();
+      transport.on("close", closed);
+
+      const mock = await connectAndOpen();
+      expect(vi.getTimerCount()).toBe(0);
+      vi.advanceTimersByTime(600);
+
+      expect(transport.state).toBe(TransportState.CONNECTED);
+      expect(mock.closeCalls).toBe(0);
+      expect(closed).not.toHaveBeenCalled();
+    });
+
+    it("reports a reply after its timeout as an unknown id", async () => {
+      const { transport, connectAndOpen } = createTestTransport({ requestTimeout: 1000 });
+      const mock = await connectAndOpen();
+      const faults = vi.fn();
+      transport.on("error", faults);
+
+      const resultPromise = transport.send("rois.command.search", { condition: "" });
+      vi.advanceTimersByTime(1100);
+      await expect(resultPromise).rejects.toThrow(RequestTimeoutError);
+
+      mock.simulateMessage(successResponse("req-1", { return_code: "OK" }));
+
+      expect(faults).toHaveBeenCalledOnce();
+      expect(faults.mock.calls[0][0].message).toContain("unknown request id: req-1");
     });
   });
 
@@ -597,6 +788,41 @@ describe("WebSocketTransport", () => {
 
       expect(errorHandler).toHaveBeenCalledOnce();
       expect(errorHandler.mock.calls[0][0].message).toContain("unknown request id");
+    });
+
+    it("logs a fault that has no listener, and keeps reading", async () => {
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      const { transport, connectAndOpen } = createTestTransport();
+      const mock = await connectAndOpen();
+      const handler = vi.fn();
+      transport.on("notification", handler);
+
+      mock.simulateMessage("this is not valid JSON{{{");
+      mock.simulateMessage(notification("rois.system.profile_changed"));
+
+      expect(log).toHaveBeenCalledOnce();
+      expect(log.mock.calls[0][1]).toBeInstanceOf(TransportError);
+      expect(handler).toHaveBeenCalledOnce();
+      log.mockRestore();
+    });
+
+    it("keeps reading after a listener throws", async () => {
+      const { transport, connectAndOpen } = createTestTransport();
+      const mock = await connectAndOpen();
+      const after = vi.fn();
+      const faults = vi.fn();
+      transport.on("notification", () => {
+        throw new Error("listener failed");
+      });
+      transport.on("notification", after);
+      transport.on("error", faults);
+
+      mock.simulateMessage(notification("rois.system.profile_changed"));
+      mock.simulateMessage(notification("rois.system.profile_changed"));
+
+      expect(after).toHaveBeenCalledTimes(2);
+      expect(faults).toHaveBeenCalledTimes(2);
+      expect(faults.mock.calls[0][0].message).toBe("listener failed");
     });
 
     it("can connect again after a disconnect", async () => {

@@ -7,7 +7,7 @@
  *   - Establish and manage a WebSocket connection (browser or Node.js).
  *   - Serialize outgoing JSON-RPC requests and deserialize incoming messages.
  *   - Correlate responses to pending requests by matching the `id` field.
- *   - Route server-push notifications to listeners via EventEmitter.
+ *   - Route server-push notifications to listeners.
  *   - Handle connection errors, timeouts, and unexpected disconnects.
  *
  * The transport does NOT validate the inner payload of `params` or `result`.
@@ -20,17 +20,14 @@
  *   const result = await transport.send("rois.command.search", { condition: "" });
  *   transport.close();
  *
- * The transport auto-detects the environment: it uses the global WebSocket
- * in browsers and the 'ws' npm package in Node.js. A custom factory can
- * still be passed via TransportOptions.webSocketFactory if needed.
+ * The transport uses the global WebSocket, which browsers and Node.js 22 both
+ * have. TransportOptions.webSocketFactory replaces it, for example to pass
+ * headers with the `ws` package.
  *
  * Architecture: docs/architecture.md section 4 (Client SDK layer)
  */
 
-// 1. Node.js built-ins
-import { EventEmitter } from "events";
-
-// 2. Local modules
+import { TypedEmitter } from "./emitter";
 import {
   JsonRpcResponseSchema,
   JsonRpcErrorSchema,
@@ -38,6 +35,7 @@ import {
   JSONRPC_VERSION,
   type JsonRpcRequest,
   type JsonRpcErrorObject,
+  type JsonRpcNotification,
 } from "./jsonrpc";
 
 // ---------------------------------------------------------------------------
@@ -45,12 +43,12 @@ import {
 // ---------------------------------------------------------------------------
 
 /**
- * Minimal WebSocket interface satisfied by both the browser global WebSocket
- * and the Node.js `ws` package.
+ * Minimal WebSocket interface satisfied by the global WebSocket of browsers and
+ * Node.js, and by the `ws` package.
  *
  * We use the property-based event handler style (onopen, onmessage, etc.)
- * because both environments support it identically. The transport assigns
- * these handlers after creating the socket.
+ * because all of them support it identically. The transport assigns these
+ * handlers after creating the socket.
  */
 export interface WebSocketLike {
   send(data: string): void;
@@ -61,18 +59,6 @@ export interface WebSocketLike {
   onmessage: ((event: { data: unknown; type: string }) => void) | null;
   onerror: ((event: { error?: unknown; message?: string; type: string }) => void) | null;
 }
-
-/**
- * Standard WebSocket readyState values.
- *
- * These are the same in both browser WebSocket and the `ws` package.
- */
-export const WS_READY_STATE = {
-  CONNECTING: 0,
-  OPEN: 1,
-  CLOSING: 2,
-  CLOSED: 3,
-} as const;
 
 // ---------------------------------------------------------------------------
 // Transport state
@@ -88,11 +74,11 @@ export const WS_READY_STATE = {
 export enum TransportState {
   /** No active connection. Initial state and state after close. */
   DISCONNECTED = "DISCONNECTED",
-  /** connect() has been called; waiting for the WebSocket to open. */
+  /** connect() has been called, and the WebSocket has not opened yet. */
   CONNECTING = "CONNECTING",
   /** WebSocket is open and ready to send/receive messages. */
   CONNECTED = "CONNECTED",
-  /** close() has been called; waiting for the WebSocket to finish closing. */
+  /** close() has been called, and the WebSocket has not finished closing yet. */
   CLOSING = "CLOSING",
 }
 
@@ -120,13 +106,13 @@ export interface TransportOptions {
   /**
    * Optional factory function that creates a WebSocket instance for a given URL.
    *
-   * By default, the transport auto-detects the environment: it uses the
-   * global WebSocket in browsers and require("ws") in Node.js. Override
-   * this if you need custom WebSocket configuration (headers, protocols,
-   * proxy settings, etc.).
+   * By default, the transport uses the global WebSocket. Override this if you
+   * need custom WebSocket configuration (headers, protocols, proxy settings,
+   * etc.) or run somewhere that has no global WebSocket.
    *
    * Example (Node.js, `ws` package):
-   *   webSocketFactory: (url) => new WebSocket(url, { perMessageDeflate: false })
+   *   webSocketFactory: (url) =>
+   *     new WebSocket(url, { perMessageDeflate: false }) as unknown as WebSocketLike
    */
   webSocketFactory?: (url: string) => WebSocketLike;
 }
@@ -143,6 +129,19 @@ const DEFAULT_REQUEST_TIMEOUT = 30_000;
 
 /** Default timeout for the initial WebSocket connection (10 seconds). */
 const DEFAULT_CONNECT_TIMEOUT = 10_000;
+
+/** The most bytes of UTF-8 that a close frame has room for as its reason. */
+const MAX_CLOSE_REASON_BYTES = 123;
+
+/** Open a socket with the global WebSocket of the runtime. */
+function globalWebSocketFactory(url: string): WebSocketLike {
+  // Read through a narrow type so that the published types need no DOM library.
+  const { WebSocket } = globalThis as { WebSocket?: new (url: string) => WebSocketLike };
+  if (WebSocket === undefined) {
+    throw new Error("This runtime has no global WebSocket. Pass a webSocketFactory.");
+  }
+  return new WebSocket(url);
+}
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -240,29 +239,20 @@ interface PendingRequest {
 // ---------------------------------------------------------------------------
 
 /**
- * Events emitted by WebSocketTransport.
+ * The events of WebSocketTransport, with their listener arguments.
  *
- * Listen with the standard EventEmitter API:
- *   transport.on("notification", (notification) => { ... });
- *   transport.on("close", (code, reason) => { ... });
- *   transport.on("error", (error) => { ... });
- *
- * Event catalog:
- *   "notification"  - A JSON-RPC notification arrived from the gateway.
- *                     Listener receives the full JsonRpcNotification object.
- *   "close"         - The WebSocket connection closed.
- *                     Listener receives (code: number, reason: string).
- *   "error"         - A transport-level error occurred (malformed message,
- *                     WebSocket error, etc.). Listener receives (error: Error).
  *   "open"          - The WebSocket connection opened successfully.
- *
- * Notification convenience events:
- *   The transport also emits the notification's method name as a separate
- *   event. For example, a "rois.command.completed" notification triggers both
- *   the generic "notification" event and a "rois.command.completed" event,
- *   each with the full JsonRpcNotification:
- *     transport.on("rois.command.completed", (notification) => { ... });
+ *   "notification"  - A JSON-RPC notification arrived from the gateway, with any
+ *                     method, in or outside the catalog.
+ *   "close"         - The WebSocket connection closed.
+ *   "error"         - A message from the gateway could not be used.
  */
+export type TransportEvents = {
+  open: [];
+  notification: [notification: JsonRpcNotification];
+  close: [code: number, reason: string];
+  error: [error: Error];
+};
 
 // ---------------------------------------------------------------------------
 // WebSocketTransport
@@ -279,7 +269,7 @@ interface PendingRequest {
  * One transport instance manages one connection. To reconnect, close the
  * existing connection and call connect() again.
  */
-export class WebSocketTransport extends EventEmitter {
+export class WebSocketTransport extends TypedEmitter<TransportEvents> {
   /** Current connection state. */
   private _state: TransportState = TransportState.DISCONNECTED;
 
@@ -298,12 +288,15 @@ export class WebSocketTransport extends EventEmitter {
   /** The URL this transport is connected (or connecting) to. */
   private url: string = "";
 
+  /** Ends the connect() that is in progress, or null when none is. */
+  private abortConnect: ((message: string) => void) | null = null;
+
   constructor(options?: TransportOptions) {
     super();
     this.options = {
       requestTimeout: options?.requestTimeout ?? DEFAULT_REQUEST_TIMEOUT,
       connectTimeout: options?.connectTimeout ?? DEFAULT_CONNECT_TIMEOUT,
-      webSocketFactory: options?.webSocketFactory ?? this.defaultWebSocketFactory,
+      webSocketFactory: options?.webSocketFactory ?? globalWebSocketFactory,
     };
   }
 
@@ -320,7 +313,8 @@ export class WebSocketTransport extends EventEmitter {
    * Open a WebSocket connection to the gateway.
    *
    * Resolves when the connection is established and ready for messages.
-   * Rejects with ConnectionError if the connection fails or times out.
+   * Rejects with ConnectionError if the connection fails or times out, or if
+   * close() runs first.
    *
    * @param url - The WebSocket URL, e.g. "ws://localhost:8765" or
    *              "wss://gateway.example.com".
@@ -338,20 +332,10 @@ export class WebSocketTransport extends EventEmitter {
     this._state = TransportState.CONNECTING;
 
     return new Promise<void>((resolve, reject) => {
-      // Start the connection timeout timer.
-      const connectTimer = setTimeout(() => {
-        this.cleanupSocket();
-        this._state = TransportState.DISCONNECTED;
-        reject(new ConnectionError(
-          `Connection timed out after ${this.options.connectTimeout}ms`,
-          url,
-        ));
-      }, this.options.connectTimeout);
-
+      let socket: WebSocketLike;
       try {
-        this.ws = this.options.webSocketFactory(url);
+        socket = this.options.webSocketFactory(url);
       } catch (err) {
-        clearTimeout(connectTimer);
         this._state = TransportState.DISCONNECTED;
         const message = err instanceof Error ? err.message : String(err);
         reject(new ConnectionError(
@@ -360,51 +344,65 @@ export class WebSocketTransport extends EventEmitter {
         ));
         return;
       }
+      this.ws = socket;
+
+      // Every way out of the attempt stops its timer, so the timer can never act on a
+      // connection that a later connect() opened.
+      const fail = (message: string): void => {
+        clearTimeout(connectTimer);
+        this.abortConnect = null;
+        this.cleanupSocket();
+        this._state = TransportState.DISCONNECTED;
+        reject(new ConnectionError(message, url));
+      };
+
+      // Close it as well, or the handshake can still finish after the caller gave up,
+      // and leave an open connection that nothing holds.
+      const abort = (message: string): void => {
+        fail(message);
+        try {
+          socket.close();
+        } catch {
+          // Ignore errors from closing a socket that is failing on its own.
+        }
+      };
+
+      // Start the connection timeout timer.
+      const connectTimer = setTimeout(() => {
+        abort(`Connection timed out after ${this.options.connectTimeout}ms`);
+      }, this.options.connectTimeout);
+      this.abortConnect = abort;
 
       // Handle successful connection.
-      this.ws.onopen = () => {
+      socket.onopen = () => {
         clearTimeout(connectTimer);
+        this.abortConnect = null;
         this._state = TransportState.CONNECTED;
         this.emit("open");
         resolve();
       };
 
-      // Handle connection failure (fires before onopen).
-      this.ws.onerror = (event) => {
-        clearTimeout(connectTimer);
-        // If we are still connecting, this error means the connection failed.
-        // If we are already connected, handleError takes over.
+      // Handle connection failure (fires before onopen). After the connection
+      // opened, a socket error says nothing that the close event after it does not.
+      socket.onerror = (event) => {
         if (this._state === TransportState.CONNECTING) {
-          this.cleanupSocket();
-          this._state = TransportState.DISCONNECTED;
-          const detail = event.message ?? "unknown error";
-          reject(new ConnectionError(
-            `WebSocket connection failed: ${detail}`,
-            url,
-          ));
+          fail(`WebSocket connection failed: ${event.message ?? "unknown error"}`);
         }
       };
 
       // Handle unexpected close during connection attempt.
-      this.ws.onclose = (event) => {
-        clearTimeout(connectTimer);
+      socket.onclose = (event) => {
         if (this._state === TransportState.CONNECTING) {
-          this.cleanupSocket();
-          this._state = TransportState.DISCONNECTED;
-          reject(new ConnectionError(
-            `WebSocket closed during connection: code ${event.code}`,
-            url,
-          ));
+          fail(`WebSocket closed during connection: code ${event.code}`);
           return;
         }
         this.handleClose(event.code, event.reason);
       };
 
       // Wire up the message handler.
-      this.ws.onmessage = (event) => {
-        // Both browser WebSocket and Node.js ws deliver the payload as
-        // event.data. In Node.js ws, data may be a Buffer; we convert
-        // to string.
+      socket.onmessage = (event) => {
+        // Every implementation delivers the payload as event.data. In the
+        // `ws` package a binary frame arrives as a Buffer, so we convert it.
         const raw = typeof event.data === "string"
           ? event.data
           : String(event.data);
@@ -474,24 +472,44 @@ export class WebSocketTransport extends EventEmitter {
    * Any pending requests are rejected with a ConnectionError.
    * Safe to call when already disconnected (no-op).
    *
-   * @param code   - WebSocket close code (default: 1000 for normal closure).
-   * @param reason - Human-readable close reason.
+   * During connect(), this ends the attempt instead: connect() rejects with a
+   * ConnectionError and no "close" event fires, because no connection opened.
+   *
+   * @param code   - WebSocket close code (default: 1000 for normal closure): 1000, or
+   *                 3000 to 4999, which is what the WebSocket API lets a client send.
+   * @param reason - Human-readable close reason, at most 123 bytes of UTF-8.
+   * @throws TransportError for any other code or reason, in every state, and a
+   *         connection stays open.
    */
   close(code: number = 1000, reason: string = "client closed"): void {
+    // Checked here for every kind of socket. The global WebSocket throws on these, but
+    // the `ws` package can throw halfway, with a socket that neither works nor closes.
+    if (code !== 1000 && !(code >= 3000 && code <= 4999)) {
+      throw new TransportError(`Cannot close with code ${code}: use 1000, or 3000 to 4999`);
+    }
+    if (new TextEncoder().encode(reason).length > MAX_CLOSE_REASON_BYTES) {
+      throw new TransportError(
+        `Cannot close with this reason: it is over ${MAX_CLOSE_REASON_BYTES} bytes of UTF-8`
+      );
+    }
+
     if (this._state === TransportState.DISCONNECTED || !this.ws) {
       return;
     }
+
+    if (this.abortConnect) {
+      this.abortConnect("Connection closed by client");
+      return;
+    }
+
+    // First, so that a socket that throws leaves the transport as it was, and nothing
+    // reports a close that never happened.
+    this.ws.close(code, reason);
 
     this._state = TransportState.CLOSING;
     this.rejectAllPending(
       new ConnectionError("Connection closed by client", this.url)
     );
-
-    try {
-      this.ws.close(code, reason);
-    } catch {
-      // Ignore errors from closing an already-closed socket.
-    }
 
     this.cleanupSocket();
     this._state = TransportState.DISCONNECTED;
@@ -622,11 +640,9 @@ export class WebSocketTransport extends EventEmitter {
   }
 
   /**
-   * Handle a notification by emitting it as an event.
-   *
-   * Emits two events:
-   *   1. "notification" with the full notification object (generic catch-all).
-   *   2. The method name (e.g. "rois.command.completed") for targeted listeners.
+   * Handle a notification by emitting it as an event. It goes out only as
+   * "notification", never under its method name, because a server could then
+   * fake the "close" event by naming a notification after it.
    */
   private handleNotification(msg: Record<string, unknown>): void {
     // Validate the envelope structure.
@@ -638,14 +654,7 @@ export class WebSocketTransport extends EventEmitter {
       return;
     }
 
-    const notification = parseResult.data;
-
-    // Emit the generic catch-all event.
-    this.emit("notification", notification);
-
-    // Emit a method-specific event for convenience.
-    // This lets callers do: transport.on("rois.command.completed", handler)
-    this.emit(notification.method, notification);
+    this.emit("notification", parseResult.data);
   }
 
   // -------------------------------------------------------------------------
@@ -695,14 +704,16 @@ export class WebSocketTransport extends EventEmitter {
    * Null out the WebSocket reference and remove event handlers.
    *
    * Prevents stale handlers from firing after the transport considers
-   * itself disconnected.
+   * itself disconnected. The error handler stays as a no-op, because the `ws`
+   * package throws a late socket error that has no handler, and it raises one
+   * when a socket closes before its handshake ends.
    */
   private cleanupSocket(): void {
     if (this.ws) {
       this.ws.onopen = null;
       this.ws.onclose = null;
       this.ws.onmessage = null;
-      this.ws.onerror = null;
+      this.ws.onerror = () => {};
       this.ws = null;
     }
   }
@@ -722,39 +733,5 @@ export class WebSocketTransport extends EventEmitter {
     const id = `req-${this.nextId}`;
     this.nextId += 1;
     return id;
-  }
-
-  /**
-   * Default WebSocket factory that auto-detects the environment.
-   *
-   * Tries in order:
-   *   1. globalThis.WebSocket (browsers, Deno, Bun, or any polyfilled env)
-   *   2. The 'ws' npm package (Node.js)
-   *
-   * If neither is available, throws a ConnectionError explaining what to install.
-   *
-   * Note: the require("ws") call is inside a try/catch so bundlers that
-   * target the browser can mark 'ws' as external without breaking the build.
-   */
-  private defaultWebSocketFactory(url: string): WebSocketLike {
-    // 1. Check for a global WebSocket (browser, Deno, Bun).
-    if (typeof globalThis.WebSocket !== "undefined") {
-      return new globalThis.WebSocket(url) as unknown as WebSocketLike;
-    }
-
-    // 2. Try the 'ws' package for Node.js.
-    try {
-      // A require inside try/catch, not an import, so browser bundlers can leave
-      // 'ws' out and the browser path above never loads it.
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const WS = require("ws");
-      return new WS(url) as unknown as WebSocketLike;
-    } catch {
-      throw new ConnectionError(
-        "No WebSocket implementation found. If running in Node.js, " +
-        "install the 'ws' package: npm install ws",
-        url,
-      );
-    }
   }
 }

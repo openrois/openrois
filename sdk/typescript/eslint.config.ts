@@ -2,7 +2,9 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["dist/", "node_modules/"],
+    // The consumer project is a fixture that has to use require and to declare what it uses
+    // only for the type checker.
+    ignores: ["dist/", "node_modules/", "tests/consumer/project/"],
   },
   ...tseslint.configs.recommended,
   {
