@@ -321,7 +321,7 @@ generated files by hand.
 | Engine | `engine` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Component SDK | `components/core` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Common components | `components/common` | `pytest`, `mypy`, `ruff check src/ tests/` |
-| Gateway | `services/gateway` | `pytest`, `mypy`, `ruff check src/ tests/ scripts/` |
+| Gateway | `services/gateway` | `pytest`, `mypy`, `ruff check src/ tests/` |
 
 [`AGENTS.md`](AGENTS.md) documents the conventions and the generation pipeline in
 detail.

@@ -8,15 +8,20 @@ Adapters and lower gateways connect to it as child engines on the path `/adapter
 applications connect as clients on any other path. The gateway discovers each child engine's
 components, aggregates their profiles, holds the bindings, runs command sequences across
 the child engines, and routes every RoIS call and every event to where it belongs. It composes
-`Engine` and `WsServer` from [`openrois-engine`](../../engine/README.md) into a process with
+`Engine` and `WsServer` from [`openrois-engine`](https://github.com/openrois/openrois/blob/dev/engine/README.md) into a process with
 configuration, logging and a graceful stop.
 
 ## Install
 
-Not published to PyPI yet. From a clone of the repository:
+```bash
+pip install openrois-gateway
+```
+
+The gateway needs Python 3.12 or later. With [uv](https://docs.astral.sh/uv/), which fetches
+Python itself, it runs with no install:
 
 ```bash
-pip install -e ./interfaces/python -e ./engine -e ./services/gateway
+uvx --python 3.12 --from openrois-gateway openrois-gateway
 ```
 
 ## Run
@@ -31,7 +36,8 @@ Ctrl+C or SIGTERM stops the gateway: it closes every connection with code 1001 a
 with code 0.
 
 The gateway does not authenticate its peers, so it binds loopback by default. Bind another
-interface only on a network you trust.
+interface only on a network you trust, and the gateway logs a warning when you do. Phones
+and headsets need this, since they cannot reach a gateway on loopback.
 
 ## Docker
 
@@ -45,8 +51,8 @@ Inside the container the gateway listens on every interface, so Docker can publi
 Publish it on `127.0.0.1` unless the network is trusted. Settings come from
 `OPENROIS_GATEWAY_*` variables (`-e`) or flags after the image name.
 
-[`compose.yaml`](../../compose.yaml) at the repository root runs the gateway with the
-[mock adapter](../../testing/mock-adapter/README.md) behind it:
+[`compose.yaml`](https://github.com/openrois/openrois/blob/dev/compose.yaml) at the repository root runs the gateway with the
+[mock adapter](https://github.com/openrois/openrois/blob/dev/testing/mock-adapter/README.md) behind it:
 
 ```bash
 docker compose up --build
@@ -54,7 +60,7 @@ python testing/conformance/wire_check.py
 ```
 
 The check connects as a client, waits until the adapter's components appear, and runs the
-[conformance list](../../testing/conformance/README.md). It needs only the `websockets`
+[conformance list](https://github.com/openrois/openrois/blob/dev/testing/conformance/README.md). It needs only the `websockets`
 package and exits with 0 when every scenario passes.
 
 ## Configuration
@@ -111,7 +117,7 @@ asyncio.run(main())
 ## Test
 
 ```bash
-pip install -e ./interfaces/python -e ./engine -e "./services/gateway[dev]"
+pip install -e "./services/gateway[dev]"
 cd services/gateway && pytest && mypy && ruff check src/ tests/
 ```
 
@@ -119,7 +125,7 @@ cd services/gateway && pytest && mypy && ruff check src/ tests/
 
 Alpha, pre-1.0, unstable API. The gateway answers the RoIS method catalog that the
 TypeScript SDK and the HRI client speak, with the RoIS behavior of CP1 to CP3 that
-[`openrois-engine`](../../engine/README.md) implements, and makes no conformance claim.
+[`openrois-engine`](https://github.com/openrois/openrois/blob/dev/engine/README.md) implements, and makes no conformance claim.
 Authentication is planned for Phase 9, so the gateway binds to loopback by default. Health endpoints and a compose healthcheck are
 planned for [Phase 5](https://openrois.org/docs/project/roadmap).
 

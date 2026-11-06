@@ -670,7 +670,7 @@ messages, over WebSocket between processes.
 - `execute` carries its `command_unit_list` as JSON that follows
   `CommandUnitSequenceType` in `XML-Profiles.xsd`: a list of command messages
   (`component_ref`, `command_type`, `command_id`, `arguments`, `delay_time`) and
-  concurrent groups (`command_list`, `delay_time`). The IDL types it as a string that
+  concurrent groups (`branch_list`, `delay_time`). The IDL types it as a string that
   holds the XML.
 - `get_profile` returns the engine profile as JSON that follows `HRIEngineProfileType`
   in `XML-Profiles.xsd`. The IDL types `HRI_Engine_Profile` as a string that holds the
@@ -907,6 +907,28 @@ engine refuses a parameter value that does not fit its type with `BAD_PARAMETER`
   cleared, and `BAD_PARAMETER` after.
 - **Effect.** While a component has `ERROR` raised, its commands complete with `ERROR`
   without running, its queries answer `ERROR`, and its events are held back.
+
+### 17.11 Client Connections
+
+What a client of a gateway can rely on, beyond the methods themselves.
+
+- **Paths.** Clients connect on any path except `/adapter`, which is for child engines.
+- **Order.** A reply goes out before the notifications it causes. A command can still end
+  before a client has read the reply, so a client adds its `rois.command.completed`
+  listener before the call, and records each status by `command_id`.
+- **Concurrency.** Each request runs on its own, so replies may come in a different order
+  and are matched by id. A client that needs an order waits for each reply.
+- **Message size.** An engine reads a message of up to 1 MiB. A larger one closes the
+  connection with code 1009, which ends the session.
+- **Stop.** A gateway that stops closes every connection with code 1001, with no
+  notification first.
+- **Sessions.** A session is one connection. Its binds and subscriptions do not survive a
+  reconnect.
+- **A child engine that leaves.** Its running commands complete with `ERROR`, its components
+  leave the profile, and `rois.system.profile_changed` reports it. Binds and subscriptions
+  on those components are gone, and nothing else says so. A client binds and subscribes
+  again when `rois.system.profile_changed` shows the component is back. Ids start again
+  after a child engine restarts.
 
 
 ---

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import logging
 import signal
 
@@ -14,6 +15,16 @@ logger = logging.getLogger(__name__)
 
 #: The signals that stop the gateway gracefully.
 STOP_SIGNALS = (signal.SIGTERM, signal.SIGINT)
+
+
+def is_loopback(host: str) -> bool:
+    """Whether an address to bind reaches only this machine."""
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
 
 
 class Gateway:
@@ -38,6 +49,12 @@ class Gateway:
         """Start listening. Returns once the gateway accepts connections."""
         await self.engine.start()
         await self.server.start(self.config.host, self.config.port)
+        if not is_loopback(self.config.host):
+            logger.warning(
+                "Listening on %s, beyond this machine, with no TLS and no authentication. "
+                "Use a network you trust.",
+                self.config.host,
+            )
 
     async def stop(self) -> None:
         """Close every connection, stop listening, and stop the engine."""

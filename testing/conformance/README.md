@@ -23,6 +23,13 @@ the simulated work ten times faster.
 `wire_check.py --watch-close` holds one connection and exits with 0 when the gateway closes
 it with code 1001. CI runs it across `docker compose stop` to check a graceful stop.
 
+## The Frozen Stack
+
+Pull requests run the list against the tree. `frozen.txt` names the exact versions the client
+SDKs are released against: each SDK release installs it into a venv of its own and runs its
+suite there, so no SDK ships against a stack it was not tested with. A change a client can
+see needs a new alpha and a change to that file.
+
 ## The List
 
 `wire_check.py` covers C02 to C17, some of them through a raw request instead of a client
