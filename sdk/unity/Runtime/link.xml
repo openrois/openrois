@@ -1,0 +1,7 @@
+<linker>
+  <!-- System.Text.Json reaches the message types through reflection, which the
+       IL2CPP linker cannot see. -->
+  <assembly fullname="OpenRoIS.Sdk" preserve="all"/>
+  <assembly fullname="OpenRoIS.Interfaces" preserve="all"/>
+  <assembly fullname="System.Text.Json" preserve="all"/>
+</linker>
