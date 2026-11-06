@@ -60,7 +60,8 @@ await client.release(nav);
 await client.disconnect();
 ```
 
-Run it against `testing/mock-engine` for an engine with simulated components.
+Run it against the Docker Compose stack at the repository root, which serves simulated
+components through a gateway.
 
 ## API
 
@@ -86,7 +87,7 @@ catalog schemas in `@openrois/interfaces`, and returns the result's out paramete
 - `query()` and `subscribe()` go to the one component that declares the query or event
   type and matches the condition.
 
-`testing/mock-engine`, the Python engine and the gateway implement this method catalog.
+The Python engine and the gateway implement this method catalog.
 
 ### Conditions
 

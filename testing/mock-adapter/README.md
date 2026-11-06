@@ -1,10 +1,8 @@
 # Mock Adapter
 
-A working adapter that needs no robot. It hosts the three components of the
-[TypeScript mock engine](../mock-engine/README.md) on the Python engine, under the engine id
-`mock`, and serves them to a gateway. Each component is declared with the profile constant
-of its type, so a client sees the same refs, profiles, parameters, events and timing
-whichever of the two it talks to.
+A working adapter that needs no robot. It hosts three simulated components on the Python
+engine, under the engine id `mock`, and serves them to a gateway. Each component is declared
+with the profile constant of its type.
 
 Use it to develop clients and to exercise a gateway end to end.
 

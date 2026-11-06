@@ -1107,7 +1107,7 @@ openrois/
 ├── services/      # Network processes: the gateway and its container image (openrois-gateway)
 ├── apps/          # Product applications (Hub visualizer, planned)
 ├── examples/      # Web client, adapter template
-├── testing/       # Test fixtures: mock engine, mock adapter
+├── testing/       # Test fixtures: mock adapter
 └── docs/          # Architecture, white paper, roadmap, spec reference
 ```
 
@@ -1120,7 +1120,7 @@ openrois/
 | `sdk/` | Client SDKs: TypeScript for web and Node.js, C# for Unity (in progress). |
 | `apps/` | Product applications: the Hub (a gateway visualizer, planned). |
 | `examples/` | Reference implementations and templates for onboarding. |
-| `testing/` | Fixtures that tests and CI depend on: the mock engine and the mock adapter. |
+| `testing/` | Fixtures that tests and CI depend on: the mock adapter. |
 | `docs/` | Documentation. |
 
 Adapters for specific robots live in separate repositories. They consume the

@@ -141,12 +141,11 @@ and `mock/system_information`, served by the mock adapter, an engine of its own 
 gateway. Nothing in the client is specific to the components on the other side.
 `python services/gateway/scripts/smoke.py` checks the same stack from the command line.
 
-To develop a client without Docker, the [mock engine](testing/mock-engine/README.md)
-serves the same components from one Node.js process:
-`cd testing/mock-engine && npm install && npm start`.
+To develop a client without Docker, run the gateway and the
+[mock adapter](testing/mock-adapter/README.md) as Python processes.
 
 <p align="center">
-  <img src="docs/assets/hri-client-demo.gif" alt="Screen recording of the OpenRoIS HRI Client connecting to the mock engine, querying components, binding, subscribing to events, and executing a command." width="760">
+  <img src="docs/assets/hri-client-demo.gif" alt="Screen recording of the OpenRoIS HRI Client connecting to the mock adapter, querying components, binding, subscribing to events, and executing a command." width="760">
 </p>
 
 <p align="center"><sub>Recorded from this quickstart, with no robot attached. A <a href="https://openrois.org/#see-it-run">higher-resolution version</a> is on the website.</sub></p>
@@ -291,7 +290,6 @@ openrois/
 │   ├── hri-client/      Profile-driven web inspector for any RoIS engine
 │   └── adapter-template/  Starting point for a new robot adapter
 ├── testing/
-│   ├── mock-engine/     RoIS engine test double with simulated components
 │   └── mock-adapter/    Adapter with simulated components
 ├── docs/                White paper, architecture, roadmap, RoIS reference
 └── compose.yaml         The gateway with the mock adapter, in Docker Compose
@@ -319,7 +317,6 @@ generated files by hand.
 | TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test` |
 | C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
 | TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` |
-| Mock engine | `testing/mock-engine` | `npm install`, `npm test` |
 | Engine | `engine` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Component SDK | `components/core` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Common components | `components/common` | `pytest`, `mypy`, `ruff check src/ tests/` |

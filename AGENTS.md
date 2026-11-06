@@ -20,7 +20,7 @@ What exists today:
 | TypeScript client SDK | `sdk/typescript/` | Available |
 | C# client SDK for Unity | `sdk/unity/` | JSON-RPC layer only, client in progress |
 | Examples: web client, adapter template | `examples/` | Available |
-| Test fixtures: mock engine, mock adapter | `testing/` | Available |
+| Test fixture: mock adapter | `testing/` | Available |
 | Hub management application | `apps/hub/` | Not started, scaffold only |
 
 Each robot's components live in its adapter repository, not here. The reference example
@@ -74,7 +74,6 @@ its description. The IDL and XSD cross-check tests fail on any other addition.
 | Component SDK | `components/core` | `pip install -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | Common components | `components/common` | `pip install -e ../../interfaces/python -e ../core -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway) |
-| Mock engine | `testing/mock-engine` | `npm install`, `npm test` |
 
 Some tests in `interfaces/python` cross-check the models against the normative RoIS
 machine-readable files, which are not redistributed in this repository. Those tests are

@@ -30,12 +30,6 @@ npm run dev
 
 Open the address Vite prints, enter `ws://localhost:8765`, and click Connect.
 
-## Run It Against the Mock Engine
-
-Without Docker, start the [mock engine](../../testing/mock-engine/README.md) in terminal 1 instead:
-`cd testing/mock-engine && npm install && npm start`. It serves the same components on
-the same port.
-
 ## Run It Against Another Engine
 
 Enter that engine's WebSocket URL instead. Any engine that implements the RoIS method
@@ -47,7 +41,6 @@ qualified ref, and the client renders a panel for each.
 | Example | RoIS role |
 |---------|-----------|
 | `hri-client` | HRI Client, the application side |
-| `mock-engine` | HRI Engine, a test double |
 | `mock-adapter` | Sub HRI Engine, a working adapter with no robot |
 | `adapter-template` | Sub HRI Engine, a blank starting point |
 

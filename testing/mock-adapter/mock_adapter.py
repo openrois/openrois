@@ -1,4 +1,4 @@
-"""A mock adapter: the components of the TypeScript mock engine, on the Python engine.
+"""A mock adapter: three simulated components on the Python engine.
 
 It hosts three simulated components under the engine id ``mock``, each declared with
 the profile constant of its type, and serves them to a gateway:
@@ -58,7 +58,7 @@ class MockConfig(AdapterConfig):
 
 @dataclass(frozen=True)
 class Timing:
-    """How long the simulated work takes, in seconds. The TypeScript mock engine's values.
+    """How long the simulated work takes, in seconds.
 
     Attributes:
         command: A command or a parameter change, other than a navigation.
