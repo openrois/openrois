@@ -9,9 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- A client for the RoIS behavior of `openrois-engine`: connect first, bind every component you command, read the command ids from the `execute` result, and match `rois.command.completed` by them.
 - `RoISClient`, a client for an OpenRoIS engine over WebSocket, for browsers and Node.js. It has one method per operation of the RoIS method catalog, each taking the IDL parameters in IDL order and returning the out parameters:
-  - System: `RoISClient.connect(url)`, `disconnect()`, `getProfile(condition?)` and `getErrorDetail(errorId, condition?)`.
+  - System: `RoISClient.connect(url, options?)`, `disconnect()`, `getProfile(condition?)` and `getErrorDetail(errorId, condition?)`.
   - Command: `search(condition?)`, `bind(ref)`, `bindAny(condition?)`, `release(ref)`, `getParameter(ref)`, `setParameter(ref, parameters)`, `execute(commandUnitList)` and `getCommandResult(commandId, condition?)`.
   - Query: `query(queryType, condition?)`.
   - Event: `subscribe(eventType, condition?)`, `unsubscribe(subscribeId)` and `getEventDetail(eventId, condition?)`.
@@ -19,8 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `getProfile()` returns the engine profile together with the profile of every component it lists, keyed by fully qualified ref.
 - `execute()` runs commands in order. A ConcurrentCommands item gives its commands in `branch_list`: the branches run at the same time and each branch runs its commands in order. The engine assigns each command's `command_id`, and `execute()` returns the ids from the engine's answer, in order, branch by branch. Match `rois.command.completed` notifications by those ids.
 - Typed events, with validated params for each catalog notification: `rois.event.notify_event`, `rois.command.completed`, `rois.system.notify_error` and `rois.system.profile_changed`. Each event also arrives under its own event type, for example `reached_target`. The `notification`, `close` and `error` events carry the JSON-RPC envelope, the close code and reason, and the error.
-- The builders for CQL2-Text conditions from `@openrois/interfaces`: `componentRef`, `componentType`, `componentTypeUrn`, `eq`, `like`, `allOf` and `quote`, with the property names `COMPONENT_REF` and `COMPONENT_TYPE`.
-- `WebSocketTransport` (`@openrois/sdk/transport`), with request and connect timeouts, a custom WebSocket factory, and the `ConnectionError`, `RequestTimeoutError` and `RpcError` errors.
+- The builders for CQL2-Text conditions, exported from `@openrois/sdk`: `componentRef`, `componentType`, `componentTypeUrn`, `eq`, `like`, `allOf` and `quote`, with the property names `COMPONENT_REF` and `COMPONENT_TYPE`.
+- `WebSocketTransport` (`@openrois/sdk/transport`), with request and connect timeouts, a custom WebSocket factory, and the errors `TransportError`, `ConnectionError`, `RequestTimeoutError` and `RpcError`, which `@openrois/sdk` also exports.
 - The JSON-RPC 2.0 envelope schemas and `JsonRpcErrorCode` (`@openrois/sdk/jsonrpc`).
 
 [unreleased]: https://github.com/openrois/openrois/tree/dev/sdk/typescript
