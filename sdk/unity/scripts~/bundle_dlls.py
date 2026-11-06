@@ -36,7 +36,6 @@ TARGET_FRAMEWORK = ".NETStandard,Version=v2.1"
 # System.Text.Json upgrade that adds a dependency stops here for a decision.
 BUNDLED = {
     "Microsoft.Bcl.AsyncInterfaces",
-    "System.IO.Pipelines",
     "System.Runtime.CompilerServices.Unsafe",
     "System.Text.Encodings.Web",
     "System.Text.Json",

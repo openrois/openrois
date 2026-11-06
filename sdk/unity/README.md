@@ -70,16 +70,16 @@ every method, its parameters, and its implementation status.
 
 ## Bundled Assemblies
 
-Unity's .NET Standard 2.1 profile has no `System.Text.Json`, so the package carries what
-it needs in `Runtime/Plugins`:
+Unity 6000.0 and 6000.3 have no `System.Text.Json`, so the package carries what it needs in
+`Runtime/Plugins`. Unity 6000.6 ships version 8.0 in its class library and discards other
+copies, which is why the package stays on version 8:
 
 | Assembly | Version | Auto referenced |
 |----------|---------|-----------------|
 | `OpenRoIS.Interfaces` | Built from `interfaces/csharp` | Yes |
-| `System.Text.Json` | 9.0.0 | Yes, the SDK API exposes `JsonElement` |
-| `System.Text.Encodings.Web` | 9.0.0 | No |
-| `System.IO.Pipelines` | 9.0.0 | No |
-| `Microsoft.Bcl.AsyncInterfaces` | 9.0.0 | No |
+| `System.Text.Json` | 8.0.6 | Yes, the SDK API exposes `JsonElement` |
+| `System.Text.Encodings.Web` | 8.0.0 | No |
+| `Microsoft.Bcl.AsyncInterfaces` | 8.0.0 | No |
 | `System.Runtime.CompilerServices.Unsafe` | 6.0.0 | No |
 
 A project that already contains an assembly with one of these names does not compile

@@ -6,15 +6,14 @@ NuGet at the version that `interfaces/csharp` pins.
 
 | Component | Version | Source | License |
 |-----------|---------|--------|---------|
-| System.Text.Json | 9.0.0 | <https://www.nuget.org/packages/System.Text.Json/9.0.0> | MIT |
-| System.Text.Encodings.Web | 9.0.0 | <https://www.nuget.org/packages/System.Text.Encodings.Web/9.0.0> | MIT |
-| System.IO.Pipelines | 9.0.0 | <https://www.nuget.org/packages/System.IO.Pipelines/9.0.0> | MIT |
-| Microsoft.Bcl.AsyncInterfaces | 9.0.0 | <https://www.nuget.org/packages/Microsoft.Bcl.AsyncInterfaces/9.0.0> | MIT |
+| System.Text.Json | 8.0.6 | <https://www.nuget.org/packages/System.Text.Json/8.0.6> | MIT |
+| System.Text.Encodings.Web | 8.0.0 | <https://www.nuget.org/packages/System.Text.Encodings.Web/8.0.0> | MIT |
+| Microsoft.Bcl.AsyncInterfaces | 8.0.0 | <https://www.nuget.org/packages/Microsoft.Bcl.AsyncInterfaces/8.0.0> | MIT |
 | System.Runtime.CompilerServices.Unsafe | 6.0.0 | <https://www.nuget.org/packages/System.Runtime.CompilerServices.Unsafe/6.0.0> | MIT |
 
-All five come from the [.NET runtime repository](https://github.com/dotnet/runtime), which
+All four come from the [.NET runtime repository](https://github.com/dotnet/runtime), which
 lists the code it incorporates in its
-[third-party notices](https://github.com/dotnet/runtime/blob/v9.0.0/THIRD-PARTY-NOTICES.TXT).
+[third-party notices](https://github.com/dotnet/runtime/blob/release/8.0/THIRD-PARTY-NOTICES.TXT).
 Each NuGet package carries the same license text:
 
 ```text

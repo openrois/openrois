@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The README gives Unity 6000.0 as the floor and points Unity users to `org.openrois.sdk`, which bundles this assembly.
+- The package depends on `System.Text.Json` 8.0.6 instead of 9.0.0, the version Unity 6000.6 ships in its class library. Against 9.0, scripts that use these types fail there with CS1705.
 
 ## [0.1.0-alpha.5] - 2026-10-16
 
