@@ -69,7 +69,7 @@ monorepo keeps the component SDK and the common components.
 (`examples/hri-client`), and an end-to-end demonstration of a web application controlling
 a physical robot through the gateway and an adapter.
 
-**In progress:** the C# client SDK for Unity. Its JSON-RPC layer exists, and the
+**In progress:** the Unity SDK. Its JSON-RPC layer exists, and the
 high-level client does not yet.
 
 **Exit criteria:** tagged release `v0.1.0`.

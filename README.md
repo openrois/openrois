@@ -103,7 +103,7 @@ robots and virtual agents alike.
 
 | RoIS concept | OpenRoIS realization |
 |--------------|----------------------|
-| Service Application | Your application, built with the TypeScript or C# SDK |
+| Service Application | Your application, built with the TypeScript or Unity SDK |
 | Main HRI Engine | The gateway process: `Engine` with child engines, behind a WebSocket server |
 | Sub HRI Engine | An adapter process: `Engine` with local components, connected to the gateway |
 | HRI Component | A class decorated with `@component`, hosted by an adapter |
@@ -259,7 +259,7 @@ makes no conformance claim. The rest of the RoIS surface is being built in the o
 | Component and adapter SDK (Python): decorators, resources, RoIS_Common default, `adapter.yaml` | Available |
 | Gateway process, container image, and Docker Compose with a mock adapter | Available |
 | TypeScript client SDK and web inspector | Available |
-| C# client SDK for Unity | In progress (JSON-RPC layer) |
+| Unity SDK | In progress (JSON-RPC layer) |
 | Python client SDK | Planned |
 | Open reference platform based on the Pollen Robotics Reachy Mini | In progress, in openrois-adapter-reachy-mini |
 | Loading XML-declared component profiles at run time | Planned |

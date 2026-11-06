@@ -1,6 +1,6 @@
 # OpenRoIS SDK for Unity
 
-C# client SDK for [OpenRoIS](https://openrois.org/), an open-source middleware
+The Unity SDK of [OpenRoIS](https://openrois.org/), an open-source middleware
 implementing the [OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0). Shipped as
 the Unity package `org.openrois.sdk` (assembly `OpenRoIS.Sdk`), for Unity 6000.0 and later.
 

@@ -18,7 +18,7 @@ What exists today:
 | Gateway process (`openrois-gateway`) | `services/gateway/` | Available |
 | Component and adapter SDK, and the common components | `components/` | Available |
 | TypeScript client SDK | `sdk/typescript/` | Available |
-| C# client SDK for Unity | `sdk/unity/` | JSON-RPC layer only, client in progress |
+| Unity SDK | `sdk/unity/` | JSON-RPC layer only, client in progress |
 | Examples: web client, adapter template | `examples/` | Available |
 | Test fixture: mock adapter | `testing/` | Available |
 | Hub management application | `apps/hub/` | Not started, scaffold only |
