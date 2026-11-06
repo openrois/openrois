@@ -90,7 +90,7 @@ skipped unless `OPENROIS_NORMATIVE_DIR` points to a local copy of the files.
 - Python 3.12+, Pydantic v2, `from __future__ import annotations`, PEP 695 `type`
   statements, mypy strict, ruff line length 100.
 - TypeScript ESM, strict typecheck, vitest.
-- C# `netstandard2.1` (Unity 6.3+), `sealed class`, `Nullable` enabled.
+- C# `netstandard2.1` (Unity 6000.0+), `sealed class`, `Nullable` enabled.
 - `interfaces/python/src/` and `engine/src/` stay transport-neutral and paradigm-neutral.
   No ROS, DDS, gRPC, or game engine imports. Those belong in components.
 - Do not change the component contract (`ComponentContract` in

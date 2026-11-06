@@ -787,7 +787,7 @@ Target characteristics (the JSON-RPC 2.0 layer exists today, the rest is in prog
 
 - Packaged for Unity as `org.openrois.sdk` through the Unity Package Manager
   (publication planned).
-- Targets `netstandard2.1`, Unity 6.5 and later.
+- Targets `netstandard2.1`, Unity 6000.0 and later.
 - SDK callbacks marshaled to the Unity main thread (in progress).
 - Typed component proxies: `client.BindAsync("PersonDetection")` returning a typed
   proxy with `.On(event)` handlers (planned).
@@ -1954,8 +1954,8 @@ service without rewriting the scenario logic.
 ### 17.3 OpenRoIS and Unity
 
 Unity is a secondary client platform for service applications. The C# SDK targets
-Unity 6.5 and later through UPM, and the C# interfaces package targets `netstandard2.1`,
-which runs on both Mono (Unity 6.3 and later) and CoreCLR (Unity 6.8). The same types
+Unity 6000.0 and later through UPM, and bundles the C# interfaces assembly, which targets
+`netstandard2.1`. The same types
 also work outside Unity (any .NET runtime). The gateway runs as a separate process. A
 Unity application connects to the gateway over WebSocket using the C# SDK (in
 progress). Adapters run as separate processes on the robot or in the cloud.

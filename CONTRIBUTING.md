@@ -49,7 +49,7 @@ apply to all documentation, code comments, commit messages, and PR descriptions.
 
 ### C\#
 
-- `netstandard2.1` (Unity 6.3+), `sealed class`, `Nullable` enabled
+- `netstandard2.1` (Unity 6000.0+), `sealed class`, `Nullable` enabled
 
 ## 3. Testing
 

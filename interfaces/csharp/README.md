@@ -6,12 +6,12 @@ Transport-independent [RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0) in
 
 This package is **generated from JSON Schema**, the canonical wire contract authored as Pydantic models in `interfaces/python/` and exported to `interfaces/schema/`. The C# types are never hand-written, so all three language stacks (Python, C#, TypeScript) stay consistent.
 
-Targets `netstandard2.1` for Unity 6.3+ (Mono) through Unity 6.8 (CoreCLR) compatibility.
+Targets `netstandard2.1`, for Unity 6000.0 and later.
 
 ## Installation
 
-> **Note:** The package is not yet on NuGet or UPM. For the alpha, reference
-> the source project directly or build from source.
+> **Note:** The package is not yet on NuGet. For the alpha, reference the source
+> project directly or build from source. In Unity, install the OpenRoIS SDK.
 
 ### Reference the Source Project
 
@@ -30,20 +30,23 @@ cd interfaces/csharp
 dotnet build src/OpenRoIS.Interfaces/OpenRoIS.Interfaces.csproj
 ```
 
-The output assembly targets `netstandard2.1`, compatible with Unity 6.3+ (Mono)
-through Unity 6.8 (CoreCLR).
+The output assembly targets `netstandard2.1`.
 
-### Unity (Future)
+### Unity
 
-Once published to a UPM registry, add via `manifest.json`:
+The Unity package `org.openrois.sdk` bundles these types as a precompiled assembly, with
+the `System.Text.Json` assemblies they need, for Unity 6000.0 and later. Add it by Git URL
+in `Packages/manifest.json`:
 
 ```json
 {
   "dependencies": {
-    "org.openrois.interfaces": "0.1.0-alpha.5"
+    "org.openrois.sdk": "https://github.com/openrois/openrois.git?path=sdk/unity"
   }
 }
 ```
+
+See the [SDK README](../../sdk/unity/README.md).
 
 ## Usage
 
