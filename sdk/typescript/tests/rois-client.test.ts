@@ -202,6 +202,59 @@ describe("disconnect()", () => {
     expect(mock.sent).toHaveLength(2);
   });
 
+  it("shares one rois.system.disconnect between overlapping calls", async () => {
+    const { client, mock } = await connected();
+    const closed = vi.fn();
+    client.on("close", closed);
+
+    const calls = Promise.all([
+      client.disconnect(),
+      client.disconnect(),
+      client[Symbol.asyncDispose](),
+    ]);
+    await untilSent(mock, 2);
+    respond(mock, { return_code: "OK" });
+    await calls;
+
+    expect(mock.sent.map(({ method }) => method)).toEqual([
+      "rois.system.connect",
+      "rois.system.disconnect",
+    ]);
+    expect(closed).toHaveBeenCalledOnce();
+  });
+
+  it("gives overlapping calls one failure, which a later call does not repeat", async () => {
+    const { client, mock } = await connected();
+
+    const calls = Promise.allSettled([client.disconnect(), client.disconnect()]);
+    await untilSent(mock, 2);
+    respond(mock, { return_code: "ERROR" });
+    const [first, second] = await calls;
+
+    expect(first.status).toBe("rejected");
+    expect((first as PromiseRejectedResult).reason).toBeInstanceOf(RoISError);
+    expect((second as PromiseRejectedResult).reason).toBe(
+      (first as PromiseRejectedResult).reason,
+    );
+    await expect(client.disconnect()).resolves.toBeUndefined();
+  });
+
+  it("runs when a block with await using ends", async () => {
+    const { client, mock } = await connected();
+    const leaving = (async () => {
+      await using held = client;
+      await held.search().catch(() => {});
+    })();
+    await untilSent(mock, 2);
+    respond(mock, { return_code: "OK", component_ref_list: [] });
+    await untilSent(mock, 3);
+    expect(mock.last.method).toBe("rois.system.disconnect");
+    respond(mock, { return_code: "OK" });
+    await leaving;
+
+    await expect(client.search()).rejects.toThrow(TransportError);
+  });
+
   it("closes the connection even when the engine answers with an error", async () => {
     const { client, mock } = await connected();
     const disconnecting = client.disconnect();
@@ -577,15 +630,14 @@ describe("notifications", () => {
     expect(listener).toHaveBeenCalledWith({ ...event, expire: "" });
   });
 
-  it("emits each event under its event type as well", async () => {
+  it("has no listener for an event type", async () => {
     const { client, mock } = await connected();
-    const listener = vi.fn();
-    client.on("person_detected", listener);
+    const byType = vi.fn();
+    (client as unknown as { on(name: string, fn: () => void): void }).on("person_detected", byType);
 
     notify(mock, "rois.event.notify_event", event);
 
-    expect(listener).toHaveBeenCalledOnce();
-    expect(listener.mock.calls[0][0].results[0].value).toBe("2");
+    expect(byType).not.toHaveBeenCalled();
   });
 
   it("does not let an event type shadow the client's own events", async () => {
@@ -636,19 +688,51 @@ describe("notifications", () => {
     expect(errors.mock.calls[0][0]).toBeInstanceOf(TransportError);
   });
 
-  it("emits every notification's envelope as 'notification'", async () => {
+  it("leaves a method outside the catalog to the transport", async () => {
     const { client, mock } = await connected();
-    const all = vi.fn();
-    const named = vi.fn();
-    client.on("notification", all);
-    client.on("rois.event.notify", named);
+    const raw = vi.fn();
+    const errors = vi.fn();
+    client.transport.on("notification", raw);
+    client.on("error", errors);
 
-    notify(mock, "rois.event.notify", { event_id: "evt-1" });
+    notify(mock, "vendor.custom.status", { level: 3 });
+    // A name every object inherits is not a catalog name either.
+    notify(mock, "constructor");
+
+    expect(raw).toHaveBeenCalledTimes(2);
+    expect(raw.mock.calls[0][0]).toMatchObject({ method: "vendor.custom.status" });
+    expect(errors).not.toHaveBeenCalled();
+  });
+
+  it("logs an invalid notification when nothing listens for 'error'", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { client, mock } = await connected();
+    const completed = vi.fn();
+    client.on("rois.command.completed", completed);
+
+    notify(mock, "rois.command.completed", { command_id: "nod-1", status: "FINISHED" });
+    notify(mock, "rois.command.completed", { command_id: "nod-2", status: "OK" });
+
+    expect(log).toHaveBeenCalledOnce();
+    expect(completed).toHaveBeenCalledOnce();
+    log.mockRestore();
+  });
+
+  it("reports a listener that throws, and calls the others", async () => {
+    const { client, mock } = await connected();
+    const after = vi.fn();
+    const errors = vi.fn();
+    client.on("rois.command.completed", () => {
+      throw new Error("listener failed");
+    });
+    client.on("rois.command.completed", after);
+    client.on("error", errors);
+
     notify(mock, "rois.command.completed", { command_id: "nod-1", status: "OK" });
 
-    expect(all).toHaveBeenCalledTimes(2);
-    expect(all.mock.calls[0][0]).toMatchObject({ method: "rois.event.notify" });
-    expect(named).not.toHaveBeenCalled();
+    expect(after).toHaveBeenCalledOnce();
+    expect(errors).toHaveBeenCalledOnce();
+    expect(errors.mock.calls[0][0].message).toBe("listener failed");
   });
 
   it("passes each listener the arguments its event declares", async () => {
@@ -657,7 +741,9 @@ describe("notifications", () => {
     const resultCounts: number[] = [];
     const closeCodes: number[] = [];
     client.on("rois.command.completed", (params) => statuses.push(params.status));
-    client.on("person_detected", (params) => resultCounts.push(params.results?.length ?? 0));
+    client.on("rois.event.notify_event", (params) => {
+      resultCounts.push(params.results?.length ?? 0);
+    });
     client.on("close", (code) => closeCodes.push(code));
 
     notify(mock, "rois.command.completed", { command_id: "nod-1", status: "ABORT" });

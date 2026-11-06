@@ -10,7 +10,8 @@
  *   Query    query
  *   Event    subscribe, unsubscribe, getEventDetail
  *
- * Streaming is not modelled yet (planned).
+ * A streaming component is driven with these same methods. Carrying its media
+ * is planned.
  *
  * Every call goes through one path that validates the params and the result
  * against the catalog schemas from @openrois/interfaces and turns a return code
@@ -29,6 +30,11 @@
  *   client.on("rois.event.notify_event", (params) => console.log(params.event_type));
  *   const subscribeId = await client.subscribe("person_detected", head);
  *
+ *   const statuses = new Map<string, string>();
+ *   client.on("rois.command.completed", ({ command_id, status }) => {
+ *     statuses.set(command_id, status);
+ *   });
+ *
  *   await client.bind("reachy_real/head");
  *   const [commandId] = await client.execute([
  *     { component_ref: "reachy_real/head", command_type: "start" },
@@ -39,17 +45,13 @@
  * Wire binding: docs/rois-reference.md section 17.
  */
 
-// 1. Node.js built-ins
-import { EventEmitter } from "events";
-
-// 2. External packages
+// 1. External packages
 import type { z } from "zod";
 
-// 3. Internal packages (@openrois/*)
+// 2. Internal packages (@openrois/*)
 import {
   RoISMethods,
   RoISMethodSchemas,
-  RoISNotifications,
   RoISNotificationSchemas,
 } from "@openrois/interfaces";
 
@@ -58,7 +60,6 @@ import type {
   ConcurrentCommandsSchema,
   HRIComponentProfile,
   HRIEngineProfileType,
-  NotifyEventParams,
   Parameter,
   Result,
   ReturnCode,
@@ -68,13 +69,13 @@ import type {
   RoISNotificationMap,
 } from "@openrois/interfaces";
 
-// 4. Local modules
+// 3. Local modules
+import { TypedEmitter } from "./emitter";
 import {
   WebSocketTransport,
   TransportError,
   type TransportOptions,
 } from "./transport";
-import type { JsonRpcNotification } from "./jsonrpc";
 
 // The condition builders, so a client needs no second import to write conditions.
 export {
@@ -144,14 +145,10 @@ export type CommandUnitSequenceItemInput = CommandUnitInput | ConcurrentCommands
 /** The params a listener receives for each catalog notification. */
 export type NotificationParams<N extends RoISNotification> = RoISNotificationMap[N]["params"];
 
-/**
- * The listener arguments of every event the client emits under a fixed name.
- * Event types, such as "person_detected", come on top of these.
- */
+/** The listener arguments of every event the client emits. */
 export type RoISClientEvents = {
   [N in RoISNotification]: [params: NotificationParams<N>];
 } & {
-  notification: [notification: JsonRpcNotification];
   close: [code: number, reason: string];
   error: [error: Error];
 };
@@ -202,15 +199,6 @@ interface MethodSchema<M extends RoISMethod> {
   result: z.ZodType<MethodResult<M>>;
 }
 
-/**
- * A listener of any event. Its parameters are `never` so that a listener with
- * any parameter list fits, which the typed overloads then narrow.
- */
-type AnyListener = (...args: never[]) => void;
-
-/** Event names the client emits itself, which an event type must not shadow. */
-const RESERVED_EVENTS: ReadonlySet<string> = new Set(["notification", "close", "error"]);
-
 // ---------------------------------------------------------------------------
 // RoISClient
 // ---------------------------------------------------------------------------
@@ -218,27 +206,27 @@ const RESERVED_EVENTS: ReadonlySet<string> = new Set(["notification", "close", "
 /**
  * A connection to an OpenRoIS engine, with one method per RoIS operation.
  *
- * Create it with RoISClient.connect().
+ * Create it with RoISClient.connect(). One client is one session: bindings and
+ * subscriptions end with it, and nothing reconnects by itself.
  *
- * Events:
+ * Listen with on() and off():
  *   "rois.event.notify_event"     NotifyEventParams, for every event of a subscription
- *   <event_type>                  NotifyEventParams, the same events under their type,
- *                                 for example "person_detected"
  *   "rois.command.completed"      CompletedParams, when a command ends
  *   "rois.system.notify_error"    NotifyErrorParams, when the engine reports an error
  *   "rois.system.profile_changed" ProfileChangedParams, when components join or leave
- *   "notification"                The JSON-RPC envelope of every notification,
- *                                 including methods outside the catalog
  *   "close"                       (code, reason) when the connection closes
- *   "error"                       Error, for transport faults and notifications whose
- *                                 params fail validation
+ *   "error"                       Error, for a message that cannot be used or a listener
+ *                                 that throws. With no listener it goes to the console.
  */
-export class RoISClient extends EventEmitter {
+export class RoISClient extends TypedEmitter<RoISClientEvents> {
   /** The WebSocket transport this client sends on. */
   private readonly wire: WebSocketTransport;
 
   /** Whether the connect handshake succeeded and disconnect has not run. */
   private connected: boolean = false;
+
+  /** The disconnect in flight, which overlapping callers share. */
+  private disconnecting: Promise<void> | null = null;
 
   private constructor(wire: WebSocketTransport) {
     super();
@@ -252,44 +240,6 @@ export class RoISClient extends EventEmitter {
    */
   get transport(): WebSocketTransport {
     return this.wire;
-  }
-
-  // -----------------------------------------------------------------------
-  // Typed listeners
-  // -----------------------------------------------------------------------
-
-  /**
-   * Listen for an event. A catalog notification passes its validated params,
-   * and any other name is an event type, such as "person_detected", which
-   * passes the NotifyEventParams of each event of that type.
-   */
-  override on<E extends keyof RoISClientEvents>(
-    event: E,
-    listener: (...args: RoISClientEvents[E]) => void,
-  ): this;
-  override on(event: string, listener: (params: NotifyEventParams) => void): this;
-  override on(event: string, listener: AnyListener): this {
-    return super.on(event, listener as (...args: unknown[]) => void);
-  }
-
-  /** Listen for the next occurrence of an event. */
-  override once<E extends keyof RoISClientEvents>(
-    event: E,
-    listener: (...args: RoISClientEvents[E]) => void,
-  ): this;
-  override once(event: string, listener: (params: NotifyEventParams) => void): this;
-  override once(event: string, listener: AnyListener): this {
-    return super.once(event, listener as (...args: unknown[]) => void);
-  }
-
-  /** Remove a listener added with on() or once(). */
-  override off<E extends keyof RoISClientEvents>(
-    event: E,
-    listener: (...args: RoISClientEvents[E]) => void,
-  ): this;
-  override off(event: string, listener: (params: NotifyEventParams) => void): this;
-  override off(event: string, listener: AnyListener): this {
-    return super.off(event, listener as (...args: unknown[]) => void);
   }
 
   // -----------------------------------------------------------------------
@@ -319,18 +269,19 @@ export class RoISClient extends EventEmitter {
 
   /**
    * Run rois.system.disconnect and close the connection. The connection closes
-   * even when the engine answers with an error. Safe to call more than once.
+   * even when the engine answers with an error. Safe to call more than once. Calls
+   * that overlap send one rois.system.disconnect and share its outcome.
    */
   async disconnect(): Promise<void> {
-    if (!this.connected) {
-      return;
-    }
-    try {
-      await this.call(RoISMethods.Disconnect, {});
-    } finally {
-      this.connected = false;
-      this.wire.close();
-    }
+    this.disconnecting ??= this.endSession().finally(() => {
+      this.disconnecting = null;
+    });
+    return this.disconnecting;
+  }
+
+  /** Run disconnect() when a block declared with `await using` ends. */
+  async [Symbol.asyncDispose](): Promise<void> {
+    await this.disconnect();
   }
 
   /**
@@ -485,7 +436,7 @@ export class RoISClient extends EventEmitter {
 
   /**
    * Subscribe to an event. Its occurrences arrive as rois.event.notify_event
-   * notifications, and under their event type.
+   * notifications, which carry the subscribe_id this returns.
    *
    * The engine subscribes to the one component that declares `eventType` and
    * matches the condition, with the same rules as query().
@@ -525,6 +476,19 @@ export class RoISClient extends EventEmitter {
   // Private: calls
   // -----------------------------------------------------------------------
 
+  /** The work of disconnect(), once for all the calls that overlap. */
+  private async endSession(): Promise<void> {
+    if (!this.connected) {
+      return;
+    }
+    try {
+      await this.call(RoISMethods.Disconnect, {});
+    } finally {
+      this.connected = false;
+      this.wire.close();
+    }
+  }
+
   /** Run a catalog method on a connected client. */
   private async call<M extends RoISMethod>(
     method: M,
@@ -562,29 +526,28 @@ export class RoISClient extends EventEmitter {
 
   /**
    * Re-emit what the transport receives. Catalog notifications are validated
-   * and emitted with their params. Methods outside the catalog reach listeners
-   * through the generic "notification" event only.
+   * and emitted with their params. Methods outside the catalog stay on the
+   * transport's "notification" event.
    */
   private forwardTransportEvents(): void {
-    this.wire.on("notification", (notification: JsonRpcNotification) => {
-      this.emit("notification", notification);
-      if (notification.method in RoISNotificationSchemas) {
-        this.dispatchNotification(notification.method as RoISNotification, notification.params);
+    this.wire.on("notification", ({ method, params }) => {
+      if (Object.hasOwn(RoISNotificationSchemas, method)) {
+        this.dispatchNotification(method as RoISNotification, params);
       }
     });
 
-    this.wire.on("close", (code: number, reason: string) => {
+    this.wire.on("close", (code, reason) => {
       this.connected = false;
       this.emit("close", code, reason);
     });
 
-    this.wire.on("error", (error: Error) => {
+    this.wire.on("error", (error) => {
       this.emit("error", error);
     });
   }
 
   /** Validate a catalog notification and emit its params. */
-  private dispatchNotification(method: RoISNotification, rawParams: unknown): void {
+  private dispatchNotification<N extends RoISNotification>(method: N, rawParams: unknown): void {
     const parsed = RoISNotificationSchemas[method].params.safeParse(rawParams ?? {});
     if (!parsed.success) {
       this.emit(
@@ -593,15 +556,6 @@ export class RoISClient extends EventEmitter {
       );
       return;
     }
-    this.emit(method, parsed.data);
-
-    // An event also goes out under its own type, so a caller can listen for
-    // "person_detected" directly. Names the client already uses are skipped.
-    if (method === RoISNotifications.NotifyEvent) {
-      const eventType = (parsed.data as NotificationParams<"rois.event.notify_event">).event_type;
-      if (!RESERVED_EVENTS.has(eventType) && !eventType.startsWith("rois.")) {
-        this.emit(eventType, parsed.data);
-      }
-    }
+    this.emit(method, ...([parsed.data] as unknown as RoISClientEvents[N]));
   }
 }

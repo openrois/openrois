@@ -1,21 +1,22 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { RoISClient } from "@openrois/sdk";
-import type { CompletedParams, HRIComponentProfile } from "@openrois/interfaces";
+import type { HRIComponentProfile } from "@openrois/interfaces";
+import type { CommandStatuses } from "../hooks/useRoISClient";
 import { useQuery } from "../hooks/useQuery";
 import { useSubscribe } from "../hooks/useSubscribe";
 import { QueryResult } from "./QueryResult";
 
 interface ComponentPanelProps {
   client: RoISClient | null;
+  commandStatuses: CommandStatuses;
   componentRef: string;
   profile: HRIComponentProfile;
 }
 
-/** The last command sent from this panel, and how it ended. */
-interface CommandState {
+/** The last command sent from this panel. */
+interface LastCommand {
   name: string;
   commandId: string;
-  status: string;
 }
 
 /**
@@ -25,11 +26,16 @@ interface CommandState {
  * from its profile, with bind and release for an actuation component. Nothing
  * here is specific to a component type.
  */
-export function ComponentPanel({ client, componentRef, profile }: ComponentPanelProps) {
+export function ComponentPanel({
+  client,
+  commandStatuses,
+  componentRef,
+  profile,
+}: ComponentPanelProps) {
   const [activeQuery, setActiveQuery] = useState<string | null>(null);
   const [activeEvent, setActiveEvent] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
-  const [lastCommand, setLastCommand] = useState<CommandState | null>(null);
+  const [lastCommand, setLastCommand] = useState<LastCommand | null>(null);
   const [bound, setBound] = useState(false);
 
   const paramProfiles = profile.parameter_profiles ?? [];
@@ -42,24 +48,11 @@ export function ComponentPanel({ client, componentRef, profile }: ComponentPanel
     Object.fromEntries(paramProfiles.map((p) => [p.name, p.default_value ?? ""])),
   );
 
+  // A command with no recorded completion has not ended yet.
+  const lastStatus = lastCommand && (commandStatuses.get(lastCommand.commandId) ?? "running");
+
   const queryHook = useQuery(client, componentRef);
   const subscribeHook = useSubscribe(client, componentRef, activeEvent ?? "");
-
-  // Each command ends with a rois.command.completed notification. Show how the
-  // last command sent from this panel ended.
-  useEffect(() => {
-    if (!client || !lastCommand) return;
-    const handler = (params: CompletedParams) => {
-      if (params.command_id !== lastCommand.commandId) return;
-      setLastCommand((current) =>
-        current?.commandId === params.command_id ? { ...current, status: params.status } : current,
-      );
-    };
-    client.on("rois.command.completed", handler);
-    return () => {
-      client.off("rois.command.completed", handler);
-    };
-  }, [client, lastCommand]);
 
   const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
@@ -99,7 +92,7 @@ export function ComponentPanel({ client, componentRef, profile }: ComponentPanel
         value: paramValues[p.name] ?? "",
       }));
       const commandId = await client.setParameter(componentRef, parameters);
-      setLastCommand({ name: "set_parameter", commandId, status: "running" });
+      setLastCommand({ name: "set_parameter", commandId });
       setMessage("");
     } catch (err: unknown) {
       setMessage(`Set parameter error: ${errorText(err)}`);
@@ -112,7 +105,7 @@ export function ComponentPanel({ client, componentRef, profile }: ComponentPanel
       const [commandId] = await client.execute([
         { component_ref: componentRef, command_type: commandName },
       ]);
-      setLastCommand({ name: commandName, commandId, status: "running" });
+      setLastCommand({ name: commandName, commandId });
       setMessage("");
     } catch (err: unknown) {
       setMessage(`${commandName} error: ${errorText(err)}`);
@@ -221,7 +214,7 @@ export function ComponentPanel({ client, componentRef, profile }: ComponentPanel
           <div className="command-result">
             {message ||
               (lastCommand &&
-                `${lastCommand.name}: ${lastCommand.status} (id: ${lastCommand.commandId})`)}
+                `${lastCommand.name}: ${lastStatus} (id: ${lastCommand.commandId})`)}
           </div>
         )}
 

@@ -286,6 +286,9 @@ async def query(stack: Stack) -> None:
             "rois.query.query", query_type="component_status", condition=""
         )
         check(several["return_code"] == "BAD_PARAMETER", f"several: {several}")
+        await client.ok(
+            "rois.query.query", query_type="component_status", condition=ref_is(stack.navigation)
+        )
 
 
 @scenario("C06", "an actuator takes one client, and a sensor is shared")
@@ -436,6 +439,12 @@ async def subscriptions(stack: Stack) -> None:
         other = await second.ok("rois.event.subscribe", **params)
         check(one["subscribe_id"] != other["subscribe_id"], "two clients got one id")
         await first.ok("rois.event.unsubscribe", subscribe_id=f"{stack.engine_id}/sub-0")
+        elsewhere = await first.call(
+            "rois.event.subscribe",
+            event_type="person_detected",
+            condition=ref_is(stack.navigation),
+        )
+        check(elsewhere["return_code"] == "UNSUPPORTED", f"no such event: {elsewhere}")
 
         await first.notification(
             NOTIFY_EVENT, lambda p: p["subscribe_id"] == one["subscribe_id"], stack.event_timeout
@@ -449,12 +458,14 @@ async def subscriptions(stack: Stack) -> None:
         )
 
         await first.ok("rois.event.unsubscribe", subscribe_id=one["subscribe_id"])
+        left = len(first.sent(NOTIFY_EVENT))
         received = len(second.sent(NOTIFY_EVENT))
         await second.until(
-            lambda: len(second.sent(NOTIFY_EVENT)) > received,
+            lambda: len(second.sent(NOTIFY_EVENT)) > received + 1,
             stack.event_timeout,
-            "event after the other client left",
+            "two events after the other client left",
         )
+        check(len(first.sent(NOTIFY_EVENT)) == left, "events reached a client that unsubscribed")
 
 
 @scenario("C14", "notify_event results equal get_event_detail")
