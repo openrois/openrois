@@ -14,6 +14,19 @@ from websockets.asyncio.client import ClientConnection, connect
 from openrois.gateway import Gateway, GatewayConfig
 
 
+@pytest.mark.parametrize(
+    ("host", "warned"),
+    [("127.0.0.1", False), ("localhost", False), ("::1", False), ("0.0.0.0", True)],
+)
+async def test_a_bind_beyond_loopback_logs_a_warning(
+    host: str, warned: bool, caplog: pytest.LogCaptureFixture
+) -> None:
+    gateway = Gateway(GatewayConfig(host=host, port=0))
+    await gateway.start()
+    await gateway.stop()
+    assert ("no authentication" in caplog.text) is warned
+
+
 async def wait_until(condition: Callable[[], bool], timeout: float = 2.0) -> None:
     """Poll a condition until it holds, failing the test after ``timeout`` seconds."""
     loop = asyncio.get_running_loop()
