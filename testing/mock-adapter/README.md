@@ -1,10 +1,8 @@
 # Mock Adapter
 
-A working adapter that needs no robot. It hosts the three components of the
-[TypeScript mock engine](../mock-engine/README.md) on the Python engine, under the engine id
-`mock`, and serves them to a gateway. Each component is declared with the profile constant
-of its type, so a client sees the same refs, profiles, parameters, events and timing
-whichever of the two it talks to.
+A working adapter that needs no robot. It hosts simulated components on the Python
+engine, under the engine id `mock`, and serves them to a gateway. Each component is declared
+with the profile constant of its type, or declared in the adapter for `mock/fault`.
 
 Use it to develop clients and to exercise a gateway end to end.
 
@@ -13,6 +11,7 @@ Use it to develop clients and to exercise a gateway end to end.
 | `mock/person_detection` | `OMG::PersonDetection` | sensing | Emits `person_detected` every five seconds, counting zero to three persons in turn |
 | `mock/navigation` | `OMG::Navigation` | actuation | `start` drives to the first of `target_positions` for three seconds, then emits `reached_target` |
 | `mock/system_information` | `OMG::SystemInformation` | | Answers `robot_position` with the robot at the origin, and `engine_status` |
+| `mock/fault` | `OpenRoIS::TestFault` | function | A test fixture: its commands make the error and the profile change that the [conformance list](../conformance/README.md) checks |
 
 The person detection and navigation components take the RoIS_Common commands (`start`,
 `stop`, `suspend`, `resume`), which take 0.2 seconds unless the table says otherwise. The
@@ -26,12 +25,11 @@ From the repository root, start a gateway with the mock adapter behind it:
 
 ```bash
 docker compose up --build
-python services/gateway/scripts/smoke.py    # needs pip install websockets
+python testing/conformance/wire_check.py    # needs pip install websockets
 ```
 
-The gateway listens on `ws://127.0.0.1:8765`. The smoke script connects as a client, waits
-until the adapter's components appear, runs the queries, reads an event, and drives the
-navigation to a target.
+The gateway listens on `ws://127.0.0.1:8765`. The check connects as a client, waits until
+the adapter's components appear, and runs the conformance list.
 `OPENROIS_ADAPTER_CONFIG=/opt/mock-adapter/adapter.fast.yaml docker compose up --build`
 makes the simulated work ten times faster.
 

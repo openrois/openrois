@@ -1,0 +1,881 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>OpenRoIS.Interfaces</name>
+    </assembly>
+    <members>
+        <member name="T:OpenRoIS.Interfaces.Catalog.BindAnyParams">
+            <summary>
+            Params of rois.command.bind_any.
+            
+            Maps to CommandIF::bind_any(in condition, out component_ref).
+            
+            Attributes:
+                condition: Selection condition on component_ref and component_type for the
+                    components the engine may choose from. The engine binds a free one.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.BindAnyResult">
+            <summary>
+            Result of rois.command.bind_any.
+            
+            Maps to CommandIF::bind_any(in condition, out component_ref).
+            
+            Attributes:
+                return_code: Outcome of the operation.
+                component_ref: The component the engine reserved. Empty when return_code is
+                    not OK.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.BindParams">
+            <summary>
+            Params of rois.command.bind.
+            
+            Maps to CommandIF::bind(in component_ref).
+            
+            Attributes:
+                component_ref: The component to reserve for this client.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.BindResult">
+            <summary>
+            Result of rois.command.bind.
+            
+            Maps to CommandIF::bind(in component_ref).
+            
+            Attributes:
+                return_code: Outcome of the operation. OUT_OF_RESOURCES when another client
+                    holds the component.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.ConnectParams">
+            <summary>
+            Params of rois.system.connect.
+            
+            Maps to SystemIF::connect(), which takes no arguments. A request may omit params.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.ConnectResult">
+            <summary>
+            Result of rois.system.connect.
+            
+            Maps to SystemIF::connect().
+            
+            Attributes:
+                return_code: Outcome of the operation.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.DisconnectParams">
+            <summary>
+            Params of rois.system.disconnect.
+            
+            Maps to SystemIF::disconnect(), which takes no arguments. A request may omit params.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.DisconnectResult">
+            <summary>
+            Result of rois.system.disconnect.
+            
+            Maps to SystemIF::disconnect().
+            
+            Attributes:
+                return_code: Outcome of the operation.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.ExecuteParams">
+            <summary>
+            Params of rois.command.execute.
+            
+            Maps to CommandIF::execute(in command_unit_list). The engine the client calls
+            assigns every command_id and ignores the ids a client sends, and completed
+            notifications report each command by the id the engine assigned.
+            
+            Attributes:
+                command_unit_list: Commands to run in order. A ConcurrentCommands item runs
+                    its branches at the same time.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.ExecuteResult">
+            <summary>
+            Result of rois.command.execute.
+            
+            Maps to CommandIF::execute(in command_unit_list), which has no out parameters.
+            
+            Attributes:
+                return_code: Whether the engine accepted the commands. Completed
+                    notifications report how each command ended.
+                command_unit_list: The sequence as the engine runs it, with the command_id it
+                    assigned to every command. Empty unless return_code is OK. An OpenRoIS
+                    extension.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.GetCommandResultParams">
+            <summary>
+            Params of rois.command.get_command_result.
+            
+            Maps to CommandIF::get_command_result(in command_id, in condition, out results).
+            
+            Attributes:
+                command_id: The command whose results to read.
+                condition: Filter on the results. No property is defined for it yet, so it
+                    must be empty.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.GetCommandResultResult">
+            <summary>
+            Result of rois.command.get_command_result.
+            
+            Maps to CommandIF::get_command_result(in command_id, in condition, out results).
+            
+            Attributes:
+                return_code: Outcome of the operation.
+                results: Results of the command.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.GetErrorDetailParams">
+            <summary>
+            Params of rois.system.get_error_detail.
+            
+            Maps to SystemIF::get_error_detail(in error_id, in condition, out results).
+            
+            Attributes:
+                error_id: The error_id from a notify_error notification.
+                condition: Filter on the results. No property is defined for it yet, so it
+                    must be empty.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.GetErrorDetailResult">
+            <summary>
+            Result of rois.system.get_error_detail.
+            
+            Maps to SystemIF::get_error_detail(in error_id, in condition, out results).
+            
+            Attributes:
+                return_code: Outcome of the operation.
+                results: Details of the error.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.GetEventDetailParams">
+            <summary>
+            Params of rois.event.get_event_detail.
+            
+            Maps to EventIF::get_event_detail(in event_id, in condition, out results).
+            
+            Attributes:
+                event_id: The event_id from a notify_event notification.
+                condition: Filter on the results. No property is defined for it yet, so it
+                    must be empty.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.GetEventDetailResult">
+            <summary>
+            Result of rois.event.get_event_detail.
+            
+            Maps to EventIF::get_event_detail(in event_id, in condition, out results).
+            
+            Attributes:
+                return_code: Outcome of the operation.
+                results: The event payload.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.GetParameterParams">
+            <summary>
+            Params of rois.command.get_parameter.
+            
+            Maps to CommandIF::get_parameter(in component_ref, out parameters).
+            
+            Attributes:
+                component_ref: The component whose parameters to read.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.GetParameterResult">
+            <summary>
+            Result of rois.command.get_parameter.
+            
+            Maps to CommandIF::get_parameter(in component_ref, out parameters).
+            
+            Attributes:
+                return_code: Outcome of the operation.
+                parameters: The current value of every parameter of the component.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.GetProfileParams">
+            <summary>
+            Params of rois.system.get_profile.
+            
+            Maps to SystemIF::get_profile(in condition, out profile).
+            
+            Attributes:
+                condition: Selection condition on component_ref and component_type. The
+                    profile lists only the matching components. Empty means every component.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.GetProfileResult">
+            <summary>
+            Result of rois.system.get_profile.
+            
+            Maps to SystemIF::get_profile(in condition, out profile). The IDL carries the
+            profile as an XML document in a string. OpenRoIS sends the structured form of
+            the same XSD type.
+            
+            The XSD engine profile names its components by ref only. The UML model links an
+            engine profile to its component profiles by reference, and component_profiles
+            carries those referenced profiles once each. It is an OpenRoIS extension.
+            
+            Attributes:
+                return_code: Outcome of the operation.
+                profile: The engine profile. Null when return_code is not OK.
+                component_profiles: The profile of every component in profile.component_ids,
+                    keyed by fully qualified ref.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.QueryParams">
+            <summary>
+            Params of rois.query.query.
+            
+            Maps to QueryIF::query(in query_type, in condition, out results). An engine sends
+            the query to the one component that declares query_type and matches the condition.
+            When none does it returns UNSUPPORTED. When several do it returns BAD_PARAMETER,
+            and a component_ref comparison picks one.
+            
+            Attributes:
+                query_type: Name of the query, from a component profile.
+                condition: Selection condition on component_ref and component_type.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.QueryResult">
+            <summary>
+            Result of rois.query.query.
+            
+            Maps to QueryIF::query(in query_type, in condition, out results).
+            
+            Attributes:
+                return_code: Outcome of the operation.
+                results: Results of the query.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.ReleaseParams">
+            <summary>
+            Params of rois.command.release.
+            
+            Maps to CommandIF::release(in component_ref).
+            
+            Attributes:
+                component_ref: The component to release.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.ReleaseResult">
+            <summary>
+            Result of rois.command.release.
+            
+            Maps to CommandIF::release(in component_ref).
+            
+            Attributes:
+                return_code: Outcome of the operation.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.SearchParams">
+            <summary>
+            Params of rois.command.search.
+            
+            Maps to CommandIF::search(in condition, out component_ref_list).
+            
+            Attributes:
+                condition: Selection condition on component_ref and component_type. Empty
+                    matches every component.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.SearchResult">
+            <summary>
+            Result of rois.command.search.
+            
+            Maps to CommandIF::search(in condition, out component_ref_list).
+            
+            Attributes:
+                return_code: Outcome of the operation.
+                component_ref_list: Refs of the matching components.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.SetParameterParams">
+            <summary>
+            Params of rois.command.set_parameter.
+            
+            Maps to CommandIF::set_parameter(in component_ref, in parameters, out command_id).
+            
+            Attributes:
+                component_ref: The component to configure.
+                parameters: The parameters to set.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.SetParameterResult">
+            <summary>
+            Result of rois.command.set_parameter.
+            
+            Maps to CommandIF::set_parameter(in component_ref, in parameters, out command_id).
+            The engine assigns the command_id. A completed notification reports the outcome.
+            
+            Attributes:
+                return_code: Outcome of the request.
+                command_id: Identifier of the parameter change, assigned by the engine.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.SubscribeParams">
+            <summary>
+            Params of rois.event.subscribe.
+            
+            Maps to EventIF::subscribe(in event_type, in condition, out subscribe_id). An
+            engine subscribes to the one component that declares event_type and matches the
+            condition. When none does it returns UNSUPPORTED. When several do it returns
+            BAD_PARAMETER, and a component_ref comparison picks one.
+            
+            Attributes:
+                event_type: Name of the event, from a component profile.
+                condition: Selection condition on component_ref and component_type.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.SubscribeResult">
+            <summary>
+            Result of rois.event.subscribe.
+            
+            Maps to EventIF::subscribe(in event_type, in condition, out subscribe_id).
+            
+            Attributes:
+                return_code: Outcome of the operation.
+                subscribe_id: Identifier of the subscription. Empty when return_code is not OK.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.UnsubscribeParams">
+            <summary>
+            Params of rois.event.unsubscribe.
+            
+            Maps to EventIF::unsubscribe(in subscribe_id). Unsubscribing twice is not an error.
+            
+            Attributes:
+                subscribe_id: The subscription to cancel.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.UnsubscribeResult">
+            <summary>
+            Result of rois.event.unsubscribe.
+            
+            Maps to EventIF::unsubscribe(in subscribe_id).
+            
+            Attributes:
+                return_code: Outcome of the operation.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.RoISMethods">
+            <summary>JSON-RPC method names of the RoIS method catalog, keyed by operation.</summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.RoISMethodTypes">
+            <summary>The params and result type of every catalog method.</summary>
+        </member>
+        <member name="F:OpenRoIS.Interfaces.Catalog.RoISMethodTypes.ByMethod">
+            <summary>Params and result type, keyed by JSON-RPC method name.</summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.RoISNotifications">
+            <summary>JSON-RPC notification names an engine sends to a service application, keyed by operation.</summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.RoISNotificationTypes">
+            <summary>The params type of every notification.</summary>
+        </member>
+        <member name="F:OpenRoIS.Interfaces.Catalog.RoISNotificationTypes.ByMethod">
+            <summary>Params type, keyed by JSON-RPC notification name.</summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.RoISCommandTypes">
+            <summary>Standard command names every component may accept. A component may define its own as well.</summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Catalog.JsonRpcErrorCodes">
+            <summary>JSON-RPC 2.0 error codes an engine returns for protocol faults.</summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Common.ComponentStatus">
+            <summary>
+            Status of a RoIS component.
+            
+            Maps to RoIS_Common::Component_Status in the IDL.
+            
+            UNINITIALIZED: Component has not been initialized.
+            READY: Component is ready to operate.
+            BUSY: Component is currently processing.
+            WARNING: Component is operational but has a warning condition.
+            ERROR: Component has encountered an error.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Common.StreamStatus">
+            <summary>
+            Status of a streaming connection.
+            
+            Maps to RoIS_Common::Stream_Status in the IDL.
+            
+            NOT_CONNECTED: No peer connection established.
+            NOT_RUNNING: Connection exists but stream is not active.
+            RUNNING: Stream is actively delivering data.
+            SUSPENDED: Stream has been suspended (track disabled).
+            RESUMED: Stream has been resumed after suspension.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Components.Navigation.RoutingPolicy">
+            <summary>
+            Routing policy for Navigation.
+            
+            The XML profile defines routing_policy as a string with values 'time'
+            or 'distance'. We constrain it to an enum for compile-time safety.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Components.Navigation.NavigationGetParameterResult">
+            <summary>
+            Result payload for Navigation::Query::get_parameter.
+            
+            Maps to the get_parameter operation in Navigation.xml.
+            
+            Attributes:
+                target_positions: Current navigation target positions.
+                time_limit: Current time limit setting.
+                routing_policy: Current routing policy setting.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Components.Navigation.NavigationReachedTargetEvent">
+            <summary>
+            Event payload for Navigation::Event::reached_target.
+            
+            Maps to the reached_target event in Navigation.xml.
+            
+            Attributes:
+                target: The reached target destination.
+                is_final_target: Whether this is the final destination point.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Components.Navigation.NavigationSetParameter">
+            <summary>
+            Command payload for Navigation::Command::set_parameter.
+            
+            Maps to the set_parameter operation in Navigation.xml.
+            
+            Attributes:
+                target_positions: Navigation target positions as structured data.
+                    In the XML profile, data_type_ref is 'string[]'.
+                time_limit: Intended time limit to complete navigation (default: 0).
+                routing_policy: Routing policy: 'time' priority or 'distance' priority
+                    (default: 'time').
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Components.Navigation.NavigationSetParameterResult">
+            <summary>
+            Result of Navigation set_parameter command.
+            
+            Attributes:
+                command_id: The assigned command identifier for this navigation command.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Components.Navigation.NavigationStatusResult">
+            <summary>
+            Result model for Navigation component_status query.
+            
+            Attributes:
+                status: Current status of the Navigation component.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Components.PersonDetection.PersonDetectedEvent">
+            <summary>
+            Event payload for Person_Detection::Event::person_detected.
+            
+            Maps to the person_detected event in PersonDetection.xml.
+            
+            Attributes:
+                timestamp: ISO 8601 datetime when the detection was measured.
+                number: Number of detected persons in the current frame/observation.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Components.PersonDetection.PersonDetectionStatusResult">
+            <summary>
+            Result model for PersonDetection component_status query.
+            
+            Attributes:
+                status: Current status of the PersonDetection component.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Components.Reaction.ReactionGetParameterResult">
+            <summary>
+            Result payload for Reaction::Query::get_parameter.
+            
+            Maps to the get_parameter operation in RoIS_Reaction.idl, which returns the
+            list of available reactions and the currently selected reaction reference.
+            
+            Attributes:
+                available_reactions: List of reaction identifiers this host can perform.
+                reaction_ref: Currently selected reaction identifier.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Components.Reaction.ReactionSetParameter">
+            <summary>
+            Command payload for Reaction::Command::set_parameter.
+            
+            Maps to the set_parameter operation in RoIS_Reaction.idl, which takes a
+            ``RoIS_IdentifierList`` of reaction references. The XML profile declares
+            ``reaction_ref`` as a single ``RoISIdentifier`` parameter, but the IDL
+            operation signature accepts a list, so the model uses a list to match the
+            operation contract.
+            
+            Attributes:
+                reaction_ref: List of reaction identifiers to trigger. Each identifier
+                    is an opaque string whose meaning is defined by the host backend
+                    (e.g., "wave", "nod", "smile" for an avatar, or "led_green" for a
+                    robot).
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Components.Reaction.ReactionSetParameterResult">
+            <summary>
+            Result of Reaction set_parameter command.
+            
+            Attributes:
+                command_id: The assigned command identifier for this reaction command.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Components.Reaction.ReactionStatusResult">
+            <summary>
+            Result model for Reaction component_status query.
+            
+            Attributes:
+                status: Current status of the Reaction component.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Components.SystemInformation.SystemInformationEngineStatusResult">
+            <summary>
+            Result payload for System_Information::Query::engine_status.
+            
+            Maps to the engine_status query in SystemInformation.xml.
+            
+            Attributes:
+                status: Current component status of the engine.
+                operable_time: List of ISO 8601 datetimes representing operable periods.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Components.SystemInformation.SystemInformationRobotPositionResult">
+            <summary>
+            Result payload for System_Information::Query::robot_position.
+            
+            Maps to the robot_position query in SystemInformation.xml.
+            
+            Attributes:
+                timestamp: ISO 8601 datetime when the position was measured.
+                robot_ref: List of robot identifiers in the position data.
+                position_data: Positional/measurement data (RoLo Data sequence as strings).
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Hri.ICommandUnitSequenceItem">
+            <summary>Marker interface for CommandUnitSequence items (CommandUnit or ConcurrentCommands).</summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Hri.Argument">
+            <summary>
+            A named argument for command execution.
+            
+            Maps to RoIS_HRI::Argument in the IDL.
+            
+            Attributes:
+                name: The argument name.
+                data_type_ref: Reference to the data type.
+                value: The argument value as a string.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Hri.CommandUnit">
+            <summary>
+            A single command within a CommandUnitSequence.
+            
+            Maps to CommandMessageType in XML-Profiles.xsd (CommandBaseType subtype).
+            
+            Attributes:
+                component_ref: The component to send the command to.
+                command_type: The command name: a standard one (start, stop, suspend, resume,
+                    set_parameter) or one the component profile defines.
+                command_id: Unique identifier for this command instance. The engine a client
+                    calls assigns it and ignores one the client sends. An engine passes the ids
+                    it assigned on to the engines below it.
+                arguments: Optional list of arguments for the command.
+                delay_time: Optional delay in milliseconds before executing this command.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Hri.Branch">
+            <summary>
+            One branch of a ConcurrentCommands group: commands that run in order.
+            
+            Maps to BranchType in XML-Profiles.xsd, which ConcurrentCommandsType does not use.
+            Annex B.1 and Tables 8.15 and 8.16 of the specification give ConcurrentCommands a
+            branch_list of branches, and OpenRoIS follows them (docs/rois-reference.md, section
+            16).
+            
+            Attributes:
+                command_list: The commands of the branch, run one after the other.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Hri.ConcurrentCommands">
+            <summary>
+            A group of branches executed in parallel.
+            
+            Maps to ConcurrentCommandsType in XML-Profiles.xsd, with the branch_list of Annex
+            B.1. The branches run at the same time, each branch runs its commands in order, and
+            the next unit of the sequence waits for every branch.
+            
+            The XSD form, a flat command_list, is read as one-command branches.
+            
+            Attributes:
+                branch_list: The branches to run in parallel.
+                delay_time: Optional delay in milliseconds before executing this group.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Hri.CommandUnitSequence">
+            <summary>
+            An ordered sequence of command units (sequential and/or concurrent).
+            
+            Maps to CommandUnitSequenceType in XML-Profiles.xsd. The IDL typedefs this
+            as `string`, but the XSD defines a rich structure with sequential and
+            concurrent branches. We model the structured form; the string representation
+            is the wire serialization format.
+            
+            Attributes:
+                command_unit_list: Ordered list of command units and/or concurrent groups.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Hri.Parameter">
+            <summary>
+            A named parameter for command operations (set_parameter, execute).
+            
+            Maps to RoIS_HRI::Parameter in the IDL.
+            
+            Attributes:
+                name: The parameter name (e.g., 'target_position', 'time_limit').
+                data_type_ref: Reference to the data type.
+                value: The parameter value as a string.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Hri.Result">
+            <summary>
+            A named result value returned by query or event operations.
+            
+            Maps to RoIS_HRI::Result in the IDL.
+            
+            Attributes:
+                name: The result parameter name (e.g., 'number', 'timestamp').
+                data_type_ref: Reference to the data type (e.g., 'int', 'DateTime').
+                value: The result value as a string. Component-specific typed models
+                    provide structured access.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Hri.ReturnCode">
+            <summary>
+            Return code for all RoIS operations.
+            
+            Maps to RoIS_HRI::ReturnCode_t in the IDL.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Profiles.RoISIdentifierType">
+            <summary>
+            A structured RoIS identifier with optional metadata.
+            
+            Maps to RoISIdentifierType in XML-Profiles.xsd.
+            
+            Attributes:
+                authority: Optional naming authority (e.g., 'OMG').
+                code: The identifier code (e.g., 'PersonDetection').
+                codebook_ref: Optional reference to a codebook or ontology.
+                version: Optional version string.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Profiles.ParameterProfile">
+            <summary>
+            Describes a parameter's data type and metadata.
+            
+            Maps to ParameterProfileType in XML-Profiles.xsd.
+            
+            Used in both message profiles (Arguments/Results) and component-level
+            parameter declarations.
+            
+            Attributes:
+                name: The parameter name.
+                data_type_ref: Reference to the data type (e.g., 'int', 'DateTime',
+                    'RoISIdentifier[]').
+                default_value: The default value as a string, or None when the profile gives
+                    none. An empty default_value reads as None: the profiles write
+                    ``default_value=""`` on parameters that have no default.
+                description: Optional human-readable description.
+                read_only: True for a parameter that get_parameter returns and set_parameter
+                    refuses. An OpenRoIS extension: the XSD has no such attribute.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Profiles.CommandMessageProfile">
+            <summary>
+            A command message profile with arguments and optional timeout.
+            
+            Maps to CommandMessageProfileType in XML-Profiles.xsd.
+            
+            Attributes:
+                arguments: The input arguments for this command.
+                timeout: Optional timeout in milliseconds.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Profiles.ComponentFunction">
+            <summary>
+            The RoSO function class of a component.
+            
+            Not part of XML-Profiles.xsd. The values are the Robotic Service Function
+            Ontology classes that the spec's ontology file assigns to the basic components:
+            Navigation, Reaction and SpeechSynthesis are Actuation, the detection,
+            localization and recognition components are Sensing, and AudioStreaming is the
+            generic Function class. An engine requires a bind before commands on an
+            actuation component.
+            
+            ACTUATION: The component acts on the world (moves, speaks, shows).
+            SENSING: The component observes the world.
+            FUNCTION: The component is neither, for example a stream.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Profiles.EventMessageProfile">
+            <summary>
+            An event message profile.
+            
+            Maps to EventMessageProfileType in XML-Profiles.xsd.
+            
+            Attributes:
+                arguments: The arguments of this event. The XSD gives an event no Arguments,
+                    but the streaming profiles have them (notify_stream_status names stream_id),
+                    and the codec follows the profiles. A subscription selects them with its
+                    condition.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Profiles.QueryMessageProfile">
+            <summary>
+            A query message profile.
+            
+            Maps to QueryMessageProfileType in XML-Profiles.xsd.
+            
+            Attributes:
+                arguments: The input arguments of this query. The XSD gives a query no
+                    Arguments, but the streaming profiles have them (get_stream_status takes
+                    stream_id), and the codec follows the profiles.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Profiles.HRIEngineProfileType">
+            <summary>
+            Describes an HRI Engine's composition of sub-engines and components.
+            
+            Maps to HRIEngineProfileType in XML-Profiles.xsd, field for field. The profile
+            names its components by ref only, as the XSD does. The get_profile result carries
+            their HRIComponentProfiles next to it.
+            
+            Attributes:
+                identifier: The engine's structured identifier.
+                name: The gml:name of the engine, or None when it has none.
+                sub_profiles: One profile per child engine (XSD SubProfile).
+                component_ids: Fully qualified refs of every component reachable through this
+                    engine, including the components of its child engines (XSD HRIComponent).
+                parameter_profiles: Engine-level parameter declarations.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Profiles.HRIComponentProfile">
+            <summary>
+            Describes a RoIS component's capabilities, messages, and parameters.
+            
+            Maps to HRIComponentProfileType in XML-Profiles.xsd. One profile describes one
+            component instance: its messages are the ones that instance supports.
+            
+            Attributes:
+                identifier: The component type, for example authority 'OMG' and code
+                    'PersonDetection' for urn:x-rois:def:component:OMG::PersonDetection.
+                name: A short human-readable name (e.g., 'person_detecter').
+                function: The RoSO function class. An OpenRoIS extension: the XSD has no
+                    such element.
+                sub_component_profiles: URNs of sub-component profiles (e.g., RoISCommon).
+                command_profiles: Command message profiles this component supports.
+                query_profiles: Query message profiles this component supports.
+                event_profiles: Event message profiles this component supports.
+                parameter_profiles: Parameter declarations for this component.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Profiles.MessageProfile">
+            <summary>
+            Base message profile describing a command, query, or event message.
+            
+            Maps to MessageProfileType in XML-Profiles.xsd.
+            
+            Attributes:
+                name: The message name (e.g., 'person_detected', 'set_parameter').
+                results: The result parameters of this message.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Service.CompletedStatus">
+            <summary>
+            Status of a completed command execution.
+            
+            Maps to RoIS_Service::Completed_Status in the IDL.
+            
+            OK: Command completed successfully.
+            ERROR: Command completed with an error.
+            ABORT: Command was aborted.
+            OUT_OF_RESOURCES: Command failed due to resource exhaustion.
+            TIMEOUT: Command timed out before completion.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Service.ErrorType">
+            <summary>
+            Classification of error notifications.
+            
+            Maps to RoIS_Service::ErrorType in the IDL.
+            
+            ENGINE_INTERNAL_ERROR: Error originating from the HRI Engine itself.
+            COMPONENT_INTERNAL_ERROR: Error originating from a component.
+            COMPONENT_NOT_RESPONDING: A component failed to respond within timeout.
+            USER_DEFINED_ERROR: Application-specific error.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Service.CompletedParams">
+            <summary>
+            Params of the rois.command.completed notification.
+            
+            Maps to ServiceApplicationBase::completed(in command_id, in status). The results
+            come from CommandIF::get_command_result(command_id).
+            
+            Attributes:
+                command_id: The command that ended, as the application named it.
+                status: How the command ended.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Service.NotifyErrorParams">
+            <summary>
+            Params of the rois.system.notify_error notification.
+            
+            Maps to ServiceApplicationBase::notify_error(in error_id, in error_type). The
+            details come from SystemIF::get_error_detail(error_id).
+            
+            Attributes:
+                error_id: Identifier of this error, for get_error_detail.
+                error_type: Classification of the error.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Service.NotifyEventParams">
+            <summary>
+            Params of the rois.event.notify_event notification.
+            
+            Maps to ServiceApplicationBase::notify_event(in event_id, in event_type,
+            in subscribe_id, in expire). The payload also comes from
+            EventIF::get_event_detail(event_id) until the event expires.
+            
+            Attributes:
+                event_id: Identifier of this event, for get_event_detail.
+                event_type: The type of event (e.g., 'person_detected').
+                subscribe_id: The subscription this event matches.
+                expire: ISO 8601 datetime after which get_event_detail no longer has the
+                    event, or empty if it does not expire.
+                results: The event payload. An OpenRoIS extension that saves one
+                    get_event_detail round trip per event.
+            </summary>
+        </member>
+        <member name="T:OpenRoIS.Interfaces.Service.ProfileChangedParams">
+            <summary>
+            Params of the rois.system.profile_changed notification.
+            
+            Not part of RoIS: an OpenRoIS extension. The engine sends it when its profile
+            changes, for example when a child engine connects or disconnects, so a client
+            calls get_profile again instead of polling it. It carries no params.
+            </summary>
+        </member>
+    </members>
+</doc>

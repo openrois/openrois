@@ -33,7 +33,7 @@ body:
         - Engine or gateway (core)
         - Component framework or a reference component
         - TypeScript SDK
-        - C# SDK
+        - Unity SDK
         - Interface types or the type pipeline
         - Examples
         - Documentation

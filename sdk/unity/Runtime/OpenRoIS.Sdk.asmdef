@@ -2,5 +2,14 @@
     "name": "OpenRoIS.Sdk",
     "references": [],
     "includePlatforms": [],
-    "excludePlatforms": []
+    "excludePlatforms": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "OpenRoIS.Interfaces.dll",
+        "System.Text.Json.dll",
+        "System.Text.Encodings.Web.dll",
+        "System.Runtime.CompilerServices.Unsafe.dll",
+        "Microsoft.Bcl.AsyncInterfaces.dll"
+    ],
+    "autoReferenced": true
 }

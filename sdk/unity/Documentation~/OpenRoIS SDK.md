@@ -1,0 +1,82 @@
+# About OpenRoIS SDK
+
+Use the OpenRoIS SDK package to connect a Unity application to an OpenRoIS gateway and
+drive robots, avatars, and AI services through the standard interfaces of the
+[OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0). The same calls work for a
+physical robot and for a virtual character, which lets one Unity application serve as
+the front end of either.
+
+This version of the package is an alpha. It contains the JSON-RPC 2.0 layer used by the
+protocol. The high-level `RoISClient` is in progress. See the
+[roadmap](https://openrois.org/docs/project/roadmap).
+
+# Installing OpenRoIS SDK
+
+The package is not published to a registry yet. Add it by Git URL, in the Package Manager
+window or in `Packages/manifest.json`:
+
+```json
+{
+  "dependencies": {
+    "org.openrois.sdk": "https://github.com/openrois/openrois.git?path=sdk/unity"
+  }
+}
+```
+
+For general guidance, see the Unity Manual on
+[installing a package from a Git URL](https://docs.unity3d.com/Manual/upm-ui-giturl.html).
+
+# Using OpenRoIS SDK
+
+Everything currently available lives in the `OpenRoIS.Sdk.JsonRpc` namespace.
+
+- `JsonRpcBuilder.CreateRequest(id, method, parameters)` and
+  `JsonRpcBuilder.CreateNotification(method, parameters)` produce wire-ready strings.
+- `JsonRpcParser.Parse(json)` classifies an incoming string as a request, response, error,
+  or notification and exposes the typed message.
+
+The [wire protocol reference](https://openrois.org/docs/reference/wire-protocol) lists
+every RoIS method, its parameters, and its implementation status in the engine.
+
+# Technical Details
+
+## Requirements
+
+This version of OpenRoIS SDK is compatible with the following versions of the Unity
+Editor:
+
+- Unity 6000.0 and later
+
+The package has no package dependencies. Running its tests needs
+`com.unity.test-framework` in the project.
+
+## Known Limitations
+
+OpenRoIS SDK version 0.1.0-alpha.1 includes the following known limitations:
+
+- No high-level RoIS client yet. Applications build and parse JSON-RPC messages and
+  manage their own WebSocket.
+- A project that already contains an assembly named like one in `Runtime/Plugins` does
+  not compile with this package.
+- Mono players with Managed Stripping Level High fail at runtime with a
+  `FieldAccessException` inside `System.Text.Json`. Use Medium or lower on Mono. IL2CPP
+  works at High.
+- No authentication. The OpenRoIS gateway does not authenticate connections in the alpha
+  releases. Use it on trusted networks only.
+
+## Package Contents
+
+| Location | Description |
+|----------|-------------|
+| `Runtime/JsonRpc` | The JSON-RPC 2.0 builder, parser, and message types |
+| `Runtime/Plugins` | `OpenRoIS.Interfaces`, `System.Text.Json`, and the dependencies of `System.Text.Json` that Unity does not provide |
+| `Runtime/link.xml` | Keeps the assemblies that `System.Text.Json` reads by reflection in stripped builds |
+| `Editor` | Hands `Runtime/link.xml` to the managed code linker |
+| `Tests/Runtime` | Unity Test Framework tests for the builder and the parser |
+| `Samples~/Example` | Builds a request and parses a response with the JSON-RPC layer |
+
+## Document Revision History
+
+| Date | Reason |
+|------|--------|
+| September 18, 2026 | Document created for package version 0.1.0-alpha.1 |

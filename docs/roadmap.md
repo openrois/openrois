@@ -66,11 +66,10 @@ monorepo keeps the component SDK and the common components.
 ### Phase 3: Client SDKs and First End-to-End Demonstration (In Progress)
 
 **Done:** the TypeScript SDK (`@openrois/sdk`), the profile-driven web client
-(`examples/hri-client`), the mock engine (`testing/mock-engine`), and an end-to-end
-demonstration of a web application controlling a physical robot through the gateway and
-an adapter.
+(`examples/hri-client`), and an end-to-end demonstration of a web application controlling
+a physical robot through the gateway and an adapter.
 
-**In progress:** the C# client SDK for Unity. Its JSON-RPC layer exists, and the
+**In progress:** the Unity SDK. Its JSON-RPC layer exists, and the
 high-level client does not yet.
 
 **Exit criteria:** tagged release `v0.1.0`.
@@ -112,8 +111,8 @@ minimal health and status endpoints.
 **Done:** the `openrois-gateway` package, a standalone gateway process composed from
 `Engine` and `WsServer`, with configuration from a YAML file, the environment and flags,
 logging, and a graceful stop on SIGTERM and SIGINT. Its container image, and a Docker
-Compose file that starts it with the mock adapter, checked end to end by a smoke script on
-the RoIS method catalog. Docker Compose is the one-command quickstart.
+Compose file that starts it with the mock adapter, checked end to end by the conformance
+list on the RoIS method catalog. Docker Compose is the one-command quickstart.
 
 **In progress:** the first release of `openrois-gateway`, together with the engine.
 

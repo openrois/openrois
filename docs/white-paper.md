@@ -24,7 +24,7 @@
 > it. The engine implements the RoIS interfaces, profiles and common messages (CP1 to CP3)
 > as [rois-reference §16](rois-reference.md#16-known-normative-divergences) records them,
 > without a conformance claim. Each robot's components live in its adapter repository,
-> such as the Reachy Mini adapter. The C# client SDK, a Python client SDK,
+> such as the Reachy Mini adapter. The Unity SDK, a Python client SDK,
 > authentication, and WebRTC media are in progress or planned. This document
 > describes the target architecture and marks features that are not implemented yet.
 
@@ -94,7 +94,7 @@ This white paper describes the following contributions:
    of 16 methods and 4 notifications named after the IDL, with conditions in a subset
    of CQL2-Text and a small set of documented extensions (section 9).
 5. **SDKs for both sides of the system**: client SDKs for web (TypeScript) and
-   Unity (C#, in progress) that behave identically regardless of the host paradigm
+   Unity (in progress) that behave identically regardless of the host paradigm
    behind the gateway, and a Python component SDK in which a component is a class that
    declares the profile of its RoIS component type (section 8).
 6. A **package management boundary** that keeps the engine pure while allowing
@@ -436,7 +436,7 @@ flowchart TB
     subgraph L1["Service Application"]
         direction LR
         WebApp["Web App<br/>+ RoIS TS SDK"]
-        UnityApp["Unity App<br/>+ RoIS C# SDK"]
+        UnityApp["Unity App<br/>+ RoIS Unity SDK"]
     end
 
     subgraph L2["Gateway (hosts Engine, main)"]
@@ -480,7 +480,7 @@ control-plane router when acting as the main engine without local components.
 | Main HRI Engine | Engine (hosted by the gateway) | Holds the bindings, routes to child engines, aggregates profiles |
 | Sub HRI Engine | Engine (hosted by an adapter) | Hosts local components, owns data-plane transport |
 | HRI Component | Component hosted by an adapter | Translation layer: RoIS calls to backend calls |
-| Service Application | Client SDK (TypeScript or C#) | Drives robot scenarios via RoIS interfaces |
+| Service Application | Client SDK (TypeScript or Unity) | Drives robot scenarios via RoIS interfaces |
 | RoIS interfaces (SystemIF, CommandIF, QueryIF, EventIF), with streaming as two components | JSON-RPC 2.0 methods over WebSocket | Service application to gateway boundary (control plane) |
 | Main HRI Engine to sub HRI Engine | The same JSON-RPC 2.0 methods, sent by the parent engine | Gateway to adapter boundary (control plane) |
 | (no spec term) | Component contract (`ComponentContract`) | Inside an engine: its own components and its child engines behind one interface |
@@ -656,7 +656,7 @@ match what the pipeline produces. Generated files are never edited by hand.
 | Package | Language | Target registry | Role |
 |---------|----------|-----------------|------|
 | `openrois-interfaces` | Python 3.12+ | PyPI | Source of truth |
-| `OpenRoIS.Interfaces` | C# (netstandard2.1) | NuGet / UPM | Generated |
+| `OpenRoIS.Interfaces` | C# (netstandard2.1) | NuGet, bundled in the Unity SDK | Generated |
 | `@openrois/interfaces` | TypeScript (ESM) | npm | Generated |
 
 The packages are released as tagged alphas in the repository and installed from source.
@@ -705,7 +705,7 @@ flowchart TB
     subgraph SDKs["Client SDKs"]
         direction LR
         TS["TypeScript SDK<br/>Web service applications<br/>(primary client)"]
-        CSharp["C# SDK<br/>Unity service applications<br/>(secondary client, in progress)"]
+        Unity["Unity SDK<br/>Unity service applications<br/>(secondary client, in progress)"]
     end
 
     SDKs -->|"WebSocket + JSON-RPC 2.0"| Gateway["Gateway"]
@@ -759,13 +759,13 @@ Key characteristics:
 - Typed notifications, each event also delivered under its own event type, for example
   `reached_target`.
 - Builders for CQL2-Text conditions, such as `componentRef` and `componentType`.
-- Tested against the mock engine (`testing/mock-engine/`) and, with
-  `OPENROIS_GATEWAY_URL` set, against a live gateway with the mock adapter behind it.
+- Tested with `OPENROIS_GATEWAY_URL` set against a live gateway with the mock adapter
+  behind it.
 - Reconnection is planned.
 
-### 8.2 C# SDK for Unity (Secondary Client, in Progress)
+### 8.2 Unity SDK (Secondary Client, in Progress)
 
-The C# SDK (`OpenRoIS.Sdk` / `org.openrois.sdk`) targets Unity service
+The Unity SDK (`OpenRoIS.Sdk` / `org.openrois.sdk`) targets Unity service
 applications. Its JSON-RPC 2.0 layer is available. The high-level client shown
 below is the target API and is in progress.
 
@@ -787,7 +787,7 @@ Target characteristics (the JSON-RPC 2.0 layer exists today, the rest is in prog
 
 - Packaged for Unity as `org.openrois.sdk` through the Unity Package Manager
   (publication planned).
-- Targets `netstandard2.1`, Unity 6.5 and later.
+- Targets `netstandard2.1`, Unity 6000.0 and later.
 - SDK callbacks marshaled to the Unity main thread (in progress).
 - Typed component proxies: `client.BindAsync("PersonDetection")` returning a typed
   proxy with `.On(event)` handlers (planned).
@@ -857,7 +857,7 @@ Clients then see `robot_1/navigation`. Key characteristics:
 
 ### 8.4 SDK Interface Mapping
 
-The client SDKs mirror the RoIS interfaces defined in the normative IDL. The C# client
+The client SDKs mirror the RoIS interfaces defined in the normative IDL. The Unity SDK
 will have the same methods (in progress).
 
 | RoIS Interface | `RoISClient` methods (TypeScript) | Notifications |
@@ -1851,7 +1851,7 @@ details and open decisions.
 | 0 | Paradigm-Neutral Interfaces | type pipeline, tests against the normative files | done |
 | 1 | Engine and Sub HRI Engine | TypeScript proof of concept, child engines, mock components | done |
 | 2 | Adapter Framework and Components | component framework, reference components, real robot adapter | done |
-| 3 | Client SDKs and First Demonstration | TypeScript SDK and web client done, C# SDK in progress, exit tag `v0.1.0` | in progress |
+| 3 | Client SDKs and First Demonstration | TypeScript SDK and web client done, Unity SDK in progress, exit tag `v0.1.0` | in progress |
 | 4 | Recursive Engine in Python | the Python engine on the RoIS method catalog is the only dispatch implementation | in progress |
 | 5 | Hardening the Engine | graceful shutdown, reconnection, package loading, health endpoints | planned |
 | 6 | Gateway Process | `openrois-gateway` from `Engine` + `WsServer`, Docker Compose quickstart | in progress |
@@ -1896,7 +1896,7 @@ repository: the Reachy Mini adapter of the openrois organization is the referenc
 example, and Coarobo maintains a Kachaka adapter. The first end-to-end demonstration, a web application
 driving a physical robot over gRPC, ran on the earlier TypeScript proof of concept. The
 next one, a physical robot and a virtual agent behind one gateway on the Reachy Mini
-reference platform, is Phase 8, and the Reachy Mini adapter is built. The C# client SDK
+reference platform, is Phase 8, and the Reachy Mini adapter is built. The Unity SDK
 is in progress, and a Python client SDK is planned.
 
 ---
@@ -1953,11 +1953,11 @@ service without rewriting the scenario logic.
 
 ### 17.3 OpenRoIS and Unity
 
-Unity is a secondary client platform for service applications. The C# SDK targets
-Unity 6.5 and later through UPM, and the C# interfaces package targets `netstandard2.1`,
-which runs on both Mono (Unity 6.3 and later) and CoreCLR (Unity 6.8). The same types
+Unity is a secondary client platform for service applications. The Unity SDK targets
+Unity 6000.0 and later through UPM, and bundles the C# interface types, which target
+`netstandard2.1`. The same types
 also work outside Unity (any .NET runtime). The gateway runs as a separate process. A
-Unity application connects to the gateway over WebSocket using the C# SDK (in
+Unity application connects to the gateway over WebSocket using the Unity SDK (in
 progress). Adapters run as separate processes on the robot or in the cloud.
 
 ### 17.4 Conformance
@@ -1997,13 +1997,13 @@ The single-source-of-truth type pipeline (Python Pydantic to JSON Schema to C# a
 TypeScript) keeps three language stacks consistent without manual synchronization. The
 JSON-RPC 2.0 binding of the RoIS method catalog over WebSocket provides a
 browser-native, NAT-friendly control plane with full async event support. The client
-SDKs (TypeScript for web, and C# for Unity, in progress) expose identical behavior
+SDKs (TypeScript for web, and Unity, in progress) expose identical behavior
 regardless of the host paradigm behind the gateway.
 
 The project is in alpha. The type pipeline, the recursive engine, the gateway process,
 the component SDK, reference components, and the TypeScript SDK are built. A Docker
 Compose stack runs the gateway with the mock adapter, and the TypeScript SDK runs full
-sessions against it. The C# SDK, authentication, media streaming, and the
+sessions against it. The Unity SDK, authentication, media streaming, and the
 full component library follow the roadmap. Researchers and engineers evaluating RoIS
 2.0 can use OpenRoIS as a reference implementation, contribute reference components, or
 build applications against the SDK today.

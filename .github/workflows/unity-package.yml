@@ -1,0 +1,41 @@
+name: Unity Package
+
+# The Unity package commits precompiled assemblies so that a Git URL install works.
+# This job rebuilds them and fails if the committed files no longer match the sources.
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - "interfaces/csharp/src/**"
+      - "sdk/unity/**"
+      - ".github/workflows/unity-package.yml"
+  pull_request:
+    paths:
+      - "interfaces/csharp/src/**"
+      - "sdk/unity/**"
+      - ".github/workflows/unity-package.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unity-package-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bundled-dlls:
+    name: Bundled DLLs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # The compiler version decides the exact bytes of OpenRoIS.Interfaces.dll, so
+      # this job uses the SDK that the script pins.
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: sdk/unity/scripts~/global.json
+
+      - name: Bundled DLLs are up to date
+        run: python3 sdk/unity/scripts~/bundle_dlls.py --check

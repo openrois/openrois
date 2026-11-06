@@ -18,9 +18,9 @@ What exists today:
 | Gateway process (`openrois-gateway`) | `services/gateway/` | Available |
 | Component and adapter SDK, and the common components | `components/` | Available |
 | TypeScript client SDK | `sdk/typescript/` | Available |
-| C# client SDK for Unity | `sdk/unity/` | JSON-RPC layer only, client in progress |
+| Unity SDK | `sdk/unity/` | JSON-RPC layer only, client in progress |
 | Examples: web client, adapter template | `examples/` | Available |
-| Test fixtures: mock engine, mock adapter | `testing/` | Available |
+| Test fixtures: mock adapter, conformance list | `testing/` | Available |
 | Hub management application | `apps/hub/` | Not started, scaffold only |
 
 Each robot's components live in its adapter repository, not here. The reference example
@@ -70,11 +70,10 @@ its description. The IDL and XSD cross-check tests fail on any other addition.
 | TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test` |
 | C# types | `interfaces/csharp` | `dotnet build src/OpenRoIS.Interfaces`, `dotnet test tests/OpenRoIS.Interfaces.Tests` |
 | Engine | `engine` | `pip install -e ../components/core -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
-| Gateway | `services/gateway` | `pip install -e ../../interfaces/python -e ../../engine -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/ scripts/` |
+| Gateway | `services/gateway` | `pip install -e ../../interfaces/python -e ../../engine -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | Component SDK | `components/core` | `pip install -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | Common components | `components/common` | `pip install -e ../../interfaces/python -e ../core -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway) |
-| Mock engine | `testing/mock-engine` | `npm install`, `npm test` |
 
 Some tests in `interfaces/python` cross-check the models against the normative RoIS
 machine-readable files, which are not redistributed in this repository. Those tests are
@@ -91,7 +90,7 @@ skipped unless `OPENROIS_NORMATIVE_DIR` points to a local copy of the files.
 - Python 3.12+, Pydantic v2, `from __future__ import annotations`, PEP 695 `type`
   statements, mypy strict, ruff line length 100.
 - TypeScript ESM, strict typecheck, vitest.
-- C# `netstandard2.1` (Unity 6.3+), `sealed class`, `Nullable` enabled.
+- C# `netstandard2.1` (Unity 6000.0+), `sealed class`, `Nullable` enabled.
 - `interfaces/python/src/` and `engine/src/` stay transport-neutral and paradigm-neutral.
   No ROS, DDS, gRPC, or game engine imports. Those belong in components.
 - Do not change the component contract (`ComponentContract` in

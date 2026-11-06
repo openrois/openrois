@@ -50,14 +50,12 @@ Publish it on `127.0.0.1` unless the network is trusted. Settings come from
 
 ```bash
 docker compose up --build
-python services/gateway/scripts/smoke.py
+python testing/conformance/wire_check.py
 ```
 
-The smoke script connects as a client and waits until the adapter's components appear. It
-then reads the profile, runs the queries, reads a relayed event, drives the mock navigation
-to a target from bind to `reached_target`, and checks that a method outside the catalog
-gets `METHOD_NOT_FOUND`. It needs only the `websockets` package and exits with 0 when every
-check passes.
+The check connects as a client, waits until the adapter's components appear, and runs the
+[conformance list](../../testing/conformance/README.md). It needs only the `websockets`
+package and exits with 0 when every scenario passes.
 
 ## Configuration
 
@@ -114,7 +112,7 @@ asyncio.run(main())
 
 ```bash
 pip install -e ./interfaces/python -e ./engine -e "./services/gateway[dev]"
-cd services/gateway && pytest && mypy && ruff check src/ tests/ scripts/
+cd services/gateway && pytest && mypy && ruff check src/ tests/
 ```
 
 ## Status

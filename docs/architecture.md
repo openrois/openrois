@@ -60,7 +60,7 @@
   assume hardware, a world model, or any specific middleware.
 - Allow a **service application in a remote location** to control any RoIS host
   (robot or avatar) securely.
-- Expose a **simple client SDK** (TypeScript for web first, C# for Unity second)
+- Expose a **simple client SDK** (TypeScript for web first, Unity second)
   so a scenario can be written in a few lines, identically regardless of the host
   paradigm.
 - Support **live audio/video** for both telepresence (robot) and rendered avatars.
@@ -130,7 +130,7 @@ Logical Layer (control plane)
 | Main HRI Engine | Engine (hosted by the gateway) | Routes to child engines, aggregates profiles |
 | Sub HRI Engine | Engine (hosted by an adapter) | Hosts components, owns data-plane transport |
 | HRI Component | Component registered by a sub HRI Engine | Translation layer: RoIS calls to backend calls |
-| Service Application | Client SDK (TypeScript or C#) | Drives robot scenarios via RoIS interfaces |
+| Service Application | Client SDK (TypeScript or Unity) | Drives robot scenarios via RoIS interfaces |
 | RoIS interfaces (SystemIF, CommandIF, QueryIF, EventIF, StreamingIF) | JSON-RPC 2.0 methods over WebSocket | Service application to gateway boundary (control plane) |
 | Main HRI Engine to sub HRI Engine | The same JSON-RPC 2.0 methods, sent by the parent engine | Gateway to sub HRI Engine boundary (control plane) |
 | (no spec term) | Component contract (`ComponentContract`) | Inside an engine: its own components and its child engines behind one interface |
@@ -189,7 +189,7 @@ flowchart TB
     subgraph L1["Service Application"]
         direction LR
         WebApp["Web App<br/>+ RoIS TS SDK"]
-        UnityApp["Unity App<br/>+ RoIS C# SDK"]
+        UnityApp["Unity App<br/>+ RoIS Unity SDK"]
     end
 
     subgraph L2["Gateway (hosts Engine, main)"]
@@ -281,7 +281,7 @@ through `execute`, answer `get_stream_status` through `query`, and send
 
 The TypeScript SDK (`@openrois/sdk`) is the client for web service applications.
 `RoISClient` has one method per operation of the method catalog, each taking the
-operation's IDL parameters in IDL order. The C# SDK for Unity will have the same methods
+operation's IDL parameters in IDL order. The Unity SDK will have the same methods
 (in progress).
 
 ```
@@ -1103,11 +1103,11 @@ openrois/
 ├── interfaces/    # Shared types: single source of truth (Python to JSON Schema to C#/TS)
 ├── engine/        # Engine library: recursive Engine, LocalComponents, ChildEngine, WsServer, WsClient (openrois-engine)
 ├── components/    # Component SDK (core) and common components
-├── sdk/           # Client SDKs (TypeScript, C# for Unity)
+├── sdk/           # Client SDKs (TypeScript, Unity)
 ├── services/      # Network processes: the gateway and its container image (openrois-gateway)
 ├── apps/          # Product applications (Hub visualizer, planned)
 ├── examples/      # Web client, adapter template
-├── testing/       # Test fixtures: mock engine, mock adapter
+├── testing/       # Test fixtures: mock adapter, conformance list
 └── docs/          # Architecture, white paper, roadmap, spec reference
 ```
 
@@ -1117,10 +1117,10 @@ openrois/
 | `engine/` | Engine library (`openrois-engine`). Recursive RoIS dispatch logic: one `Engine` class used by both the gateway and adapters, plus `WsServer` and `WsClient`. Zero media and zero paradigm-specific imports. |
 | `services/gateway/` | Gateway process (`openrois-gateway`). Composes `Engine` and `WsServer` into the process that hosts the Main HRI Engine, with configuration, logging, a graceful stop, and a container image. |
 | `components/` | The component SDK (`openrois-components-core`) and the common components (`openrois-components-common`). |
-| `sdk/` | Client SDKs: TypeScript for web and Node.js, C# for Unity (in progress). |
+| `sdk/` | Client SDKs: TypeScript for web and Node.js, Unity (in progress). |
 | `apps/` | Product applications: the Hub (a gateway visualizer, planned). |
 | `examples/` | Reference implementations and templates for onboarding. |
-| `testing/` | Fixtures that tests and CI depend on: the mock engine and the mock adapter. |
+| `testing/` | Fixtures that tests and CI depend on: the mock adapter and the conformance list. |
 | `docs/` | Documentation. |
 
 Adapters for specific robots live in separate repositories. They consume the

@@ -3,7 +3,7 @@
 #     docker compose up --build
 #
 # Clients connect to ws://127.0.0.1:8765, where the mock adapter serves mock/navigation,
-# mock/person_detection and mock/system_information. services/gateway/scripts/smoke.py
+# mock/person_detection and mock/system_information. testing/conformance/wire_check.py
 # checks the stack.
 
 name: openrois

@@ -1,11 +1,19 @@
 {
     "name": "OpenRoIS.Sdk.Tests",
     "references": [
-        "OpenRoIS.Sdk"
-    ],
-    "optionalUnityReferences": [
-        "TestAssemblies"
+        "OpenRoIS.Sdk",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
     ],
     "includePlatforms": [],
-    "excludePlatforms": []
+    "excludePlatforms": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll",
+        "System.Text.Json.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ]
 }

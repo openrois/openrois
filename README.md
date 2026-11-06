@@ -103,7 +103,7 @@ robots and virtual agents alike.
 
 | RoIS concept | OpenRoIS realization |
 |--------------|----------------------|
-| Service Application | Your application, built with the TypeScript or C# SDK |
+| Service Application | Your application, built with the TypeScript or Unity SDK |
 | Main HRI Engine | The gateway process: `Engine` with child engines, behind a WebSocket server |
 | Sub HRI Engine | An adapter process: `Engine` with local components, connected to the gateway |
 | HRI Component | A class decorated with `@component`, hosted by an adapter |
@@ -139,14 +139,13 @@ The inspector reads the engine profile and renders every component it finds, wit
 queries, parameters, commands, and events: `mock/navigation`, `mock/person_detection`
 and `mock/system_information`, served by the mock adapter, an engine of its own below the
 gateway. Nothing in the client is specific to the components on the other side.
-`python services/gateway/scripts/smoke.py` checks the same stack from the command line.
+`python testing/conformance/wire_check.py` checks the same stack from the command line.
 
-To develop a client without Docker, the [mock engine](testing/mock-engine/README.md)
-serves the same components from one Node.js process:
-`cd testing/mock-engine && npm install && npm start`.
+To develop a client without Docker, run the gateway and the
+[mock adapter](testing/mock-adapter/README.md) as Python processes.
 
 <p align="center">
-  <img src="docs/assets/hri-client-demo.gif" alt="Screen recording of the OpenRoIS HRI Client connecting to the mock engine, querying components, binding, subscribing to events, and executing a command." width="760">
+  <img src="docs/assets/hri-client-demo.gif" alt="Screen recording of the OpenRoIS HRI Client connecting to the mock adapter, querying components, binding, subscribing to events, and executing a command." width="760">
 </p>
 
 <p align="center"><sub>Recorded from this quickstart, with no robot attached. A <a href="https://openrois.org/#see-it-run">higher-resolution version</a> is on the website.</sub></p>
@@ -260,7 +259,7 @@ makes no conformance claim. The rest of the RoIS surface is being built in the o
 | Component and adapter SDK (Python): decorators, resources, RoIS_Common default, `adapter.yaml` | Available |
 | Gateway process, container image, and Docker Compose with a mock adapter | Available |
 | TypeScript client SDK and web inspector | Available |
-| C# client SDK for Unity | In progress (JSON-RPC layer) |
+| Unity SDK | In progress (JSON-RPC layer) |
 | Python client SDK | Planned |
 | Open reference platform based on the Pollen Robotics Reachy Mini | In progress, in openrois-adapter-reachy-mini |
 | Loading XML-declared component profiles at run time | Planned |
@@ -291,8 +290,8 @@ openrois/
 │   ├── hri-client/      Profile-driven web inspector for any RoIS engine
 │   └── adapter-template/  Starting point for a new robot adapter
 ├── testing/
-│   ├── mock-engine/     RoIS engine test double with simulated components
-│   └── mock-adapter/    Adapter with simulated components
+│   ├── mock-adapter/    Adapter with simulated components
+│   └── conformance/     The scenario list for clients of a gateway
 ├── docs/                White paper, architecture, roadmap, RoIS reference
 └── compose.yaml         The gateway with the mock adapter, in Docker Compose
 ```
@@ -319,7 +318,6 @@ generated files by hand.
 | TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test` |
 | C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
 | TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` |
-| Mock engine | `testing/mock-engine` | `npm install`, `npm test` |
 | Engine | `engine` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Component SDK | `components/core` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Common components | `components/common` | `pytest`, `mypy`, `ruff check src/ tests/` |
