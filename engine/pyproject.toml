@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openrois-engine"
-version = "0.1.0a1"
+version = "0.1.0a2"
 description = "OpenRoIS engine: the recursive RoIS HRI Engine, with its WebSocket server and client"
 readme = "README.md"
 license = "Apache-2.0"

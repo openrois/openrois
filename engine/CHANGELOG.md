@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0a2] - 2026-11-06
+
+### Fixed
+
+- A second client of a gateway can subscribe to an event another client already subscribes to. It got `ERROR`, because the child engine returned the first subscription for it. Adapters need this release too, since the fix is in the child engine.
+
 ## [0.1.0a1] - 2026-11-05
 
 ### Added
@@ -22,5 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Type information for every public name (`py.typed`).
 - `openrois-interfaces` 0.1.0a5 or later is required, because the engine reads the `Branch` model that release introduced.
 
-[unreleased]: https://github.com/openrois/openrois/compare/engine-v0.1.0-alpha.1...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/engine-v0.1.0-alpha.2...HEAD
+[0.1.0a2]: https://github.com/openrois/openrois/releases/tag/engine-v0.1.0-alpha.2
 [0.1.0a1]: https://github.com/openrois/openrois/releases/tag/engine-v0.1.0-alpha.1
