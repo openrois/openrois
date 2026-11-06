@@ -32,8 +32,8 @@ Open the address Vite prints, enter `ws://localhost:8765`, and click Connect.
 
 ## Run It Against the Mock Engine
 
-Without Docker, start the [mock engine](../mock-engine/README.md) in terminal 1 instead:
-`cd examples/mock-engine && npm install && npm start`. It serves the same components on
+Without Docker, start the [mock engine](../../testing/mock-engine/README.md) in terminal 1 instead:
+`cd testing/mock-engine && npm install && npm start`. It serves the same components on
 the same port.
 
 ## Run It Against Another Engine

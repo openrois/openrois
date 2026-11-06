@@ -66,7 +66,7 @@ monorepo keeps the component SDK and the common components.
 ### Phase 3: Client SDKs and First End-to-End Demonstration (In Progress)
 
 **Done:** the TypeScript SDK (`@openrois/sdk`), the profile-driven web client
-(`examples/hri-client`), the mock engine (`examples/mock-engine`), and an end-to-end
+(`examples/hri-client`), the mock engine (`testing/mock-engine`), and an end-to-end
 demonstration of a web application controlling a physical robot through the gateway and
 an adapter.
 

@@ -2,21 +2,22 @@
 #
 # The OpenRoIS gateway. Build from the repository root:
 #
-#     docker build -f gateway/Dockerfile -t openrois-gateway .
+#     docker build -f services/gateway/Dockerfile -t openrois-gateway .
 #     docker run --rm -p 127.0.0.1:8765:8765 openrois-gateway
 #
 # Settings come from OPENROIS_GATEWAY_* environment variables or flags after the image
-# name. See gateway/README.md.
+# name. See services/gateway/README.md.
 
 FROM python:3.12-slim AS build
 
 WORKDIR /src
 COPY interfaces/python interfaces/python
 COPY engine engine
-COPY gateway gateway
+COPY services/gateway services/gateway
 # Build wheels for the three packages and every dependency, so the runtime stage
 # installs offline and carries no source tree or build tools.
-RUN pip wheel --no-cache-dir --wheel-dir /wheels ./interfaces/python ./engine ./gateway
+RUN pip wheel --no-cache-dir --wheel-dir /wheels ./interfaces/python ./engine \
+    ./services/gateway
 
 
 FROM python:3.12-slim

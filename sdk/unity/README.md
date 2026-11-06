@@ -30,7 +30,7 @@ Unity project manifest at this directory:
 ```json title="Packages/manifest.json"
 {
   "dependencies": {
-    "org.openrois.sdk": "file:../../openrois/sdk/csharp"
+    "org.openrois.sdk": "file:../../openrois/sdk/unity"
   }
 }
 ```

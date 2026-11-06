@@ -17,4 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A container image, built from `gateway/Dockerfile`, that runs the gateway as a non-root user and listens on every interface inside the container. `compose.yaml` runs it with the mock adapter.
 - The smoke script, `gateway/scripts/smoke.py`, which checks a running gateway end to end: it connects, binds, executes and reads the command id the gateway assigns.
 
-[unreleased]: https://github.com/openrois/openrois/tree/dev/gateway
+### Changed
+
+- **BREAKING CHANGE:** the package directory moved from `gateway/` to `services/gateway/`, with the Dockerfile and the smoke script inside it. The package name `openrois-gateway` does not change.
+
+[unreleased]: https://github.com/openrois/openrois/tree/dev/services/gateway

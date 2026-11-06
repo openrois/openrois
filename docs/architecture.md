@@ -1102,11 +1102,12 @@ product component, not an example or a demo.
 openrois/
 ├── interfaces/    # Shared types: single source of truth (Python to JSON Schema to C#/TS)
 ├── engine/        # Engine library: recursive Engine, LocalComponents, ChildEngine, WsServer, WsClient (openrois-engine)
-├── gateway/       # Gateway process and container image (openrois-gateway)
 ├── components/    # Component SDK (core) and common components
-├── sdk/           # Client SDKs (TypeScript, C#)
-├── examples/      # Mock engine, mock adapter, web client, adapter template
+├── sdk/           # Client SDKs (TypeScript, C# for Unity)
+├── services/      # Network processes: the gateway and its container image (openrois-gateway)
 ├── apps/          # Product applications (Hub visualizer, planned)
+├── examples/      # Web client, adapter template
+├── testing/       # Test fixtures: mock engine, mock adapter
 └── docs/          # Architecture, white paper, roadmap, spec reference
 ```
 
@@ -1114,11 +1115,12 @@ openrois/
 |-----------|------|
 | `interfaces/` | Type pipeline. Pydantic models are the source of truth. JSON Schema is the canonical wire contract. C# and TypeScript types are generated. |
 | `engine/` | Engine library (`openrois-engine`). Recursive RoIS dispatch logic: one `Engine` class used by both the gateway and adapters, plus `WsServer` and `WsClient`. Zero media and zero paradigm-specific imports. |
-| `gateway/` | Gateway process (`openrois-gateway`). Composes `Engine` and `WsServer` into the process that hosts the Main HRI Engine, with configuration, logging, a graceful stop, and a container image. |
+| `services/gateway/` | Gateway process (`openrois-gateway`). Composes `Engine` and `WsServer` into the process that hosts the Main HRI Engine, with configuration, logging, a graceful stop, and a container image. |
 | `components/` | The component SDK (`openrois-components-core`) and the common components (`openrois-components-common`). |
 | `sdk/` | Client SDKs: TypeScript for web and Node.js, C# for Unity (in progress). |
-| `examples/` | Reference implementations and templates for testing and onboarding. |
 | `apps/` | Product applications: the Hub (a gateway visualizer, planned). |
+| `examples/` | Reference implementations and templates for onboarding. |
+| `testing/` | Fixtures that tests and CI depend on: the mock engine and the mock adapter. |
 | `docs/` | Documentation. |
 
 Adapters for specific robots live in separate repositories. They consume the

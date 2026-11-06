@@ -19,7 +19,7 @@ The package is not published to a registry yet. Add it from a local clone of the
 ```json
 {
   "dependencies": {
-    "org.openrois.sdk": "file:../../openrois/sdk/csharp"
+    "org.openrois.sdk": "file:../../openrois/sdk/unity"
   }
 }
 ```

@@ -58,7 +58,7 @@ npm start          # listens on ws://127.0.0.1:8765
 ```
 
 Then point a client at `ws://localhost:8765`, for example
-[`examples/hri-client`](../hri-client/README.md).
+[`examples/hri-client`](../../examples/hri-client/README.md).
 
 ## Test
 

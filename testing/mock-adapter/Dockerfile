@@ -2,7 +2,7 @@
 #
 # The mock adapter. Build from the repository root:
 #
-#     docker build -f examples/mock-adapter/Dockerfile -t openrois-mock-adapter .
+#     docker build -f testing/mock-adapter/Dockerfile -t openrois-mock-adapter .
 #     docker run --rm --init -e OPENROIS_ADAPTER_GATEWAY_URL=ws://<gateway-host>:8765 \
 #         openrois-mock-adapter
 #
@@ -10,7 +10,7 @@
 # adapter.yaml, or adapter.fast.yaml with
 # OPENROIS_ADAPTER_CONFIG=/opt/mock-adapter/adapter.fast.yaml, then from the
 # OPENROIS_ADAPTER_* environment variables, then from flags after the image name. See
-# examples/mock-adapter/README.md.
+# testing/mock-adapter/README.md.
 
 FROM python:3.12-slim AS build
 
@@ -39,8 +39,8 @@ RUN --mount=type=bind,from=build,source=/wheels,target=/wheels \
 RUN useradd --system --uid 10001 --no-create-home openrois
 
 WORKDIR /opt/mock-adapter
-COPY examples/mock-adapter/mock_adapter.py examples/mock-adapter/adapter.yaml \
-    examples/mock-adapter/adapter.fast.yaml ./
+COPY testing/mock-adapter/mock_adapter.py testing/mock-adapter/adapter.yaml \
+    testing/mock-adapter/adapter.fast.yaml ./
 ENV OPENROIS_ADAPTER_CONFIG=/opt/mock-adapter/adapter.yaml
 USER openrois
 
