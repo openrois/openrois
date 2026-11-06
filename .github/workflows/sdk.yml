@@ -1,9 +1,9 @@
 name: SDK
 
 # The client SDKs against the tree. Each job installs the interfaces from the tree, and the
-# TypeScript job runs the conformance list on a stack from the tree, so a change that breaks
-# a client fails in its own pull request. Jobs share nothing, so the Python client SDK and
-# the Unity core join as jobs of their own.
+# TypeScript and Python jobs run the conformance list on a stack from the tree, so a change
+# that breaks a client fails in its own pull request. Jobs share nothing, so the Unity core
+# joins as a job of its own.
 
 on:
   push:
@@ -17,6 +17,7 @@ on:
       - "services/gateway/**"
       - "testing/**"
       - "sdk/typescript/**"
+      - "sdk/python/**"
       - "examples/hri-client/**"
       - ".github/workflows/sdk.yml"
   pull_request:
@@ -29,6 +30,7 @@ on:
       - "services/gateway/**"
       - "testing/**"
       - "sdk/typescript/**"
+      - "sdk/python/**"
       - "examples/hri-client/**"
       - ".github/workflows/sdk.yml"
   workflow_dispatch:
@@ -117,6 +119,65 @@ jobs:
 
       - name: Consumer checks on the packed tarball
         run: npm run test:consumer
+
+      - name: Logs
+        if: always()
+        working-directory: .
+        run: cat gateway.log adapter.log
+
+  python:
+    name: Python SDK, Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    env:
+      OPENROIS_GATEWAY_URL: ws://127.0.0.1:8765
+    defaults:
+      run:
+        working-directory: sdk/python
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            interfaces/python/pyproject.toml
+            engine/pyproject.toml
+            components/core/pyproject.toml
+            components/common/pyproject.toml
+            services/gateway/pyproject.toml
+            sdk/python/pyproject.toml
+
+      - name: Install the stack and the SDK
+        # The package depends on the published interfaces. The tree goes over them, so a
+        # catalog change reaches these tests before it is released.
+        working-directory: .
+        run: >-
+          python -m pip install
+          -e interfaces/python -e engine -e components/core -e components/common
+          -e services/gateway -e "sdk/python[dev]"
+
+      - name: Start the gateway and the mock adapter
+        # They stay up for the steps below. The suite waits until the adapter has joined.
+        working-directory: .
+        run: |
+          openrois-gateway --log-level warning > gateway.log 2>&1 &
+          python testing/mock-adapter/mock_adapter.py \
+            --config testing/mock-adapter/adapter.fast.yaml --log-level warning \
+            > adapter.log 2>&1 &
+
+      - name: Lint
+        run: ruff check src/ tests/
+
+      - name: Type check
+        run: mypy
+
+      - name: Test
+        run: pytest
 
       - name: Logs
         if: always()

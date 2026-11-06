@@ -225,6 +225,19 @@ describe("WebSocketTransport", () => {
       expect(transport.state).toBe(TransportState.DISCONNECTED);
     });
 
+    it("waits 10 seconds for the connection by default", async () => {
+      const { transport } = createTestTransport();
+      const failed = vi.fn();
+
+      const connectPromise = transport.connect("ws://test-gateway:8765");
+      connectPromise.catch(failed);
+      await vi.advanceTimersByTimeAsync(9_999);
+      expect(failed).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+
+      await expect(connectPromise).rejects.toThrow("timed out");
+    });
+
     it("closes the socket when the connection times out", async () => {
       let socket: MockWebSocket | undefined;
       const transport = new WebSocketTransport({
@@ -413,6 +426,20 @@ describe("WebSocketTransport", () => {
         expect(rpcErr.code).toBe(JsonRpcErrorCode.INVALID_PARAMS);
         expect(rpcErr.data).toEqual({ field: "component_ref", issue: "required" });
       }
+    });
+
+    it("waits 30 seconds for a response by default", async () => {
+      const { transport, connectAndOpen } = createTestTransport();
+      await connectAndOpen();
+      const failed = vi.fn();
+
+      const resultPromise = transport.send("rois.command.search", { condition: "" });
+      resultPromise.catch(failed);
+      await vi.advanceTimersByTimeAsync(29_999);
+      expect(failed).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+
+      await expect(resultPromise).rejects.toThrow(RequestTimeoutError);
     });
 
     it("rejects with RequestTimeoutError when no response arrives in time", async () => {
