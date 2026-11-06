@@ -12,20 +12,19 @@ protocol. The high-level `RoISClient` is in progress. See the
 
 # Installing OpenRoIS SDK
 
-The package is not published to a registry yet. Add it from a local clone of the
-[OpenRoIS repository](https://github.com/openrois/openrois) by editing
-`Packages/manifest.json`:
+The package is not published to a registry yet. Add it by Git URL, in the Package Manager
+window or in `Packages/manifest.json`:
 
 ```json
 {
   "dependencies": {
-    "org.openrois.sdk": "file:../../openrois/sdk/unity"
+    "org.openrois.sdk": "https://github.com/openrois/openrois.git?path=sdk/unity"
   }
 }
 ```
 
 For general guidance, see the Unity Manual on
-[installing a package from a local folder](https://docs.unity3d.com/Manual/upm-ui-local.html).
+[installing a package from a Git URL](https://docs.unity3d.com/Manual/upm-ui-giturl.html).
 
 # Using OpenRoIS SDK
 
@@ -46,9 +45,10 @@ every RoIS method, its parameters, and its implementation status in the engine.
 This version of OpenRoIS SDK is compatible with the following versions of the Unity
 Editor:
 
-- Unity 6.5 and later
+- Unity 6000.0 and later
 
-The package depends on `com.unity.test-framework` for its tests only.
+The package has no package dependencies. Running its tests needs
+`com.unity.test-framework` in the project.
 
 ## Known Limitations
 
@@ -56,6 +56,8 @@ OpenRoIS SDK version 0.1.0-alpha.1 includes the following known limitations:
 
 - No high-level RoIS client yet. Applications build and parse JSON-RPC messages and
   manage their own WebSocket.
+- A project that already contains an assembly named like one in `Runtime/Plugins` does
+  not compile with this package.
 - No authentication. The OpenRoIS gateway does not authenticate connections in the alpha
   releases. Use it on trusted networks only.
 
@@ -64,8 +66,10 @@ OpenRoIS SDK version 0.1.0-alpha.1 includes the following known limitations:
 | Location | Description |
 |----------|-------------|
 | `Runtime/JsonRpc` | The JSON-RPC 2.0 builder, parser, and message types |
+| `Runtime/Plugins` | `OpenRoIS.Interfaces`, `System.Text.Json`, and the dependencies of `System.Text.Json` that Unity does not provide |
+| `Runtime/link.xml` | Keeps the assemblies that `System.Text.Json` reads by reflection in IL2CPP builds |
 | `Tests/Runtime` | Unity Test Framework tests for the builder and the parser |
-| `Samples/Example` | Placeholder sample, to be replaced by a RoIS client sample |
+| `Samples~/Example` | Builds a request and parses a response with the JSON-RPC layer |
 
 ## Document Revision History
 
