@@ -3,7 +3,7 @@
 // Generator: scripts/generate.ts
 
 import { z } from "zod";
-import { ComponentStatusSchema } from "../common";
+import { ComponentStatusSchema } from "../common.js";
 
 // ─── Shared type definitions ($defs) ─────────────────────────────
 
@@ -31,7 +31,7 @@ export type RoutingPolicy = z.infer<typeof RoutingPolicySchema>;
 
 export const NavigationGetParameterResultSchema = z.object({
   target_positions: z.array(z.string()), // Current navigation target positions
-  time_limit: z.number().int(), // Current time limit setting
+  time_limit: z.number().int().min(-2147483648).max(2147483647), // Current time limit setting
   routing_policy: RoutingPolicySchema, // Current routing policy setting
 }).strict();
 export type NavigationGetParameterResult = z.infer<typeof NavigationGetParameterResultSchema>;
@@ -67,7 +67,7 @@ export type NavigationReachedTargetEvent = z.infer<typeof NavigationReachedTarge
 
 export const NavigationSetParameterSchema = z.object({
   target_positions: z.array(z.string()), // Navigation target positions
-  time_limit: z.number().int().default(0), // Intended time limit to complete navigation
+  time_limit: z.number().int().min(-2147483648).max(2147483647).default(0), // Intended time limit to complete navigation
   routing_policy: RoutingPolicySchema.default("time"), // Routing policy: 'time' or 'distance' priority
 }).strict();
 export type NavigationSetParameter = z.infer<typeof NavigationSetParameterSchema>;

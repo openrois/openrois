@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0a6] - 2026-11-06
+
+### Added
+
+- `component_ref` and `component_type` in `openrois.interfaces.condition`, which build the condition that selects one component or every component of a type.
+
+### Changed
+
+- **Breaking:** `Integer` is 32 bits, as the IDL `long` it stands for: `delay_time`, `time_limit`, `number` and `CommandMessageProfile.timeout` refuse a value outside -2147483648 to 2147483647, and the XML reader raises `ProfileFormatError` for one.
+
+### Fixed
+
+- `decode_value` reads a float array item too large for a double as signed infinity, as it reads `[1e400]`, and `encode_value` raises `ValueError` for an `int` too large for a double. Both raised `OverflowError`.
+
 ## [0.1.0a5] - 2026-10-16
 
 ### Added
@@ -76,7 +90,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `BusAdapter` protocol with its request and response models.
 - JSON Schema exported from the models into `interfaces/schema/`.
 
-[unreleased]: https://github.com/openrois/openrois/compare/interfaces-v0.1.0-alpha.5...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/interfaces-v0.1.0-alpha.6...HEAD
+[0.1.0a6]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.6
 [0.1.0a5]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.5
 [0.1.0a4]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.4
 [0.1.0a3]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.3

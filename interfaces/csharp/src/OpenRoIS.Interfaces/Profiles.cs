@@ -4,11 +4,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace OpenRoIS.Interfaces.Profiles
 {
     // ─── Shared type definitions ($defs) ─────────────────────────────
+
 
     /// <summary>
     /// A structured RoIS identifier with optional metadata.
@@ -21,16 +23,18 @@ namespace OpenRoIS.Interfaces.Profiles
     ///     codebook_ref: Optional reference to a codebook or ontology.
     ///     version: Optional version string.
     /// </summary>
-    public sealed class RoISIdentifierType : IEquatable<RoISIdentifierType>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class RoISIdentifierType : IEquatable<RoISIdentifierType>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("code")]
-        public string Code { get; }
+        public string Code { get; init; }
         [JsonPropertyName("authority")]
-        public string Authority { get; }
+        public string Authority { get; init; }
         [JsonPropertyName("codebook_ref")]
-        public string CodebookRef { get; }
+        public string CodebookRef { get; init; }
         [JsonPropertyName("version")]
-        public string Version { get; }
+        public string Version { get; init; }
 
         public RoISIdentifierType(string code, string authority = "", string codebookRef = "", string version = "")
         {
@@ -38,6 +42,14 @@ namespace OpenRoIS.Interfaces.Profiles
             Authority = authority;
             CodebookRef = codebookRef;
             Version = version;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Code is null) throw new JsonException("RoISIdentifierType.code must not be null.");
+            if (Authority is null) throw new JsonException("RoISIdentifierType.authority must not be null.");
+            if (CodebookRef is null) throw new JsonException("RoISIdentifierType.codebook_ref must not be null.");
+            if (Version is null) throw new JsonException("RoISIdentifierType.version must not be null.");
         }
 
         public bool Equals(RoISIdentifierType? other)
@@ -82,18 +94,21 @@ namespace OpenRoIS.Interfaces.Profiles
     ///     read_only: True for a parameter that get_parameter returns and set_parameter
     ///         refuses. An OpenRoIS extension: the XSD has no such attribute.
     /// </summary>
-    public sealed class ParameterProfile : IEquatable<ParameterProfile>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class ParameterProfile : IEquatable<ParameterProfile>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("name")]
-        public string Name { get; }
+        public string Name { get; init; }
+        [JsonRequired]
         [JsonPropertyName("data_type_ref")]
-        public RoISIdentifierType DataTypeRef { get; }
+        public RoISIdentifierType DataTypeRef { get; init; }
         [JsonPropertyName("default_value")]
-        public string? DefaultValue { get; }
+        public string? DefaultValue { get; init; }
         [JsonPropertyName("description")]
-        public string Description { get; }
+        public string Description { get; init; }
         [JsonPropertyName("read_only")]
-        public bool ReadOnly { get; }
+        public bool ReadOnly { get; init; }
 
         public ParameterProfile(string name, RoISIdentifierType dataTypeRef, string? defaultValue = null, string description = "", bool readOnly = false)
         {
@@ -102,6 +117,13 @@ namespace OpenRoIS.Interfaces.Profiles
             DefaultValue = defaultValue;
             Description = description;
             ReadOnly = readOnly;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Name is null) throw new JsonException("ParameterProfile.name must not be null.");
+            if (DataTypeRef is null) throw new JsonException("ParameterProfile.data_type_ref must not be null.");
+            if (Description is null) throw new JsonException("ParameterProfile.description must not be null.");
         }
 
         public bool Equals(ParameterProfile? other)
@@ -136,16 +158,18 @@ namespace OpenRoIS.Interfaces.Profiles
     ///     arguments: The input arguments for this command.
     ///     timeout: Optional timeout in milliseconds.
     /// </summary>
-    public sealed class CommandMessageProfile : IEquatable<CommandMessageProfile>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class CommandMessageProfile : IEquatable<CommandMessageProfile>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("name")]
-        public string Name { get; }
+        public string Name { get; init; }
         [JsonPropertyName("results")]
-        public IReadOnlyList<ParameterProfile>? Results { get; }
+        public IReadOnlyList<ParameterProfile>? Results { get; init; }
         [JsonPropertyName("arguments")]
-        public IReadOnlyList<ParameterProfile>? Arguments { get; }
+        public IReadOnlyList<ParameterProfile>? Arguments { get; init; }
         [JsonPropertyName("timeout")]
-        public int? Timeout { get; }
+        public int? Timeout { get; init; }
 
         public CommandMessageProfile(string name, IReadOnlyList<ParameterProfile>? results = null, IReadOnlyList<ParameterProfile>? arguments = null, int? timeout = null)
         {
@@ -153,6 +177,25 @@ namespace OpenRoIS.Interfaces.Profiles
             Results = results;
             Arguments = arguments;
             Timeout = timeout;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Name is null) throw new JsonException("CommandMessageProfile.name must not be null.");
+            if (Results is not null)
+            {
+                foreach (var item0 in Results)
+                {
+                    if (item0 is null) throw new JsonException("CommandMessageProfile.results item must not be null.");
+                }
+            }
+            if (Arguments is not null)
+            {
+                foreach (var item0 in Arguments)
+                {
+                    if (item0 is null) throw new JsonException("CommandMessageProfile.arguments item must not be null.");
+                }
+            }
         }
 
         public bool Equals(CommandMessageProfile? other)
@@ -210,20 +253,41 @@ namespace OpenRoIS.Interfaces.Profiles
     ///         and the codec follows the profiles. A subscription selects them with its
     ///         condition.
     /// </summary>
-    public sealed class EventMessageProfile : IEquatable<EventMessageProfile>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class EventMessageProfile : IEquatable<EventMessageProfile>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("name")]
-        public string Name { get; }
+        public string Name { get; init; }
         [JsonPropertyName("results")]
-        public IReadOnlyList<ParameterProfile>? Results { get; }
+        public IReadOnlyList<ParameterProfile>? Results { get; init; }
         [JsonPropertyName("arguments")]
-        public IReadOnlyList<ParameterProfile>? Arguments { get; }
+        public IReadOnlyList<ParameterProfile>? Arguments { get; init; }
 
         public EventMessageProfile(string name, IReadOnlyList<ParameterProfile>? results = null, IReadOnlyList<ParameterProfile>? arguments = null)
         {
             Name = name;
             Results = results;
             Arguments = arguments;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Name is null) throw new JsonException("EventMessageProfile.name must not be null.");
+            if (Results is not null)
+            {
+                foreach (var item0 in Results)
+                {
+                    if (item0 is null) throw new JsonException("EventMessageProfile.results item must not be null.");
+                }
+            }
+            if (Arguments is not null)
+            {
+                foreach (var item0 in Arguments)
+                {
+                    if (item0 is null) throw new JsonException("EventMessageProfile.arguments item must not be null.");
+                }
+            }
         }
 
         public bool Equals(EventMessageProfile? other)
@@ -259,20 +323,41 @@ namespace OpenRoIS.Interfaces.Profiles
     ///         Arguments, but the streaming profiles have them (get_stream_status takes
     ///         stream_id), and the codec follows the profiles.
     /// </summary>
-    public sealed class QueryMessageProfile : IEquatable<QueryMessageProfile>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class QueryMessageProfile : IEquatable<QueryMessageProfile>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("name")]
-        public string Name { get; }
+        public string Name { get; init; }
         [JsonPropertyName("results")]
-        public IReadOnlyList<ParameterProfile>? Results { get; }
+        public IReadOnlyList<ParameterProfile>? Results { get; init; }
         [JsonPropertyName("arguments")]
-        public IReadOnlyList<ParameterProfile>? Arguments { get; }
+        public IReadOnlyList<ParameterProfile>? Arguments { get; init; }
 
         public QueryMessageProfile(string name, IReadOnlyList<ParameterProfile>? results = null, IReadOnlyList<ParameterProfile>? arguments = null)
         {
             Name = name;
             Results = results;
             Arguments = arguments;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Name is null) throw new JsonException("QueryMessageProfile.name must not be null.");
+            if (Results is not null)
+            {
+                foreach (var item0 in Results)
+                {
+                    if (item0 is null) throw new JsonException("QueryMessageProfile.results item must not be null.");
+                }
+            }
+            if (Arguments is not null)
+            {
+                foreach (var item0 in Arguments)
+                {
+                    if (item0 is null) throw new JsonException("QueryMessageProfile.arguments item must not be null.");
+                }
+            }
         }
 
         public bool Equals(QueryMessageProfile? other)
@@ -313,18 +398,20 @@ namespace OpenRoIS.Interfaces.Profiles
     ///         engine, including the components of its child engines (XSD HRIComponent).
     ///     parameter_profiles: Engine-level parameter declarations.
     /// </summary>
-    public sealed class HRIEngineProfileType : IEquatable<HRIEngineProfileType>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class HRIEngineProfileType : IEquatable<HRIEngineProfileType>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("identifier")]
-        public RoISIdentifierType Identifier { get; }
+        public RoISIdentifierType Identifier { get; init; }
         [JsonPropertyName("name")]
-        public string? Name { get; }
+        public string? Name { get; init; }
         [JsonPropertyName("sub_profiles")]
-        public IReadOnlyList<HRIEngineProfileType>? SubProfiles { get; }
+        public IReadOnlyList<HRIEngineProfileType>? SubProfiles { get; init; }
         [JsonPropertyName("component_ids")]
-        public IReadOnlyList<string>? ComponentIds { get; }
+        public IReadOnlyList<string>? ComponentIds { get; init; }
         [JsonPropertyName("parameter_profiles")]
-        public IReadOnlyList<ParameterProfile>? ParameterProfiles { get; }
+        public IReadOnlyList<ParameterProfile>? ParameterProfiles { get; init; }
 
         public HRIEngineProfileType(RoISIdentifierType identifier, string? name = null, IReadOnlyList<HRIEngineProfileType>? subProfiles = null, IReadOnlyList<string>? componentIds = null, IReadOnlyList<ParameterProfile>? parameterProfiles = null)
         {
@@ -333,6 +420,32 @@ namespace OpenRoIS.Interfaces.Profiles
             SubProfiles = subProfiles;
             ComponentIds = componentIds;
             ParameterProfiles = parameterProfiles;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Identifier is null) throw new JsonException("HRIEngineProfileType.identifier must not be null.");
+            if (SubProfiles is not null)
+            {
+                foreach (var item0 in SubProfiles)
+                {
+                    if (item0 is null) throw new JsonException("HRIEngineProfileType.sub_profiles item must not be null.");
+                }
+            }
+            if (ComponentIds is not null)
+            {
+                foreach (var item0 in ComponentIds)
+                {
+                    if (item0 is null) throw new JsonException("HRIEngineProfileType.component_ids item must not be null.");
+                }
+            }
+            if (ParameterProfiles is not null)
+            {
+                foreach (var item0 in ParameterProfiles)
+                {
+                    if (item0 is null) throw new JsonException("HRIEngineProfileType.parameter_profiles item must not be null.");
+                }
+            }
         }
 
         public bool Equals(HRIEngineProfileType? other)
@@ -376,24 +489,27 @@ namespace OpenRoIS.Interfaces.Profiles
     ///     event_profiles: Event message profiles this component supports.
     ///     parameter_profiles: Parameter declarations for this component.
     /// </summary>
-    public sealed class HRIComponentProfile : IEquatable<HRIComponentProfile>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class HRIComponentProfile : IEquatable<HRIComponentProfile>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("identifier")]
-        public RoISIdentifierType Identifier { get; }
+        public RoISIdentifierType Identifier { get; init; }
+        [JsonRequired]
         [JsonPropertyName("name")]
-        public string Name { get; }
+        public string Name { get; init; }
         [JsonPropertyName("function")]
-        public ComponentFunction? Function { get; }
+        public ComponentFunction? Function { get; init; }
         [JsonPropertyName("sub_component_profiles")]
-        public IReadOnlyList<string>? SubComponentProfiles { get; }
+        public IReadOnlyList<string>? SubComponentProfiles { get; init; }
         [JsonPropertyName("command_profiles")]
-        public IReadOnlyList<CommandMessageProfile>? CommandProfiles { get; }
+        public IReadOnlyList<CommandMessageProfile>? CommandProfiles { get; init; }
         [JsonPropertyName("query_profiles")]
-        public IReadOnlyList<QueryMessageProfile>? QueryProfiles { get; }
+        public IReadOnlyList<QueryMessageProfile>? QueryProfiles { get; init; }
         [JsonPropertyName("event_profiles")]
-        public IReadOnlyList<EventMessageProfile>? EventProfiles { get; }
+        public IReadOnlyList<EventMessageProfile>? EventProfiles { get; init; }
         [JsonPropertyName("parameter_profiles")]
-        public IReadOnlyList<ParameterProfile>? ParameterProfiles { get; }
+        public IReadOnlyList<ParameterProfile>? ParameterProfiles { get; init; }
 
         public HRIComponentProfile(RoISIdentifierType identifier, string name, ComponentFunction? function = null, IReadOnlyList<string>? subComponentProfiles = null, IReadOnlyList<CommandMessageProfile>? commandProfiles = null, IReadOnlyList<QueryMessageProfile>? queryProfiles = null, IReadOnlyList<EventMessageProfile>? eventProfiles = null, IReadOnlyList<ParameterProfile>? parameterProfiles = null)
         {
@@ -405,6 +521,47 @@ namespace OpenRoIS.Interfaces.Profiles
             QueryProfiles = queryProfiles;
             EventProfiles = eventProfiles;
             ParameterProfiles = parameterProfiles;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Identifier is null) throw new JsonException("HRIComponentProfile.identifier must not be null.");
+            if (Name is null) throw new JsonException("HRIComponentProfile.name must not be null.");
+            if (SubComponentProfiles is not null)
+            {
+                foreach (var item0 in SubComponentProfiles)
+                {
+                    if (item0 is null) throw new JsonException("HRIComponentProfile.sub_component_profiles item must not be null.");
+                }
+            }
+            if (CommandProfiles is not null)
+            {
+                foreach (var item0 in CommandProfiles)
+                {
+                    if (item0 is null) throw new JsonException("HRIComponentProfile.command_profiles item must not be null.");
+                }
+            }
+            if (QueryProfiles is not null)
+            {
+                foreach (var item0 in QueryProfiles)
+                {
+                    if (item0 is null) throw new JsonException("HRIComponentProfile.query_profiles item must not be null.");
+                }
+            }
+            if (EventProfiles is not null)
+            {
+                foreach (var item0 in EventProfiles)
+                {
+                    if (item0 is null) throw new JsonException("HRIComponentProfile.event_profiles item must not be null.");
+                }
+            }
+            if (ParameterProfiles is not null)
+            {
+                foreach (var item0 in ParameterProfiles)
+                {
+                    if (item0 is null) throw new JsonException("HRIComponentProfile.parameter_profiles item must not be null.");
+                }
+            }
         }
 
         public bool Equals(HRIComponentProfile? other)
@@ -439,17 +596,31 @@ namespace OpenRoIS.Interfaces.Profiles
     ///     name: The message name (e.g., 'person_detected', 'set_parameter').
     ///     results: The result parameters of this message.
     /// </summary>
-    public sealed class MessageProfile : IEquatable<MessageProfile>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class MessageProfile : IEquatable<MessageProfile>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("name")]
-        public string Name { get; }
+        public string Name { get; init; }
         [JsonPropertyName("results")]
-        public IReadOnlyList<ParameterProfile>? Results { get; }
+        public IReadOnlyList<ParameterProfile>? Results { get; init; }
 
         public MessageProfile(string name, IReadOnlyList<ParameterProfile>? results = null)
         {
             Name = name;
             Results = results;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Name is null) throw new JsonException("MessageProfile.name must not be null.");
+            if (Results is not null)
+            {
+                foreach (var item0 in Results)
+                {
+                    if (item0 is null) throw new JsonException("MessageProfile.results item must not be null.");
+                }
+            }
         }
 
         public bool Equals(MessageProfile? other)

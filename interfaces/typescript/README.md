@@ -8,13 +8,13 @@ This package is **generated from JSON Schema**, the canonical wire contract auth
 
 ## Installation
 
-### npm (When Published)
+### npm
 
 ```bash
 npm install @openrois/interfaces
 ```
 
-### From Source (Alpha, Pre-Publish)
+### From Source
 
 ```bash
 git clone https://github.com/openrois/openrois.git
@@ -55,6 +55,10 @@ const search = RoISMethodSchemas["rois.command.search"].result.parse({
 });
 ```
 
+## Node.js
+
+The package is one ES module build, with no separate CommonJS build. `import` works in any supported Node.js, and `require` works from Node.js 22.12. `moduleResolution` can be `nodenext` or `bundler`.
+
 ## Subpath Exports
 
 | Import path | Contents |
@@ -64,13 +68,14 @@ const search = RoISMethodSchemas["rois.command.search"].result.parse({
 | `@openrois/interfaces/common` | `ComponentStatus`, `StreamStatus` |
 | `@openrois/interfaces/service` | Params of the engine notifications: `NotifyErrorParams`, `CompletedParams`, `NotifyEventParams`, `ProfileChangedParams`, with `CompletedStatus` and `ErrorType` |
 | `@openrois/interfaces/profiles` | Component profile schema models |
-| `@openrois/interfaces/condition` | The CQL2-Text subset every `condition` uses: `parseCondition`, `Condition`, `Comparison`, `ConditionError`, the `component_ref` and `component_type` properties, and the `eq`, `like`, `allOf`, `quote`, `componentRef` and `componentType` builders |
+| `@openrois/interfaces/condition` | The CQL2-Text subset every `condition` uses: `parseCondition`, `Condition`, `Comparison`, `ConditionError`, the `component_ref` and `component_type` properties, and the `eq`, `like`, `allOf`, `quote`, `componentRef`, `componentType` and `componentTypeUrn` builders |
+| `@openrois/interfaces/values` | The string form of a typed value: `encodeValue`, `decodeValue`, `RoISValue`, `RoISValueError` |
 | `@openrois/interfaces/catalog` | Service-side method catalog: params and result schemas for every `rois.*` method, `RoISMethods`, `RoISMethodMap`, `RoISMethodSchemas`, the notification names and schemas (`RoISNotifications`, `RoISNotificationMap`, `RoISNotificationSchemas`), `RoISCommandTypes`, `JsonRpcErrorCode` |
-| `@openrois/interfaces/components` | The profile constants of the basic components (`NAVIGATION_PROFILE`, ...), generated from `schema/profiles.json`, and per-component typed message models |
+| `@openrois/interfaces/components` | The profile constants of all 18 standard component types (`NAVIGATION_PROFILE`, ...), generated from `schema/profiles.json`, and per-component typed message models |
 
 ## Generation
 
-The source files in `src/` (except `condition.ts` and the `index.ts` barrels) are generated from `interfaces/schema/*.schema.json`, the method table in `interfaces/schema/catalog.json` and the profile constants in `interfaces/schema/profiles.json`:
+The source files in `src/` (except `condition.ts`, `values.ts` and the `index.ts` barrels) are generated from `interfaces/schema/*.schema.json`, the method table in `interfaces/schema/catalog.json` and the profile constants in `interfaces/schema/profiles.json`:
 
 ```bash
 npm run generate   # reads ../schema/*.json → writes src/*.ts
@@ -78,6 +83,12 @@ npm run build      # generate + tsc → dist/
 ```
 
 `condition.ts`, the parser, matcher and builders of the CQL2-Text conditions, is hand-written. It mirrors the Python `openrois.interfaces.condition` module.
+
+`values.ts`, the string forms of typed values, is hand-written too. It mirrors the Python `openrois.interfaces.values` module. A JavaScript number cannot hold every integer, so an integer outside the safe range of `Number` is refused instead of being rounded.
+
+`interfaces/fixtures` holds the wire messages and the condition and value vectors that the Python, TypeScript and C# tests all read.
+
+After a build, `npm run test:package` loads every subpath export in plain Node.js, with `import` and with `require`.
 
 ## License
 

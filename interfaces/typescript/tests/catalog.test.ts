@@ -87,6 +87,17 @@ describe("execute", () => {
     expect(parsed.success).toBe(false);
   });
 
+  it("rejects an empty command_unit_list", () => {
+    expect(ExecuteParamsSchema.safeParse({ command_unit_list: [] }).success).toBe(false);
+  });
+
+  it("rejects a branch with no commands at any depth of the sequence", () => {
+    const parsed = ExecuteParamsSchema.safeParse({
+      command_unit_list: [{ branch_list: [{ command_list: [] }] }],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
   it("lets a unit leave out its command_id, which the engine assigns", () => {
     const parsed = ExecuteParamsSchema.parse({
       command_unit_list: [{ component_ref: "reachy_real/head", command_type: "start" }],

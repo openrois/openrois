@@ -1,11 +1,19 @@
 """Tests for openrois.interfaces.hri — Core HRI types."""
 
 import json
+from collections.abc import Callable
 
 import pytest
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
+from openrois.interfaces.components.navigation import (
+    NavigationGetParameterResult,
+    NavigationSetParameter,
+)
+from openrois.interfaces.components.person_detection import PersonDetectedEvent
 from openrois.interfaces.hri import (
+    INTEGER_MAX,
+    INTEGER_MIN,
     Argument,
     ArgumentList,
     CommandUnit,
@@ -25,6 +33,7 @@ from openrois.interfaces.hri import (
     RoISIdentifierList,
     RoLoData,
 )
+from openrois.interfaces.profiles import CommandMessageProfile
 
 
 # ---------------------------------------------------------------------------
@@ -96,6 +105,65 @@ class TestTypeAliases:
     def test_rolo_data(self) -> None:
         data: RoLoData = "1.0,2.0,3.0"
         assert isinstance(data, str)
+
+
+# ---------------------------------------------------------------------------
+# Integer bounds
+# ---------------------------------------------------------------------------
+
+
+def _delay_time(value: int) -> BaseModel:
+    return CommandUnit(component_ref="a/b", command_type="start", delay_time=value)
+
+
+def _group_delay_time(value: int) -> BaseModel:
+    return ConcurrentCommands(branch_list=[], delay_time=value)
+
+
+def _set_time_limit(value: int) -> BaseModel:
+    return NavigationSetParameter(target_positions=["a"], time_limit=value)
+
+
+def _get_time_limit(value: int) -> BaseModel:
+    return NavigationGetParameterResult(
+        target_positions=["a"], time_limit=value, routing_policy="time"
+    )
+
+
+def _number(value: int) -> BaseModel:
+    return PersonDetectedEvent(timestamp="2025-01-15T10:30:00Z", number=value)
+
+
+def _timeout(value: int) -> BaseModel:
+    return CommandMessageProfile(name="start", timeout=value)
+
+
+_INTEGER_FIELDS = pytest.mark.parametrize(
+    "build",
+    [_delay_time, _group_delay_time, _set_time_limit, _get_time_limit, _number, _timeout],
+)
+
+
+class TestIntegerBounds:
+    def test_bounds_are_those_of_an_idl_long(self) -> None:
+        assert (INTEGER_MIN, INTEGER_MAX) == (-2147483648, 2147483647)
+
+    @_INTEGER_FIELDS
+    @pytest.mark.parametrize("value", [INTEGER_MIN, -1, 0, INTEGER_MAX])
+    def test_accepts_a_value_in_range(self, build: Callable[[int], BaseModel], value: int) -> None:
+        assert value in build(value).model_dump().values()
+
+    @_INTEGER_FIELDS
+    @pytest.mark.parametrize("value", [INTEGER_MIN - 1, INTEGER_MAX + 1, 2**63])
+    def test_refuses_a_value_out_of_range(
+        self, build: Callable[[int], BaseModel], value: int
+    ) -> None:
+        with pytest.raises(ValidationError):
+            build(value)
+
+    def test_bounds_reach_the_schema(self) -> None:
+        schema = CommandUnit.model_json_schema()["$defs"]["Integer"]
+        assert schema == {"type": "integer", "minimum": INTEGER_MIN, "maximum": INTEGER_MAX}
 
 
 # ---------------------------------------------------------------------------

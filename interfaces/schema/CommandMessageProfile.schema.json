@@ -1,6 +1,11 @@
 {
   "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
   "$defs": {
+    "Integer": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
     "ParameterProfile": {
       "additionalProperties": false,
       "description": "Describes a parameter's data type and metadata.\n\nMaps to ParameterProfileType in XML-Profiles.xsd.\n\nUsed in both message profiles (Arguments/Results) and component-level\nparameter declarations.\n\nAttributes:\n    name: The parameter name.\n    data_type_ref: Reference to the data type (e.g., 'int', 'DateTime',\n        'RoISIdentifier[]').\n    default_value: The default value as a string, or None when the profile gives\n        none. An empty default_value reads as None: the profiles write\n        ``default_value=\"\"`` on parameters that have no default.\n    description: Optional human-readable description.\n    read_only: True for a parameter that get_parameter returns and set_parameter\n        refuses. An OpenRoIS extension: the XSD has no such attribute.",
@@ -98,14 +103,13 @@
     "timeout": {
       "anyOf": [
         {
-          "type": "integer"
+          "$ref": "#/$defs/Integer"
         },
         {
           "type": "null"
         }
       ],
-      "default": null,
-      "title": "Timeout"
+      "default": null
     }
   },
   "required": [

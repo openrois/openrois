@@ -12,11 +12,6 @@ namespace OpenRoIS.Interfaces.Tests
 {
     public class CatalogTests
     {
-    private static readonly JsonSerializerOptions s_jsonOpts = new()
-    {
-        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
-    };
-
     [Fact]
     public void MethodTable_HasSixteenMethods()
     {
@@ -62,7 +57,7 @@ namespace OpenRoIS.Interfaces.Tests
     public void SearchResult_DeserializesFromTheWire()
     {
         var json = "{\"return_code\":\"OK\",\"component_ref_list\":[\"reachy_real/head\"]}";
-        var result = JsonSerializer.Deserialize<SearchResult>(json, s_jsonOpts)!;
+        var result = JsonSerializer.Deserialize<SearchResult>(json, OpenRoIS.Interfaces.Hri.RoISJson.Options)!;
         Assert.Equal(ReturnCode.OK, result.ReturnCode);
         Assert.Equal(new[] { "reachy_real/head" }, result.ComponentRefList);
     }
@@ -72,7 +67,7 @@ namespace OpenRoIS.Interfaces.Tests
     {
         var json = "{\"return_code\":\"OK\",\"parameters\":"
             + "[{\"name\":\"time_limit\",\"data_type_ref\":\"int\",\"value\":\"30\"}]}";
-        var result = JsonSerializer.Deserialize<GetParameterResult>(json, s_jsonOpts)!;
+        var result = JsonSerializer.Deserialize<GetParameterResult>(json, OpenRoIS.Interfaces.Hri.RoISJson.Options)!;
         Assert.NotNull(result.Parameters);
         Assert.Single(result.Parameters!);
         Assert.Equal(new Parameter("time_limit", "int", "30"), result.Parameters![0]);
@@ -119,7 +114,7 @@ namespace OpenRoIS.Interfaces.Tests
             + "\"component_profiles\":{\"reachy_real/head\":"
             + "{\"identifier\":{\"authority\":\"OpenRoIS\",\"code\":\"Head\"},"
             + "\"name\":\"head\",\"function\":\"actuation\"}}}";
-        var result = JsonSerializer.Deserialize<GetProfileResult>(json, s_jsonOpts)!;
+        var result = JsonSerializer.Deserialize<GetProfileResult>(json, OpenRoIS.Interfaces.Hri.RoISJson.Options)!;
         Assert.Equal(new[] { "reachy_real/head" }, result.Profile!.ComponentIds);
         var head = result.ComponentProfiles!["reachy_real/head"];
         Assert.Equal("head", head.Name);
@@ -131,7 +126,7 @@ namespace OpenRoIS.Interfaces.Tests
     public void FailureResult_NeedsOnlyTheReturnCode()
     {
         var result = JsonSerializer.Deserialize<GetProfileResult>(
-            "{\"return_code\":\"ERROR\"}", s_jsonOpts)!;
+            "{\"return_code\":\"ERROR\"}", OpenRoIS.Interfaces.Hri.RoISJson.Options)!;
         Assert.Equal(ReturnCode.ERROR, result.ReturnCode);
         Assert.Null(result.Profile);
         Assert.Null(result.ComponentProfiles);

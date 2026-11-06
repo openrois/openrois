@@ -39,9 +39,11 @@ Python (Pydantic) → JSON Schema → C# + TypeScript
 ```
 
 - **Edit:** `interfaces/python/src/openrois/interfaces/*.py`
-- **Never edit:** `interfaces/schema/`, `interfaces/csharp/src/OpenRoIS.Interfaces/`,
-  `interfaces/typescript/src/` (except `condition.ts` and the `index.ts` barrels, which
-  are hand-written)
+- **Never edit:** `interfaces/schema/`, `interfaces/csharp/src/OpenRoIS.Interfaces/`
+  (except `Condition.cs`, `Values.cs` and `IsExternalInit.cs`, which are hand-written),
+  `interfaces/typescript/src/` (except `condition.ts`, `values.ts` and the `index.ts`
+  barrels, which are hand-written), `interfaces/fixtures/wire.json` (written by
+  `testing/conformance/capture.py`)
 
 After editing the Python models, run the full pipeline and the tests:
 
@@ -67,7 +69,7 @@ its description. The IDL and XSD cross-check tests fail on any other addition.
 | Stack | Directory | Commands |
 |-------|-----------|----------|
 | Python types | `interfaces/python` | `pip install -e ".[dev]"`, `pytest`, `mypy src/`, `ruff check src/` |
-| TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test` |
+| TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test`, `npm run test:package` |
 | C# types | `interfaces/csharp` | `dotnet build src/OpenRoIS.Interfaces`, `dotnet test tests/OpenRoIS.Interfaces.Tests` |
 | Engine | `engine` | `pip install -e ../components/core -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | Gateway | `services/gateway` | `pip install -e ../../interfaces/python -e ../../engine -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |

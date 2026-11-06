@@ -69,7 +69,7 @@ export const CommandMessageProfileSchema = z.object({
   name: z.string(),
   results: z.array(ParameterProfileSchema).optional(),
   arguments: z.array(ParameterProfileSchema).optional(),
-  timeout: z.number().int().nullable().default(null),
+  timeout: z.number().int().min(-2147483648).max(2147483647).nullable().default(null),
 }).strict();
 export type CommandMessageProfile = z.infer<typeof CommandMessageProfileSchema>;
 

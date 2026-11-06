@@ -9,6 +9,9 @@ with the profile constant of their type, and serves them to a gateway:
 - ``mock/system_information`` answers ``robot_position`` and ``engine_status``.
 - ``mock/fault`` is a test fixture. Its commands make the error and the profile change
   that the conformance list checks, so a client triggers them with a plain ``execute``.
+  Its ``echo`` messages and ``end_with`` give ``testing/conformance/capture.py`` what the
+  profiles of the other components never carry: arguments, results and a timeout on a
+  command, arguments on a query and an event, and every way a command can end.
 
 Usage:
     python mock_adapter.py [--config FILE] [--gateway-url URL] [--engine-id ID]
@@ -38,13 +41,20 @@ from openrois.components.core import (
     component,
     invoke,
     on_set_parameter,
+    query,
     subscribe,
 )
 from openrois.engine import Engine, WsClient
 from openrois.engine.config import AdapterConfig, ConfigError, load_adapter_config
 from openrois.interfaces.common import ComponentStatus
 from openrois.interfaces.components import NAVIGATION_PROFILE, PERSON_DETECTION_PROFILE
-from openrois.interfaces.declaration import Command, ComponentDeclaration
+from openrois.interfaces.declaration import (
+    Command,
+    ComponentDeclaration,
+    Event,
+    Param,
+    Query,
+)
 from openrois.interfaces.service import CompletedStatus
 from pydantic import Field
 
@@ -183,18 +193,32 @@ class MockNavigation(Component):
 #: How long mock/fault holds an error, and how long the peer engine stays, in seconds.
 FAULT_HOLD = 1.0
 
+#: The timeout of the echo command in milliseconds, far above what it takes to start, so
+#: that it only puts a timeout in the profile.
+ECHO_TIMEOUT = 5000
+
+#: What every echo message takes and gives back.
+ECHO_TEXT = Param("text", "string")
+
 TEST_FAULT_PROFILE = ComponentDeclaration(
     identifier="urn:x-rois:def:component:OpenRoIS::TestFault",
     name="test_fault",
     function="function",
-    commands=(Command("raise_error"), Command("peer_join")),
+    commands=(
+        Command("raise_error"),
+        Command("peer_join"),
+        Command("echo", arguments=[ECHO_TEXT], results=[ECHO_TEXT], timeout=ECHO_TIMEOUT),
+        Command("end_with", arguments=[Param("status", "string")]),
+    ),
+    queries=(Query("echo", arguments=[ECHO_TEXT], results=[ECHO_TEXT]),),
+    events=(Event("echoed", arguments=[ECHO_TEXT], results=[ECHO_TEXT]),),
     sub_profiles=(),
 ).profile()
 
 
 @component(TEST_FAULT_PROFILE)
 class MockFault(Component):
-    """Makes an error, or a profile change, on request."""
+    """Makes an error, a profile change or a chosen end of a command, on request."""
 
     def __init__(self, gateway_url: str) -> None:
         self._gateway_url = gateway_url
@@ -213,6 +237,23 @@ class MockFault(Component):
         await asyncio.sleep(FAULT_HOLD)
         peer.cancel()
         await asyncio.gather(peer, return_exceptions=True)
+
+    @invoke("echo")
+    async def echo(self, text: str) -> dict[str, str]:
+        self.emit("echoed", concerning={"text": text}, text=text)
+        return {"text": text}
+
+    @invoke("end_with")
+    async def end_with(self, status: str) -> None:
+        raise CommandFailed(CompletedStatus(status), "ended on request")
+
+    @query("echo")
+    async def answer_echo(self, text: str) -> dict[str, str]:
+        return {"text": text}
+
+    @subscribe("echoed")
+    async def echoed(self, text: str | None = None) -> None:
+        pass  # The echo command emits the event.
 
 
 def build_engine(

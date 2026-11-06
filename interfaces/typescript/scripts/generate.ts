@@ -35,6 +35,9 @@ interface JsonSchema {
   properties?: Record<string, JsonSchema>;
   required?: string[];
   items?: JsonSchema;
+  minItems?: number;
+  minimum?: number;
+  maximum?: number;
   anyOf?: JsonSchema[];
   additionalProperties?: boolean | JsonSchema;
   propertyNames?: JsonSchema;
@@ -169,6 +172,13 @@ function isInlineType(schema: JsonSchema): boolean {
 // Schema → zod code generation
 // ---------------------------------------------------------------------------
 
+/** The zod calls for the inclusive bounds of an integer, which Pydantic writes for `Integer`. */
+function integerBounds(schema: JsonSchema): string {
+  const minimum = schema.minimum === undefined ? "" : `.min(${schema.minimum})`;
+  const maximum = schema.maximum === undefined ? "" : `.max(${schema.maximum})`;
+  return `${minimum}${maximum}`;
+}
+
 /**
  * Generate zod code for a JSON Schema node.
  * Returns the zod expression string (without trailing `.default()` —
@@ -211,17 +221,16 @@ function genZod(schema: JsonSchema, defs: Record<string, JsonSchema>, indent = "
     case "string":
       return "z.string()";
     case "integer":
-      return "z.number().int()";
+      return `z.number().int()${integerBounds(schema)}`;
     case "number":
       return "z.number()";
     case "boolean":
       return "z.boolean()";
-    case "array":
-      if (schema.items) {
-        const itemZod = genZod(schema.items, defs, indent);
-        return `z.array(${itemZod})`;
-      }
-      return "z.array(z.unknown())";
+    case "array": {
+      const itemZod = schema.items ? genZod(schema.items, defs, indent) : "z.unknown()";
+      const minItems = schema.minItems === undefined ? "" : `.min(${schema.minItems})`;
+      return `z.array(${itemZod})${minItems}`;
+    }
     case "object":
       return genObject(schema, defs, indent);
     case "null":
@@ -442,10 +451,15 @@ function moduleOutFile(moduleName: string): string {
   return `${moduleName}.ts`;
 }
 
-/** The import specifier that reaches `toModule` from the file of `fromModule`. */
+/**
+ * The import specifier that reaches `toModule` from the file of `fromModule`.
+ *
+ * It names the `.js` file, because Node.js resolves an ES module import by its exact path
+ * and `nodenext` type resolution follows the same rule.
+ */
 function importSpecifier(fromModule: string, toModule: string): string {
   const fromDir = path.dirname(moduleOutFile(fromModule));
-  const target = moduleOutFile(toModule).replace(/\.ts$/, "");
+  const target = moduleOutFile(toModule).replace(/\.ts$/, ".js");
   const relative = path.relative(fromDir, target).split(path.sep).join("/");
   return relative.startsWith(".") ? relative : `./${relative}`;
 }
@@ -598,12 +612,8 @@ function generateModule(
     parts.push("/** ISO 8601 datetime string. */");
     parts.push("export type DateTime = string;");
     parts.push("/**");
-    parts.push(" * IDL `typedef long Integer` — 32-bit signed integer.");
-    parts.push(" *");
-    parts.push(" * Note: The zod schema validates that the value is an integer but does not");
-    parts.push(" * enforce the 32-bit range (±2^31). Values outside this range will pass");
-    parts.push(" * TypeScript validation but may overflow in C# consumers (where `int` is");
-    parts.push(" * 32-bit). This is a known limitation to be addressed in a future release.");
+    parts.push(" * IDL `typedef long Integer`: a 32-bit signed integer. The zod schemas refuse a");
+    parts.push(" * value outside that range, as the Python and C# models do.");
     parts.push(" */");
     parts.push("export type Integer = number;");
     parts.push("/** Positional or measurement data from the RoLo Architecture module. */");
@@ -784,7 +794,7 @@ function genProfiles(document: ProfilesDocument): string {
   lines.push("// the profile of its type and implements a part of it, and the engine serves");
   lines.push("// the part the component implements.");
   lines.push("");
-  lines.push('import type { HRIComponentProfile } from "../profiles";');
+  lines.push('import type { HRIComponentProfile } from "../profiles.js";');
   for (const { name, profile } of document.profiles) {
     const identifier = profile.identifier as { authority: string; code: string };
     lines.push("");

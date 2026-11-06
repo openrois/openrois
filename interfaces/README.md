@@ -14,7 +14,8 @@ interfaces/
 ├── python/      # Source of truth, hand-authored Pydantic models
 ├── schema/      # Canonical JSON Schema wire contract, generated from Python
 ├── csharp/      # C# types for Unity, generated from the schema
-└── typescript/  # TypeScript types for the web, generated from the schema
+├── typescript/  # TypeScript types for the web, generated from the schema
+└── fixtures/    # Wire messages and test vectors that all three packages read
 ```
 
 ## Pipeline
@@ -33,28 +34,45 @@ Python (Pydantic) ──export_schema.py──► JSON Schema ──Generator─
 
 The schema drift test (`python/tests/test_schema_drift.py`) verifies that the committed
 schemas still match what the Pydantic models produce. The C# and TypeScript sources are
-never hand-written, except `typescript/src/condition.ts`, the CQL2-Text parser, and the
-TypeScript `index.ts` barrels.
+never hand-written, except for what a schema cannot describe:
+
+| File | Contents |
+|------|----------|
+| `typescript/src/condition.ts` | The CQL2-Text parser, matcher and builders |
+| `typescript/src/values.ts` | The string forms of typed values |
+| `typescript/src/**/index.ts` | The barrels |
+| `csharp/src/OpenRoIS.Interfaces/Condition.cs` | The condition builders |
+| `csharp/src/OpenRoIS.Interfaces/Values.cs` | The string forms of typed values |
+| `csharp/src/OpenRoIS.Interfaces/IsExternalInit.cs` | The type `init` properties need on `netstandard2.1` |
+
+`fixtures/wire.json` holds real messages from a gateway, recorded by
+`testing/conformance/capture.py`. `fixtures/conditions.json` and `fixtures/values.json` give
+each helper below an exact input and output, and `fixtures/value-edges.json` holds the edges
+they cannot hold, with the differences between the languages. Each package reads all of them
+in its tests, so the languages cannot drift apart.
 
 ## Packages
 
-| Package | Language | Version | Role |
-|---------|----------|---------|------|
-| `openrois-interfaces` | Python 3.12+ | 0.1.0a5 | Source of truth |
-| `@openrois/interfaces` | TypeScript (ESM) | 0.1.0-alpha.5 | Generated |
-| `OpenRoIS.Interfaces` | C# (netstandard2.1) | 0.1.0-alpha.5 | Generated |
+| Package | Language | Version | Role | Where |
+|---------|----------|---------|------|-------|
+| `openrois-interfaces` | Python 3.12+ | 0.1.0a6 | Source of truth | PyPI |
+| `@openrois/interfaces` | TypeScript (ESM) | 0.1.0-alpha.6 | Generated | npm |
+| `OpenRoIS.Interfaces` | C# (netstandard2.1) | 0.1.0-alpha.6 | Generated | Inside the Unity package |
 
-None are published yet. Install them from a clone, as each package README describes.
+One tag, `interfaces-v0.1.0-alpha.6`, releases all three at the same version. The C# types
+are not on NuGet: they ship inside the Unity package `org.openrois.sdk`, as a precompiled
+assembly. Each package README describes how to install it, and how to use it from a clone.
+The GitHub release of a tag carries the wheel, the npm tarball and the `.nupkg` as assets.
 
 ## What Is Covered
 
 The framework types are complete: return codes, results, parameters, arguments, command
-units with branches, and component and engine profiles, with the profile constants of all
-18 standard profiles. The Python package also reads and writes RoIS XML: component
-profiles, engine profiles and bundles, and command unit sequences, in the
-`XML-Profiles.xsd` form. Its declaration API (`ComponentDeclaration`, `Param`, `Command`,
-`Query`, `Event`) declares the profile of a component type of your own and writes it as
-XML.
+units with branches, and component and engine profiles. The Python and TypeScript packages
+have the profile constants of all 18 standard profiles. The Python package also reads and
+writes RoIS XML: component profiles, engine profiles and bundles, and command unit
+sequences, in the `XML-Profiles.xsd` form. Its declaration API (`ComponentDeclaration`,
+`Param`, `Command`, `Query`, `Event`) declares the profile of a component type of your own
+and writes it as XML. Both stay in Python by design, because only engines and components need them.
 
 The method catalog covers the service side. It has a params and a result model for every
 method of SystemIF, CommandIF, QueryIF and EventIF, the method names, the notifications an
@@ -69,13 +87,24 @@ Section 17 of [docs/rois-reference.md](../docs/rois-reference.md) describes the 
 binding, the extension policy and each extension.
 
 Every `condition` is a string in a subset of CQL2-Text (OGC 21-065r2), for example
-`component_ref = 'reachy_real/head'`. The Python `condition` module and its TypeScript
-port parse, match and build conditions.
+`component_ref = 'reachy_real/head'`. `Result`, `Parameter` and `Argument` carry a value as
+a string in the form of its `data_type_ref`, described in section 17.6 of
+[docs/rois-reference.md](../docs/rois-reference.md). All three languages have helpers for
+both, so a client does not need to write either form by hand:
+
+| Helper | Python | TypeScript | C# |
+|--------|--------|------------|----|
+| Build a condition | `eq`, `like`, `all_of`, `quote`, `component_ref`, `component_type`, `component_type_urn` in `condition` | `eq`, `like`, `allOf`, `quote`, `componentRef`, `componentType`, `componentTypeUrn` in `condition` | `Eq`, `Like`, `AllOf`, `Quote`, `ComponentRef`, `ComponentType`, `ComponentTypeUrn` on `Condition` |
+| Parse and match a condition | `parse_condition`, `Condition` | `parseCondition`, `Condition` | None, because a Unity client only sends conditions |
+| Encode and decode a value | `encode_value`, `decode_value` in `values` | `encodeValue`, `decodeValue` in `values` | `Encode`, `Decode` on `RoISValues` |
 
 Profile constants exist for all 17 basic RoIS HRI Components and for the RoIS_Common
 profile they include, from `AUDIO_STREAMING_PROFILE` to `VIDEO_STREAMING_PROFILE`, in
-Python and TypeScript. The C# package does not have them yet. Typed per-component message
-models exist for 4 components:
+Python and TypeScript. They are not in C# by design, because no component is written in C#.
+The 18 `*_URN` constants of the standard component types exist only in Python, by design:
+TypeScript and C# pass an authority and a code to their `component_type` builder instead.
+
+Typed per-component message models exist for 4 components:
 
 | Component | Typed messages |
 |-----------|----------------|

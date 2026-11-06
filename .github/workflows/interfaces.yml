@@ -70,8 +70,12 @@ jobs:
           fi
 
   typescript:
-    name: TypeScript
+    name: TypeScript on Node ${{ matrix.node-version }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["22", "24"]
     defaults:
       run:
         working-directory: interfaces/typescript
@@ -80,7 +84,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: ${{ matrix.node-version }}
           cache: npm
           cache-dependency-path: interfaces/typescript/package-lock.json
 
@@ -102,6 +106,14 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Node import check
+        # Plain Node.js loads the built package by name, which is the only check that sees
+        # a missing file extension or a broken exports map.
+        run: npm run test:package
 
   csharp:
     name: C#

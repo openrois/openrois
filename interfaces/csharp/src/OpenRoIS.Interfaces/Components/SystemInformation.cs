@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace OpenRoIS.Interfaces.Components.SystemInformation
@@ -22,17 +23,29 @@ namespace OpenRoIS.Interfaces.Components.SystemInformation
     ///     status: Current component status of the engine.
     ///     operable_time: List of ISO 8601 datetimes representing operable periods.
     /// </summary>
-    public sealed class SystemInformationEngineStatusResult : IEquatable<SystemInformationEngineStatusResult>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class SystemInformationEngineStatusResult : IEquatable<SystemInformationEngineStatusResult>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("status")]
-        public OpenRoIS.Interfaces.Common.ComponentStatus Status { get; }
+        public OpenRoIS.Interfaces.Common.ComponentStatus Status { get; init; }
+        [JsonRequired]
         [JsonPropertyName("operable_time")]
-        public IReadOnlyList<string> OperableTime { get; }
+        public IReadOnlyList<string> OperableTime { get; init; }
 
         public SystemInformationEngineStatusResult(OpenRoIS.Interfaces.Common.ComponentStatus status, IReadOnlyList<string> operableTime)
         {
             Status = status;
             OperableTime = operableTime;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (OperableTime is null) throw new JsonException("SystemInformationEngineStatusResult.operable_time must not be null.");
+            foreach (var item0 in OperableTime)
+            {
+                if (item0 is null) throw new JsonException("SystemInformationEngineStatusResult.operable_time item must not be null.");
+            }
         }
 
         public bool Equals(SystemInformationEngineStatusResult? other)
@@ -68,20 +81,39 @@ namespace OpenRoIS.Interfaces.Components.SystemInformation
     ///     robot_ref: List of robot identifiers in the position data.
     ///     position_data: Positional/measurement data (RoLo Data sequence as strings).
     /// </summary>
-    public sealed class SystemInformationRobotPositionResult : IEquatable<SystemInformationRobotPositionResult>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class SystemInformationRobotPositionResult : IEquatable<SystemInformationRobotPositionResult>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("timestamp")]
-        public string Timestamp { get; }
+        public string Timestamp { get; init; }
+        [JsonRequired]
         [JsonPropertyName("robot_ref")]
-        public IReadOnlyList<string> RobotRef { get; }
+        public IReadOnlyList<string> RobotRef { get; init; }
+        [JsonRequired]
         [JsonPropertyName("position_data")]
-        public IReadOnlyList<string> PositionData { get; }
+        public IReadOnlyList<string> PositionData { get; init; }
 
         public SystemInformationRobotPositionResult(string timestamp, IReadOnlyList<string> robotRef, IReadOnlyList<string> positionData)
         {
             Timestamp = timestamp;
             RobotRef = robotRef;
             PositionData = positionData;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Timestamp is null) throw new JsonException("SystemInformationRobotPositionResult.timestamp must not be null.");
+            if (RobotRef is null) throw new JsonException("SystemInformationRobotPositionResult.robot_ref must not be null.");
+            foreach (var item0 in RobotRef)
+            {
+                if (item0 is null) throw new JsonException("SystemInformationRobotPositionResult.robot_ref item must not be null.");
+            }
+            if (PositionData is null) throw new JsonException("SystemInformationRobotPositionResult.position_data must not be null.");
+            foreach (var item0 in PositionData)
+            {
+                if (item0 is null) throw new JsonException("SystemInformationRobotPositionResult.position_data item must not be null.");
+            }
         }
 
         public bool Equals(SystemInformationRobotPositionResult? other)

@@ -69,7 +69,8 @@ them.
 - Format: [Keep a Changelog](https://keepachangelog.com/en/2.0.0/)
 - Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Add entries under `## [Unreleased]` as you work
-- Move them to a versioned section when you tag a release
+- Move them to a versioned section before you tag a release: the release workflow turns
+  that section into the notes of the GitHub release, and stops if it is missing or empty
 - Categories: `Added`, `Changed`, `Fixed`, `Removed`, `Deprecated`, `Security`
 
 Example entry:
@@ -315,14 +316,14 @@ Use this template for every PR:
 ## 11. Checks
 
 Continuous integration runs the checks for the interface types (Python, TypeScript, and
-C#) on every pull request that touches `interfaces/`. For every other stack you touched,
-run the checks before opening a pull request, and say in the pull request which ones you
-ran.
+C#), the Python packages, and the conformance list on every pull request that touches
+them. For every other stack you touched, run the checks before opening a pull request, and
+say in the pull request which ones you ran.
 
 | Stack | Directory | Commands |
 |-------|-----------|----------|
 | Python types | `interfaces/python` | `pytest`, `mypy src/`, `ruff check src/` |
-| TypeScript types | `interfaces/typescript` | `npm run build`, `npm test` |
+| TypeScript types | `interfaces/typescript` | `npm run build`, `npm test`, `npm run test:package` |
 | C# types | `interfaces/csharp` | `dotnet build src/OpenRoIS.Interfaces`, `dotnet test tests/OpenRoIS.Interfaces.Tests` |
 | TypeScript SDK | `sdk/typescript` | `npm run build`, `npm test`, and with `OPENROIS_GATEWAY_URL=ws://127.0.0.1:8765` against the Compose stack |
 | Engine | `engine` | `pytest`, `mypy`, `ruff check src/ tests/` |
@@ -340,8 +341,8 @@ a local copy of the OMG RoIS Framework 2.0 machine-readable files, downloaded fr
 OPENROIS_NORMATIVE_DIR=~/omg/rois-2.0/machine-readable pytest
 ```
 
-Workflows for the other stacks are an open task on the [roadmap](docs/roadmap.md), and a
-welcome contribution.
+Workflows for the other stacks, such as the TypeScript SDK tests, are a welcome
+contribution.
 
 ## 12. Base Branch
 

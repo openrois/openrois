@@ -636,6 +636,15 @@ these entries.
     and completes when that run ends for an actuation component, or once it runs for a
     sensing one. `stop` ends it and aborts a running action.
 
+23. **32-bit bound on `delay_time` and `timeout`** (`XML-Profiles.xsd`; `RoIS_HRI.idl`).
+    Spec: `RoIS_HRI::Integer` is an IDL `long`, which is 32 bits, and `number` and
+    `time_limit` use it.
+    Files: the XSD writes `delay_time` and `timeout` as `xsd:integer`, which has no bound.
+    OpenRoIS: all four fields use the 32-bit `Integer`, so that every language reads the
+    same values. A larger value is refused on the wire, and `xmlcodec` refuses a document
+    that carries one, even though the XSD allows it. Both fields are in milliseconds, so
+    the limit is about 24.8 days.
+
 ---
 
 ## 17. How OpenRoIS Implements RoIS

@@ -195,6 +195,11 @@ class TestReadComponentProfile:
         with pytest.raises(ProfileFormatError):
             read_component_profile(bad)
 
+    def test_refuses_a_timeout_beyond_32_bits(self) -> None:
+        bad = SAMPLE_PROFILE.replace('rois:timeout="500"', 'rois:timeout="2147483648"')
+        with pytest.raises(ProfileFormatError, match="32 bits"):
+            read_component_profile(bad)
+
     def test_rejects_another_root(self) -> None:
         with pytest.raises(ProfileFormatError):
             read_component_profile(f"<rois:CommandUnitSequence {HEADER}/>")
@@ -551,6 +556,13 @@ class TestCommandUnitSequence:
                 _unit("F"),
             ]
         )
+
+    @pytest.mark.parametrize("value", ["2147483648", "-2147483649"])
+    def test_refuses_a_delay_time_beyond_32_bits(self, value: str) -> None:
+        """xsd:integer has no bound, but the models hold 32 bits, as the IDL Integer does."""
+        attribute = f'rois:delay_time="{value}"'
+        with pytest.raises(ProfileFormatError, match="32 bits"):
+            read_command_unit_sequence(BRANCH_FORM.replace('rois:delay_time="10"', attribute))
 
     def test_reads_the_flat_xsd_form_as_one_command_branches(self) -> None:
         sequence = read_command_unit_sequence(FLAT_FORM)

@@ -114,7 +114,8 @@ logging, and a graceful stop on SIGTERM and SIGINT. Its container image, and a D
 Compose file that starts it with the mock adapter, checked end to end by the conformance
 list on the RoIS method catalog. Docker Compose is the one-command quickstart.
 
-**In progress:** the first release of `openrois-gateway`, together with the engine.
+**In progress:** the `0.1.0` release of `openrois-gateway`, together with the engine. Until
+then it ships as alpha pre-releases, tagged `gateway-v0.1.0-alpha.N`.
 
 ### Phase 7: Adapter Process (Planned)
 
@@ -151,7 +152,7 @@ Security for ROS 2 based adapters.
 ### Phase 10: Full Component Library (Planned)
 
 All 17 basic RoIS HRI Components, for physical robots and virtual avatars, and packages
-published to PyPI, npm, NuGet, and the Unity Package Manager. First stable release with
+published to PyPI, npm, and the Unity Package Manager. First stable release with
 semantic versioning guarantees: **`v1.0`**.
 
 ### Phase 11: Component Registry and Hub (After 1.0)

@@ -1,0 +1,1089 @@
+[
+  {
+    "kind": "params",
+    "method": "rois.system.connect",
+    "body": {}
+  },
+  {
+    "kind": "result",
+    "method": "rois.system.connect",
+    "body": {
+      "return_code": "OK"
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.system.get_profile",
+    "body": {
+      "condition": ""
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.system.get_profile",
+    "body": {
+      "return_code": "OK",
+      "profile": {
+        "identifier": {
+          "authority": "OpenRoIS",
+          "code": "gateway",
+          "codebook_ref": "",
+          "version": ""
+        },
+        "name": null,
+        "sub_profiles": [
+          {
+            "identifier": {
+              "authority": "OpenRoIS",
+              "code": "mock",
+              "codebook_ref": "",
+              "version": ""
+            },
+            "name": null,
+            "sub_profiles": [],
+            "component_ids": [
+              "mock/person_detection",
+              "mock/navigation",
+              "mock/system_information",
+              "mock/fault"
+            ],
+            "parameter_profiles": []
+          }
+        ],
+        "component_ids": [
+          "mock/person_detection",
+          "mock/navigation",
+          "mock/system_information",
+          "mock/fault"
+        ],
+        "parameter_profiles": []
+      },
+      "component_profiles": {
+        "mock/person_detection": {
+          "identifier": {
+            "authority": "OMG",
+            "code": "PersonDetection",
+            "codebook_ref": "",
+            "version": ""
+          },
+          "name": "person_detection",
+          "function": "sensing",
+          "sub_component_profiles": [
+            "urn:x-rois:def:Component:OMG::RoISCommon"
+          ],
+          "command_profiles": [
+            {
+              "name": "start",
+              "results": [],
+              "arguments": [],
+              "timeout": null
+            },
+            {
+              "name": "stop",
+              "results": [],
+              "arguments": [],
+              "timeout": null
+            },
+            {
+              "name": "suspend",
+              "results": [],
+              "arguments": [],
+              "timeout": null
+            },
+            {
+              "name": "resume",
+              "results": [],
+              "arguments": [],
+              "timeout": null
+            }
+          ],
+          "query_profiles": [
+            {
+              "name": "component_status",
+              "results": [
+                {
+                  "name": "status",
+                  "data_type_ref": {
+                    "authority": "",
+                    "code": "Component_Status",
+                    "codebook_ref": "",
+                    "version": ""
+                  },
+                  "default_value": null,
+                  "description": "",
+                  "read_only": false
+                }
+              ],
+              "arguments": []
+            }
+          ],
+          "event_profiles": [
+            {
+              "name": "person_detected",
+              "results": [
+                {
+                  "name": "number",
+                  "data_type_ref": {
+                    "authority": "",
+                    "code": "int",
+                    "codebook_ref": "",
+                    "version": ""
+                  },
+                  "default_value": null,
+                  "description": "number of detected persons",
+                  "read_only": false
+                },
+                {
+                  "name": "timestamp",
+                  "data_type_ref": {
+                    "authority": "",
+                    "code": "DateTime",
+                    "codebook_ref": "",
+                    "version": ""
+                  },
+                  "default_value": null,
+                  "description": "time when measuered",
+                  "read_only": false
+                }
+              ],
+              "arguments": []
+            }
+          ],
+          "parameter_profiles": []
+        },
+        "mock/navigation": {
+          "identifier": {
+            "authority": "OMG",
+            "code": "Navigation",
+            "codebook_ref": "",
+            "version": ""
+          },
+          "name": "navigation",
+          "function": "actuation",
+          "sub_component_profiles": [
+            "urn:x-rois:def:Component:OMG::RoISCommon"
+          ],
+          "command_profiles": [
+            {
+              "name": "start",
+              "results": [],
+              "arguments": [],
+              "timeout": null
+            },
+            {
+              "name": "stop",
+              "results": [],
+              "arguments": [],
+              "timeout": null
+            },
+            {
+              "name": "suspend",
+              "results": [],
+              "arguments": [],
+              "timeout": null
+            },
+            {
+              "name": "resume",
+              "results": [],
+              "arguments": [],
+              "timeout": null
+            }
+          ],
+          "query_profiles": [
+            {
+              "name": "component_status",
+              "results": [
+                {
+                  "name": "status",
+                  "data_type_ref": {
+                    "authority": "",
+                    "code": "Component_Status",
+                    "codebook_ref": "",
+                    "version": ""
+                  },
+                  "default_value": null,
+                  "description": "",
+                  "read_only": false
+                }
+              ],
+              "arguments": []
+            }
+          ],
+          "event_profiles": [
+            {
+              "name": "reached_target",
+              "results": [
+                {
+                  "name": "target",
+                  "data_type_ref": {
+                    "authority": "",
+                    "code": "string",
+                    "codebook_ref": "",
+                    "version": ""
+                  },
+                  "default_value": null,
+                  "description": "reached target destination",
+                  "read_only": false
+                },
+                {
+                  "name": "is_final_target",
+                  "data_type_ref": {
+                    "authority": "",
+                    "code": "bool",
+                    "codebook_ref": "",
+                    "version": ""
+                  },
+                  "default_value": null,
+                  "description": "if it is final destination point",
+                  "read_only": false
+                }
+              ],
+              "arguments": []
+            }
+          ],
+          "parameter_profiles": [
+            {
+              "name": "target_positions",
+              "data_type_ref": {
+                "authority": "",
+                "code": "string[]",
+                "codebook_ref": "",
+                "version": ""
+              },
+              "default_value": "[\"home\"]",
+              "description": "navigation target positions",
+              "read_only": false
+            },
+            {
+              "name": "time_limit",
+              "data_type_ref": {
+                "authority": "",
+                "code": "int",
+                "codebook_ref": "",
+                "version": ""
+              },
+              "default_value": "0",
+              "description": "intended time limit to complete navigation",
+              "read_only": false
+            },
+            {
+              "name": "routing_policy",
+              "data_type_ref": {
+                "authority": "",
+                "code": "string",
+                "codebook_ref": "",
+                "version": ""
+              },
+              "default_value": "time",
+              "description": "routing policy: 'time' priority or 'distance' priority",
+              "read_only": false
+            }
+          ]
+        },
+        "mock/system_information": {
+          "identifier": {
+            "authority": "OMG",
+            "code": "SystemInformation",
+            "codebook_ref": "",
+            "version": ""
+          },
+          "name": "system_information",
+          "function": null,
+          "sub_component_profiles": [],
+          "command_profiles": [],
+          "query_profiles": [
+            {
+              "name": "robot_position",
+              "results": [
+                {
+                  "name": "position_data",
+                  "data_type_ref": {
+                    "authority": "",
+                    "code": "String[]",
+                    "codebook_ref": "",
+                    "version": ""
+                  },
+                  "default_value": null,
+                  "description": "position of robot or its parts in comma seperated double values [x, y, th]",
+                  "read_only": false
+                },
+                {
+                  "name": "robot_ref",
+                  "data_type_ref": {
+                    "authority": "",
+                    "code": "RoISIdentifier[]",
+                    "codebook_ref": "",
+                    "version": ""
+                  },
+                  "default_value": null,
+                  "description": "List of robot IDs",
+                  "read_only": false
+                },
+                {
+                  "name": "timestamp",
+                  "data_type_ref": {
+                    "authority": "",
+                    "code": "DateTime",
+                    "codebook_ref": "",
+                    "version": ""
+                  },
+                  "default_value": null,
+                  "description": "timestamp of measurement",
+                  "read_only": false
+                }
+              ],
+              "arguments": []
+            },
+            {
+              "name": "engine_status",
+              "results": [
+                {
+                  "name": "operable_time",
+                  "data_type_ref": {
+                    "authority": "",
+                    "code": "DateTime",
+                    "codebook_ref": "",
+                    "version": ""
+                  },
+                  "default_value": null,
+                  "description": "Operable time of the HRI Engine that includes this basic component",
+                  "read_only": false
+                },
+                {
+                  "name": "status",
+                  "data_type_ref": {
+                    "authority": "",
+                    "code": "Component_Status",
+                    "codebook_ref": "",
+                    "version": ""
+                  },
+                  "default_value": null,
+                  "description": "Status information of this engine",
+                  "read_only": false
+                }
+              ],
+              "arguments": []
+            }
+          ],
+          "event_profiles": [],
+          "parameter_profiles": []
+        },
+        "mock/fault": {
+          "identifier": {
+            "authority": "OpenRoIS",
+            "code": "TestFault",
+            "codebook_ref": "",
+            "version": ""
+          },
+          "name": "fault",
+          "function": "function",
+          "sub_component_profiles": [],
+          "command_profiles": [
+            {
+              "name": "raise_error",
+              "results": [],
+              "arguments": [],
+              "timeout": null
+            },
+            {
+              "name": "peer_join",
+              "results": [],
+              "arguments": [],
+              "timeout": null
+            },
+            {
+              "name": "echo",
+              "results": [
+                {
+                  "name": "text",
+                  "data_type_ref": {
+                    "authority": "",
+                    "code": "string",
+                    "codebook_ref": "",
+                    "version": ""
+                  },
+                  "default_value": null,
+                  "description": "",
+                  "read_only": false
+                }
+              ],
+              "arguments": [
+                {
+                  "name": "text",
+                  "data_type_ref": {
+                    "authority": "",
+                    "code": "string",
+                    "codebook_ref": "",
+                    "version": ""
+                  },
+                  "default_value": null,
+                  "description": "",
+                  "read_only": false
+                }
+              ],
+              "timeout": 5000
+            },
+            {
+              "name": "end_with",
+              "results": [],
+              "arguments": [
+                {
+                  "name": "status",
+                  "data_type_ref": {
+                    "authority": "",
+                    "code": "string",
+                    "codebook_ref": "",
+                    "version": ""
+                  },
+                  "default_value": null,
+                  "description": "",
+                  "read_only": false
+                }
+              ],
+              "timeout": null
+            }
+          ],
+          "query_profiles": [
+            {
+              "name": "echo",
+              "results": [
+                {
+                  "name": "text",
+                  "data_type_ref": {
+                    "authority": "",
+                    "code": "string",
+                    "codebook_ref": "",
+                    "version": ""
+                  },
+                  "default_value": null,
+                  "description": "",
+                  "read_only": false
+                }
+              ],
+              "arguments": [
+                {
+                  "name": "text",
+                  "data_type_ref": {
+                    "authority": "",
+                    "code": "string",
+                    "codebook_ref": "",
+                    "version": ""
+                  },
+                  "default_value": null,
+                  "description": "",
+                  "read_only": false
+                }
+              ]
+            }
+          ],
+          "event_profiles": [
+            {
+              "name": "echoed",
+              "results": [
+                {
+                  "name": "text",
+                  "data_type_ref": {
+                    "authority": "",
+                    "code": "string",
+                    "codebook_ref": "",
+                    "version": ""
+                  },
+                  "default_value": null,
+                  "description": "",
+                  "read_only": false
+                }
+              ],
+              "arguments": [
+                {
+                  "name": "text",
+                  "data_type_ref": {
+                    "authority": "",
+                    "code": "string",
+                    "codebook_ref": "",
+                    "version": ""
+                  },
+                  "default_value": null,
+                  "description": "",
+                  "read_only": false
+                }
+              ]
+            }
+          ],
+          "parameter_profiles": []
+        }
+      }
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.system.get_profile",
+    "body": {
+      "condition": "nonsense !! 1"
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.system.get_profile",
+    "body": {
+      "return_code": "BAD_PARAMETER",
+      "profile": null,
+      "component_profiles": {}
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.command.search",
+    "body": {
+      "condition": "component_type = 'urn:x-rois:def:component:OMG::Navigation'"
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.command.search",
+    "body": {
+      "return_code": "OK",
+      "component_ref_list": [
+        "mock/navigation"
+      ]
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.command.bind_any",
+    "body": {
+      "condition": "component_ref = 'mock/navigation'"
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.command.bind_any",
+    "body": {
+      "return_code": "OK",
+      "component_ref": "mock/navigation"
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.command.release",
+    "body": {
+      "component_ref": "mock/navigation"
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.command.release",
+    "body": {
+      "return_code": "OK"
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.command.bind",
+    "body": {
+      "component_ref": "mock/navigation"
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.command.bind",
+    "body": {
+      "return_code": "OK"
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.command.search",
+    "body": {
+      "condition": ""
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.command.search",
+    "body": {
+      "return_code": "ERROR",
+      "component_ref_list": []
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.command.bind",
+    "body": {
+      "component_ref": "mock/navigation"
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.command.bind",
+    "body": {
+      "return_code": "OUT_OF_RESOURCES"
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.command.get_parameter",
+    "body": {
+      "component_ref": "mock/navigation"
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.command.get_parameter",
+    "body": {
+      "return_code": "OK",
+      "parameters": [
+        {
+          "name": "target_positions",
+          "data_type_ref": "string[]",
+          "value": "[\"home\"]"
+        },
+        {
+          "name": "time_limit",
+          "data_type_ref": "int",
+          "value": "0"
+        },
+        {
+          "name": "routing_policy",
+          "data_type_ref": "string",
+          "value": "time"
+        }
+      ]
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.command.set_parameter",
+    "body": {
+      "component_ref": "mock/navigation",
+      "parameters": [
+        {
+          "name": "target_positions",
+          "data_type_ref": "string[]",
+          "value": "[\"home\"]"
+        }
+      ]
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.command.set_parameter",
+    "body": {
+      "return_code": "OK",
+      "command_id": "mock/param-1"
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.command.execute",
+    "body": {
+      "command_unit_list": [
+        {
+          "component_ref": "mock/person_detection",
+          "command_type": "start",
+          "command_id": "",
+          "arguments": [],
+          "delay_time": 1
+        },
+        {
+          "branch_list": [
+            {
+              "command_list": [
+                {
+                  "component_ref": "mock/person_detection",
+                  "command_type": "suspend",
+                  "command_id": "",
+                  "arguments": [],
+                  "delay_time": null
+                },
+                {
+                  "component_ref": "mock/person_detection",
+                  "command_type": "resume",
+                  "command_id": "",
+                  "arguments": [],
+                  "delay_time": null
+                }
+              ]
+            },
+            {
+              "command_list": [
+                {
+                  "component_ref": "mock/navigation",
+                  "command_type": "stop",
+                  "command_id": "",
+                  "arguments": [],
+                  "delay_time": null
+                }
+              ]
+            }
+          ],
+          "delay_time": 1
+        },
+        {
+          "component_ref": "mock/fault",
+          "command_type": "echo",
+          "command_id": "",
+          "arguments": [
+            {
+              "name": "text",
+              "data_type_ref": "string",
+              "value": "hello"
+            }
+          ],
+          "delay_time": null
+        }
+      ]
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.command.execute",
+    "body": {
+      "return_code": "OK",
+      "command_unit_list": [
+        {
+          "component_ref": "mock/person_detection",
+          "command_type": "start",
+          "command_id": "gateway/cmd-1",
+          "arguments": [],
+          "delay_time": 1
+        },
+        {
+          "branch_list": [
+            {
+              "command_list": [
+                {
+                  "component_ref": "mock/person_detection",
+                  "command_type": "suspend",
+                  "command_id": "gateway/cmd-2",
+                  "arguments": [],
+                  "delay_time": null
+                },
+                {
+                  "component_ref": "mock/person_detection",
+                  "command_type": "resume",
+                  "command_id": "gateway/cmd-3",
+                  "arguments": [],
+                  "delay_time": null
+                }
+              ]
+            },
+            {
+              "command_list": [
+                {
+                  "component_ref": "mock/navigation",
+                  "command_type": "stop",
+                  "command_id": "gateway/cmd-4",
+                  "arguments": [],
+                  "delay_time": null
+                }
+              ]
+            }
+          ],
+          "delay_time": 1
+        },
+        {
+          "component_ref": "mock/fault",
+          "command_type": "echo",
+          "command_id": "gateway/cmd-5",
+          "arguments": [
+            {
+              "name": "text",
+              "data_type_ref": "string",
+              "value": "hello"
+            }
+          ],
+          "delay_time": null
+        }
+      ]
+    }
+  },
+  {
+    "kind": "notification",
+    "method": "rois.command.completed",
+    "body": {
+      "command_id": "gateway/cmd-1",
+      "status": "OK"
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.command.get_command_result",
+    "body": {
+      "command_id": "gateway/cmd-1",
+      "condition": ""
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.command.get_command_result",
+    "body": {
+      "return_code": "OK",
+      "results": []
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.command.get_command_result",
+    "body": {
+      "command_id": "gateway/cmd-5",
+      "condition": ""
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.command.get_command_result",
+    "body": {
+      "return_code": "OK",
+      "results": [
+        {
+          "name": "text",
+          "data_type_ref": "string",
+          "value": "hello"
+        }
+      ]
+    }
+  },
+  {
+    "kind": "notification",
+    "method": "rois.command.completed",
+    "body": {
+      "command_id": "gateway/cmd-6",
+      "status": "ERROR"
+    }
+  },
+  {
+    "kind": "notification",
+    "method": "rois.command.completed",
+    "body": {
+      "command_id": "gateway/cmd-7",
+      "status": "OUT_OF_RESOURCES"
+    }
+  },
+  {
+    "kind": "notification",
+    "method": "rois.command.completed",
+    "body": {
+      "command_id": "gateway/cmd-8",
+      "status": "TIMEOUT"
+    }
+  },
+  {
+    "kind": "notification",
+    "method": "rois.command.completed",
+    "body": {
+      "command_id": "gateway/cmd-9",
+      "status": "ABORT"
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.query.query",
+    "body": {
+      "query_type": "robot_position",
+      "condition": "component_ref = 'mock/system_information'"
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.query.query",
+    "body": {
+      "return_code": "OK",
+      "results": [
+        {
+          "name": "position_data",
+          "data_type_ref": "String[]",
+          "value": "[\"0.0,0.0,0.0\"]"
+        },
+        {
+          "name": "robot_ref",
+          "data_type_ref": "RoISIdentifier[]",
+          "value": "[\"mock\"]"
+        },
+        {
+          "name": "timestamp",
+          "data_type_ref": "DateTime",
+          "value": "2026-11-06T13:15:09.956015+00:00"
+        }
+      ]
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.query.query",
+    "body": {
+      "query_type": "no_such_query",
+      "condition": ""
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.query.query",
+    "body": {
+      "return_code": "UNSUPPORTED",
+      "results": []
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.query.query",
+    "body": {
+      "query_type": "echo",
+      "condition": "text = 'hello'"
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.query.query",
+    "body": {
+      "return_code": "OK",
+      "results": [
+        {
+          "name": "text",
+          "data_type_ref": "string",
+          "value": "hello"
+        }
+      ]
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.event.subscribe",
+    "body": {
+      "event_type": "person_detected",
+      "condition": "component_ref = 'mock/person_detection'"
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.event.subscribe",
+    "body": {
+      "return_code": "OK",
+      "subscribe_id": "mock/sub-2"
+    }
+  },
+  {
+    "kind": "notification",
+    "method": "rois.event.notify_event",
+    "body": {
+      "event_id": "mock/evt-3",
+      "event_type": "person_detected",
+      "subscribe_id": "mock/sub-2",
+      "expire": "2026-11-06T13:16:10.046471+00:00",
+      "results": [
+        {
+          "name": "number",
+          "data_type_ref": "int",
+          "value": "1"
+        },
+        {
+          "name": "timestamp",
+          "data_type_ref": "DateTime",
+          "value": "2026-11-06T13:15:10.046083+00:00"
+        }
+      ]
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.event.get_event_detail",
+    "body": {
+      "event_id": "mock/evt-3",
+      "condition": ""
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.event.get_event_detail",
+    "body": {
+      "return_code": "OK",
+      "results": [
+        {
+          "name": "number",
+          "data_type_ref": "int",
+          "value": "1"
+        },
+        {
+          "name": "timestamp",
+          "data_type_ref": "DateTime",
+          "value": "2026-11-06T13:15:10.046083+00:00"
+        }
+      ]
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.event.unsubscribe",
+    "body": {
+      "subscribe_id": "mock/sub-2"
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.event.unsubscribe",
+    "body": {
+      "return_code": "OK"
+    }
+  },
+  {
+    "kind": "notification",
+    "method": "rois.system.profile_changed",
+    "body": {}
+  },
+  {
+    "kind": "notification",
+    "method": "rois.system.notify_error",
+    "body": {
+      "error_id": "mock/err-4",
+      "error_type": "COMPONENT_INTERNAL_ERROR"
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.system.get_error_detail",
+    "body": {
+      "error_id": "mock/err-4",
+      "condition": ""
+    }
+  },
+  {
+    "kind": "result",
+    "method": "rois.system.get_error_detail",
+    "body": {
+      "return_code": "OK",
+      "results": [
+        {
+          "name": "component_ref",
+          "data_type_ref": "RoISIdentifier",
+          "value": "mock/fault"
+        },
+        {
+          "name": "status",
+          "data_type_ref": "Component_Status",
+          "value": "ERROR"
+        },
+        {
+          "name": "message",
+          "data_type_ref": "string",
+          "value": "raised on request"
+        },
+        {
+          "name": "time",
+          "data_type_ref": "DateTime",
+          "value": "2026-11-06T13:15:11.061607+00:00"
+        }
+      ]
+    }
+  },
+  {
+    "kind": "params",
+    "method": "rois.system.disconnect",
+    "body": {}
+  },
+  {
+    "kind": "result",
+    "method": "rois.system.disconnect",
+    "body": {
+      "return_code": "OK"
+    }
+  }
+]

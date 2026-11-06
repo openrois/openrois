@@ -18,6 +18,9 @@ same type. An array holds its items as JSON values: numbers for the numeric type
 ``true`` and ``false`` for the boolean types, and strings for every other type, for
 example ``["kitchen", "hall"]`` for ``string[]``.
 
+An item of a float array too large for a double reads as signed infinity, as ``[1e400]``
+does. An ``int`` too large for a double has no float to be written as, so it is refused.
+
 Source: OMG RoIS Framework 2.0, RoIS_HRI.idl (``any value``). The string forms are an
 OpenRoIS choice, described in section 17 of docs/rois-reference.md.
 """
@@ -25,6 +28,7 @@ OpenRoIS choice, described in section 17 of docs/rois-reference.md.
 from __future__ import annotations
 
 import json
+import math
 from datetime import datetime
 
 from openrois.interfaces.common import ComponentStatus
@@ -132,7 +136,12 @@ def _to_json(data_type: str, value: object) -> object:
     if base in _FLOAT:
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             raise ValueError(f"A {data_type} value must be a number, not {value!r}")
-        return float(value)
+        try:
+            return float(value)
+        except OverflowError as exc:
+            # The message leaves the value out, because repr refuses an int above 4300 digits.
+            message = f"A {data_type} value must be a number that a double can hold"
+            raise ValueError(message) from exc
     if base in _BOOLEAN:
         if not isinstance(value, bool):
             raise ValueError(f"A {data_type} value must be a bool, not {value!r}")
@@ -165,7 +174,13 @@ def _from_json(data_type: str, item: object) -> object:
     if base in _FLOAT:
         if isinstance(item, bool) or not isinstance(item, (int, float)):
             raise ValueError(f"A {data_type} item must be a JSON number: {item!r}")
-        return float(item)
+        try:
+            return float(item)
+        except OverflowError:
+            # Python's JSON reader gives an int for this item and inf for 1e400. TypeScript and
+            # C# read both as infinity, so the result must not depend on how the number is
+            # spelled. The sign comes from a comparison, because copysign would overflow too.
+            return math.inf if item > 0 else -math.inf
     if base in _BOOLEAN:
         if not isinstance(item, bool):
             raise ValueError(f"A {data_type} item must be true or false: {item!r}")

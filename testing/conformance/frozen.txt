@@ -3,5 +3,5 @@
 # released, for the mock adapter.
 openrois-gateway==0.1.0a1
 openrois-engine==0.1.0a2
-openrois-interfaces==0.1.0a5
+openrois-interfaces==0.1.0a6
 openrois-components-core==0.1.0a1

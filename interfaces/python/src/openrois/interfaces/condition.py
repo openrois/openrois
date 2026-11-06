@@ -266,8 +266,19 @@ def like(property_name: str, pattern: str) -> str:
 
 
 def all_of(*conditions: str) -> str:
-    """Join conditions with AND, skipping empty ones."""
+    """Join conditions with AND, skipping empty ones.
+
+    A condition is empty here when ``str.strip`` leaves nothing, and the other languages
+    define empty differently. U+0085 is empty here and in C#, not in TypeScript. U+FEFF is
+    empty in TypeScript only. U+001C to U+001F are empty here only.
+    interfaces/fixtures/value-edges.json records these cases.
+    """
     return " AND ".join(c for c in conditions if c.strip())
+
+
+def component_ref(ref: str) -> str:
+    """Select the one component with this fully qualified ref, such as ``reachy_real/head``."""
+    return eq(COMPONENT_REF, ref)
 
 
 def component_type_urn(identifier: RoISIdentifierType) -> str:
@@ -278,3 +289,8 @@ def component_type_urn(identifier: RoISIdentifierType) -> str:
     profiles use.
     """
     return f"urn:x-rois:def:component:{identifier.authority}::{identifier.code}"
+
+
+def component_type(identifier: RoISIdentifierType) -> str:
+    """Select every component of a type, for example ``OMG::Navigation``."""
+    return eq(COMPONENT_TYPE, component_type_urn(identifier))

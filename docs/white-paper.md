@@ -653,14 +653,15 @@ match what the pipeline produces. Generated files are never edited by hand.
 
 ### 7.2 Packages
 
-| Package | Language | Target registry | Role |
-|---------|----------|-----------------|------|
+| Package | Language | Where | Role |
+|---------|----------|-------|------|
 | `openrois-interfaces` | Python 3.12+ | PyPI | Source of truth |
-| `OpenRoIS.Interfaces` | C# (netstandard2.1) | NuGet, bundled in the Unity SDK | Generated |
+| `OpenRoIS.Interfaces` | C# (netstandard2.1) | Inside the Unity package | Generated |
 | `@openrois/interfaces` | TypeScript (ESM) | npm | Generated |
 
-The packages are released as tagged alphas in the repository and installed from source.
-Publication to the registries is planned.
+One tag releases all three at the same version, as an alpha. The Python and TypeScript
+packages install from PyPI and npm. The C# types are not on NuGet: they ship inside the
+Unity package `org.openrois.sdk`, as a precompiled assembly.
 
 ### 7.3 Profiles and Values
 

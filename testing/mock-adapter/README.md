@@ -11,7 +11,7 @@ Use it to develop clients and to exercise a gateway end to end.
 | `mock/person_detection` | `OMG::PersonDetection` | sensing | Emits `person_detected` every five seconds, counting zero to three persons in turn |
 | `mock/navigation` | `OMG::Navigation` | actuation | `start` drives to the first of `target_positions` for three seconds, then emits `reached_target` |
 | `mock/system_information` | `OMG::SystemInformation` | | Answers `robot_position` with the robot at the origin, and `engine_status` |
-| `mock/fault` | `OpenRoIS::TestFault` | function | A test fixture: its commands make the error and the profile change that the [conformance list](../conformance/README.md) checks |
+| `mock/fault` | `OpenRoIS::TestFault` | function | A test fixture: its commands make the error and the profile change that the [conformance list](../conformance/README.md) checks, and its `echo` messages and `end_with` give the [wire fixtures](../conformance/README.md#wire-fixtures) arguments, results, a timeout and every way a command can end |
 
 The person detection and navigation components take the RoIS_Common commands (`start`,
 `stop`, `suspend`, `resume`), which take 0.2 seconds unless the table says otherwise. The
@@ -36,7 +36,7 @@ makes the simulated work ten times faster.
 ## Run Without Docker
 
 ```bash
-# From the repository root. The packages are not published yet.
+# From the repository root. openrois-components-common is not on PyPI yet.
 pip install -e ./interfaces/python -e ./engine -e ./components/core -e ./components/common \
     -e ./services/gateway
 

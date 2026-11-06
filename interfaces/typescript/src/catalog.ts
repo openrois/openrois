@@ -3,9 +3,9 @@
 // Generator: scripts/generate.ts
 
 import { z } from "zod";
-import { CommandUnitSequenceItemSchema, ParameterSchema, ResultSchema, ReturnCodeSchema } from "./hri";
-import { HRIComponentProfileSchema, HRIEngineProfileTypeSchema } from "./profiles";
-import { CompletedParamsSchema, type CompletedParams, NotifyErrorParamsSchema, type NotifyErrorParams, NotifyEventParamsSchema, type NotifyEventParams, ProfileChangedParamsSchema, type ProfileChangedParams } from "./service";
+import { CommandUnitSequenceItemSchema, ParameterSchema, ResultSchema, ReturnCodeSchema } from "./hri.js";
+import { HRIComponentProfileSchema, HRIEngineProfileTypeSchema } from "./profiles.js";
+import { CompletedParamsSchema, type CompletedParams, NotifyErrorParamsSchema, type NotifyErrorParams, NotifyEventParamsSchema, type NotifyEventParams, ProfileChangedParamsSchema, type ProfileChangedParams } from "./service.js";
 
 /**
  * Params of rois.command.bind_any.
@@ -127,7 +127,7 @@ export type DisconnectResult = z.infer<typeof DisconnectResultSchema>;
  */
 
 export const ExecuteParamsSchema = z.object({
-  command_unit_list: z.array(CommandUnitSequenceItemSchema), // Commands to run in order
+  command_unit_list: z.array(CommandUnitSequenceItemSchema).min(1), // Commands to run in order
 }).strict();
 export type ExecuteParams = z.infer<typeof ExecuteParamsSchema>;
 

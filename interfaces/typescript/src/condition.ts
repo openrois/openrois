@@ -37,7 +37,7 @@
  * Section 17.4 of docs/rois-reference.md describes the subset.
  */
 
-import type { RoISIdentifierType } from "./profiles";
+import type { RoISIdentifierType } from "./profiles.js";
 
 /** The property that selects a component by its fully qualified ref. */
 export const COMPONENT_REF = "component_ref";
@@ -287,7 +287,13 @@ export function like(property: string, pattern: string): string {
   return new Comparison(property, "LIKE", pattern).toString();
 }
 
-/** Join conditions with AND, skipping empty ones. */
+/**
+ * Join conditions with AND, skipping empty ones.
+ *
+ * A condition is empty here when `trim` leaves nothing, and the other languages define empty
+ * differently. U+FEFF is empty here only. U+0085 is empty in Python and C#, not here. U+001C to
+ * U+001F are empty in Python only. interfaces/fixtures/value-edges.json records these cases.
+ */
 export function allOf(...conditions: string[]): string {
   return conditions.filter((condition) => condition.trim() !== "").join(" AND ");
 }

@@ -17,12 +17,8 @@ export type HRIEngineProfile = string;
 /** ISO 8601 datetime string. */
 export type DateTime = string;
 /**
- * IDL `typedef long Integer` — 32-bit signed integer.
- *
- * Note: The zod schema validates that the value is an integer but does not
- * enforce the 32-bit range (±2^31). Values outside this range will pass
- * TypeScript validation but may overflow in C# consumers (where `int` is
- * 32-bit). This is a known limitation to be addressed in a future release.
+ * IDL `typedef long Integer`: a 32-bit signed integer. The zod schemas refuse a
+ * value outside that range, as the Python and C# models do.
  */
 export type Integer = number;
 /** Positional or measurement data from the RoLo Architecture module. */
@@ -75,7 +71,7 @@ export const CommandUnitSchema = z.object({
   command_type: z.string(), // Command name, for example start, stop or set_parameter
   command_id: z.string().default(""), // Command instance identifier, assigned by the engine the client calls
   arguments: z.array(ArgumentSchema).optional(),
-  delay_time: z.number().int().nullable().default(null), // Delay in ms before execution
+  delay_time: z.number().int().min(-2147483648).max(2147483647).nullable().default(null), // Delay in ms before execution
 }).strict();
 export type CommandUnit = z.infer<typeof CommandUnitSchema>;
 
@@ -92,7 +88,7 @@ export type CommandUnit = z.infer<typeof CommandUnitSchema>;
  */
 
 export const BranchSchema = z.object({
-  command_list: z.array(CommandUnitSchema),
+  command_list: z.array(CommandUnitSchema).min(1),
 }).strict();
 export type Branch = z.infer<typeof BranchSchema>;
 
@@ -112,7 +108,7 @@ export type Branch = z.infer<typeof BranchSchema>;
 
 export const ConcurrentCommandsSchema = z.object({
   branch_list: z.array(BranchSchema),
-  delay_time: z.number().int().nullable().default(null), // Delay in ms before execution
+  delay_time: z.number().int().min(-2147483648).max(2147483647).nullable().default(null), // Delay in ms before execution
 }).strict();
 export type ConcurrentCommands = z.infer<typeof ConcurrentCommandsSchema>;
 

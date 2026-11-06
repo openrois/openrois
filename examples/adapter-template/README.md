@@ -9,8 +9,13 @@ every RoIS client through the same standard interfaces as any other.
 
 ## Install
 
-The Python packages are not published yet, so install them from a clone of the
-repository:
+Install the Python packages from PyPI:
+
+```bash
+pip install openrois-interfaces openrois-engine openrois-components-core
+```
+
+To work on OpenRoIS itself, install them from a clone of the repository instead:
 
 ```bash
 pip install -e ./interfaces/python -e ./engine -e ./components/core

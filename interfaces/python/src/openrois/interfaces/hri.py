@@ -8,9 +8,9 @@ Source: OMG RoIS Framework 2.0, RoIS_HRI.idl and RoIS_HRI.hpp
 
 Design decisions:
   - ReturnCode is a string enum for JSON readability.
-  - RoIS_Identifier, Condition_t, HRI_Engine_Profile, DateTime, and Integer
-    are type aliases (not new classes) — they carry semantic meaning without
-    runtime overhead.
+  - RoIS_Identifier, Condition_t, HRI_Engine_Profile, and DateTime are type
+    aliases (not new classes), which carry semantic meaning without runtime
+    overhead. Integer is an alias too, with the bounds of an IDL long.
   - Result, Parameter, and Argument are Pydantic models with a `value` field
     typed as `str` (matching the HPP `std::string` and XSD `xsd:string`).
     Component-specific typed models provide structured typing where needed.
@@ -25,7 +25,7 @@ Design decisions:
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Any
+from typing import Annotated, Any
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -91,8 +91,13 @@ type HRIEngineProfile = str
 type DateTime = str
 
 # RoIS_HRI::Integer → long
-# 32-bit integer, matching the IDL 'long' type.
-type Integer = int
+# 32-bit integer, matching the IDL 'long' type. The bounds travel in the JSON Schema, so
+# every language refuses the same values. The XSD writes delay_time and timeout as
+# xsd:integer, which has no bound, and they use this alias too, because a value travels
+# through every language and a C# client reads them as a 32-bit int.
+INTEGER_MIN = -(2**31)
+INTEGER_MAX = 2**31 - 1
+type Integer = Annotated[int, Field(ge=INTEGER_MIN, le=INTEGER_MAX)]
 
 # RoLo::Architecture::Data → string
 # Positional or measurement data from the RoLo Architecture module.

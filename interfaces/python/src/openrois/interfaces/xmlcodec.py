@@ -35,6 +35,8 @@ from types import MappingProxyType
 from lxml import etree
 
 from openrois.interfaces.hri import (
+    INTEGER_MAX,
+    INTEGER_MIN,
     Argument,
     Branch,
     CommandUnit,
@@ -291,9 +293,14 @@ def _integer(element: etree._Element, local: str) -> int | None:
     if value is None or not value.strip():
         return None
     try:
-        return int(value)
+        number = int(value)
     except ValueError:
         raise ProfileFormatError(f"{local}={value!r} is not an integer") from None
+    # xsd:integer has no bound, so the XSD lets through a value the models refuse. A
+    # reader's caller expects ProfileFormatError, not the error of a model.
+    if not INTEGER_MIN <= number <= INTEGER_MAX:
+        raise ProfileFormatError(f"{local}={value!r} does not fit in 32 bits")
+    return number
 
 
 def _text(element: etree._Element | None) -> str:
