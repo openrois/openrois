@@ -5,6 +5,7 @@
 	"unity": "6000.5",
 	"unityRelease": "3f1",
 	"description": "RoIS Framework 2.0 client SDK for the OpenRoIS middleware. Paradigm-neutral HRI middleware for Unity.",
+	"license": "Apache-2.0",
 	"dependencies": {
 		"com.unity.test-framework": "1.6.0"
 	},
@@ -14,5 +15,5 @@
 	},
 	"changelogUrl": "https://github.com/openrois/openrois/blob/dev/sdk/unity/CHANGELOG.md",
 	"documentationUrl": "https://github.com/openrois/openrois/blob/dev/sdk/unity/README.md",
-	"licensesUrl": "https://github.com/openrois/openrois/blob/dev/LICENSE"
+	"licensesUrl": "https://github.com/openrois/openrois/blob/dev/sdk/unity/LICENSE.md"
 }
