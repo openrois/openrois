@@ -265,6 +265,9 @@ suite("the conformance list", { timeout: SCENARIO }, () => {
       expect(await client.search(componentRef(NAVIGATION))).toEqual([NAVIGATION]);
       expect(await client.search(byType)).toEqual([NAVIGATION]);
       expect(await client.search(allOf(prefix, byType))).toEqual([NAVIGATION]);
+      // Each term matches alone, so an empty answer shows that both were applied.
+      expect(await client.search(componentRef(DETECTION))).toEqual([DETECTION]);
+      expect(await client.search(allOf(componentRef(DETECTION), byType))).toEqual([]);
       expect(await client.search(prefix)).toEqual(
         expect.arrayContaining([DETECTION, NAVIGATION, INFORMATION, FAULT]),
       );

@@ -24,7 +24,7 @@
  * have. TransportOptions.webSocketFactory replaces it, for example to pass
  * headers with the `ws` package.
  *
- * Architecture: docs/architecture.md section 4 (Client SDK layer)
+ * Architecture: docs/architecture.md section 5 (Client & Service Application SDK)
  */
 
 import { TypedEmitter } from "./emitter";

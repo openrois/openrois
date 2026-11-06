@@ -16,6 +16,7 @@ on:
       - "services/gateway/**"
       - "testing/**"
       - "sdk/typescript/**"
+      - "sdk/python/**"
       - "compose.yaml"
       - ".dockerignore"
       - ".github/workflows/conformance.yml"
@@ -29,6 +30,7 @@ on:
       - "services/gateway/**"
       - "testing/**"
       - "sdk/typescript/**"
+      - "sdk/python/**"
       - "compose.yaml"
       - ".dockerignore"
       - ".github/workflows/conformance.yml"
@@ -82,11 +84,18 @@ jobs:
           (cd interfaces/typescript && npm ci && npm run build)
           (cd sdk/typescript && npm ci && npm install ../../interfaces/typescript --no-save)
 
-      - name: SDK sessions against the gateway
+      - name: The list on the TypeScript SDK
         working-directory: sdk/typescript
         env:
           OPENROIS_GATEWAY_URL: ws://127.0.0.1:8765
-        run: npx vitest run tests/gateway.test.ts
+        run: npx vitest run tests/conformance.test.ts tests/gateway.test.ts
+
+      - name: The list on the Python SDK
+        env:
+          OPENROIS_GATEWAY_URL: ws://127.0.0.1:8765
+        run: |
+          python -m pip install -e interfaces/python -e "sdk/python[dev]"
+          python -m pytest sdk/python/tests/test_conformance.py
 
       - name: Stop gracefully
         # The gateway runs as the container's main process and must handle SIGTERM
