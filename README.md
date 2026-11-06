@@ -139,11 +139,11 @@ The inspector reads the engine profile and renders every component it finds, wit
 queries, parameters, commands, and events: `mock/navigation`, `mock/person_detection`
 and `mock/system_information`, served by the mock adapter, an engine of its own below the
 gateway. Nothing in the client is specific to the components on the other side.
-`python gateway/scripts/smoke.py` checks the same stack from the command line.
+`python services/gateway/scripts/smoke.py` checks the same stack from the command line.
 
-To develop a client without Docker, the [mock engine](examples/mock-engine/README.md)
+To develop a client without Docker, the [mock engine](testing/mock-engine/README.md)
 serves the same components from one Node.js process:
-`cd examples/mock-engine && npm install && npm start`.
+`cd testing/mock-engine && npm install && npm start`.
 
 <p align="center">
   <img src="docs/assets/hri-client-demo.gif" alt="Screen recording of the OpenRoIS HRI Client connecting to the mock engine, querying components, binding, subscribing to events, and executing a command." width="760">
@@ -278,19 +278,21 @@ The [roadmap](docs/roadmap.md) describes each phase and its exit criteria.
 openrois/
 ├── interfaces/          RoIS types: Python models, JSON Schema, generated TypeScript and C#
 ├── engine/              Recursive Engine, WebSocket server and client (openrois-engine)
-├── gateway/             Gateway process and container image (openrois-gateway)
 ├── components/
 │   ├── core/            Component SDK: decorators, resources, RoIS_Common default (openrois-components-core)
 │   └── common/          Common components: a mock SystemInformation (openrois-components-common)
 ├── sdk/
 │   ├── typescript/      Client SDK for web and Node.js (@openrois/sdk)
-│   └── csharp/          Client SDK for Unity (OpenRoIS.Sdk, in progress)
-├── examples/
-│   ├── mock-engine/     RoIS engine test double with simulated components
-│   ├── hri-client/      Profile-driven web inspector for any RoIS engine
-│   ├── mock-adapter/    Adapter with simulated components
-│   └── adapter-template/  Starting point for a new robot adapter
+│   └── unity/           Client SDK for Unity (OpenRoIS.Sdk, in progress)
+├── services/
+│   └── gateway/         Gateway process and container image (openrois-gateway)
 ├── apps/hub/            Management dashboard (planned)
+├── examples/
+│   ├── hri-client/      Profile-driven web inspector for any RoIS engine
+│   └── adapter-template/  Starting point for a new robot adapter
+├── testing/
+│   ├── mock-engine/     RoIS engine test double with simulated components
+│   └── mock-adapter/    Adapter with simulated components
 ├── docs/                White paper, architecture, roadmap, RoIS reference
 └── compose.yaml         The gateway with the mock adapter, in Docker Compose
 ```
@@ -317,11 +319,11 @@ generated files by hand.
 | TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test` |
 | C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
 | TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` |
-| Mock engine | `examples/mock-engine` | `npm install`, `npm test` |
+| Mock engine | `testing/mock-engine` | `npm install`, `npm test` |
 | Engine | `engine` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Component SDK | `components/core` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Common components | `components/common` | `pytest`, `mypy`, `ruff check src/ tests/` |
-| Gateway | `gateway` | `pytest`, `mypy`, `ruff check src/ tests/ scripts/` |
+| Gateway | `services/gateway` | `pytest`, `mypy`, `ruff check src/ tests/ scripts/` |
 
 [`AGENTS.md`](AGENTS.md) documents the conventions and the generation pipeline in
 detail.

@@ -759,7 +759,7 @@ Key characteristics:
 - Typed notifications, each event also delivered under its own event type, for example
   `reached_target`.
 - Builders for CQL2-Text conditions, such as `componentRef` and `componentType`.
-- Tested against the mock engine (`examples/mock-engine/`) and, with
+- Tested against the mock engine (`testing/mock-engine/`) and, with
   `OPENROIS_GATEWAY_URL` set, against a live gateway with the mock adapter behind it.
 - Reconnection is planned.
 

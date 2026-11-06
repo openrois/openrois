@@ -13,8 +13,8 @@ on:
       - "interfaces/typescript/**"
       - "components/**"
       - "engine/**"
-      - "gateway/**"
-      - "examples/mock-adapter/**"
+      - "services/gateway/**"
+      - "testing/mock-adapter/**"
       - "sdk/typescript/**"
       - "compose.yaml"
       - ".dockerignore"
@@ -26,8 +26,8 @@ on:
       - "interfaces/typescript/**"
       - "components/**"
       - "engine/**"
-      - "gateway/**"
-      - "examples/mock-adapter/**"
+      - "services/gateway/**"
+      - "testing/mock-adapter/**"
       - "sdk/typescript/**"
       - "compose.yaml"
       - ".dockerignore"
@@ -130,21 +130,21 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-          cache-dependency-path: gateway/pyproject.toml
+          cache-dependency-path: services/gateway/pyproject.toml
 
       - name: Install
-        run: python -m pip install -e interfaces/python -e engine -e "gateway[dev]"
+        run: python -m pip install -e interfaces/python -e engine -e "services/gateway[dev]"
 
       - name: Lint
-        working-directory: gateway
+        working-directory: services/gateway
         run: ruff check src/ tests/ scripts/
 
       - name: Type check
-        working-directory: gateway
+        working-directory: services/gateway
         run: mypy
 
       - name: Test
-        working-directory: gateway
+        working-directory: services/gateway
         run: pytest
 
   compose:
@@ -175,7 +175,7 @@ jobs:
       - name: Smoke test
         run: |
           python -m pip install websockets
-          python gateway/scripts/smoke.py --timeout 120
+          python services/gateway/scripts/smoke.py --timeout 120
 
       - name: Install the TypeScript SDK
         # The SDK depends on the TypeScript interfaces in the tree, which are built

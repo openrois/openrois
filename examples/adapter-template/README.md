@@ -76,7 +76,7 @@ talk ROS 2 share an `RclpyExecutor` from `openrois.components.core.ros2`, which 
 nodes.
 
 See [`components/core`](../../components/core/README.md) for the decorators and
-[`examples/mock-adapter`](../mock-adapter/README.md) for an adapter that runs as is.
+[`testing/mock-adapter`](../../testing/mock-adapter/README.md) for an adapter that runs as is.
 
 ## Stay Within RoIS
 

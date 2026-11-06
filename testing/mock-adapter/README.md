@@ -26,7 +26,7 @@ From the repository root, start a gateway with the mock adapter behind it:
 
 ```bash
 docker compose up --build
-python gateway/scripts/smoke.py    # needs pip install websockets
+python services/gateway/scripts/smoke.py    # needs pip install websockets
 ```
 
 The gateway listens on `ws://127.0.0.1:8765`. The smoke script connects as a client, waits
@@ -40,13 +40,13 @@ makes the simulated work ten times faster.
 ```bash
 # From the repository root. The packages are not published yet.
 pip install -e ./interfaces/python -e ./engine -e ./components/core -e ./components/common \
-    -e ./gateway
+    -e ./services/gateway
 
 # Terminal 1: the gateway, on ws://127.0.0.1:8765.
 openrois-gateway
 
 # Terminal 2: the adapter.
-python examples/mock-adapter/mock_adapter.py
+python testing/mock-adapter/mock_adapter.py
 ```
 
 The settings come from `adapter.yaml`, named by `--config` or `OPENROIS_ADAPTER_CONFIG`,
@@ -54,7 +54,7 @@ then from the environment, then from the flags, each overriding the one before. 
 file the defaults below apply. `adapter.fast.yaml` sets `time_scale` to `0.1`:
 
 ```bash
-python examples/mock-adapter/mock_adapter.py --config examples/mock-adapter/adapter.fast.yaml
+python testing/mock-adapter/mock_adapter.py --config testing/mock-adapter/adapter.fast.yaml
 ```
 
 | Setting | In `adapter.yaml` | Flag | Environment | Default |
@@ -73,4 +73,4 @@ with [`openrois-components-core`](../../components/core/README.md), one of them 
 [`openrois-components-common`](../../components/common/README.md), settings declared as a
 subclass of `AdapterConfig` and loaded with `load_adapter_config`, components hosted with
 `Engine.add_component` and served with `WsClient`. To start an adapter of your own, copy
-[`examples/adapter-template`](../adapter-template/README.md).
+[`examples/adapter-template`](../../examples/adapter-template/README.md).

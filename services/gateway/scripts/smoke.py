@@ -16,7 +16,7 @@ Retries the connection and the search until --timeout, so it can run right after
 passes, 1 otherwise. Needs only the websockets package.
 
 Usage:
-    python gateway/scripts/smoke.py [--url ws://127.0.0.1:8765] [--engine-id mock]
+    python services/gateway/scripts/smoke.py [--url ws://127.0.0.1:8765] [--engine-id mock]
         [--timeout 60] [--event-timeout 15]
 """
 

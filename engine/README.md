@@ -138,7 +138,7 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-The standalone gateway process, `openrois-gateway` in [`gateway/`](https://github.com/openrois/openrois/blob/dev/gateway/README.md),
+The standalone gateway process, `openrois-gateway` in [`services/gateway/`](https://github.com/openrois/openrois/blob/dev/services/gateway/README.md),
 runs exactly this with configuration and signal handling.
 
 ## What the Engine Does

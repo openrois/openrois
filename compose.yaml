@@ -3,8 +3,8 @@
 #     docker compose up --build
 #
 # Clients connect to ws://127.0.0.1:8765, where the mock adapter serves mock/navigation,
-# mock/person_detection and mock/system_information. gateway/scripts/smoke.py checks the
-# stack.
+# mock/person_detection and mock/system_information. services/gateway/scripts/smoke.py
+# checks the stack.
 
 name: openrois
 
@@ -12,7 +12,7 @@ services:
   gateway:
     build:
       context: .
-      dockerfile: gateway/Dockerfile
+      dockerfile: services/gateway/Dockerfile
     ports:
       # Loopback only: the gateway does not authenticate its peers.
       - "127.0.0.1:8765:8765"
@@ -23,7 +23,7 @@ services:
   mock-adapter:
     build:
       context: .
-      dockerfile: examples/mock-adapter/Dockerfile
+      dockerfile: testing/mock-adapter/Dockerfile
     environment:
       OPENROIS_ADAPTER_GATEWAY_URL: ws://gateway:8765
       # /opt/mock-adapter/adapter.fast.yaml makes the simulated work ten times faster, as

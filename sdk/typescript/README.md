@@ -60,7 +60,7 @@ await client.release(nav);
 await client.disconnect();
 ```
 
-Run it against `examples/mock-engine` for an engine with simulated components.
+Run it against `testing/mock-engine` for an engine with simulated components.
 
 ## API
 
@@ -86,7 +86,7 @@ catalog schemas in `@openrois/interfaces`, and returns the result's out paramete
 - `query()` and `subscribe()` go to the one component that declares the query or event
   type and matches the condition.
 
-`examples/mock-engine`, the Python engine and the gateway implement this method catalog.
+`testing/mock-engine`, the Python engine and the gateway implement this method catalog.
 
 ### Conditions
 

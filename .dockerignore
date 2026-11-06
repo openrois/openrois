@@ -2,15 +2,15 @@
 # out of the build context, and each image lists below what it copies.
 *
 
-# gateway/Dockerfile
+# services/gateway/Dockerfile
 !interfaces/python
 !engine
-!gateway
+!services/gateway
 
-# examples/mock-adapter/Dockerfile
+# testing/mock-adapter/Dockerfile
 !components/core
 !components/common
-!examples/mock-adapter
+!testing/mock-adapter
 
 # Local state inside the included directories.
 **/__pycache__
