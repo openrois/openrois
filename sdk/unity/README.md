@@ -85,8 +85,11 @@ it needs in `Runtime/Plugins`:
 A project that already contains an assembly with one of these names does not compile
 with this package, because Unity refuses two precompiled assemblies with the same name.
 `Runtime/link.xml` keeps the assemblies that `System.Text.Json` reads by reflection
-from being stripped in IL2CPP builds. Licenses are in
+from being stripped, and the `OpenRoIS.Sdk.Editor` assembly hands it to the linker. Licenses are in
 [Third Party Notices](Third%20Party%20Notices.md).
+
+Mono players need a Managed Stripping Level of Medium or lower. At High they fail at runtime
+with a `FieldAccessException` inside `System.Text.Json`. IL2CPP works at High.
 
 Rebuild the assemblies after a change to the C# interface types or to their
 `System.Text.Json` version. This needs Python 3 and the .NET SDK pinned in

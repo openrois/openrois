@@ -58,6 +58,9 @@ OpenRoIS SDK version 0.1.0-alpha.1 includes the following known limitations:
   manage their own WebSocket.
 - A project that already contains an assembly named like one in `Runtime/Plugins` does
   not compile with this package.
+- Mono players with Managed Stripping Level High fail at runtime with a
+  `FieldAccessException` inside `System.Text.Json`. Use Medium or lower on Mono. IL2CPP
+  works at High.
 - No authentication. The OpenRoIS gateway does not authenticate connections in the alpha
   releases. Use it on trusted networks only.
 
@@ -67,7 +70,8 @@ OpenRoIS SDK version 0.1.0-alpha.1 includes the following known limitations:
 |----------|-------------|
 | `Runtime/JsonRpc` | The JSON-RPC 2.0 builder, parser, and message types |
 | `Runtime/Plugins` | `OpenRoIS.Interfaces`, `System.Text.Json`, and the dependencies of `System.Text.Json` that Unity does not provide |
-| `Runtime/link.xml` | Keeps the assemblies that `System.Text.Json` reads by reflection in IL2CPP builds |
+| `Runtime/link.xml` | Keeps the assemblies that `System.Text.Json` reads by reflection in stripped builds |
+| `Editor` | Hands `Runtime/link.xml` to the managed code linker |
 | `Tests/Runtime` | Unity Test Framework tests for the builder and the parser |
 | `Samples~/Example` | Builds a request and parses a response with the JSON-RPC layer |
 
