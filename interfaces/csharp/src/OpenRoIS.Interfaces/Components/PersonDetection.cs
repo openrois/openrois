@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace OpenRoIS.Interfaces.Components.PersonDetection
@@ -21,17 +22,25 @@ namespace OpenRoIS.Interfaces.Components.PersonDetection
     ///     timestamp: ISO 8601 datetime when the detection was measured.
     ///     number: Number of detected persons in the current frame/observation.
     /// </summary>
-    public sealed class PersonDetectedEvent : IEquatable<PersonDetectedEvent>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class PersonDetectedEvent : IEquatable<PersonDetectedEvent>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("timestamp")]
-        public string Timestamp { get; }
+        public string Timestamp { get; init; }
+        [JsonRequired]
         [JsonPropertyName("number")]
-        public int Number { get; }
+        public int Number { get; init; }
 
         public PersonDetectedEvent(string timestamp, int number)
         {
             Timestamp = timestamp;
             Number = number;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Timestamp is null) throw new JsonException("PersonDetectedEvent.timestamp must not be null.");
         }
 
         public bool Equals(PersonDetectedEvent? other)
@@ -63,10 +72,12 @@ namespace OpenRoIS.Interfaces.Components.PersonDetection
     /// Attributes:
     ///     status: Current status of the PersonDetection component.
     /// </summary>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
     public sealed class PersonDetectionStatusResult : IEquatable<PersonDetectionStatusResult>
     {
+        [JsonRequired]
         [JsonPropertyName("status")]
-        public OpenRoIS.Interfaces.Common.ComponentStatus Status { get; }
+        public OpenRoIS.Interfaces.Common.ComponentStatus Status { get; init; }
 
         public PersonDetectionStatusResult(OpenRoIS.Interfaces.Common.ComponentStatus status)
         {

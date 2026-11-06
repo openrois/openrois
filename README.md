@@ -266,7 +266,8 @@ makes no conformance claim. The rest of the RoIS surface is being built in the o
 | Authentication (JWT) and authorization (RBAC) | Planned |
 | Streaming: AudioStreaming and VideoStreaming profiles | Available, no streaming component ships yet |
 | WebRTC media for the streaming components | Planned |
-| Packages on PyPI, npm, NuGet, and the Unity Package Manager | Planned |
+| Alpha packages on PyPI (`openrois-interfaces`, `openrois-engine`, `openrois-components-core`, `openrois-gateway`) and npm (`@openrois/interfaces`) | Available |
+| `@openrois/sdk` on npm, `openrois-components-common` on PyPI, the Unity package in a registry | Planned |
 | All 17 basic RoIS HRI Components (v1.0) | Planned |
 
 The [roadmap](docs/roadmap.md) describes each phase and its exit criteria.
@@ -315,7 +316,7 @@ generated files by hand.
 | Stack | Directory | Commands |
 |-------|-----------|----------|
 | Python types | `interfaces/python` | `pip install -e ".[dev]"`, `pytest`, `mypy src/`, `ruff check src/` |
-| TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test` |
+| TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test`, `npm run test:package` |
 | C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
 | TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` |
 | Engine | `engine` | `pytest`, `mypy`, `ruff check src/ tests/` |

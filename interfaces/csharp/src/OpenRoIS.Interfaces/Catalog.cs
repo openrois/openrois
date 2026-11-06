@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace OpenRoIS.Interfaces.Catalog
@@ -31,14 +32,20 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     condition: Selection condition on component_ref and component_type for the
     ///         components the engine may choose from. The engine binds a free one.
     /// </summary>
-    public sealed class BindAnyParams : IEquatable<BindAnyParams>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class BindAnyParams : IEquatable<BindAnyParams>, IJsonOnDeserialized
     {
         [JsonPropertyName("condition")]
-        public string Condition { get; }
+        public string Condition { get; init; }
 
         public BindAnyParams(string condition = "")
         {
             Condition = condition;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Condition is null) throw new JsonException("BindAnyParams.condition must not be null.");
         }
 
         public bool Equals(BindAnyParams? other)
@@ -74,17 +81,24 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     component_ref: The component the engine reserved. Empty when return_code is
     ///         not OK.
     /// </summary>
-    public sealed class BindAnyResult : IEquatable<BindAnyResult>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class BindAnyResult : IEquatable<BindAnyResult>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("return_code")]
-        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; }
+        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; init; }
         [JsonPropertyName("component_ref")]
-        public string ComponentRef { get; }
+        public string ComponentRef { get; init; }
 
         public BindAnyResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode, string componentRef = "")
         {
             ReturnCode = returnCode;
             ComponentRef = componentRef;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (ComponentRef is null) throw new JsonException("BindAnyResult.component_ref must not be null.");
         }
 
         public bool Equals(BindAnyResult? other)
@@ -118,14 +132,21 @@ namespace OpenRoIS.Interfaces.Catalog
     /// Attributes:
     ///     component_ref: The component to reserve for this client.
     /// </summary>
-    public sealed class BindParams : IEquatable<BindParams>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class BindParams : IEquatable<BindParams>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("component_ref")]
-        public string ComponentRef { get; }
+        public string ComponentRef { get; init; }
 
         public BindParams(string componentRef)
         {
             ComponentRef = componentRef;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (ComponentRef is null) throw new JsonException("BindParams.component_ref must not be null.");
         }
 
         public bool Equals(BindParams? other)
@@ -160,10 +181,12 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     return_code: Outcome of the operation. OUT_OF_RESOURCES when another client
     ///         holds the component.
     /// </summary>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
     public sealed class BindResult : IEquatable<BindResult>
     {
+        [JsonRequired]
         [JsonPropertyName("return_code")]
-        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; }
+        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; init; }
 
         public BindResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode)
         {
@@ -198,6 +221,7 @@ namespace OpenRoIS.Interfaces.Catalog
     /// 
     /// Maps to SystemIF::connect(), which takes no arguments. A request may omit params.
     /// </summary>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
     public sealed class ConnectParams { }
 
     /// <summary>
@@ -208,10 +232,12 @@ namespace OpenRoIS.Interfaces.Catalog
     /// Attributes:
     ///     return_code: Outcome of the operation.
     /// </summary>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
     public sealed class ConnectResult : IEquatable<ConnectResult>
     {
+        [JsonRequired]
         [JsonPropertyName("return_code")]
-        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; }
+        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; init; }
 
         public ConnectResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode)
         {
@@ -246,6 +272,7 @@ namespace OpenRoIS.Interfaces.Catalog
     /// 
     /// Maps to SystemIF::disconnect(), which takes no arguments. A request may omit params.
     /// </summary>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
     public sealed class DisconnectParams { }
 
     /// <summary>
@@ -256,10 +283,12 @@ namespace OpenRoIS.Interfaces.Catalog
     /// Attributes:
     ///     return_code: Outcome of the operation.
     /// </summary>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
     public sealed class DisconnectResult : IEquatable<DisconnectResult>
     {
+        [JsonRequired]
         [JsonPropertyName("return_code")]
-        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; }
+        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; init; }
 
         public DisconnectResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode)
         {
@@ -300,14 +329,26 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     command_unit_list: Commands to run in order. A ConcurrentCommands item runs
     ///         its branches at the same time.
     /// </summary>
-    public sealed class ExecuteParams : IEquatable<ExecuteParams>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class ExecuteParams : IEquatable<ExecuteParams>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("command_unit_list")]
-        public IReadOnlyList<OpenRoIS.Interfaces.Hri.ICommandUnitSequenceItem> CommandUnitList { get; }
+        public IReadOnlyList<OpenRoIS.Interfaces.Hri.ICommandUnitSequenceItem> CommandUnitList { get; init; }
 
         public ExecuteParams(IReadOnlyList<OpenRoIS.Interfaces.Hri.ICommandUnitSequenceItem> commandUnitList)
         {
             CommandUnitList = commandUnitList;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (CommandUnitList is null) throw new JsonException("ExecuteParams.command_unit_list must not be null.");
+            if (CommandUnitList.Count < 1) throw new JsonException("ExecuteParams.command_unit_list must have a length of at least 1.");
+            foreach (var item0 in CommandUnitList)
+            {
+                if (item0 is null) throw new JsonException("ExecuteParams.command_unit_list item must not be null.");
+            }
         }
 
         public bool Equals(ExecuteParams? other)
@@ -345,17 +386,30 @@ namespace OpenRoIS.Interfaces.Catalog
     ///         assigned to every command. Empty unless return_code is OK. An OpenRoIS
     ///         extension.
     /// </summary>
-    public sealed class ExecuteResult : IEquatable<ExecuteResult>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class ExecuteResult : IEquatable<ExecuteResult>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("return_code")]
-        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; }
+        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; init; }
         [JsonPropertyName("command_unit_list")]
-        public IReadOnlyList<OpenRoIS.Interfaces.Hri.ICommandUnitSequenceItem>? CommandUnitList { get; }
+        public IReadOnlyList<OpenRoIS.Interfaces.Hri.ICommandUnitSequenceItem>? CommandUnitList { get; init; }
 
         public ExecuteResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode, IReadOnlyList<OpenRoIS.Interfaces.Hri.ICommandUnitSequenceItem>? commandUnitList = null)
         {
             ReturnCode = returnCode;
             CommandUnitList = commandUnitList;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (CommandUnitList is not null)
+            {
+                foreach (var item0 in CommandUnitList)
+                {
+                    if (item0 is null) throw new JsonException("ExecuteResult.command_unit_list item must not be null.");
+                }
+            }
         }
 
         public bool Equals(ExecuteResult? other)
@@ -391,17 +445,25 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     condition: Filter on the results. No property is defined for it yet, so it
     ///         must be empty.
     /// </summary>
-    public sealed class GetCommandResultParams : IEquatable<GetCommandResultParams>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class GetCommandResultParams : IEquatable<GetCommandResultParams>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("command_id")]
-        public string CommandId { get; }
+        public string CommandId { get; init; }
         [JsonPropertyName("condition")]
-        public string Condition { get; }
+        public string Condition { get; init; }
 
         public GetCommandResultParams(string commandId, string condition = "")
         {
             CommandId = commandId;
             Condition = condition;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (CommandId is null) throw new JsonException("GetCommandResultParams.command_id must not be null.");
+            if (Condition is null) throw new JsonException("GetCommandResultParams.condition must not be null.");
         }
 
         public bool Equals(GetCommandResultParams? other)
@@ -436,17 +498,30 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     return_code: Outcome of the operation.
     ///     results: Results of the command.
     /// </summary>
-    public sealed class GetCommandResultResult : IEquatable<GetCommandResultResult>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class GetCommandResultResult : IEquatable<GetCommandResultResult>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("return_code")]
-        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; }
+        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; init; }
         [JsonPropertyName("results")]
-        public IReadOnlyList<OpenRoIS.Interfaces.Hri.Result>? Results { get; }
+        public IReadOnlyList<OpenRoIS.Interfaces.Hri.Result>? Results { get; init; }
 
         public GetCommandResultResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode, IReadOnlyList<OpenRoIS.Interfaces.Hri.Result>? results = null)
         {
             ReturnCode = returnCode;
             Results = results;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Results is not null)
+            {
+                foreach (var item0 in Results)
+                {
+                    if (item0 is null) throw new JsonException("GetCommandResultResult.results item must not be null.");
+                }
+            }
         }
 
         public bool Equals(GetCommandResultResult? other)
@@ -482,17 +557,25 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     condition: Filter on the results. No property is defined for it yet, so it
     ///         must be empty.
     /// </summary>
-    public sealed class GetErrorDetailParams : IEquatable<GetErrorDetailParams>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class GetErrorDetailParams : IEquatable<GetErrorDetailParams>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("error_id")]
-        public string ErrorId { get; }
+        public string ErrorId { get; init; }
         [JsonPropertyName("condition")]
-        public string Condition { get; }
+        public string Condition { get; init; }
 
         public GetErrorDetailParams(string errorId, string condition = "")
         {
             ErrorId = errorId;
             Condition = condition;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (ErrorId is null) throw new JsonException("GetErrorDetailParams.error_id must not be null.");
+            if (Condition is null) throw new JsonException("GetErrorDetailParams.condition must not be null.");
         }
 
         public bool Equals(GetErrorDetailParams? other)
@@ -527,17 +610,30 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     return_code: Outcome of the operation.
     ///     results: Details of the error.
     /// </summary>
-    public sealed class GetErrorDetailResult : IEquatable<GetErrorDetailResult>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class GetErrorDetailResult : IEquatable<GetErrorDetailResult>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("return_code")]
-        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; }
+        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; init; }
         [JsonPropertyName("results")]
-        public IReadOnlyList<OpenRoIS.Interfaces.Hri.Result>? Results { get; }
+        public IReadOnlyList<OpenRoIS.Interfaces.Hri.Result>? Results { get; init; }
 
         public GetErrorDetailResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode, IReadOnlyList<OpenRoIS.Interfaces.Hri.Result>? results = null)
         {
             ReturnCode = returnCode;
             Results = results;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Results is not null)
+            {
+                foreach (var item0 in Results)
+                {
+                    if (item0 is null) throw new JsonException("GetErrorDetailResult.results item must not be null.");
+                }
+            }
         }
 
         public bool Equals(GetErrorDetailResult? other)
@@ -573,17 +669,25 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     condition: Filter on the results. No property is defined for it yet, so it
     ///         must be empty.
     /// </summary>
-    public sealed class GetEventDetailParams : IEquatable<GetEventDetailParams>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class GetEventDetailParams : IEquatable<GetEventDetailParams>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("event_id")]
-        public string EventId { get; }
+        public string EventId { get; init; }
         [JsonPropertyName("condition")]
-        public string Condition { get; }
+        public string Condition { get; init; }
 
         public GetEventDetailParams(string eventId, string condition = "")
         {
             EventId = eventId;
             Condition = condition;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (EventId is null) throw new JsonException("GetEventDetailParams.event_id must not be null.");
+            if (Condition is null) throw new JsonException("GetEventDetailParams.condition must not be null.");
         }
 
         public bool Equals(GetEventDetailParams? other)
@@ -618,17 +722,30 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     return_code: Outcome of the operation.
     ///     results: The event payload.
     /// </summary>
-    public sealed class GetEventDetailResult : IEquatable<GetEventDetailResult>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class GetEventDetailResult : IEquatable<GetEventDetailResult>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("return_code")]
-        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; }
+        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; init; }
         [JsonPropertyName("results")]
-        public IReadOnlyList<OpenRoIS.Interfaces.Hri.Result>? Results { get; }
+        public IReadOnlyList<OpenRoIS.Interfaces.Hri.Result>? Results { get; init; }
 
         public GetEventDetailResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode, IReadOnlyList<OpenRoIS.Interfaces.Hri.Result>? results = null)
         {
             ReturnCode = returnCode;
             Results = results;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Results is not null)
+            {
+                foreach (var item0 in Results)
+                {
+                    if (item0 is null) throw new JsonException("GetEventDetailResult.results item must not be null.");
+                }
+            }
         }
 
         public bool Equals(GetEventDetailResult? other)
@@ -662,14 +779,21 @@ namespace OpenRoIS.Interfaces.Catalog
     /// Attributes:
     ///     component_ref: The component whose parameters to read.
     /// </summary>
-    public sealed class GetParameterParams : IEquatable<GetParameterParams>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class GetParameterParams : IEquatable<GetParameterParams>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("component_ref")]
-        public string ComponentRef { get; }
+        public string ComponentRef { get; init; }
 
         public GetParameterParams(string componentRef)
         {
             ComponentRef = componentRef;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (ComponentRef is null) throw new JsonException("GetParameterParams.component_ref must not be null.");
         }
 
         public bool Equals(GetParameterParams? other)
@@ -704,17 +828,30 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     return_code: Outcome of the operation.
     ///     parameters: The current value of every parameter of the component.
     /// </summary>
-    public sealed class GetParameterResult : IEquatable<GetParameterResult>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class GetParameterResult : IEquatable<GetParameterResult>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("return_code")]
-        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; }
+        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; init; }
         [JsonPropertyName("parameters")]
-        public IReadOnlyList<OpenRoIS.Interfaces.Hri.Parameter>? Parameters { get; }
+        public IReadOnlyList<OpenRoIS.Interfaces.Hri.Parameter>? Parameters { get; init; }
 
         public GetParameterResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode, IReadOnlyList<OpenRoIS.Interfaces.Hri.Parameter>? parameters = null)
         {
             ReturnCode = returnCode;
             Parameters = parameters;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Parameters is not null)
+            {
+                foreach (var item0 in Parameters)
+                {
+                    if (item0 is null) throw new JsonException("GetParameterResult.parameters item must not be null.");
+                }
+            }
         }
 
         public bool Equals(GetParameterResult? other)
@@ -749,14 +886,20 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     condition: Selection condition on component_ref and component_type. The
     ///         profile lists only the matching components. Empty means every component.
     /// </summary>
-    public sealed class GetProfileParams : IEquatable<GetProfileParams>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class GetProfileParams : IEquatable<GetProfileParams>, IJsonOnDeserialized
     {
         [JsonPropertyName("condition")]
-        public string Condition { get; }
+        public string Condition { get; init; }
 
         public GetProfileParams(string condition = "")
         {
             Condition = condition;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Condition is null) throw new JsonException("GetProfileParams.condition must not be null.");
         }
 
         public bool Equals(GetProfileParams? other)
@@ -799,20 +942,33 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     component_profiles: The profile of every component in profile.component_ids,
     ///         keyed by fully qualified ref.
     /// </summary>
-    public sealed class GetProfileResult : IEquatable<GetProfileResult>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class GetProfileResult : IEquatable<GetProfileResult>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("return_code")]
-        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; }
+        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; init; }
         [JsonPropertyName("profile")]
-        public OpenRoIS.Interfaces.Profiles.HRIEngineProfileType? Profile { get; }
+        public OpenRoIS.Interfaces.Profiles.HRIEngineProfileType? Profile { get; init; }
         [JsonPropertyName("component_profiles")]
-        public IReadOnlyDictionary<string, OpenRoIS.Interfaces.Profiles.HRIComponentProfile>? ComponentProfiles { get; }
+        public IReadOnlyDictionary<string, OpenRoIS.Interfaces.Profiles.HRIComponentProfile>? ComponentProfiles { get; init; }
 
         public GetProfileResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode, OpenRoIS.Interfaces.Profiles.HRIEngineProfileType? profile = null, IReadOnlyDictionary<string, OpenRoIS.Interfaces.Profiles.HRIComponentProfile>? componentProfiles = null)
         {
             ReturnCode = returnCode;
             Profile = profile;
             ComponentProfiles = componentProfiles;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (ComponentProfiles is not null)
+            {
+                foreach (var pair0 in ComponentProfiles)
+                {
+                    if (pair0.Value is null) throw new JsonException("GetProfileResult.component_profiles value must not be null.");
+                }
+            }
         }
 
         public bool Equals(GetProfileResult? other)
@@ -850,17 +1006,25 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     query_type: Name of the query, from a component profile.
     ///     condition: Selection condition on component_ref and component_type.
     /// </summary>
-    public sealed class QueryParams : IEquatable<QueryParams>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class QueryParams : IEquatable<QueryParams>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("query_type")]
-        public string QueryType { get; }
+        public string QueryType { get; init; }
         [JsonPropertyName("condition")]
-        public string Condition { get; }
+        public string Condition { get; init; }
 
         public QueryParams(string queryType, string condition = "")
         {
             QueryType = queryType;
             Condition = condition;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (QueryType is null) throw new JsonException("QueryParams.query_type must not be null.");
+            if (Condition is null) throw new JsonException("QueryParams.condition must not be null.");
         }
 
         public bool Equals(QueryParams? other)
@@ -895,17 +1059,30 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     return_code: Outcome of the operation.
     ///     results: Results of the query.
     /// </summary>
-    public sealed class QueryResult : IEquatable<QueryResult>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class QueryResult : IEquatable<QueryResult>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("return_code")]
-        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; }
+        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; init; }
         [JsonPropertyName("results")]
-        public IReadOnlyList<OpenRoIS.Interfaces.Hri.Result>? Results { get; }
+        public IReadOnlyList<OpenRoIS.Interfaces.Hri.Result>? Results { get; init; }
 
         public QueryResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode, IReadOnlyList<OpenRoIS.Interfaces.Hri.Result>? results = null)
         {
             ReturnCode = returnCode;
             Results = results;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Results is not null)
+            {
+                foreach (var item0 in Results)
+                {
+                    if (item0 is null) throw new JsonException("QueryResult.results item must not be null.");
+                }
+            }
         }
 
         public bool Equals(QueryResult? other)
@@ -939,14 +1116,21 @@ namespace OpenRoIS.Interfaces.Catalog
     /// Attributes:
     ///     component_ref: The component to release.
     /// </summary>
-    public sealed class ReleaseParams : IEquatable<ReleaseParams>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class ReleaseParams : IEquatable<ReleaseParams>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("component_ref")]
-        public string ComponentRef { get; }
+        public string ComponentRef { get; init; }
 
         public ReleaseParams(string componentRef)
         {
             ComponentRef = componentRef;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (ComponentRef is null) throw new JsonException("ReleaseParams.component_ref must not be null.");
         }
 
         public bool Equals(ReleaseParams? other)
@@ -980,10 +1164,12 @@ namespace OpenRoIS.Interfaces.Catalog
     /// Attributes:
     ///     return_code: Outcome of the operation.
     /// </summary>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
     public sealed class ReleaseResult : IEquatable<ReleaseResult>
     {
+        [JsonRequired]
         [JsonPropertyName("return_code")]
-        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; }
+        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; init; }
 
         public ReleaseResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode)
         {
@@ -1022,14 +1208,20 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     condition: Selection condition on component_ref and component_type. Empty
     ///         matches every component.
     /// </summary>
-    public sealed class SearchParams : IEquatable<SearchParams>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class SearchParams : IEquatable<SearchParams>, IJsonOnDeserialized
     {
         [JsonPropertyName("condition")]
-        public string Condition { get; }
+        public string Condition { get; init; }
 
         public SearchParams(string condition = "")
         {
             Condition = condition;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Condition is null) throw new JsonException("SearchParams.condition must not be null.");
         }
 
         public bool Equals(SearchParams? other)
@@ -1064,17 +1256,30 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     return_code: Outcome of the operation.
     ///     component_ref_list: Refs of the matching components.
     /// </summary>
-    public sealed class SearchResult : IEquatable<SearchResult>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class SearchResult : IEquatable<SearchResult>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("return_code")]
-        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; }
+        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; init; }
         [JsonPropertyName("component_ref_list")]
-        public IReadOnlyList<string>? ComponentRefList { get; }
+        public IReadOnlyList<string>? ComponentRefList { get; init; }
 
         public SearchResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode, IReadOnlyList<string>? componentRefList = null)
         {
             ReturnCode = returnCode;
             ComponentRefList = componentRefList;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (ComponentRefList is not null)
+            {
+                foreach (var item0 in ComponentRefList)
+                {
+                    if (item0 is null) throw new JsonException("SearchResult.component_ref_list item must not be null.");
+                }
+            }
         }
 
         public bool Equals(SearchResult? other)
@@ -1109,17 +1314,30 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     component_ref: The component to configure.
     ///     parameters: The parameters to set.
     /// </summary>
-    public sealed class SetParameterParams : IEquatable<SetParameterParams>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class SetParameterParams : IEquatable<SetParameterParams>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("component_ref")]
-        public string ComponentRef { get; }
+        public string ComponentRef { get; init; }
+        [JsonRequired]
         [JsonPropertyName("parameters")]
-        public IReadOnlyList<OpenRoIS.Interfaces.Hri.Parameter> Parameters { get; }
+        public IReadOnlyList<OpenRoIS.Interfaces.Hri.Parameter> Parameters { get; init; }
 
         public SetParameterParams(string componentRef, IReadOnlyList<OpenRoIS.Interfaces.Hri.Parameter> parameters)
         {
             ComponentRef = componentRef;
             Parameters = parameters;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (ComponentRef is null) throw new JsonException("SetParameterParams.component_ref must not be null.");
+            if (Parameters is null) throw new JsonException("SetParameterParams.parameters must not be null.");
+            foreach (var item0 in Parameters)
+            {
+                if (item0 is null) throw new JsonException("SetParameterParams.parameters item must not be null.");
+            }
         }
 
         public bool Equals(SetParameterParams? other)
@@ -1155,17 +1373,24 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     return_code: Outcome of the request.
     ///     command_id: Identifier of the parameter change, assigned by the engine.
     /// </summary>
-    public sealed class SetParameterResult : IEquatable<SetParameterResult>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class SetParameterResult : IEquatable<SetParameterResult>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("return_code")]
-        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; }
+        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; init; }
         [JsonPropertyName("command_id")]
-        public string CommandId { get; }
+        public string CommandId { get; init; }
 
         public SetParameterResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode, string commandId = "")
         {
             ReturnCode = returnCode;
             CommandId = commandId;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (CommandId is null) throw new JsonException("SetParameterResult.command_id must not be null.");
         }
 
         public bool Equals(SetParameterResult? other)
@@ -1203,17 +1428,25 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     event_type: Name of the event, from a component profile.
     ///     condition: Selection condition on component_ref and component_type.
     /// </summary>
-    public sealed class SubscribeParams : IEquatable<SubscribeParams>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class SubscribeParams : IEquatable<SubscribeParams>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("event_type")]
-        public string EventType { get; }
+        public string EventType { get; init; }
         [JsonPropertyName("condition")]
-        public string Condition { get; }
+        public string Condition { get; init; }
 
         public SubscribeParams(string eventType, string condition = "")
         {
             EventType = eventType;
             Condition = condition;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (EventType is null) throw new JsonException("SubscribeParams.event_type must not be null.");
+            if (Condition is null) throw new JsonException("SubscribeParams.condition must not be null.");
         }
 
         public bool Equals(SubscribeParams? other)
@@ -1248,17 +1481,24 @@ namespace OpenRoIS.Interfaces.Catalog
     ///     return_code: Outcome of the operation.
     ///     subscribe_id: Identifier of the subscription. Empty when return_code is not OK.
     /// </summary>
-    public sealed class SubscribeResult : IEquatable<SubscribeResult>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class SubscribeResult : IEquatable<SubscribeResult>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("return_code")]
-        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; }
+        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; init; }
         [JsonPropertyName("subscribe_id")]
-        public string SubscribeId { get; }
+        public string SubscribeId { get; init; }
 
         public SubscribeResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode, string subscribeId = "")
         {
             ReturnCode = returnCode;
             SubscribeId = subscribeId;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (SubscribeId is null) throw new JsonException("SubscribeResult.subscribe_id must not be null.");
         }
 
         public bool Equals(SubscribeResult? other)
@@ -1292,14 +1532,21 @@ namespace OpenRoIS.Interfaces.Catalog
     /// Attributes:
     ///     subscribe_id: The subscription to cancel.
     /// </summary>
-    public sealed class UnsubscribeParams : IEquatable<UnsubscribeParams>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class UnsubscribeParams : IEquatable<UnsubscribeParams>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("subscribe_id")]
-        public string SubscribeId { get; }
+        public string SubscribeId { get; init; }
 
         public UnsubscribeParams(string subscribeId)
         {
             SubscribeId = subscribeId;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (SubscribeId is null) throw new JsonException("UnsubscribeParams.subscribe_id must not be null.");
         }
 
         public bool Equals(UnsubscribeParams? other)
@@ -1333,10 +1580,12 @@ namespace OpenRoIS.Interfaces.Catalog
     /// Attributes:
     ///     return_code: Outcome of the operation.
     /// </summary>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
     public sealed class UnsubscribeResult : IEquatable<UnsubscribeResult>
     {
+        [JsonRequired]
         [JsonPropertyName("return_code")]
-        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; }
+        public OpenRoIS.Interfaces.Hri.ReturnCode ReturnCode { get; init; }
 
         public UnsubscribeResult(OpenRoIS.Interfaces.Hri.ReturnCode returnCode)
         {

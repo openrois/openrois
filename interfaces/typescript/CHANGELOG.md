@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.6] - 2026-11-06
+
+### Added
+
+- `encodeValue` and `decodeValue`, with `RoISValue` and `RoISValueError`, in the package root and the `./values` subpath export. They write and read the string form of a typed value, the same text as `encode_value` and `decode_value` in the Python package.
+- `./components` exports the profile constants of all 18 standard component types, and the `Reaction` schemas and types.
+
+### Changed
+
+- **Breaking:** an integer field is 32 bits, as the IDL `long` it stands for: `delay_time`, `time_limit`, `number` and `timeout` refuse a value outside -2147483648 to 2147483647.
+- **Breaking:** `ExecuteParamsSchema` refuses an empty `command_unit_list` and `BranchSchema` refuses an empty `command_list`, as the engine does.
+
+### Fixed
+
+- The package loads in Node.js, which failed with `ERR_MODULE_NOT_FOUND`: every relative import carries its `.js` extension.
+- `require` works from Node.js 22.12, which failed with `ERR_PACKAGE_PATH_NOT_EXPORTED`: every `exports` entry has `types` first, then a `default` condition.
+- Under `moduleResolution: nodenext` every type resolves, so a field that does not exist is a compile error. With `skipLibCheck`, a type that crossed modules used to become `any`, for example the params of `rois.command.completed` in `RoISNotificationMap`.
+
 ## [0.1.0-alpha.5] - 2026-10-16
 
 ### Added
@@ -69,7 +87,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `@openrois/interfaces` ESM package, generated from the JSON Schema: zod schemas and inferred types for the core RoIS types and the `PersonDetection`, `Navigation` and `SystemInformation` component models.
 - The `BusAdapter` interface with its error classes.
 
-[unreleased]: https://github.com/openrois/openrois/compare/interfaces-v0.1.0-alpha.5...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/interfaces-v0.1.0-alpha.6...HEAD
+[0.1.0-alpha.6]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.6
 [0.1.0-alpha.5]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.5
 [0.1.0-alpha.4]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.4
 [0.1.0-alpha.3]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.3

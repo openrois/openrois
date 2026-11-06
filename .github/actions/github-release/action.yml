@@ -1,0 +1,67 @@
+name: GitHub release
+description: >-
+  Creates the GitHub release of the pushed tag, or updates it if it exists. Runs after a
+  checkout, in a job with contents write permission.
+
+inputs:
+  title:
+    description: The release title, for example Interfaces 0.1.0-alpha.6.
+    required: true
+  notes-file:
+    description: The file that holds the release notes.
+    required: true
+  files:
+    description: The assets to attach, one path or glob on each line.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Create or update the release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        TITLE: ${{ inputs.title }}
+        NOTES_FILE: ${{ inputs.notes-file }}
+        FILES: ${{ inputs.files }}
+      run: |
+        # Only a newline separates patterns, so that the unquoted expansion below globs
+        # them and does not split a path on spaces.
+        IFS=$'\n'
+        assets=($FILES)
+        unset IFS
+
+        # A pattern that matches nothing stays as it was written, which this test catches
+        # before the release exists.
+        for asset in "${assets[@]}"; do
+          if [ ! -f "$asset" ]; then
+            echo "::error::No release asset at $asset"
+            exit 1
+          fi
+        done
+
+        # The rule reads the version alone, because the prefix of a tag such as
+        # components-core-v1.0.0 holds a hyphen of its own.
+        version="${GITHUB_REF_NAME##*-v}"
+        case "$version" in
+          *-*) prerelease=true ;;
+          *) prerelease=false ;;
+        esac
+
+        # A rerun, or a release made by hand, already exists and must not fail the job.
+        if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+          gh release edit "$GITHUB_REF_NAME" \
+            --title "$TITLE" \
+            --notes-file "$NOTES_FILE" \
+            --prerelease="$prerelease"
+          gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
+        else
+          # The tag push started this run, so --verify-tag only ever refuses a tag that
+          # was deleted since, and never lets gh create one.
+          gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
+            --verify-tag \
+            --title "$TITLE" \
+            --notes-file "$NOTES_FILE" \
+            --prerelease="$prerelease"
+        fi

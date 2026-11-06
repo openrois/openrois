@@ -13,6 +13,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field, field_validator
 
+from openrois.interfaces.hri import Integer
+
 # ---------------------------------------------------------------------------
 # Component function (from the RoSO ontology)
 # ---------------------------------------------------------------------------
@@ -136,7 +138,7 @@ class CommandMessageProfile(MessageProfile):
     """
 
     arguments: list[ParameterProfile] = Field(default_factory=list)
-    timeout: int | None = None
+    timeout: Integer | None = None
 
 
 class QueryMessageProfile(MessageProfile):

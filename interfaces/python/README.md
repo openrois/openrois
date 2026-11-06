@@ -12,7 +12,13 @@ generated stacks by hand.
 
 ## Install
 
-Not published to PyPI yet. From a clone of the repository:
+Alpha, pre-1.0, unstable API.
+
+```bash
+pip install openrois-interfaces
+```
+
+To work on the package itself, from a clone of the repository:
 
 ```bash
 pip install -e ./interfaces/python
@@ -31,9 +37,9 @@ Engines and clients exchange the params and result models of the method catalog:
 
 ```python
 from openrois.interfaces.catalog import SearchParams, SearchResult
-from openrois.interfaces.condition import COMPONENT_REF, eq
+from openrois.interfaces.condition import component_ref
 
-params = SearchParams(condition=eq(COMPONENT_REF, "robot_1/navigation"))
+params = SearchParams(condition=component_ref("robot_1/navigation"))
 result = SearchResult.model_validate({"return_code": "OK", "component_ref_list": []})
 ```
 
@@ -127,7 +133,7 @@ module also reads and writes engine profiles and the command unit sequences of `
 | `openrois.interfaces.service` | Params of the engine notifications: `NotifyErrorParams`, `CompletedParams`, `NotifyEventParams`, `ProfileChangedParams`, with `CompletedStatus` and `ErrorType` |
 | `openrois.interfaces.profiles` | Component and engine profile models |
 | `openrois.interfaces.values` | `encode_value` and `decode_value`, the string form of a typed value in `Result.value`, `Parameter.value` and `Argument.value` |
-| `openrois.interfaces.condition` | The CQL2-Text subset every `condition` uses: `parse_condition`, `Condition`, the `component_ref` and `component_type` properties, and the `eq`, `like` and `all_of` builders |
+| `openrois.interfaces.condition` | The CQL2-Text subset every `condition` uses: `parse_condition`, `Condition`, the `component_ref` and `component_type` properties, and the `eq`, `like`, `all_of`, `quote`, `component_ref`, `component_type` and `component_type_urn` builders |
 | `openrois.interfaces.catalog` | Service-side method catalog: params and result models for every `rois.*` method, the `SystemIF`, `CommandIF`, `QueryIF` and `EventIF` protocols, the method and notification tables, the `EXTENSIONS` registry, `JsonRpcErrorCode` |
 | `openrois.interfaces.components` | The profile constants of the 18 standard component types (`NAVIGATION_PROFILE`, ...), `standard_registry()`, and per-component typed message models |
 | `openrois.interfaces.declaration` | `ComponentDeclaration`, `Command`, `Query`, `Event` and `Param`, for a component type of your own |

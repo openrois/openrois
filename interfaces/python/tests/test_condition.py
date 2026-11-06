@@ -11,6 +11,8 @@ from openrois.interfaces.condition import (
     Comparison,
     Condition,
     ConditionError,
+    component_ref,
+    component_type,
     component_type_urn,
     parse_condition,
 )
@@ -169,7 +171,31 @@ class TestBuild:
         assert str(parsed) == "component_ref LIKE 'r/%' AND component_type = 't'"
 
 
+class TestComponentRef:
+    def test_selects_one_ref(self) -> None:
+        assert component_ref("reachy_real/head") == "component_ref = 'reachy_real/head'"
+
+    def test_quotes_the_ref(self) -> None:
+        assert component_ref("it's/odd") == "component_ref = 'it''s/odd'"
+
+    def test_parses_and_matches(self) -> None:
+        assert parse_condition(component_ref("reachy_real/head")).matches(HEAD)
+        assert not parse_condition(component_ref("reachy_real/arm")).matches(HEAD)
+
+
 class TestComponentType:
     def test_urn_from_profile_identifier(self) -> None:
         identifier = RoISIdentifierType(authority="OMG", code="PersonDetection")
         assert component_type_urn(identifier) == "urn:x-rois:def:component:OMG::PersonDetection"
+
+    def test_selects_a_type(self) -> None:
+        identifier = RoISIdentifierType(authority="OMG", code="Navigation")
+        assert component_type(identifier) == (
+            "component_type = 'urn:x-rois:def:component:OMG::Navigation'"
+        )
+
+    def test_parses_and_matches(self) -> None:
+        head = RoISIdentifierType(authority="OpenRoIS", code="Head")
+        arm = RoISIdentifierType(authority="OpenRoIS", code="Arm")
+        assert parse_condition(component_type(head)).matches(HEAD)
+        assert not parse_condition(component_type(arm)).matches(HEAD)

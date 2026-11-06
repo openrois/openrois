@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, it, expect } from "vitest";
 import * as openrois from "../src";
 import * as components from "../src/components";
@@ -52,6 +53,12 @@ describe("Export completeness", () => {
     expect(openrois.componentRef("r/head")).toBe("component_ref = 'r/head'");
   });
 
+  it("exports the value forms", () => {
+    expect(openrois.encodeValue("float", 2)).toBe("2.0");
+    expect(openrois.decodeValue("int", "2")).toBe(2);
+    expect(openrois.RoISValueError).toBeDefined();
+  });
+
   it("does NOT export Component types from root (use @openrois/interfaces/components)", () => {
     expect(openrois.PersonDetectedEventSchema).toBeUndefined();
   });
@@ -63,6 +70,22 @@ describe("Export completeness", () => {
     expect(components.REACTION_PROFILE).toBeDefined();
     expect(components.SPEECH_SYNTHESIS_PROFILE).toBeDefined();
     expect(components.SYSTEM_INFORMATION_PROFILE).toBeDefined();
+  });
+
+  it("exports the profile constant of every standard component type", () => {
+    const document = JSON.parse(
+      readFileSync(new URL("../../schema/profiles.json", import.meta.url), "utf-8"),
+    ) as { profiles: unknown[] };
+    const exported = Object.keys(components).filter((name) => name.endsWith("_PROFILE"));
+    expect(document.profiles).toHaveLength(18);
+    expect(exported).toHaveLength(document.profiles.length);
+  });
+
+  it("exports the Reaction types via components subpath", () => {
+    expect(components.ReactionGetParameterResultSchema).toBeDefined();
+    expect(components.ReactionSetParameterSchema).toBeDefined();
+    expect(components.ReactionSetParameterResultSchema).toBeDefined();
+    expect(components.ReactionStatusResultSchema).toBeDefined();
   });
 
   it("exports Component types via components subpath", () => {

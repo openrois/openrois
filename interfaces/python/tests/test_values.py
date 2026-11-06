@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+from collections.abc import Callable
 from datetime import UTC, datetime
 
 import pytest
@@ -65,29 +67,6 @@ def test_unknown_types_keep_their_text() -> None:
 
 
 @pytest.mark.parametrize(
-    ("data_type", "text"),
-    [
-        ("int", "1.5"),
-        ("int", " 1"),
-        ("int", ""),
-        ("float", "fast"),
-        ("bool", "True"),
-        ("bool", "1"),
-        ("Component_Status", "IDLE"),
-        ("string[]", "home"),
-        ("string[]", '{"a": 1}'),
-        ("string[]", "[1]"),
-        ("int[]", '["1"]'),
-        ("int[]", "[true]"),
-        ("bool[]", "[1]"),
-    ],
-)
-def test_decode_refuses_text_of_another_type(data_type: str, text: str) -> None:
-    with pytest.raises(ValueError):
-        decode_value(data_type, text)
-
-
-@pytest.mark.parametrize(
     ("data_type", "value"),
     [
         ("int", 1.5),
@@ -104,3 +83,59 @@ def test_decode_refuses_text_of_another_type(data_type: str, text: str) -> None:
 def test_encode_refuses_values_of_another_type(data_type: str, value: object) -> None:
     with pytest.raises(ValueError):
         encode_value(data_type, value)
+
+
+# The first integer that rounds to 2**1024, which a double cannot hold, and the one below it.
+ROUNDS_TO_OVERFLOW = 2**1024 - 2**970
+LARGEST_THAT_FITS = ROUNDS_TO_OVERFLOW - 1
+
+
+@pytest.mark.parametrize(("sign", "infinity"), [(1, math.inf), (-1, -math.inf)])
+@pytest.mark.parametrize(
+    "magnitude",
+    [10**399, ROUNDS_TO_OVERFLOW, 10**4299],
+    ids=["400 digits", "rounds to overflow", "the digit limit"],
+)
+def test_a_huge_integer_item_of_a_float_array_reads_as_infinity(
+    sign: int, infinity: float, magnitude: int
+) -> None:
+    """Such an item has no float, and reads as ``[1e400]`` does in all three languages."""
+    item = sign * magnitude
+    assert decode_value("float[]", f"[{item}]") == [infinity]
+    assert decode_value("Double[][]", f"[[{item}]]") == [[infinity]]
+    assert encode_value("float[]", f"[{item}]") == f"[{item}]"
+
+
+@pytest.mark.parametrize("sign", [1, -1])
+def test_the_largest_integer_item_a_double_holds_stays_finite(sign: int) -> None:
+    item = sign * LARGEST_THAT_FITS
+    assert decode_value("float[]", f"[{item}]") == [sign * 1.7976931348623157e308]
+
+
+@pytest.mark.parametrize("sign", [1, -1])
+@pytest.mark.parametrize(
+    "magnitude",
+    [2**1024, ROUNDS_TO_OVERFLOW, 10**399, 10**5000],
+    ids=["2**1024", "rounds to overflow", "400 digits", "above the digit limit"],
+)
+@pytest.mark.parametrize(
+    ("data_type", "wrap"),
+    [
+        ("float", lambda item: item),
+        ("double", lambda item: item),
+        ("float[]", lambda item: [item]),
+        ("Double[][]", lambda item: [[item]]),
+    ],
+    ids=["float", "double", "array", "nested array"],
+)
+def test_encode_refuses_an_int_too_large_for_a_double(
+    data_type: str, wrap: Callable[[int], object], magnitude: int, sign: int
+) -> None:
+    """The message is checked too, because repr of 10**5000 would raise ValueError by itself."""
+    with pytest.raises(ValueError, match="a double can hold"):
+        encode_value(data_type, wrap(sign * magnitude))
+
+
+@pytest.mark.parametrize("sign", [1, -1])
+def test_encode_keeps_the_largest_int_a_double_holds(sign: int) -> None:
+    assert encode_value("float", sign * LARGEST_THAT_FITS) == repr(sign * 1.7976931348623157e308)

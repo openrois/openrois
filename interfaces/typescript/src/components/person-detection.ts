@@ -3,7 +3,7 @@
 // Generator: scripts/generate.ts
 
 import { z } from "zod";
-import { ComponentStatusSchema } from "../common";
+import { ComponentStatusSchema } from "../common.js";
 
 /**
  * Event payload for Person_Detection::Event::person_detected.
@@ -17,7 +17,7 @@ import { ComponentStatusSchema } from "../common";
 
 export const PersonDetectedEventSchema = z.object({
   timestamp: z.string(), // Time when measured
-  number: z.number().int(), // Number of detected persons
+  number: z.number().int().min(-2147483648).max(2147483647), // Number of detected persons
 }).strict();
 export type PersonDetectedEvent = z.infer<typeof PersonDetectedEventSchema>;
 

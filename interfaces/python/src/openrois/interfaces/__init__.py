@@ -75,6 +75,8 @@ from openrois.interfaces.condition import (
     Comparison,
     Condition,
     ConditionError,
+    component_ref,
+    component_type,
     component_type_urn,
     parse_condition,
 )
@@ -219,6 +221,8 @@ __all__ = [
     "Comparison",
     "Condition",
     "ConditionError",
+    "component_ref",
+    "component_type",
     "component_type_urn",
     "parse_condition",
     # Values

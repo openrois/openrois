@@ -2,6 +2,8 @@
   "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
   "$defs": {
     "Integer": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
       "type": "integer"
     },
     "RoutingPolicy": {

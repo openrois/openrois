@@ -1,0 +1,390 @@
+{
+  "refused": [
+    {"data_type": "int", "text": ""},
+    {"data_type": "int", "text": "-"},
+    {"data_type": "int", "text": "1.5"},
+    {"data_type": "int", "text": "1.0"},
+    {"data_type": "int", "text": "1e3"},
+    {"data_type": "int", "text": "+1"},
+    {"data_type": "int", "text": "--1"},
+    {"data_type": "int", "text": "0x10"},
+    {"data_type": "int", "text": "1_"},
+    {"data_type": "int", "text": "_1"},
+    {"data_type": "int", "text": "1__0"},
+    {"data_type": "int", "text": "1_000"},
+    {"data_type": "int", "text": "."},
+    {"data_type": "int", "text": " 1"},
+    {"data_type": "int", "text": "1 "},
+    {"data_type": "int", "text": "1\n"},
+    {"data_type": "int", "text": "\u0661"},
+    {"data_type": "long", "text": "\uff11"},
+    {"data_type": "int", "text": "\u00b2"},
+    {"data_type": "int", "text": "NaN"},
+
+    {"data_type": "float", "text": ""},
+    {"data_type": "float", "text": " "},
+    {"data_type": "float", "text": "fast"},
+    {"data_type": "float", "text": "0x10"},
+    {"data_type": "float", "text": "1_"},
+    {"data_type": "float", "text": "_1"},
+    {"data_type": "float", "text": "1__0"},
+    {"data_type": "float", "text": "1_.5"},
+    {"data_type": "float", "text": "1._5"},
+    {"data_type": "float", "text": "1e_5"},
+    {"data_type": "float", "text": "1e5_"},
+    {"data_type": "float", "text": "."},
+    {"data_type": "float", "text": "+"},
+    {"data_type": "float", "text": "-"},
+    {"data_type": "float", "text": "--1"},
+    {"data_type": "float", "text": "+-1"},
+    {"data_type": "float", "text": "- 1"},
+    {"data_type": "float", "text": "e5"},
+    {"data_type": "float", "text": ".e1"},
+    {"data_type": "float", "text": "1e"},
+    {"data_type": "float", "text": "1e+"},
+    {"data_type": "float", "text": "1e5.0"},
+    {"data_type": "float", "text": "1.2.3"},
+    {"data_type": "float", "text": "1,5"},
+    {"data_type": "float", "text": "in"},
+    {"data_type": "float", "text": "infin"},
+    {"data_type": "float", "text": "infinityy"},
+    {"data_type": "float", "text": "nan1"},
+    {"data_type": "float", "text": "+-inf"},
+    {"data_type": "float", "text": "\ufeff1.5"},
+    {"data_type": "float", "text": "\u001c1.5"},
+    {"data_type": "float", "text": "1.5\u001f"},
+    {"data_type": "float", "text": "\u0661.5"},
+    {"data_type": "double", "text": "\uff11.\uff15"},
+
+    {"data_type": "bool", "text": ""},
+    {"data_type": "bool", "text": "True"},
+    {"data_type": "bool", "text": "TRUE"},
+    {"data_type": "bool", "text": "1"},
+    {"data_type": "bool", "text": "0"},
+    {"data_type": "bool", "text": " true"},
+    {"data_type": "bool", "text": "yes"},
+
+    {"data_type": "Component_Status", "text": ""},
+    {"data_type": "Component_Status", "text": "IDLE"},
+    {"data_type": "Component_Status", "text": "ready"},
+    {"data_type": "Component_Status", "text": "1"},
+    {"data_type": "Component_Status", "text": " READY"},
+
+    {"data_type": "string[]", "text": ""},
+    {"data_type": "string[]", "text": "home"},
+    {"data_type": "string[]", "text": "\"home\""},
+    {"data_type": "string[]", "text": "null"},
+    {"data_type": "string[]", "text": "{\"a\": 1}"},
+    {"data_type": "string[]", "text": "[1]"},
+    {"data_type": "string[]", "text": "[null]"},
+    {"data_type": "string[]", "text": "[NaN]"},
+    {"data_type": "string[]", "text": "[\"a\""},
+    {"data_type": "string[]", "text": "[\"a\",]"},
+    {"data_type": "string[]", "text": "\ufeff[\"a\"]"},
+    {"data_type": "int[]", "text": "1"},
+    {"data_type": "int[]", "text": "[\"1\"]"},
+    {"data_type": "int[]", "text": "[true]"},
+    {"data_type": "int[]", "text": "[null]"},
+    {"data_type": "int[]", "text": "[1.0]"},
+    {"data_type": "int[]", "text": "[1e2]"},
+    {"data_type": "int[]", "text": "[+1]"},
+    {"data_type": "int[]", "text": "[01]"},
+    {"data_type": "int[]", "text": "[1 2]"},
+    {"data_type": "int[]", "text": "[,1]"},
+    {"data_type": "int[]", "text": "[1,]"},
+    {"data_type": "int[]", "text": "[NaN]"},
+    {"data_type": "int[][]", "text": "[1]"},
+    {"data_type": "bool[]", "text": "[1]"},
+    {"data_type": "bool[]", "text": "[\"true\"]"},
+    {"data_type": "bool[]", "text": "[Infinity]"},
+    {"data_type": "Component_Status[]", "text": "[\"IDLE\"]"},
+    {"data_type": "Component_Status[]", "text": "[1]"},
+    {"data_type": "polygon[]", "text": "[NaN]"},
+
+    {"data_type": "float[]", "text": "NaN"},
+    {"data_type": "float[]", "text": "1.5"},
+    {"data_type": "float[]", "text": "[\"NaN\"]"},
+    {"data_type": "float[]", "text": "[\"Infinity\"]"},
+    {"data_type": "float[]", "text": "[\"-Infinity\"]"},
+    {"data_type": "float[]", "text": "[\"\\u004eaN\"]"},
+    {"data_type": "float[]", "text": "[\"\\u0049nfinity\"]"},
+    {"data_type": "Double[]", "text": "[\"NaN\"]"},
+    {"data_type": "float[][]", "text": "[[\"NaN\"]]"},
+    {"data_type": "float[]", "text": "[\"nan\"]"},
+    {"data_type": "float[]", "text": "[\"1.5\"]"},
+    {"data_type": "float[]", "text": "[null]"},
+    {"data_type": "float[]", "text": "[true]"},
+    {"data_type": "float[]", "text": "[nan]"},
+    {"data_type": "float[]", "text": "[inf]"},
+    {"data_type": "float[]", "text": "[+Infinity]"},
+    {"data_type": "float[]", "text": "[-NaN]"},
+    {"data_type": "float[]", "text": "[NaNNaN]"},
+    {"data_type": "float[]", "text": "[Infinity1]"},
+    {"data_type": "float[]", "text": "[NaN,]"},
+    {"data_type": "float[]", "text": "[5.]"},
+    {"data_type": "float[]", "text": "[.5]"},
+    {"data_type": "float[]", "text": "[+1.5]"},
+    {"data_type": "float[]", "text": "[1_000.5]"},
+    {"data_type": "float[]", "text": "[01.5]"}
+  ],
+
+  "decoded": [
+    {"data_type": "int", "text": "007", "value": 7},
+    {"data_type": "int", "text": "-007", "value": -7},
+    {"data_type": "int", "text": "-0", "value": 0},
+    {"data_type": "long", "text": "9007199254740992", "value": 9007199254740992},
+    {"data_type": "long", "text": "9007199254740993", "value": 9007199254740993},
+    {"data_type": "long", "text": "-9007199254740993", "value": -9007199254740993},
+    {"data_type": "long", "text": "9223372036854775808", "value": 9223372036854775808},
+    {"data_type": "long[]", "text": "[9007199254740993]", "value": [9007199254740993]},
+
+    {"data_type": "float", "text": "5.", "value": 5.0},
+    {"data_type": "float", "text": ".5", "value": 0.5},
+    {"data_type": "float", "text": "-.5", "value": -0.5},
+    {"data_type": "float", "text": "+.5", "value": 0.5},
+    {"data_type": "float", "text": "+1.5", "value": 1.5},
+    {"data_type": "float", "text": "3", "value": 3.0},
+    {"data_type": "float", "text": "007", "value": 7.0},
+    {"data_type": "float", "text": "1E3", "value": 1000.0},
+    {"data_type": "float", "text": "1e+3", "value": 1000.0},
+    {"data_type": "float", "text": "1e-3", "value": 0.001},
+    {"data_type": "float", "text": "1.E3", "value": 1000.0},
+    {"data_type": "float", "text": ".5e1", "value": 5.0},
+    {"data_type": "float", "text": "1_000.5", "value": 1000.5},
+    {"data_type": "float", "text": "1_0.0_1", "value": 10.01},
+    {"data_type": "float", "text": "1e1_0", "value": 10000000000.0},
+    {"data_type": "Float", "text": ".5", "value": 0.5},
+    {"data_type": "DOUBLE", "text": "5.", "value": 5.0},
+
+    {"data_type": "float", "text": "-0", "value": "-0.0"},
+    {"data_type": "float", "text": "-0.0", "value": "-0.0"},
+    {"data_type": "float", "text": "+0", "value": 0.0},
+    {"data_type": "float", "text": "1e400", "value": "Infinity"},
+    {"data_type": "float", "text": "-1e400", "value": "-Infinity"},
+    {"data_type": "float", "text": "1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", "value": "Infinity"},
+    {"data_type": "float", "text": "-1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", "value": "-Infinity"},
+    {"data_type": "float", "text": "1e-400", "value": 0.0},
+    {"data_type": "float", "text": "-1e-400", "value": "-0.0"},
+
+    {"data_type": "float", "text": "inf", "value": "Infinity"},
+    {"data_type": "float", "text": "+inf", "value": "Infinity"},
+    {"data_type": "float", "text": "-inf", "value": "-Infinity"},
+    {"data_type": "float", "text": "Inf", "value": "Infinity"},
+    {"data_type": "float", "text": "INF", "value": "Infinity"},
+    {"data_type": "float", "text": "infinity", "value": "Infinity"},
+    {"data_type": "float", "text": "+infinity", "value": "Infinity"},
+    {"data_type": "float", "text": "-INFINITY", "value": "-Infinity"},
+    {"data_type": "float", "text": "Infinity", "value": "Infinity"},
+    {"data_type": "float", "text": "nan", "value": "NaN"},
+    {"data_type": "float", "text": "+nan", "value": "NaN"},
+    {"data_type": "float", "text": "-nan", "value": "NaN"},
+    {"data_type": "float", "text": "NaN", "value": "NaN"},
+    {"data_type": "float", "text": "NAN", "value": "NaN"},
+
+    {"data_type": "float", "text": " 1.5 ", "value": 1.5},
+    {"data_type": "float", "text": "\t1.5\n", "value": 1.5},
+    {"data_type": "float", "text": " nan ", "value": "NaN"},
+    {"data_type": "float", "text": "\u00a01.5", "value": 1.5},
+    {"data_type": "float", "text": "1.5\u3000", "value": 1.5},
+    {"data_type": "float", "text": "\u000b1.5\f", "value": 1.5},
+    {"data_type": "float", "text": "\u16801.5\u2029", "value": 1.5},
+    {"data_type": "float", "text": "\u00851.5", "value": 1.5},
+    {"data_type": "float", "text": "1.5\u0085", "value": 1.5},
+
+    {"data_type": "float[]", "text": "[NaN]", "value": ["NaN"]},
+    {"data_type": "float[]", "text": "[1.5, NaN]", "value": [1.5, "NaN"]},
+    {"data_type": "float[]", "text": "[Infinity]", "value": ["Infinity"]},
+    {"data_type": "float[]", "text": "[-Infinity]", "value": ["-Infinity"]},
+    {"data_type": "double[]", "text": "[NaN, Infinity, -Infinity, 1.5]", "value": ["NaN", "Infinity", "-Infinity", 1.5]},
+    {"data_type": "float[][]", "text": "[[NaN]]", "value": [["NaN"]]},
+    {"data_type": "Double[][]", "text": "[[Infinity], []]", "value": [["Infinity"], []]},
+    {"data_type": "float[]", "text": "[1]", "value": [1.0]},
+    {"data_type": "float[]", "text": "[1,2.5]", "value": [1.0, 2.5]},
+    {"data_type": "float[]", "text": "[1e400]", "value": ["Infinity"]},
+    {"data_type": "float[]", "text": "[-1e400]", "value": ["-Infinity"]},
+    {"data_type": "float[]", "text": "[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]", "value": ["Infinity"]},
+    {"data_type": "float[]", "text": "[-1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]", "value": ["-Infinity"]},
+    {"data_type": "float[]", "text": "[10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]", "value": ["Infinity"]},
+    {"data_type": "float[]", "text": "[-0.0]", "value": ["-0.0"]},
+    {"data_type": "float[]", "text": "[-0]", "value": ["-0.0"]},
+
+    {"data_type": "int[]", "text": "[-0]", "value": [0]},
+    {"data_type": "int[]", "text": "[ 1 ,\n2 ]", "value": [1, 2]},
+    {"data_type": "bool[]", "text": "[true,false]", "value": [true, false]},
+    {"data_type": "string[]", "text": "[\"a\",\"b\"]", "value": ["a", "b"]},
+    {"data_type": "string[]", "text": "[\"\\u0041\"]", "value": ["A"]},
+    {"data_type": "string[]", "text": "[\"\\ud83d\\ude00\"]", "value": ["\ud83d\ude00"]},
+    {"data_type": "string[]", "text": "[\"\\ud800\"]", "value": ["\ud800"]}
+  ],
+
+  "encoded": [
+    {"data_type": "float", "value_text": "NaN", "text": "NaN"},
+    {"data_type": "float", "value_text": "Infinity", "text": "Infinity"},
+    {"data_type": "float", "value_text": "-Infinity", "text": "-Infinity"},
+    {"data_type": "float", "value_text": "-0.0", "text": "-0.0"},
+    {"data_type": "double", "value_text": "NaN", "text": "NaN"},
+    {"data_type": "double", "value_text": "-0.0", "text": "-0.0"},
+    {"data_type": "float[]", "value_text": "[NaN, Infinity, -Infinity, -0.0, 1.5]", "text": "[NaN, Infinity, -Infinity, -0.0, 1.5]"},
+    {"data_type": "double[][]", "value_text": "[[NaN], [-0.0]]", "text": "[[NaN], [-0.0]]"},
+
+    {"data_type": "float", "value_text": "3", "text": "3.0"},
+    {"data_type": "float", "value_text": "9007199254740991", "text": "9007199254740991.0"},
+    {"data_type": "float", "value_text": "9007199254740993", "text": "9007199254740992.0"},
+    {"data_type": "float", "value_text": "9007199254740995", "text": "9007199254740996.0"},
+    {"data_type": "float", "value_text": "-9007199254740995", "text": "-9007199254740996.0"},
+    {"data_type": "double", "value_text": "9223372036854775807", "text": "9.223372036854776e+18"},
+    {"data_type": "double", "value_text": "-9223372036854775808", "text": "-9.223372036854776e+18"},
+    {"data_type": "double", "value_text": "18446744073709551615", "text": "1.8446744073709552e+19"},
+    {"data_type": "float[]", "value_text": "[3, 2.5]", "text": "[3.0, 2.5]"},
+    {"data_type": "double[]", "value_text": "[9007199254740995, 9223372036854775807]", "text": "[9007199254740996.0, 9.223372036854776e+18]"},
+
+    {"data_type": "long", "value_text": "9007199254740993", "text": "9007199254740993"}
+  ],
+
+  "doubles": [
+    {"bits": "3fb999999999999a", "text": "0.1"},
+    {"bits": "c004000000000000", "text": "-2.5"},
+    {"bits": "4480f0cf064dd592", "text": "1e+22"},
+    {"bits": "3ee4f8b588e368f1", "text": "1e-05"},
+    {"bits": "0000000000000001", "text": "5e-324"},
+    {"bits": "3fd3333333333334", "text": "0.30000000000000004"},
+    {"bits": "3ff0000000000001", "text": "1.0000000000000002"},
+    {"bits": "7fefffffffffffff", "text": "1.7976931348623157e+308"},
+    {"bits": "0010000000000000", "text": "2.2250738585072014e-308"},
+    {"bits": "3eb0000000000000", "text": "9.5367431640625e-07"},
+    {"bits": "3e50000000000000", "text": "1.4901161193847656e-08"},
+    {"bits": "3e40000000000000", "text": "7.450580596923828e-09"},
+    {"bits": "3e30000000000000", "text": "3.725290298461914e-09"},
+    {"bits": "3e00000000000000", "text": "4.656612873077393e-10"},
+    {"bits": "3de0000000000000", "text": "1.1641532182693481e-10"},
+    {"bits": "3cb0000000000000", "text": "2.220446049250313e-16"},
+    {"bits": "3ca0000000000000", "text": "1.1102230246251565e-16"},
+    {"bits": "3c30000000000000", "text": "8.673617379884035e-19"},
+    {"bits": "3b90000000000000", "text": "8.470329472543003e-22"},
+    {"bits": "39b0000000000000", "text": "7.888609052210118e-31"},
+    {"bits": "0170000000000000", "text": "9.332636185032189e-302"},
+    {"bits": "4450000000000000", "text": "1.1805916207174113e+21"},
+    {"bits": "4630000000000000", "text": "1.2676506002282294e+30"},
+    {"bits": "7e70000000000000", "text": "1.0715086071862673e+301"},
+    {"bits": "1038f0b5e998d0ee", "text": "1.6064402655252351e-230"},
+    {"bits": "ce3fa028ea9d18b2", "text": "-8.5262514540382505e+68"},
+    {"bits": "38efbaebdb31ccd2", "text": "1.909689623213514e-34"},
+    {"bits": "64dbc8d30aaaaf81", "text": "7.036870839547745e+177"},
+    {"bits": "46f5a1b4b156d1ad", "text": "7.019876120529774e+33"}
+  ],
+
+  "models": [
+    {"name": "empty command_unit_list", "kind": "params", "method": "rois.command.execute", "refused": true, "body": {"command_unit_list": []}},
+    {"name": "empty command_list of a branch", "kind": "params", "method": "rois.command.execute", "refused": true, "body": {"command_unit_list": [{"branch_list": [{"command_list": []}]}]}},
+    {"name": "null item of a required list", "kind": "params", "method": "rois.command.execute", "refused": true, "body": {"command_unit_list": [null]}},
+    {"name": "null value of a map", "kind": "result", "method": "rois.system.get_profile", "refused": true, "body": {"return_code": "OK", "component_profiles": {"a/b": null}}},
+    {"name": "delay_time above 32 bits", "kind": "params", "method": "rois.command.execute", "refused": true, "body": {"command_unit_list": [{"component_ref": "a/b", "command_type": "start", "delay_time": 2147483648}]}},
+    {"name": "explicit null on an optional list", "kind": "result", "method": "rois.command.execute", "refused": true, "body": {"return_code": "OK", "command_unit_list": null}},
+    {"name": "explicit null on an optional map", "kind": "result", "method": "rois.system.get_profile", "refused": true, "body": {"return_code": "OK", "component_profiles": null}},
+    {"name": "flat command_list of ConcurrentCommands", "kind": "params", "method": "rois.command.execute", "refused": false, "body": {"command_unit_list": [{"command_list": [{"component_ref": "a/b", "command_type": "start"}]}]}}
+  ],
+
+  "conditions": [
+    {"name": "all_of U+FEFF", "builder": "all_of", "args": ["\ufeff", "x"], "expected": "\ufeff AND x"},
+    {"name": "all_of U+0085", "builder": "all_of", "args": ["\u0085", "x"], "expected": "x"},
+    {"name": "all_of U+001C", "builder": "all_of", "args": ["\u001c", "x"], "expected": "\u001c AND x"},
+    {"name": "all_of U+001D", "builder": "all_of", "args": ["\u001d", "x"], "expected": "\u001d AND x"},
+    {"name": "all_of U+001E", "builder": "all_of", "args": ["\u001e", "x"], "expected": "\u001e AND x"},
+    {"name": "all_of U+001F", "builder": "all_of", "args": ["\u001f", "x"], "expected": "\u001f AND x"}
+  ],
+
+  "exceptions": [
+    {
+      "language": "typescript",
+      "why": "A JavaScript number holds an integer exactly only up to 2^53, so TypeScript refuses a long above that range instead of rounding it.",
+      "cases": [
+        {"list": "decoded", "data_type": "long", "text": "9007199254740992"},
+        {"list": "decoded", "data_type": "long", "text": "9007199254740993"},
+        {"list": "decoded", "data_type": "long", "text": "-9007199254740993"},
+        {"list": "decoded", "data_type": "long", "text": "9223372036854775808"},
+        {"list": "decoded", "data_type": "long[]", "text": "[9007199254740993]"},
+        {"list": "encoded", "data_type": "long", "value_text": "9007199254740993", "text": "9007199254740993"}
+      ]
+    },
+    {
+      "language": "python",
+      "why": "Python's int() and float() read every Unicode decimal digit, where TypeScript and C# read ASCII digits only. No writer produces these digits.",
+      "cases": [
+        {"list": "refused", "data_type": "int", "text": "\u0661"},
+        {"list": "refused", "data_type": "long", "text": "\uff11"},
+        {"list": "refused", "data_type": "float", "text": "\u0661.5"},
+        {"list": "refused", "data_type": "double", "text": "\uff11.\uff15"}
+      ]
+    },
+    {
+      "language": "typescript",
+      "why": "JavaScript's trim removes U+FEFF and keeps U+0085, the opposite of Python and C#. No writer produces them.",
+      "cases": [
+        {"list": "refused", "data_type": "float", "text": "\ufeff1.5"},
+        {"list": "decoded", "data_type": "float", "text": "\u00851.5"},
+        {"list": "decoded", "data_type": "float", "text": "1.5\u0085"}
+      ]
+    },
+    {
+      "language": "python",
+      "why": "Python's JSON reader takes the array item -0 as the integer 0, so a float array holds +0.0 where the other two keep the sign.",
+      "cases": [
+        {"list": "decoded", "data_type": "float[]", "text": "[-0]"}
+      ]
+    },
+    {
+      "language": "python",
+      "why": "Python's JSON reader refuses an integer above 4300 digits, the default of sys.set_int_max_str_digits, where TypeScript and C# read it as Infinity. This item has the fewest digits that show it.",
+      "cases": [
+        {"list": "decoded", "data_type": "float[]", "text": "[10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]"}
+      ]
+    },
+    {
+      "language": "csharp",
+      "why": "System.Text.Json has no string for a lone surrogate, so C# refuses the escape where Python and TypeScript keep it.",
+      "cases": [
+        {"list": "decoded", "data_type": "string[]", "text": "[\"\\ud800\"]"}
+      ]
+    },
+    {
+      "language": "csharp",
+      "why": "The generated C# models hold an optional list or map as a nullable property that defaults to null, so an explicit null reads as absent. The engine always writes an empty list or map here, so no real traffic carries this null.",
+      "cases": [
+        {"list": "models", "name": "explicit null on an optional list"},
+        {"list": "models", "name": "explicit null on an optional map"}
+      ]
+    },
+    {
+      "language": "csharp",
+      "why": "The XSD form of a group is a flat command_list. The Python model reads it as one-command branches, as section 16 of docs/rois-reference.md describes. The generated C# model holds branch_list only and refuses it.",
+      "cases": [
+        {"list": "models", "name": "flat command_list of ConcurrentCommands"}
+      ]
+    },
+    {
+      "language": "typescript",
+      "why": "The XSD form of a group is a flat command_list. The Python model reads it as one-command branches, as section 16 of docs/rois-reference.md describes. The generated TypeScript schema holds branch_list only and refuses it.",
+      "cases": [
+        {"list": "models", "name": "flat command_list of ConcurrentCommands"}
+      ]
+    },
+    {
+      "language": "typescript",
+      "why": "allOf skips what JavaScript's trim leaves empty, and trim removes U+FEFF and keeps U+0085, the opposite of Python and C#. No builder writes a text of these characters alone.",
+      "cases": [
+        {"list": "conditions", "name": "all_of U+FEFF"},
+        {"list": "conditions", "name": "all_of U+0085"}
+      ]
+    },
+    {
+      "language": "python",
+      "why": "all_of skips what str.strip leaves empty, and strip also removes U+001C to U+001F, which TypeScript and C# keep. No builder writes a text of these characters alone.",
+      "cases": [
+        {"list": "conditions", "name": "all_of U+001C"},
+        {"list": "conditions", "name": "all_of U+001D"},
+        {"list": "conditions", "name": "all_of U+001E"},
+        {"list": "conditions", "name": "all_of U+001F"}
+      ]
+    }
+  ]
+}

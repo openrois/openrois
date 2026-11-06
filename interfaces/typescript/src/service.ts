@@ -3,7 +3,7 @@
 // Generator: scripts/generate.ts
 
 import { z } from "zod";
-import { ResultSchema } from "./hri";
+import { ResultSchema } from "./hri.js";
 
 // ─── Shared type definitions ($defs) ─────────────────────────────
 

@@ -3,7 +3,7 @@
 // Generator: scripts/generate.ts
 
 import { z } from "zod";
-import { ComponentStatusSchema } from "../common";
+import { ComponentStatusSchema } from "../common.js";
 
 /**
  * Result payload for Reaction::Query::get_parameter.

@@ -7,9 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.6] - 2026-11-06
+
+### Added
+
+- `RoISJson.Options`, the serializer settings of the wire format: enumerations as names, and unset fields left out of the message, because the engine refuses a null such as `"arguments": null`.
+- `Condition`, which builds the filter text of a `condition` parameter: `Quote`, `Eq`, `Like`, `AllOf`, `ComponentRef`, `ComponentType` and `ComponentTypeUrn`, with the property names `ComponentRefProperty` and `ComponentTypeProperty`.
+- `RoISValues.Encode` and `RoISValues.Decode`, the string forms of typed values, with the same type names and rules as `encode_value` and `decode_value` in Python. `NaN`, `Infinity` and `-Infinity` stand bare in a float array. An integer written as a float rounds to the nearest double, and one beyond the range of a double throws `FormatException`.
+
 ### Changed
 
+- **Breaking:** the models refuse an unknown field, a missing required field, and null in a field whose C# type is not nullable. Each throws `JsonException`. An optional list or map has a nullable C# type, so an explicit null there reads as absent, where Python and TypeScript refuse it.
+- **Breaking:** a model refuses with `JsonException` a null list item, a null map value, and an empty `ExecuteParams.command_unit_list` or `Branch.command_list`.
+- Model properties are `{ get; init; }`.
 - The package depends on `System.Text.Json` 8.0.6 instead of 9.0.0, the version Unity 6000.6 ships in its class library. Against 9.0, scripts that use these types fail there with CS1705.
+
+### Fixed
+
+- `ICommandUnitSequenceItem` has a JSON converter. `ExecuteParams` no longer writes each item as `{}`, and `ExecuteResult` can be read: an item with `branch_list` is a `ConcurrentCommands` and any other item is a `CommandUnit`.
 
 ## [0.1.0-alpha.5] - 2026-10-16
 
@@ -67,7 +82,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `IBusAdapter` interface with its error classes.
 - `netstandard2.1` target, for Unity 6.3 and later.
 
-[unreleased]: https://github.com/openrois/openrois/compare/interfaces-v0.1.0-alpha.5...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/interfaces-v0.1.0-alpha.6...HEAD
+[0.1.0-alpha.6]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.6
 [0.1.0-alpha.5]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.5
 [0.1.0-alpha.4]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.4
 [0.1.0-alpha.3]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.3

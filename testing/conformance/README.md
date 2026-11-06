@@ -23,6 +23,23 @@ the simulated work ten times faster.
 `wire_check.py --watch-close` holds one connection and exits with 0 when the gateway closes
 it with code 1001. CI runs it across `docker compose stop` to check a graceful stop.
 
+## Wire Fixtures
+
+`capture.py` drives one session through the same stack and records the params and the result
+of every catalog method, and every notification, into `interfaces/fixtures/wire.json`. Each
+interface package parses every recorded body into its model and writes it back. Run it again
+after a change to the models or to what an engine sends.
+
+A plain session leaves much of the wire empty, so `WANTED` in the script names what the file
+must also hold: fields that have to carry a value, such as the arguments of a command and the
+results of `get_command_result`, and enumerators, such as the ways a command ends. The script
+fails without writing the file when one is missing, as it does for a missing method.
+
+```bash
+pip install -e interfaces/python websockets
+python testing/conformance/capture.py
+```
+
 ## The Frozen Stack
 
 Pull requests run the list against the tree. `frozen.txt` names the exact versions the client
@@ -79,3 +96,9 @@ every language and in a browser. `mock/fault` is a component of the mock adapter
 |---------|--------|
 | `raise_error` | The component raises ERROR and clears it after a second, which sends `rois.system.notify_error` |
 | `peer_join` | A second engine joins the gateway and leaves it, which sends `rois.system.profile_changed` twice |
+| `echo` | Takes the argument `text` and gives it back as a result, and declares a timeout in its profile |
+| `end_with` | Ends with the status named by the argument `status`, for example `OUT_OF_RESOURCES` |
+
+`mock/fault` also answers the query `echo`, and serves the event `echoed` that the command
+`echo` emits. Both take the argument `text`, so its profile shows arguments on a query and on an
+event.

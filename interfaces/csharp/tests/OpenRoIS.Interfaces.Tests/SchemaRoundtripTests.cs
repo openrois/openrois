@@ -18,27 +18,21 @@ namespace OpenRoIS.Interfaces.Tests
 {
     public class SchemaRoundtripTests
     {
-    private static readonly JsonSerializerOptions s_jsonOpts = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
-    };
-
     [Fact]
     public void Result_JsonRoundtrip()
     {
         var data = new Result("number", "int", "3");
-        var json = JsonSerializer.Serialize(data, s_jsonOpts);
-        var parsed = JsonSerializer.Deserialize<Result>(json, s_jsonOpts)!;
+        var json = JsonSerializer.Serialize(data, RoISJson.Options);
+        var parsed = JsonSerializer.Deserialize<Result>(json, RoISJson.Options)!;
         Assert.Equal(data, parsed);
     }
 
     [Fact]
     public void ReturnCode_JsonRoundtrip()
     {
-        // C# enum member name (not wire value) — JsonStringEnumConverter uses member names
+        // The wire carries the C# enum member name, because RoISEnumConverter reads member names.
         var json = "\"OK\"";
-        var parsed = JsonSerializer.Deserialize<ReturnCode>(json, s_jsonOpts)!;
+        var parsed = JsonSerializer.Deserialize<ReturnCode>(json, RoISJson.Options)!;
         Assert.Equal(ReturnCode.OK, parsed);
     }
 
@@ -46,7 +40,7 @@ namespace OpenRoIS.Interfaces.Tests
     public void ComponentStatus_JsonRoundtrip()
     {
         var json = "\"READY\"";
-        var parsed = JsonSerializer.Deserialize<ComponentStatus>(json, s_jsonOpts)!;
+        var parsed = JsonSerializer.Deserialize<ComponentStatus>(json, RoISJson.Options)!;
         Assert.Equal(ComponentStatus.READY, parsed);
     }
 
@@ -54,7 +48,7 @@ namespace OpenRoIS.Interfaces.Tests
     public void CompletedStatus_JsonRoundtrip()
     {
         var json = "\"ABORT\"";
-        var parsed = JsonSerializer.Deserialize<CompletedStatus>(json, s_jsonOpts)!;
+        var parsed = JsonSerializer.Deserialize<CompletedStatus>(json, RoISJson.Options)!;
         Assert.Equal(CompletedStatus.ABORT, parsed);
     }
 
@@ -63,7 +57,7 @@ namespace OpenRoIS.Interfaces.Tests
     {
         // Wire value for COMPONENT_NOT_RESPONDING
         var json = "\"COMPONENT_NOT_RESPONDING\"";
-        var parsed = JsonSerializer.Deserialize<ErrorType>(json, s_jsonOpts)!;
+        var parsed = JsonSerializer.Deserialize<ErrorType>(json, RoISJson.Options)!;
         Assert.Equal(ErrorType.COMPONENT_NOT_RESPONDING, parsed);
     }
 

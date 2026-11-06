@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# Builds the harness in a fresh copy of the tree, and runs a desktop player against a live
+# gateway with the mock adapter. See README.md.
+#
+# usage: run.sh <new-folder> <editor-version> <linux-il2cpp|linux-mono|android>
+#
+# OPENROIS_VENV    virtual environment with openrois-gateway and the components (desktop)
+# OPENROIS_GATEWAY_URL    the address a device uses to reach the gateway (android)
+# UNITY_EDITORS    where the Editors are, by default ~/Unity/Hub/Editor
+set -euo pipefail
+
+if [ "$#" -ne 3 ]; then
+  sed -n 2,10p "$0" >&2
+  exit 2
+fi
+work=$1
+editor=${UNITY_EDITORS:-$HOME/Unity/Hub/Editor}/$2/Editor/Unity
+target=$3
+repo=$(cd "$(dirname "$0")/../.." && pwd)
+project=$work/testing/unity-harness
+
+case "$target" in
+  linux-il2cpp | linux-mono)
+    build_target=Linux64
+    output=$work/player/harness.x86_64
+    : "${OPENROIS_VENV:?needs the virtual environment that holds the gateway}"
+    ;;
+  android)
+    build_target=Android
+    output=$work/player/harness.apk
+    : "${OPENROIS_GATEWAY_URL:?needs the address a device uses to reach the gateway}"
+    ;;
+  *)
+    echo "Unknown target: $target" >&2
+    exit 2
+    ;;
+esac
+
+# Unity writes .meta files and a Library folder into a file: package, so it only ever opens
+# a copy. mkdir without -p refuses a folder that exists, which keeps every run fresh.
+mkdir -p "$(dirname "$work")"
+mkdir "$work"
+mkdir "$work/testing" "$work/sdk" "$work/interfaces" "$work/player"
+cp -R "$repo/testing/unity-harness" "$work/testing/"
+cp -R "$repo/sdk/unity" "$work/sdk/"
+cp -R "$repo/interfaces/fixtures" "$work/interfaces/"
+
+# With no version file Unity takes the copy for a new project and adds its default packages
+# to the manifest, and the player would no longer be the minimal project in this folder.
+mkdir "$project/ProjectSettings"
+echo "m_EditorVersion: $2" >"$project/ProjectSettings/ProjectVersion.txt"
+
+echo "build: $target on $2 in $work"
+status=0
+OPENROIS_HARNESS_TARGET=$target OPENROIS_HARNESS_OUTPUT=$output \
+  "$editor" -batchmode -nographics -buildTarget "$build_target" \
+  -projectPath "$project" \
+  -executeMethod OpenRoIS.Harness.Editor.HarnessBuild.Run \
+  -logFile "$work/build.log" || status=$?
+grep '^HARNESS BUILD' "$work/build.log" || true
+if [ "$status" -ne 0 ]; then
+  echo "build failed with exit code $status, see $work/build.log" >&2
+  exit "$status"
+fi
+if [ "$target" = android ]; then
+  echo "built $output for $OPENROIS_GATEWAY_URL"
+  exit 0
+fi
+
+port=$("$OPENROIS_VENV/bin/python" -c \
+  'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
+url=ws://127.0.0.1:$port
+"$OPENROIS_VENV/bin/openrois-gateway" --port "$port" --log-level warning >"$work/gateway.log" 2>&1 &
+gateway=$!
+"$OPENROIS_VENV/bin/python" "$repo/testing/mock-adapter/mock_adapter.py" \
+  --config "$repo/testing/mock-adapter/adapter.fast.yaml" --gateway-url "$url" >"$work/adapter.log" 2>&1 &
+adapter=$!
+trap 'kill "$adapter" "$gateway" 2>/dev/null || true' EXIT
+
+status=0
+OPENROIS_GATEWAY_URL=$url "$output" -batchmode -nographics -logFile "$work/player.log" \
+  >"$work/player.stdout" 2>&1 || status=$?
+grep '^HARNESS ' "$work/player.log" || true
+echo "player exit code $status"
+exit "$status"

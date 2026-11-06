@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace OpenRoIS.Interfaces.Service
@@ -64,17 +65,25 @@ namespace OpenRoIS.Interfaces.Service
     ///     command_id: The command that ended, as the application named it.
     ///     status: How the command ended.
     /// </summary>
-    public sealed class CompletedParams : IEquatable<CompletedParams>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class CompletedParams : IEquatable<CompletedParams>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("command_id")]
-        public string CommandId { get; }
+        public string CommandId { get; init; }
+        [JsonRequired]
         [JsonPropertyName("status")]
-        public CompletedStatus Status { get; }
+        public CompletedStatus Status { get; init; }
 
         public CompletedParams(string commandId, CompletedStatus status)
         {
             CommandId = commandId;
             Status = status;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (CommandId is null) throw new JsonException("CompletedParams.command_id must not be null.");
         }
 
         public bool Equals(CompletedParams? other)
@@ -110,17 +119,25 @@ namespace OpenRoIS.Interfaces.Service
     ///     error_id: Identifier of this error, for get_error_detail.
     ///     error_type: Classification of the error.
     /// </summary>
-    public sealed class NotifyErrorParams : IEquatable<NotifyErrorParams>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class NotifyErrorParams : IEquatable<NotifyErrorParams>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("error_id")]
-        public string ErrorId { get; }
+        public string ErrorId { get; init; }
+        [JsonRequired]
         [JsonPropertyName("error_type")]
-        public ErrorType ErrorType { get; }
+        public ErrorType ErrorType { get; init; }
 
         public NotifyErrorParams(string errorId, ErrorType errorType)
         {
             ErrorId = errorId;
             ErrorType = errorType;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (ErrorId is null) throw new JsonException("NotifyErrorParams.error_id must not be null.");
         }
 
         public bool Equals(NotifyErrorParams? other)
@@ -162,18 +179,22 @@ namespace OpenRoIS.Interfaces.Service
     ///     results: The event payload. An OpenRoIS extension that saves one
     ///         get_event_detail round trip per event.
     /// </summary>
-    public sealed class NotifyEventParams : IEquatable<NotifyEventParams>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class NotifyEventParams : IEquatable<NotifyEventParams>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("event_id")]
-        public string EventId { get; }
+        public string EventId { get; init; }
+        [JsonRequired]
         [JsonPropertyName("event_type")]
-        public string EventType { get; }
+        public string EventType { get; init; }
+        [JsonRequired]
         [JsonPropertyName("subscribe_id")]
-        public string SubscribeId { get; }
+        public string SubscribeId { get; init; }
         [JsonPropertyName("expire")]
-        public string Expire { get; }
+        public string Expire { get; init; }
         [JsonPropertyName("results")]
-        public IReadOnlyList<OpenRoIS.Interfaces.Hri.Result>? Results { get; }
+        public IReadOnlyList<OpenRoIS.Interfaces.Hri.Result>? Results { get; init; }
 
         public NotifyEventParams(string eventId, string eventType, string subscribeId, string expire = "", IReadOnlyList<OpenRoIS.Interfaces.Hri.Result>? results = null)
         {
@@ -182,6 +203,21 @@ namespace OpenRoIS.Interfaces.Service
             SubscribeId = subscribeId;
             Expire = expire;
             Results = results;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (EventId is null) throw new JsonException("NotifyEventParams.event_id must not be null.");
+            if (EventType is null) throw new JsonException("NotifyEventParams.event_type must not be null.");
+            if (SubscribeId is null) throw new JsonException("NotifyEventParams.subscribe_id must not be null.");
+            if (Expire is null) throw new JsonException("NotifyEventParams.expire must not be null.");
+            if (Results is not null)
+            {
+                foreach (var item0 in Results)
+                {
+                    if (item0 is null) throw new JsonException("NotifyEventParams.results item must not be null.");
+                }
+            }
         }
 
         public bool Equals(NotifyEventParams? other)
@@ -214,6 +250,7 @@ namespace OpenRoIS.Interfaces.Service
     /// changes, for example when a child engine connects or disconnects, so a client
     /// calls get_profile again instead of polling it. It carries no params.
     /// </summary>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
     public sealed class ProfileChangedParams { }
 
 }

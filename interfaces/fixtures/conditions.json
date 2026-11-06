@@ -1,0 +1,36 @@
+[
+  {"builder": "quote", "args": ["kitchen"], "expected": "'kitchen'"},
+  {"builder": "quote", "args": [""], "expected": "''"},
+  {"builder": "quote", "args": ["it's"], "expected": "'it''s'"},
+  {"builder": "quote", "args": ["''"], "expected": "''''''"},
+  {"builder": "quote", "args": ["100%_done"], "expected": "'100%_done'"},
+
+  {"builder": "eq", "args": ["component_ref", "mock/navigation"], "expected": "component_ref = 'mock/navigation'"},
+  {"builder": "eq", "args": ["component_ref", ""], "expected": "component_ref = ''"},
+  {"builder": "eq", "args": ["component_ref", "it's/odd"], "expected": "component_ref = 'it''s/odd'"},
+  {"builder": "eq", "args": ["component_ref", "mock/%"], "expected": "component_ref = 'mock/%'"},
+  {"builder": "eq", "args": ["component_type", "urn:x-rois:def:component:OMG::Navigation"], "expected": "component_type = 'urn:x-rois:def:component:OMG::Navigation'"},
+
+  {"builder": "like", "args": ["component_ref", "mock/%"], "expected": "component_ref LIKE 'mock/%'"},
+  {"builder": "like", "args": ["component_ref", "mock/nav_gation"], "expected": "component_ref LIKE 'mock/nav_gation'"},
+  {"builder": "like", "args": ["component_ref", "it's/%"], "expected": "component_ref LIKE 'it''s/%'"},
+  {"builder": "like", "args": ["component_ref", "100\\%"], "expected": "component_ref LIKE '100\\%'"},
+
+  {"builder": "all_of", "args": [], "expected": ""},
+  {"builder": "all_of", "args": [""], "expected": ""},
+  {"builder": "all_of", "args": ["component_ref = 'a'"], "expected": "component_ref = 'a'"},
+  {"builder": "all_of", "args": ["component_ref = 'a'", "component_type = 'b'"], "expected": "component_ref = 'a' AND component_type = 'b'"},
+  {"builder": "all_of", "args": ["component_ref = 'a'", "", "component_type LIKE 'u%'"], "expected": "component_ref = 'a' AND component_type LIKE 'u%'"},
+  {"builder": "all_of", "args": ["", "   ", "component_ref = 'a'"], "expected": "component_ref = 'a'"},
+
+  {"builder": "component_ref", "args": ["mock/navigation"], "expected": "component_ref = 'mock/navigation'"},
+  {"builder": "component_ref", "args": ["it's/odd"], "expected": "component_ref = 'it''s/odd'"},
+
+  {"builder": "component_type", "args": [{"authority": "OMG", "code": "Navigation"}], "expected": "component_type = 'urn:x-rois:def:component:OMG::Navigation'"},
+  {"builder": "component_type", "args": [{"authority": "OpenRoIS", "code": "Robot's"}], "expected": "component_type = 'urn:x-rois:def:component:OpenRoIS::Robot''s'"},
+
+  {"builder": "component_type_urn", "args": [{"authority": "OMG", "code": "PersonDetection"}], "expected": "urn:x-rois:def:component:OMG::PersonDetection"},
+  {"builder": "component_type_urn", "args": [{"authority": "OpenRoIS", "code": "TestFault"}], "expected": "urn:x-rois:def:component:OpenRoIS::TestFault"},
+  {"builder": "component_type_urn", "args": [{"authority": "", "code": "Local"}], "expected": "urn:x-rois:def:component:::Local"},
+  {"builder": "component_type_urn", "args": [{"authority": "OpenRoIS", "code": "Robot's"}], "expected": "urn:x-rois:def:component:OpenRoIS::Robot's"}
+]

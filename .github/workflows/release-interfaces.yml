@@ -1,0 +1,255 @@
+name: Release interfaces
+
+# Publishes openrois-interfaces to PyPI and @openrois/interfaces to npm when an
+# interfaces-v* tag is pushed, for example interfaces-v0.1.0-alpha.6. Both registries use
+# trusted publishing (OIDC), so no long-lived token is stored in the repository. The last
+# job then creates the GitHub release with the wheel, the npm tarball, the nupkg and the
+# CHANGELOG sections of all three languages. The nupkg is a release asset only: the C#
+# types ship inside the Unity package and never go to NuGet.
+
+on:
+  push:
+    tags: ["interfaces-v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-interfaces-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check-version:
+    name: Tag matches the package versions
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.versions.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compare the tag with the manifests
+        id: versions
+        # The tag carries the npm form (0.1.0-alpha.6), which package.json, the csproj and
+        # manifest.json use as it is. PyPI normalizes it to 0.1.0a6.
+        run: |
+          tag="${GITHUB_REF_NAME#interfaces-v}"
+          py_expected=$(python3 -c "import re,sys;print(re.sub(r'-alpha\.', 'a', sys.argv[1]))" "$tag")
+          py_version=$(python3 -c "import tomllib;print(tomllib.load(open('interfaces/python/pyproject.toml','rb'))['project']['version'])")
+          npm_version=$(python3 -c "import json;print(json.load(open('interfaces/typescript/package.json'))['version'])")
+          cs_version=$(python3 -c "import xml.etree.ElementTree as ET;print(ET.parse('interfaces/csharp/src/OpenRoIS.Interfaces/OpenRoIS.Interfaces.csproj').findtext('.//Version'))")
+          schema_version=$(python3 -c "import json;print(json.load(open('interfaces/schema/manifest.json'))['version'])")
+          if [ "$py_version" != "$py_expected" ] || [ "$npm_version" != "$tag" ] || [ "$cs_version" != "$tag" ] || [ "$schema_version" != "$tag" ]; then
+            echo "::error::Tag $tag, PyPI $py_version (expected $py_expected), npm $npm_version, csproj $cs_version, manifest.json $schema_version"
+            exit 1
+          fi
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+          echo "pypi=$py_version" >> "$GITHUB_OUTPUT"
+
+      - name: Write the release notes
+        # This runs before anything is uploaded, so a missing CHANGELOG section stops the
+        # release while the version is still free on both registries. Python spells the
+        # version 0.1.0a6 and the other two 0.1.0-alpha.6.
+        env:
+          VERSION: ${{ steps.versions.outputs.version }}
+          PY_VERSION: ${{ steps.versions.outputs.pypi }}
+        run: |
+          python3 .github/scripts/release_notes.py \
+            --part interfaces/python/CHANGELOG.md "$PY_VERSION" "Python (openrois-interfaces)" \
+            --part interfaces/typescript/CHANGELOG.md "$VERSION" "TypeScript (@openrois/interfaces)" \
+            --part interfaces/csharp/CHANGELOG.md "$VERSION" "C# (OpenRoIS.Interfaces)" \
+            > release-notes.md
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
+
+  test:
+    # One job in front of both registries, because a version cannot be uploaded twice: a
+    # failure here must stop the release before either upload. C# goes to no registry, and
+    # its tests are here because the Unity package bundles those types and the release
+    # carries the nupkg.
+    name: All three languages
+    needs: check-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Python
+        working-directory: interfaces/python
+        run: |
+          python -m pip install -e ".[dev]"
+          ruff check src/
+          mypy src/
+          pytest
+
+      - name: TypeScript
+        working-directory: interfaces/typescript
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+
+      - name: Node import check
+        # Plain Node.js loads the built package by name, which is the only check that sees
+        # a missing file extension or a broken exports map.
+        working-directory: interfaces/typescript
+        run: |
+          npm run build
+          npm run test:package
+
+      - name: The npm tarball installs and loads
+        # The import check above runs in the development tree, where every dev package is
+        # present and npm pack plays no part. This one installs the tarball into an empty
+        # folder and imports each exports entry, so a file left out of the tarball or a
+        # runtime import of a dev package stops the release. The Node.js here is the one
+        # the npm job publishes with.
+        working-directory: interfaces/typescript
+        run: |
+          npm pack
+          mkdir /tmp/npm-clean
+          cp openrois-interfaces-*.tgz /tmp/npm-clean/
+          cd /tmp/npm-clean
+          npm init --yes
+          npm install ./openrois-interfaces-*.tgz
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            const manifest = JSON.parse(
+              readFileSync("node_modules/@openrois/interfaces/package.json", "utf-8"),
+            );
+            for (const subpath of Object.keys(manifest.exports)) {
+              const specifier = manifest.name + subpath.slice(1);
+              const imported = await import(specifier);
+              if (Object.keys(imported).length === 0) {
+                throw new Error(`${specifier} exports nothing`);
+              }
+              console.log(`${specifier} loads`);
+            }
+          '
+
+      - name: C#
+        working-directory: interfaces/csharp
+        run: dotnet test tests/OpenRoIS.Interfaces.Tests
+
+      - name: Pack the C# package
+        # This is a release asset only, and it must never be pushed to NuGet.
+        working-directory: interfaces/csharp
+        run: dotnet pack src/OpenRoIS.Interfaces --configuration Release --output dist
+
+      - name: Build the Python package
+        working-directory: interfaces/python
+        run: |
+          python -m pip install build
+          python -m build
+
+      - name: The wheel installs from PyPI
+        # This resolves the dependencies from the registry, so a floor that PyPI cannot
+        # satisfy stops the release. It runs here and not in the pypi job, so that it
+        # stops the npm upload too.
+        run: |
+          python -m venv /tmp/clean
+          /tmp/clean/bin/pip install interfaces/python/dist/*.whl
+          /tmp/clean/bin/python -c "import openrois.interfaces"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: python-dist
+          path: interfaces/python/dist
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: npm-tarball
+          path: interfaces/typescript/openrois-interfaces-*.tgz
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nupkg
+          path: interfaces/csharp/dist/OpenRoIS.Interfaces.*.nupkg
+          if-no-files-found: error
+
+  pypi:
+    name: PyPI
+    needs: test
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      # The files that passed the clean install are the files that go up, so this job
+      # does not build them again.
+      - uses: actions/download-artifact@v8
+        with:
+          name: python-dist
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+
+  npm:
+    name: npm
+    needs: test
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # The tarball that passed the clean install is the file that goes up, so the registry
+      # and the release asset hold the same bytes and this job does not build it again.
+      - uses: actions/download-artifact@v8
+        with:
+          name: npm-tarball
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      # Trusted publishing needs npm 11.5.1 or later.
+      - run: npm install -g npm@latest
+
+      # npm refuses a pre-release version with no tag, so latest is named here. No stable
+      # version exists yet, and next would leave a plain npm install on alpha.5, which
+      # does not load in Node.js. Once a stable version exists, a tag with a hyphen must
+      # publish to next, so that a pre-release does not replace it as latest.
+      - run: npm publish ./openrois-interfaces-*.tgz --access public --provenance --tag latest
+
+  github-release:
+    name: GitHub release
+    needs: [check-version, pypi, npm]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      # The Python glob names the wheel alone, because the sdist stays on PyPI. The nupkg
+      # glob leaves out the snupkg that dotnet pack writes beside it.
+      - uses: ./.github/actions/github-release
+        with:
+          title: Interfaces ${{ needs.check-version.outputs.version }}
+          notes-file: artifacts/release-notes/release-notes.md
+          files: |
+            artifacts/python-dist/*.whl
+            artifacts/npm-tarball/*.tgz
+            artifacts/nupkg/*.nupkg

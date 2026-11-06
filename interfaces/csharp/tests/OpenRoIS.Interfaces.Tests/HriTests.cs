@@ -50,8 +50,8 @@ namespace OpenRoIS.Interfaces.Tests
     public void Result_JsonRoundtrip()
     {
         var result = new Result("number", "int", "3");
-        var json = JsonSerializer.Serialize(result);
-        var parsed = JsonSerializer.Deserialize<Result>(json)!;
+        var json = JsonSerializer.Serialize(result, RoISJson.Options);
+        var parsed = JsonSerializer.Deserialize<Result>(json, RoISJson.Options)!;
         Assert.Equal(result, parsed);
     }
 

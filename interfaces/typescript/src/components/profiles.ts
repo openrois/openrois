@@ -7,7 +7,7 @@
 // the profile of its type and implements a part of it, and the engine serves
 // the part the component implements.
 
-import type { HRIComponentProfile } from "../profiles";
+import type { HRIComponentProfile } from "../profiles.js";
 
 /** The OMG RoISCommon profile. */
 export const ROIS_COMMON_PROFILE: HRIComponentProfile = {

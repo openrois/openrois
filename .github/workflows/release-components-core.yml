@@ -3,6 +3,7 @@ name: Release components core
 # Publishes openrois-components-core to PyPI when a components-core-v* tag is pushed, for
 # example components-core-v0.1.0-alpha.2. PyPI uses trusted publishing (OIDC), so no
 # long-lived token is stored in the repository.
+# The last job then creates the GitHub release with the wheel and the CHANGELOG section.
 
 on:
   push:
@@ -19,10 +20,13 @@ jobs:
   check-version:
     name: Tag matches the package version
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.versions.outputs.version }}
     steps:
       - uses: actions/checkout@v7
 
       - name: Compare the tag with pyproject.toml
+        id: versions
         # The tag carries the npm form (0.1.0-alpha.2), and PyPI normalizes it to
         # 0.1.0a2, as for the interfaces tags.
         run: |
@@ -33,6 +37,21 @@ jobs:
             echo "::error::Tag $tag, PyPI $py_version (expected $py_expected)"
             exit 1
           fi
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+          echo "pypi=$py_version" >> "$GITHUB_OUTPUT"
+
+      - name: Write the release notes
+        # This runs before anything is uploaded, so a missing CHANGELOG section stops the
+        # release while the version is still free on PyPI.
+        env:
+          PY_VERSION: ${{ steps.versions.outputs.pypi }}
+        run: python3 .github/scripts/release_notes.py --part components/core/CHANGELOG.md "$PY_VERSION" > release-notes.md
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
 
   pypi:
     name: PyPI
@@ -78,6 +97,33 @@ jobs:
           /tmp/clean/bin/pip install components/core/dist/*.whl
           /tmp/clean/bin/python -c "import openrois.components.core"
 
+      # The release carries the wheel that passed the clean install. It is stored before the
+      # publish, and the sdist stays on PyPI.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheel
+          path: components/core/dist/*.whl
+          if-no-files-found: error
+
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: components/core/dist
+
+  github-release:
+    name: GitHub release
+    needs: [check-version, pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - uses: ./.github/actions/github-release
+        with:
+          title: Components Core ${{ needs.check-version.outputs.version }}
+          notes-file: artifacts/release-notes/release-notes.md
+          files: artifacts/wheel/*.whl
