@@ -17,10 +17,11 @@ What exists today:
 | Recursive engine with the RoIS behavior of CP1 to CP3, WebSocket server and client | `engine/` | Available, hardening |
 | Gateway process (`openrois-gateway`) | `services/gateway/` | Available |
 | Component and adapter SDK, and the common components | `components/` | Available |
-| JavaScript client SDK | `sdk/javascript/` | Available |
-| Unity SDK | `sdk/unity/` | JSON-RPC layer only, client in progress |
+| JavaScript client SDK | `sdk/javascript/` | Alpha, pre-1.0, unstable API. Passes the conformance list in Node.js and Chromium |
+| Python client SDK | `sdk/python/` | Alpha, pre-1.0, unstable API. Passes the conformance list |
+| Unity SDK | `sdk/unity/` | Alpha, pre-1.0, unstable API. Passes the conformance list in Linux players. Not run on a device, not built for iOS |
 | Examples: web client, adapter template | `examples/` | Available |
-| Test fixtures: mock adapter, conformance list | `testing/` | Available |
+| Test fixtures: mock adapter, conformance list, Unity harness | `testing/` | Available |
 | Hub management application | `apps/hub/` | Not started, scaffold only |
 
 Each robot's components live in its adapter repository, not here. The reference example
@@ -76,6 +77,12 @@ its description. The IDL and XSD cross-check tests fail on any other addition.
 | Component SDK | `components/core` | `pip install -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | Common components | `components/common` | `pip install -e ../../interfaces/python -e ../core -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | JavaScript SDK | `sdk/javascript` | `npm install`, `npm run build`, `npm test` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway) |
+| Python client SDK | `sdk/python` | `pip install -e ../../interfaces/python -e ".[dev]"`, `pytest` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway), `mypy`, `ruff check src/ tests/` |
+| Unity SDK | `sdk/unity/Tests~` | `dotnet test` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway) |
+
+`sdk/unity/Tests~` compiles the runtime sources without Unity. `testing/unity-harness` runs them
+in real players and in the Editor. It runs by hand before a tag, because automating it needs a
+Unity license in CI.
 
 Some tests in `interfaces/python` cross-check the models against the normative RoIS
 machine-readable files, which are not redistributed in this repository. Those tests are

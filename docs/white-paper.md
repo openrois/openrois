@@ -19,13 +19,13 @@
 >
 > **Status:** Alpha, pre-1.0, unstable API. The type pipeline with the RoIS method
 > catalog, the recursive engine (`openrois-engine`), the gateway process
-> (`openrois-gateway`), the component SDK (`openrois-components-core`) and the TypeScript
-> SDK are built, and a Docker Compose stack runs the gateway with a simulated robot behind
-> it. The engine implements the RoIS interfaces, profiles and common messages (CP1 to CP3)
+> (`openrois-gateway`), the component SDK (`openrois-components-core`) and the TypeScript,
+> Python and Unity client SDKs are built, and a Docker Compose stack runs the gateway with
+> a simulated robot behind it. The engine implements the RoIS interfaces, profiles and common messages (CP1 to CP3)
 > as [rois-reference §16](rois-reference.md#16-known-normative-divergences) records them,
 > without a conformance claim. Each robot's components live in its adapter repository,
-> such as the Reachy Mini adapter. The Unity SDK, a Python client SDK,
-> authentication, and WebRTC media are in progress or planned. This document
+> such as the Reachy Mini adapter. The first alpha of the client SDKs is in progress, and
+> authentication and WebRTC media are planned. This document
 > describes the target architecture and marks features that are not implemented yet.
 
 ---
@@ -39,7 +39,7 @@
 5. [Layered Architecture](#5-layered-architecture)
 6. [The Component Contract](#6-the-component-contract)
 7. [Interface Type Pipeline](#7-interface-type-pipeline)
-8. [Developer Experience: Three SDKs](#8-developer-experience-three-sdks)
+8. [Developer Experience: The SDKs](#8-developer-experience-the-sdks)
 9. [The Wire Protocol: JSON-RPC 2.0](#9-the-wire-protocol-json-rpc-20)
 10. [Deployment Topologies](#10-deployment-topologies)
 11. [Transport Strategy](#11-transport-strategy)
@@ -93,8 +93,8 @@ This white paper describes the following contributions:
 4. A **JSON-RPC 2.0 binding of the RoIS interfaces** over WebSocket: a method catalog
    of 16 methods and 4 notifications named after the IDL, with conditions in a subset
    of CQL2-Text and a small set of documented extensions (section 9).
-5. **SDKs for both sides of the system**: client SDKs for web (JavaScript) and
-   Unity (in progress) that behave identically regardless of the host paradigm
+5. **SDKs for both sides of the system**: client SDKs for TypeScript, Python and
+   Unity that behave identically regardless of the host paradigm
    behind the gateway, and a Python component SDK in which a component is a class that
    declares the profile of its RoIS component type (section 8).
 6. A **package management boundary** that keeps the engine pure while allowing
@@ -695,22 +695,24 @@ cross-check fails.
 
 ---
 
-## 8. Developer Experience: Three SDKs
+## 8. Developer Experience: The SDKs
 
-OpenRoIS provides SDKs for three developer audiences. The client SDKs expose the
-same RoIS interfaces and produce identical behavior regardless of the host paradigm
-behind the gateway. The Python SDK serves component and adapter authors.
+OpenRoIS provides three client SDKs for service applications and a Python component SDK
+for component and adapter authors. The client SDKs expose the same RoIS interfaces and
+produce identical behavior regardless of the host paradigm behind the gateway. All of
+them are Alpha, pre-1.0, unstable API.
 
 ```mermaid
 flowchart TB
     subgraph SDKs["Client SDKs"]
         direction LR
         TS["JavaScript SDK<br/>Web service applications<br/>(primary client)"]
-        Unity["Unity SDK<br/>Unity service applications<br/>(secondary client, in progress)"]
+        Unity["Unity SDK<br/>Unity service applications<br/>(secondary client)"]
+        PyClient["Python client SDK<br/>Asyncio service applications"]
     end
 
     SDKs -->|"WebSocket + JSON-RPC 2.0"| Gateway["Gateway"]
-    Gateway --> Adapters["Robot, Avatar, AI Service Adapters<br/>components written with the Python SDK"]
+    Gateway --> Adapters["Robot, Avatar, AI Service Adapters<br/>components written with the Python component SDK"]
 ```
 
 ### 8.1 JavaScript SDK for Web (Primary Client)
@@ -732,20 +734,32 @@ const target = componentRef(nav);
 const status = await client.query("component_status", target);
 
 // React to events.
-client.on("reached_target", (event) => console.log(event.results));
+client.on("rois.event.notify_event", ({ event_type, results }) => {
+  console.log(event_type, results);
+});
 await client.subscribe("reached_target", target);
 
-// Bind, configure, command, wait for the command to end, release.
+// Record how each command ends, before running any.
+const statuses = new Map<string, string>();
+const waiters = new Map<string, () => void>();
+client.on("rois.command.completed", ({ command_id, status }) => {
+  statuses.set(command_id, status);
+  waiters.get(command_id)?.();
+});
+
+// Bind, configure, command, wait, release.
 await client.bind(nav);
 await client.setParameter(nav, [
   { name: "target_positions", data_type_ref: "string[]", value: '["kitchen"]' },
 ]);
-const statuses = new Map<string, string>();
-client.on("rois.command.completed", ({ command_id, status }) => statuses.set(command_id, status));
 // The engine assigns the command ids and returns them. Its completed notifications
 // arrive after the answer and name those ids.
 const [commandId] = await client.execute([{ component_ref: nav, command_type: "start" }]);
-// ... later: statuses.get(commandId) is "OK" once the navigation has ended.
+// Wait here, because release aborts a running command, which then ends with ABORT.
+if (!statuses.has(commandId)) {
+  await new Promise<void>((resolve) => waiters.set(commandId, resolve));
+}
+console.log(statuses.get(commandId));
 await client.release(nav);
 
 await client.disconnect();
@@ -753,47 +767,118 @@ await client.disconnect();
 
 Key characteristics:
 
-- Written in TypeScript with types included, for browsers and Node.js, as one ES module build.
+- TypeScript strict mode, one ES module build for browsers and Node.js 22.12 or later,
+  which `require` can also load.
 - Validation of every call against the catalog schemas of `@openrois/interfaces`:
   params before they are sent, results when they arrive. A failed return code raises
   `RoISError`, which carries the return code and the method.
-- Typed notifications, each event also delivered under its own event type, for example
-  `reached_target`.
+- Typed listeners for the four catalog notifications, `close` and `error`. A listener
+  that throws never stops the client.
 - Builders for CQL2-Text conditions, such as `componentRef` and `componentType`.
 - Tested with `OPENROIS_GATEWAY_URL` set against a live gateway with the mock adapter
-  behind it.
-- Reconnection is planned.
+  behind it, in Node.js 22 and 24 and in headless Chromium.
+- One client is one session. There is no automatic reconnect, because a silent reconnect
+  would hide the loss of its bindings and subscriptions.
 
-### 8.2 Unity SDK (Secondary Client, in Progress)
+### 8.2 Unity SDK (Secondary Client)
 
-The Unity SDK (`OpenRoIS.Sdk` / `org.openrois.sdk`) targets Unity service
-applications. Its JSON-RPC 2.0 layer is available. The high-level client shown
-below is the target API and is in progress.
+The Unity SDK (`OpenRoIS.Sdk` / `org.openrois.sdk`) targets Unity service applications.
+`RoISClient` has the same operations as the JavaScript client, each returning a `Task` and
+taking an optional `CancellationToken` last.
 
 ```csharp
-var client = await RoISClient.ConnectAsync(
-    "wss://gateway.example.com",
-    new ConnectOptions { Token = token });
+await using var client = await RoISClient.ConnectAsync("ws://127.0.0.1:8765");
 
-var pd = await client.BindAsync("PersonDetection");
-var nav = await client.BindAsync("Navigation");
+// Find a component by type, and select it by ref in later calls.
+var found = await client.SearchAsync(
+    Condition.ComponentType(new RoISIdentifierType("Navigation", "OMG")));
+var nav = found[0];
 
-pd.On("person_detected", e => UpdateCount(e.Number));
-await pd.StartAsync();
+// Record how each command ends, before running any.
+var statuses = new Dictionary<string, CompletedStatus>();
+client.On(RoISNotifications.Completed, (CompletedParams c) => statuses[c.CommandId] = c.Status);
 
-await nav.ExecuteAsync(new TargetPosition(x: 3.0f, y: 1.5f, theta: 0f));
+await client.BindAsync(nav);
+var ids = await client.ExecuteAsync(new[] { new CommandUnit(nav, RoISCommandTypes.Start) });
+// Wait here, because ReleaseAsync aborts a running command, which then ends with ABORT.
+while (!statuses.ContainsKey(ids[0]))
+{
+    await Awaitable.NextFrameAsync();
+}
+Debug.Log(statuses[ids[0]]);
+await client.ReleaseAsync(nav);
 ```
 
-Target characteristics (the JSON-RPC 2.0 layer exists today, the rest is in progress):
+Key characteristics:
 
-- Packaged for Unity as `org.openrois.sdk` through the Unity Package Manager
-  (publication planned).
-- Targets `netstandard2.1`, Unity 6000.0 and later.
-- SDK callbacks marshaled to the Unity main thread (in progress).
-- Typed component proxies: `client.BindAsync("PersonDetection")` returning a typed
-  proxy with `.On(event)` handlers (planned).
+- Packaged for Unity as `org.openrois.sdk`, installed by Git URL with the tag of a release.
+  The package is not on a registry.
+- Targets `netstandard2.1` and Unity 6000.0 and later, on `ClientWebSocket`. WebGL is not a
+  target, because `ClientWebSocket` does not work in a WebGL player.
+- Listeners run in the `SynchronizationContext` that was current at `ConnectAsync`, which on
+  the Unity main thread is the main thread, so they can call Unity APIs.
+- Results are read through the generated models of `OpenRoIS.Interfaces`, bundled in the
+  package with `System.Text.Json`. The client does not validate params, so an invalid value
+  comes back from the engine as an `RpcException`.
+- Every client ends when Play Mode ends and before an assembly reload, also with domain
+  reload off.
+- The targets are desktop, mobile and VR headsets, and a target is not yet a proof. The SDK
+  has run in Linux players, with IL2CPP and Mono, and in the Editor. Its Android ARM64 build
+  has not run on a device, no VR headset has run it, iOS has not been built, and Windows and
+  macOS players have not been run.
 
-### 8.3 Python SDK for Components and Adapters
+### 8.3 Python Client SDK
+
+The Python client SDK (`openrois-sdk`, module `openrois.sdk`) is for service applications
+in asyncio, on Python 3.12 or later. It is separate from the Python component SDK of
+section 8.4, and needs no engine.
+
+```python
+import asyncio
+from collections import defaultdict
+
+from openrois.interfaces import CompletedParams, RoISIdentifierType
+from openrois.sdk import RoISClient, component_ref, component_type
+
+async with RoISClient.connect("ws://localhost:8765") as client:
+    # Find a component by type, and select it by ref in later calls.
+    navigation = RoISIdentifierType(authority="OMG", code="Navigation")
+    [nav] = await client.search(component_type(navigation))
+
+    # Read state.
+    status = await client.query("component_status", component_ref(nav))
+
+    # Record how each command ends, before running any.
+    statuses: dict[str, str] = {}
+    ended: defaultdict[str, asyncio.Event] = defaultdict(asyncio.Event)
+
+    def on_completed(completed: CompletedParams) -> None:
+        statuses[completed.command_id] = completed.status
+        ended[completed.command_id].set()
+
+    client.on("rois.command.completed", on_completed)
+
+    await client.bind(nav)
+    [command_id] = await client.execute([{"component_ref": nav, "command_type": "start"}])
+    # Wait here, because release aborts a running command, which then ends with ABORT.
+    await asyncio.wait_for(ended[command_id].wait(), timeout=30)
+    print(statuses[command_id])
+    await client.release(nav)
+```
+
+Key characteristics:
+
+- Validation of every call against the catalog models of `openrois-interfaces`: params
+  before they are sent, results when they arrive. Inputs take a model or a mapping, and
+  results are interface models.
+- `RoISClient.connect()` works with `await` and with `async with`.
+- A plain function listener runs inline in the task that reads the socket, and a coroutine
+  function runs in a task of its own, where it can await a call on the client.
+- Cancellation with `asyncio.timeout`, `asyncio.wait_for` or a `TaskGroup` leaves the client
+  working.
+- As in the other client SDKs, one client is one session, with no automatic reconnect.
+
+### 8.4 Python Component SDK
 
 The Python packages `openrois-components-core` and `openrois-engine` serve component and
 adapter authors. A component is a class that declares the profile of its type and marks
@@ -854,12 +939,12 @@ Clients then see `robot_1/navigation`. Key characteristics:
 - An adapter reads its settings from `adapter.yaml`, the environment and its flags
   through `AdapterConfig`. The Reachy Mini adapter, with its
   `openrois.components.reachy_mini` package, is the complete example.
-- A Python client for scripting and end-to-end testing is planned.
 
-### 8.4 SDK Interface Mapping
+### 8.5 SDK Interface Mapping
 
-The client SDKs mirror the RoIS interfaces defined in the normative IDL. The Unity SDK
-will have the same methods (in progress).
+The client SDKs mirror the RoIS interfaces defined in the normative IDL. The Python client
+has the same methods in `snake_case`, and the Unity client as `Async` methods in
+`PascalCase`.
 
 | RoIS Interface | `RoISClient` methods (JavaScript) | Notifications |
 |----------------|-----------------------------------|---------------|
@@ -1852,7 +1937,7 @@ details and open decisions.
 | 0 | Paradigm-Neutral Interfaces | type pipeline, tests against the normative files | done |
 | 1 | Engine and Sub HRI Engine | TypeScript proof of concept, child engines, mock components | done |
 | 2 | Adapter Framework and Components | component framework, reference components, real robot adapter | done |
-| 3 | Client SDKs and First Demonstration | JavaScript SDK and web client done, Unity SDK in progress, exit tag `v0.1.0` | in progress |
+| 3 | Client SDKs and First Demonstration | TypeScript, Python and Unity client SDKs and web client done, their first alpha in progress, exit tag `v0.1.0` | in progress |
 | 4 | Recursive Engine in Python | the Python engine on the RoIS method catalog is the only dispatch implementation | in progress |
 | 5 | Hardening the Engine | graceful shutdown, reconnection, package loading, health endpoints | planned |
 | 6 | Gateway Process | `openrois-gateway` from `Engine` + `WsServer`, Docker Compose quickstart | in progress |
@@ -1888,17 +1973,19 @@ Pre-1.0 releases are Alpha, unstable API. Do not use in production until v1.0.
 
 The type pipeline with the RoIS method catalog, the recursive Python engine
 (`openrois-engine`), the gateway process (`openrois-gateway`), the component SDK
-(`openrois-components-core`), and the JavaScript SDK are built. The engine implements the
+(`openrois-components-core`), and the TypeScript, Python and Unity client SDKs are built.
+The engine implements the
 RoIS interfaces, profiles and common messages (CP1 to CP3) as
 [rois-reference §16](rois-reference.md#16-known-normative-divergences) records them. A
-Docker Compose stack runs the gateway with a mock adapter behind it, and the TypeScript
-SDK runs full sessions against it. Each robot's components live in its adapter
+Docker Compose stack runs the gateway with a mock adapter behind it, and the three client
+SDKs pass one conformance list against a gateway with that adapter. Each robot's components live in its adapter
 repository: the Reachy Mini adapter of the openrois organization is the reference
 example, and Coarobo maintains a Kachaka adapter. The first end-to-end demonstration, a web application
 driving a physical robot over gRPC, ran on the earlier TypeScript proof of concept. The
 next one, a physical robot and a virtual agent behind one gateway on the Reachy Mini
-reference platform, is Phase 8, and the Reachy Mini adapter is built. The Unity SDK
-is in progress, and a Python client SDK is planned.
+reference platform, is Phase 8, and the Reachy Mini adapter is built. The Unity SDK has run
+in Linux players and in the Editor. Its Android build has not run on a device, and iOS has
+not been built.
 
 ---
 
@@ -1955,11 +2042,10 @@ service without rewriting the scenario logic.
 ### 17.3 OpenRoIS and Unity
 
 Unity is a secondary client platform for service applications. The Unity SDK targets
-Unity 6000.0 and later through UPM, and bundles the C# interface types, which target
+Unity 6000.0 and later through the Unity Package Manager, by Git URL, and bundles the C# interface types, which target
 `netstandard2.1`. The same types
 also work outside Unity (any .NET runtime). The gateway runs as a separate process. A
-Unity application connects to the gateway over WebSocket using the Unity SDK (in
-progress). Adapters run as separate processes on the robot or in the cloud.
+Unity application connects to the gateway over WebSocket using the Unity SDK. Adapters run as separate processes on the robot or in the cloud.
 
 ### 17.4 Conformance
 
@@ -1998,14 +2084,14 @@ The single-source-of-truth type pipeline (Python Pydantic to JSON Schema to C# a
 TypeScript) keeps three language stacks consistent without manual synchronization. The
 JSON-RPC 2.0 binding of the RoIS method catalog over WebSocket provides a
 browser-native, NAT-friendly control plane with full async event support. The client
-SDKs (JavaScript for web, and Unity, in progress) expose identical behavior
+SDKs (TypeScript, Python and Unity) expose identical behavior
 regardless of the host paradigm behind the gateway.
 
 The project is in alpha. The type pipeline, the recursive engine, the gateway process,
-the component SDK, reference components, and the JavaScript SDK are built. A Docker
-Compose stack runs the gateway with the mock adapter, and the JavaScript SDK runs full
-sessions against it. The Unity SDK, authentication, media streaming, and the
-full component library follow the roadmap. Researchers and engineers evaluating RoIS
+the component SDK, reference components, and the three client SDKs are built. A Docker
+Compose stack runs the gateway with the mock adapter, and the three client SDKs pass one
+conformance list against a gateway with that adapter. Authentication, media streaming, and
+the full component library follow the roadmap. Researchers and engineers evaluating RoIS
 2.0 can use OpenRoIS as a reference implementation, contribute reference components, or
 build applications against the SDK today.
 

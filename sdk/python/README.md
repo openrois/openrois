@@ -23,12 +23,15 @@ git clone https://github.com/openrois/openrois.git
 pip install -e ./openrois/sdk/python
 ```
 
+`wss://` has not been exercised: every run used `ws://`. The gateway does not authenticate connections in the alpha releases, so use it on trusted networks only.
+
 ## Usage
 
 ```python
 import asyncio
+from collections import defaultdict
 
-from openrois.interfaces import RoISIdentifierType
+from openrois.interfaces import CompletedParams, RoISIdentifierType
 from openrois.sdk import RoISClient, component_ref, component_type
 
 
@@ -52,19 +55,24 @@ async def main() -> None:
 
         # Record how each command ends, before running any.
         statuses: dict[str, str] = {}
-        client.on(
-            "rois.command.completed",
-            lambda completed: statuses.update({completed.command_id: completed.status}),
-        )
+        ended: defaultdict[str, asyncio.Event] = defaultdict(asyncio.Event)
 
-        # Reserve, configure, command, release.
+        def on_completed(completed: CompletedParams) -> None:
+            statuses[completed.command_id] = completed.status
+            ended[completed.command_id].set()
+
+        client.on("rois.command.completed", on_completed)
+
+        # Reserve, configure, command, wait, release.
         await client.bind(nav)
         await client.set_parameter(
             nav,
             [{"name": "target_positions", "data_type_ref": "string[]", "value": '["kitchen"]'}],
         )
         [command_id] = await client.execute([{"component_ref": nav, "command_type": "start"}])
-        # ... later: statuses[command_id] is "OK" once the navigation has ended.
+        # Wait here, because release aborts a running command, which then ends with ABORT.
+        await asyncio.wait_for(ended[command_id].wait(), timeout=30)
+        print(statuses[command_id])
         await client.release(nav)
 
 
@@ -83,7 +91,9 @@ A command that ends at once can complete before the reply reaches your code, so 
 2. Record each status by `command_id`.
 3. Read the status with the ids in the reply.
 
-The quickstart above does this. To `await` a command, set an `asyncio.Event` from the same listener, and check the record first in case the command has already ended.
+The quickstart above does this. Its `asyncio.Event` for each id stays set, so a command that has already ended does not wait, and `asyncio.wait_for` limits the wait.
+
+Wait before you release the component: `release()` aborts your running commands on it, and they end with `ABORT`. `disconnect()` aborts them too.
 
 ## API
 

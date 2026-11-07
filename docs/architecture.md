@@ -60,7 +60,7 @@
   assume hardware, a world model, or any specific middleware.
 - Allow a **service application in a remote location** to control any RoIS host
   (robot or avatar) securely.
-- Expose a **simple client SDK** (JavaScript for web first, Unity second)
+- Expose a **simple client SDK** (JavaScript, Python and Unity)
   so a scenario can be written in a few lines, identically regardless of the host
   paradigm.
 - Support **live audio/video** for both telepresence (robot) and rendered avatars.
@@ -130,7 +130,7 @@ Logical Layer (control plane)
 | Main HRI Engine | Engine (hosted by the gateway) | Routes to child engines, aggregates profiles |
 | Sub HRI Engine | Engine (hosted by an adapter) | Hosts components, owns data-plane transport |
 | HRI Component | Component registered by a sub HRI Engine | Translation layer: RoIS calls to backend calls |
-| Service Application | Client SDK (JavaScript or Unity) | Drives robot scenarios via RoIS interfaces |
+| Service Application | Client SDK (JavaScript, Python or Unity) | Drives robot scenarios via RoIS interfaces |
 | RoIS interfaces (SystemIF, CommandIF, QueryIF, EventIF, StreamingIF) | JSON-RPC 2.0 methods over WebSocket | Service application to gateway boundary (control plane) |
 | Main HRI Engine to sub HRI Engine | The same JSON-RPC 2.0 methods, sent by the parent engine | Gateway to sub HRI Engine boundary (control plane) |
 | (no spec term) | Component contract (`ComponentContract`) | Inside an engine: its own components and its child engines behind one interface |
@@ -189,6 +189,7 @@ flowchart TB
     subgraph L1["Service Application"]
         direction LR
         WebApp["Web App<br/>+ RoIS TS SDK"]
+        PythonApp["Python App<br/>+ RoIS Python SDK"]
         UnityApp["Unity App<br/>+ RoIS Unity SDK"]
     end
 
@@ -279,10 +280,21 @@ interface of its own: the AudioStreaming and VideoStreaming components take thei
 through `execute`, answer `get_stream_status` through `query`, and send
 `notify_stream_status` as an event ([§13](#13-control-plane-vs-data-plane-streaming)).
 
-The JavaScript SDK (`@openrois/sdk`) is the client for web service applications.
-`RoISClient` has one method per operation of the method catalog, each taking the
-operation's IDL parameters in IDL order. The Unity SDK will have the same methods
-(in progress).
+Three client SDKs expose these interfaces. All three are alpha, pre-1.0, with an
+unstable API, and run the same conformance list against a gateway with the mock adapter
+behind it.
+
+| SDK | Package | For | What has run |
+|-----|---------|-----|--------------|
+| JavaScript | `@openrois/sdk` | Browsers and Node.js 22.12 or later | Node.js 22 and 24, headless Chromium |
+| Python | `openrois-sdk`, module `openrois.sdk` | Asyncio on Python 3.12 or later | Python 3.12 and 3.13 |
+| Unity | `org.openrois.sdk`, assembly `OpenRoIS.Sdk` | Unity 6000.0 and later | Linux players and the Editor. Not run on a device, not built for iOS |
+
+In each SDK, `RoISClient` has one method per operation of the method catalog, each
+taking the operation's IDL parameters in IDL order. The names follow the language:
+`bindAny` in JavaScript, `bind_any` in Python, and `BindAnyAsync` in Unity. One client is
+one session, and no SDK reconnects by itself, because a silent reconnect would hide the
+loss of the session's bindings and subscriptions. The tree below uses the JavaScript names.
 
 ```
 RoISClient
@@ -308,20 +320,32 @@ const target = componentRef(nav);
 const status = await client.query("component_status", target);
 
 // React to events.
-client.on("reached_target", (event) => console.log(event.results));
+client.on("rois.event.notify_event", ({ event_type, results }) => {
+  console.log(event_type, results);
+});
 await client.subscribe("reached_target", target);
 
-// Reserve, configure, command, wait for the command to end, release.
+// Record how each command ends, before running any.
+const statuses = new Map<string, string>();
+const waiters = new Map<string, () => void>();
+client.on("rois.command.completed", ({ command_id, status }) => {
+  statuses.set(command_id, status);
+  waiters.get(command_id)?.();
+});
+
+// Reserve, configure, command, wait, release.
 await client.bind(nav);
 await client.setParameter(nav, [
   { name: "target_positions", data_type_ref: "string[]", value: '["kitchen"]' },
 ]);
-const statuses = new Map<string, string>();
-client.on("rois.command.completed", ({ command_id, status }) => statuses.set(command_id, status));
 // The engine assigns the command ids and returns them. Its completed notifications
 // arrive after the answer and name those ids.
 const [commandId] = await client.execute([{ component_ref: nav, command_type: "start" }]);
-// ... later: statuses.get(commandId) is "OK" once the navigation has ended.
+// Wait here, because release aborts a running command, which then ends with ABORT.
+if (!statuses.has(commandId)) {
+  await new Promise<void>((resolve) => waiters.set(commandId, resolve));
+}
+console.log(statuses.get(commandId));
 await client.release(nav);
 
 await client.disconnect();
@@ -329,8 +353,63 @@ await client.disconnect();
 
 The notifications come directly from `ServiceApplicationBase` in the spec:
 `notify_error`, `completed`, and `notify_event`, sent as `rois.system.notify_error`,
-`rois.command.completed`, and `rois.event.notify_event`. The SDK also delivers each
-event under its own event type, for example `reached_target`.
+`rois.command.completed`, and `rois.event.notify_event`.
+
+`on(name, listener)` and `off(name, listener)` are the whole listener surface, the same
+in all three SDKs. The names are those three notifications, `rois.system.profile_changed`,
+and two of the client's own: `close`, with the close code and reason, and `error`, with
+the fault. Listeners of the four notifications receive the params of the catalog. A
+`rois.event.notify_event` listener receives every event of every subscription and filters
+by `subscribe_id` or `event_type`, because no listener exists per event type. A listener
+that fails never stops the client: the failure goes to the `error` listeners, or to the
+log if there are none.
+
+RoIS has no operation that waits for a command, so no SDK has one. `execute` returns when
+the engine accepts the commands, and each command ends later with
+`rois.command.completed`. A command can end before the reply to `execute` is read, so the
+listener goes in before the call, and records each status by command id. An application
+waits for that record before it calls `release`, which aborts the caller's running commands
+on the component, and they end with `ABORT`.
+
+### The Python Client
+
+`openrois-sdk` is asyncio only. It depends on `openrois-interfaces`, never on
+`openrois-engine`, so a service application needs no engine, and it sits in the shared
+`openrois` namespace beside the component SDK, which is a different package for a different
+side of the gateway. Its differences follow from Python:
+
+- `RoISClient.connect()` works with `await` and with `async with`.
+- A plain function listener runs inline in the task that reads the socket, in the order
+  messages arrive, so it must not block. A coroutine function runs in a task of its own,
+  because awaiting a call inline would wait for a reply only that task can deliver.
+- Calls validate their params and results against the catalog models. Inputs take a
+  model or a mapping, and results are interface models.
+- A cancelled call, for example under `asyncio.timeout`, leaves the client working.
+- The client accepts messages of up to 16 MiB, because the 1 MiB default of the
+  `websockets` package would close the connection on a large `get_profile`.
+
+### The Unity Client
+
+`org.openrois.sdk` installs by Git URL with the tag of a release, and is on no registry. Its
+client core has no reference to `UnityEngine`, which is what lets `dotnet test` run the
+conformance list on the same sources with no Unity license. `testing/unity-harness` runs
+them in real players, by hand before a tag.
+
+- The transport is `ClientWebSocket` on every target. WebGL is not a target, because
+  `ClientWebSocket` does not work in a WebGL player.
+- Methods return a `Task` and take an optional `CancellationToken` last.
+- Listeners run in the `SynchronizationContext` that was current at `ConnectAsync`, which on
+  the Unity main thread is the main thread, so they can call Unity APIs.
+- Results are read through the generated models of `OpenRoIS.Interfaces`, bundled in the
+  package with `System.Text.Json`. The client does not validate params, so an invalid value
+  comes back from the engine as an `RpcException`.
+- Every client ends when Play Mode ends and before an assembly reload, also with domain
+  reload off.
+
+The targets are desktop, mobile and VR headsets, and a target is not yet a proof. The SDK
+has run in Linux players, with IL2CPP and Mono, and in the Editor. Its Android ARM64 build
+has not run on a device, no VR headset has run it, iOS has not been built, and Windows and
+macOS players have not been run.
 
 ### Profile-Driven Service Applications
 
@@ -1031,6 +1110,9 @@ Because the gateway filters at `search()`, robots outside a caller's scope are
 | Streaming (AudioStreaming, VideoStreaming) | `execute`, `query`, `subscribe` | The same as any component, bound one per session | Stream control through the component's commands, with media over WebRTC (planned) |
 | `ServiceApplicationBase` (`completed`, `notify_event`, `notify_error`) | Notifications | Sends each notification to the session it belongs to | `on_completed` and `deliver` callbacks |
 
+The client column uses the JavaScript names. The Python client writes them in snake case,
+and the Unity client in Pascal case with `Async` at the end.
+
 ---
 
 ## 17. End-to-End Message Flows
@@ -1107,7 +1189,7 @@ openrois/
 ├── services/      # Network processes: the gateway and its container image (openrois-gateway)
 ├── apps/          # Product applications (Hub visualizer, planned)
 ├── examples/      # Web client, adapter template
-├── testing/       # Test fixtures: mock adapter, conformance list
+├── testing/       # Test fixtures: mock adapter, conformance list, Unity harness
 └── docs/          # Architecture, white paper, roadmap, spec reference
 ```
 
@@ -1117,10 +1199,10 @@ openrois/
 | `engine/` | Engine library (`openrois-engine`). Recursive RoIS dispatch logic: one `Engine` class used by both the gateway and adapters, plus `WsServer` and `WsClient`. Zero media and zero paradigm-specific imports. |
 | `services/gateway/` | Gateway process (`openrois-gateway`). Composes `Engine` and `WsServer` into the process that hosts the Main HRI Engine, with configuration, logging, a graceful stop, and a container image. |
 | `components/` | The component SDK (`openrois-components-core`) and the common components (`openrois-components-common`). |
-| `sdk/` | Client SDKs: JavaScript for web and Node.js, Python, and Unity. |
+| `sdk/` | Client SDKs: JavaScript for browsers and Node.js, Python for asyncio, and Unity. |
 | `apps/` | Product applications: the Hub (a gateway visualizer, planned). |
 | `examples/` | Reference implementations and templates for onboarding. |
-| `testing/` | Fixtures that tests and CI depend on: the mock adapter and the conformance list. |
+| `testing/` | Fixtures that tests and CI depend on: the mock adapter, the conformance list, and the Unity harness. |
 | `docs/` | Documentation. |
 
 Adapters for specific robots live in separate repositories. They consume the
@@ -1137,6 +1219,7 @@ in the monorepo under `components/`.
 |---------|-------------|--------------|
 | Service application (web) | **TypeScript (React)** | Unity (C#), Godot |
 | Service application (desktop) | **Unity (C#)** | Godot, Unreal |
+| Service application (scripts, AI services) | **Python (asyncio)** | TypeScript (Node.js) |
 | Robot data-plane transport | **gRPC** (direct API), **ROS 2 / DDS** (ROS ecosystem) | CORBA, RTC |
 | Engine language | **Python** | TypeScript, C#/.NET |
 | Interface source of truth | **Pydantic to JSON Schema to C#/TS** | Protobuf, raw IDL |

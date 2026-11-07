@@ -1,7 +1,9 @@
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
+import { sdkAlias } from "./vitest.config";
 
 export default defineConfig({
+  resolve: { alias: sdkAlias },
   test: {
     include: ["tests/conformance.test.ts"],
     globalSetup: ["tests/conformance.setup.ts"],

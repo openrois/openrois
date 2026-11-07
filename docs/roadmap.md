@@ -65,12 +65,20 @@ monorepo keeps the component SDK and the common components.
 
 ### Phase 3: Client SDKs and First End-to-End Demonstration (In Progress)
 
-**Done:** the JavaScript SDK (`@openrois/sdk`), the profile-driven web client
-(`examples/hri-client`), and an end-to-end demonstration of a web application controlling
-a physical robot through the gateway and an adapter.
+**Done:** the JavaScript client SDK (`@openrois/sdk`), the Python client SDK
+(`openrois-sdk`) and the Unity client SDK (`org.openrois.sdk`), all Alpha, pre-1.0, unstable
+API, the profile-driven web client (`examples/hri-client`), and an end-to-end demonstration
+of a web application controlling a physical robot through the gateway and an adapter. The
+three SDKs pass one conformance list against a gateway with the mock adapter behind it, on
+the versions that `testing/conformance/frozen.txt` pins.
 
-**In progress:** the Unity SDK. Its JSON-RPC layer exists, and the
-high-level client does not yet.
+The Unity SDK has run in Linux players, with IL2CPP and Mono, and in the Editor. Its Android
+ARM64 build has not run on a device, no VR headset has run it, iOS has not been built, and
+Windows and macOS players have not been run.
+
+**In progress:** the first alpha of the three client SDKs, tagged
+`sdk-javascript-v0.1.0-alpha.1`, `sdk-python-v0.1.0-alpha.1` and
+`sdk-unity-v0.1.0-alpha.1`. A run on a device is not part of this alpha.
 
 **Exit criteria:** tagged release `v0.1.0`.
 
@@ -86,7 +94,7 @@ messages (CP1 to CP3) as [rois-reference
 RoSO function, engine-assigned command ids, branches, timeouts, the RoIS_Common default
 and the error channel. A test suite runs the engine in process and over real sockets,
 including a gateway under a gateway. The mock adapter, the adapter template and the
-Reachy Mini and Kachaka adapters run on it, and the JavaScript SDK runs its sessions
+Reachy Mini and Kachaka adapters run on it, and the three client SDKs run their sessions
 against it.
 
 **In progress:** the `0.1.0` release of `openrois-engine` with `openrois-components-core`,
