@@ -137,9 +137,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # The notes are the only artifact, and download-artifact puts a lone artifact straight
+      # into its path with no folder of its own, so the name and the path are given here.
       - uses: actions/download-artifact@v8
         with:
-          path: artifacts
+          name: release-notes
+          path: artifacts/release-notes
 
       # The package has no assets: a user installs the tag by Git URL.
       - uses: ./.github/actions/github-release
