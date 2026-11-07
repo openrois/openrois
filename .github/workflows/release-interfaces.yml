@@ -30,10 +30,15 @@ jobs:
       - name: Compare the tag with the manifests
         id: versions
         # The tag carries the npm form (0.1.0-alpha.6), which package.json, the csproj and
-        # manifest.json use as it is. PyPI normalizes it to 0.1.0a6.
+        # manifest.json use as it is. PyPI normalizes it to 0.1.0a6, and beta and rc tags
+        # the same way. The form is checked first, so any other label is refused.
         run: |
           tag="${GITHUB_REF_NAME#interfaces-v}"
-          py_expected=$(python3 -c "import re,sys;print(re.sub(r'-alpha\.', 'a', sys.argv[1]))" "$tag")
+          if [[ ! "$tag" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?$ ]]; then
+            echo "::error::Tag $tag is not in the npm form, for example 0.1.0-alpha.1"
+            exit 1
+          fi
+          py_expected=$(sed -E -e 's/-alpha\./a/' -e 's/-beta\./b/' -e 's/-rc\./rc/' <<< "$tag")
           py_version=$(python3 -c "import tomllib;print(tomllib.load(open('interfaces/python/pyproject.toml','rb'))['project']['version'])")
           npm_version=$(python3 -c "import json;print(json.load(open('interfaces/typescript/package.json'))['version'])")
           cs_version=$(python3 -c "import xml.etree.ElementTree as ET;print(ET.parse('interfaces/csharp/src/OpenRoIS.Interfaces/OpenRoIS.Interfaces.csproj').findtext('.//Version'))")

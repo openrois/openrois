@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `pydantic` 2.10 or later is required, because `openrois.engine` does not import with earlier versions, which the declared floor of 2.0 allowed.
+
 ## [0.1.0a2] - 2026-11-06
 
 ### Fixed

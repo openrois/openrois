@@ -21,7 +21,7 @@ classifiers = [
 ]
 dependencies = [
     "openrois-interfaces>=0.1.0a5",
-    "pydantic>=2.0",
+    "pydantic>=2.10",
     "pyyaml>=6.0",
     "websockets>=14.0",
 ]
