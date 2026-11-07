@@ -1,6 +1,6 @@
 name: SDK
 
-# The client SDKs against the tree. The TypeScript and Python jobs install the interfaces from
+# The client SDKs against the tree. The JavaScript and Python jobs install the interfaces from
 # the tree. The Unity core tests the assemblies bundled in its package, which unity-package.yml
 # holds to the tree. All three run the conformance list on a stack from the tree, so a change
 # that breaks a client fails in its own pull request.
@@ -16,7 +16,7 @@ on:
       - "engine/**"
       - "services/gateway/**"
       - "testing/**"
-      - "sdk/typescript/**"
+      - "sdk/javascript/**"
       - "sdk/python/**"
       - "sdk/unity/**"
       - "examples/hri-client/**"
@@ -30,7 +30,7 @@ on:
       - "engine/**"
       - "services/gateway/**"
       - "testing/**"
-      - "sdk/typescript/**"
+      - "sdk/javascript/**"
       - "sdk/python/**"
       - "sdk/unity/**"
       - "examples/hri-client/**"
@@ -45,8 +45,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  typescript:
-    name: TypeScript, Node.js ${{ matrix.node-version }}
+  javascript:
+    name: JavaScript SDK, Node.js ${{ matrix.node-version }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -56,7 +56,7 @@ jobs:
       OPENROIS_GATEWAY_URL: ws://127.0.0.1:8765
     defaults:
       run:
-        working-directory: sdk/typescript
+        working-directory: sdk/javascript
     steps:
       - uses: actions/checkout@v7
 
@@ -77,7 +77,7 @@ jobs:
           cache: npm
           cache-dependency-path: |
             interfaces/typescript/package-lock.json
-            sdk/typescript/package-lock.json
+            sdk/javascript/package-lock.json
 
       - name: Install the stack
         # websockets is for the scripted server, which the test run starts by itself.
@@ -251,14 +251,14 @@ jobs:
           cache: npm
           cache-dependency-path: |
             interfaces/typescript/package-lock.json
-            sdk/typescript/package-lock.json
+            sdk/javascript/package-lock.json
             examples/hri-client/package-lock.json
 
       - name: Build the packages it links
         # Its file: links need both built, and the SDK needs the interfaces of the tree.
         run: |
           (cd interfaces/typescript && npm ci && npm run build)
-          (cd sdk/typescript && npm ci && npm install ../../interfaces/typescript --no-save && npm run build)
+          (cd sdk/javascript && npm ci && npm install ../../interfaces/typescript --no-save && npm run build)
 
       - name: Install
         working-directory: examples/hri-client

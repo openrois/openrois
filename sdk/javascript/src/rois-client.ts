@@ -1,5 +1,5 @@
 /**
- * RoISClient: the client of the OpenRoIS TypeScript SDK.
+ * RoISClient: the client of the OpenRoIS JavaScript SDK.
  *
  * One method per operation of the RoIS method catalog, named after the IDL
  * operation and taking its `in` parameters in IDL order:

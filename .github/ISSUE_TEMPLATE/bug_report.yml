@@ -32,7 +32,7 @@ body:
       options:
         - Engine or gateway (core)
         - Component framework or a reference component
-        - TypeScript SDK
+        - JavaScript SDK
         - Unity SDK
         - Interface types or the type pipeline
         - Examples

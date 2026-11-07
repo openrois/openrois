@@ -17,7 +17,7 @@ What exists today:
 | Recursive engine with the RoIS behavior of CP1 to CP3, WebSocket server and client | `engine/` | Available, hardening |
 | Gateway process (`openrois-gateway`) | `services/gateway/` | Available |
 | Component and adapter SDK, and the common components | `components/` | Available |
-| TypeScript client SDK | `sdk/typescript/` | Available |
+| JavaScript client SDK | `sdk/javascript/` | Available |
 | Unity SDK | `sdk/unity/` | JSON-RPC layer only, client in progress |
 | Examples: web client, adapter template | `examples/` | Available |
 | Test fixtures: mock adapter, conformance list | `testing/` | Available |
@@ -75,7 +75,7 @@ its description. The IDL and XSD cross-check tests fail on any other addition.
 | Gateway | `services/gateway` | `pip install -e ../../interfaces/python -e ../../engine -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | Component SDK | `components/core` | `pip install -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | Common components | `components/common` | `pip install -e ../../interfaces/python -e ../core -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
-| TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway) |
+| JavaScript SDK | `sdk/javascript` | `npm install`, `npm run build`, `npm test` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway) |
 
 Some tests in `interfaces/python` cross-check the models against the normative RoIS
 machine-readable files, which are not redistributed in this repository. Those tests are

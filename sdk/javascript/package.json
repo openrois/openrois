@@ -1,7 +1,7 @@
 {
   "name": "@openrois/sdk",
   "version": "0.1.0-alpha.1",
-  "description": "TypeScript client SDK for the OpenRoIS middleware",
+  "description": "JavaScript client SDK for the OpenRoIS middleware",
   "license": "Apache-2.0",
   "author": "OpenRoIS Community",
   "type": "module",
@@ -62,7 +62,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/openrois/openrois",
-    "directory": "sdk/typescript"
+    "directory": "sdk/javascript"
   },
   "homepage": "https://openrois.org/",
   "bugs": {

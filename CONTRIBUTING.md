@@ -325,7 +325,7 @@ say in the pull request which ones you ran.
 | Python types | `interfaces/python` | `pytest`, `mypy src/`, `ruff check src/` |
 | TypeScript types | `interfaces/typescript` | `npm run build`, `npm test`, `npm run test:package` |
 | C# types | `interfaces/csharp` | `dotnet build src/OpenRoIS.Interfaces`, `dotnet test tests/OpenRoIS.Interfaces.Tests` |
-| TypeScript SDK | `sdk/typescript` | `npm run build`, `npm test`, and with `OPENROIS_GATEWAY_URL=ws://127.0.0.1:8765` against the Compose stack |
+| JavaScript SDK | `sdk/javascript` | `npm run build`, `npm test`, and with `OPENROIS_GATEWAY_URL=ws://127.0.0.1:8765` against the Compose stack |
 | Engine | `engine` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Gateway | `services/gateway` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Component SDK | `components/core` | `pytest`, `mypy`, `ruff check src/ tests/` |
@@ -341,7 +341,7 @@ a local copy of the OMG RoIS Framework 2.0 machine-readable files, downloaded fr
 OPENROIS_NORMATIVE_DIR=~/omg/rois-2.0/machine-readable pytest
 ```
 
-Workflows for the other stacks, such as the TypeScript SDK tests, are a welcome
+Workflows for the other stacks, such as the JavaScript SDK tests, are a welcome
 contribution.
 
 ## 12. Base Branch

@@ -15,7 +15,7 @@ on:
       - "engine/**"
       - "services/gateway/**"
       - "testing/**"
-      - "sdk/typescript/**"
+      - "sdk/javascript/**"
       - "sdk/python/**"
       - "sdk/unity/**"
       - "compose.yaml"
@@ -30,7 +30,7 @@ on:
       - "engine/**"
       - "services/gateway/**"
       - "testing/**"
-      - "sdk/typescript/**"
+      - "sdk/javascript/**"
       - "sdk/python/**"
       - "sdk/unity/**"
       - "compose.yaml"
@@ -65,7 +65,7 @@ jobs:
           cache: npm
           cache-dependency-path: |
             interfaces/typescript/package-lock.json
-            sdk/typescript/package-lock.json
+            sdk/javascript/package-lock.json
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -83,15 +83,15 @@ jobs:
       - name: The list on raw JSON-RPC
         run: python testing/conformance/wire_check.py --timeout 120
 
-      - name: Install the TypeScript SDK
+      - name: Install the JavaScript SDK
         # The SDK takes the interfaces from npm, so the tree goes over them here, and a
         # change in the tree is tested before it is published.
         run: |
           (cd interfaces/typescript && npm ci && npm run build)
-          (cd sdk/typescript && npm ci && npm install ../../interfaces/typescript --no-save)
+          (cd sdk/javascript && npm ci && npm install ../../interfaces/typescript --no-save)
 
-      - name: The list on the TypeScript SDK
-        working-directory: sdk/typescript
+      - name: The list on the JavaScript SDK
+        working-directory: sdk/javascript
         env:
           OPENROIS_GATEWAY_URL: ws://127.0.0.1:8765
         run: npx vitest run tests/conformance.test.ts tests/gateway.test.ts

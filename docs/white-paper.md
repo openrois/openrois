@@ -93,7 +93,7 @@ This white paper describes the following contributions:
 4. A **JSON-RPC 2.0 binding of the RoIS interfaces** over WebSocket: a method catalog
    of 16 methods and 4 notifications named after the IDL, with conditions in a subset
    of CQL2-Text and a small set of documented extensions (section 9).
-5. **SDKs for both sides of the system**: client SDKs for web (TypeScript) and
+5. **SDKs for both sides of the system**: client SDKs for web (JavaScript) and
    Unity (in progress) that behave identically regardless of the host paradigm
    behind the gateway, and a Python component SDK in which a component is a class that
    declares the profile of its RoIS component type (section 8).
@@ -480,7 +480,7 @@ control-plane router when acting as the main engine without local components.
 | Main HRI Engine | Engine (hosted by the gateway) | Holds the bindings, routes to child engines, aggregates profiles |
 | Sub HRI Engine | Engine (hosted by an adapter) | Hosts local components, owns data-plane transport |
 | HRI Component | Component hosted by an adapter | Translation layer: RoIS calls to backend calls |
-| Service Application | Client SDK (TypeScript or Unity) | Drives robot scenarios via RoIS interfaces |
+| Service Application | Client SDK (JavaScript or Unity) | Drives robot scenarios via RoIS interfaces |
 | RoIS interfaces (SystemIF, CommandIF, QueryIF, EventIF), with streaming as two components | JSON-RPC 2.0 methods over WebSocket | Service application to gateway boundary (control plane) |
 | Main HRI Engine to sub HRI Engine | The same JSON-RPC 2.0 methods, sent by the parent engine | Gateway to adapter boundary (control plane) |
 | (no spec term) | Component contract (`ComponentContract`) | Inside an engine: its own components and its child engines behind one interface |
@@ -705,7 +705,7 @@ behind the gateway. The Python SDK serves component and adapter authors.
 flowchart TB
     subgraph SDKs["Client SDKs"]
         direction LR
-        TS["TypeScript SDK<br/>Web service applications<br/>(primary client)"]
+        TS["JavaScript SDK<br/>Web service applications<br/>(primary client)"]
         Unity["Unity SDK<br/>Unity service applications<br/>(secondary client, in progress)"]
     end
 
@@ -713,9 +713,9 @@ flowchart TB
     Gateway --> Adapters["Robot, Avatar, AI Service Adapters<br/>components written with the Python SDK"]
 ```
 
-### 8.1 TypeScript SDK for Web (Primary Client)
+### 8.1 JavaScript SDK for Web (Primary Client)
 
-The TypeScript SDK (`@openrois/sdk`) is the primary client SDK for web service
+The JavaScript SDK (`@openrois/sdk`) is the primary client SDK for web service
 applications. `RoISClient` has one method per operation of the RoIS method catalog, each
 taking the operation's IDL parameters in IDL order.
 
@@ -753,7 +753,7 @@ await client.disconnect();
 
 Key characteristics:
 
-- TypeScript strict mode, browser and Node.js compatible, dual ESM/CJS output (tsup).
+- Written in TypeScript with types included, for browsers and Node.js, as one ES module build.
 - Validation of every call against the catalog schemas of `@openrois/interfaces`:
   params before they are sent, results when they arrive. A failed return code raises
   `RoISError`, which carries the return code and the method.
@@ -861,7 +861,7 @@ Clients then see `robot_1/navigation`. Key characteristics:
 The client SDKs mirror the RoIS interfaces defined in the normative IDL. The Unity SDK
 will have the same methods (in progress).
 
-| RoIS Interface | `RoISClient` methods (TypeScript) | Notifications |
+| RoIS Interface | `RoISClient` methods (JavaScript) | Notifications |
 |----------------|-----------------------------------|---------------|
 | SystemIF | `connect(url)`, `disconnect()`, `getProfile(condition?)`, `getErrorDetail(errorId, condition?)` | `rois.system.notify_error`, `rois.system.profile_changed` |
 | CommandIF | `search(condition?)`, `bind(ref)`, `bindAny(condition?)`, `release(ref)`, `getParameter(ref)`, `setParameter(ref, parameters)`, `execute(commandUnitList)`, `getCommandResult(commandId, condition?)` | `rois.command.completed` |
@@ -1852,7 +1852,7 @@ details and open decisions.
 | 0 | Paradigm-Neutral Interfaces | type pipeline, tests against the normative files | done |
 | 1 | Engine and Sub HRI Engine | TypeScript proof of concept, child engines, mock components | done |
 | 2 | Adapter Framework and Components | component framework, reference components, real robot adapter | done |
-| 3 | Client SDKs and First Demonstration | TypeScript SDK and web client done, Unity SDK in progress, exit tag `v0.1.0` | in progress |
+| 3 | Client SDKs and First Demonstration | JavaScript SDK and web client done, Unity SDK in progress, exit tag `v0.1.0` | in progress |
 | 4 | Recursive Engine in Python | the Python engine on the RoIS method catalog is the only dispatch implementation | in progress |
 | 5 | Hardening the Engine | graceful shutdown, reconnection, package loading, health endpoints | planned |
 | 6 | Gateway Process | `openrois-gateway` from `Engine` + `WsServer`, Docker Compose quickstart | in progress |
@@ -1888,7 +1888,7 @@ Pre-1.0 releases are Alpha, unstable API. Do not use in production until v1.0.
 
 The type pipeline with the RoIS method catalog, the recursive Python engine
 (`openrois-engine`), the gateway process (`openrois-gateway`), the component SDK
-(`openrois-components-core`), and the TypeScript SDK are built. The engine implements the
+(`openrois-components-core`), and the JavaScript SDK are built. The engine implements the
 RoIS interfaces, profiles and common messages (CP1 to CP3) as
 [rois-reference §16](rois-reference.md#16-known-normative-divergences) records them. A
 Docker Compose stack runs the gateway with a mock adapter behind it, and the TypeScript
@@ -1998,12 +1998,12 @@ The single-source-of-truth type pipeline (Python Pydantic to JSON Schema to C# a
 TypeScript) keeps three language stacks consistent without manual synchronization. The
 JSON-RPC 2.0 binding of the RoIS method catalog over WebSocket provides a
 browser-native, NAT-friendly control plane with full async event support. The client
-SDKs (TypeScript for web, and Unity, in progress) expose identical behavior
+SDKs (JavaScript for web, and Unity, in progress) expose identical behavior
 regardless of the host paradigm behind the gateway.
 
 The project is in alpha. The type pipeline, the recursive engine, the gateway process,
-the component SDK, reference components, and the TypeScript SDK are built. A Docker
-Compose stack runs the gateway with the mock adapter, and the TypeScript SDK runs full
+the component SDK, reference components, and the JavaScript SDK are built. A Docker
+Compose stack runs the gateway with the mock adapter, and the JavaScript SDK runs full
 sessions against it. The Unity SDK, authentication, media streaming, and the
 full component library follow the roadmap. Researchers and engineers evaluating RoIS
 2.0 can use OpenRoIS as a reference implementation, contribute reference components, or

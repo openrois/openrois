@@ -64,14 +64,14 @@ pip install websockets
 python testing/conformance/scripted_check.py
 ```
 
-## The TypeScript Suite
+## The JavaScript SDK Suite
 
-`sdk/typescript/tests/conformance.test.ts` has one test for each id from C01 to C21. W01 to
+`sdk/javascript/tests/conformance.test.ts` has one test for each id from C01 to C21. W01 to
 W03 stay with `wire_check.py`. The file uses only the public surface of the SDK and takes only
 URLs, so one file runs in Node.js and in headless Chromium:
 
 ```bash
-cd sdk/typescript
+cd sdk/javascript
 OPENROIS_GATEWAY_URL=ws://127.0.0.1:8765 npx vitest run tests/conformance.test.ts
 npx playwright install --only-shell chromium      # once, for the browser run
 OPENROIS_GATEWAY_URL=ws://127.0.0.1:8765 npm run test:browser

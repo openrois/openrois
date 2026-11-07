@@ -4,7 +4,7 @@
  * tests import, so these run on `npm pack` output in a clean folder outside the repository.
  * The folder holds only tests/consumer/project and what npm installs for the tarball.
  *
- * Run it from sdk/typescript after a build, which `npm run test:consumer` does. TMPDIR
+ * Run it from sdk/javascript after a build, which `npm run test:consumer` does. TMPDIR
  * sets where the folder goes. It exits with 0 when all four pass.
  */
 

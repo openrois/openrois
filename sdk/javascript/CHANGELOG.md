@@ -23,4 +23,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The builders for CQL2-Text conditions, exported from `@openrois/sdk`: `componentRef`, `componentType`, `componentTypeUrn`, `eq`, `like`, `allOf` and `quote`, with the property names `COMPONENT_REF` and `COMPONENT_TYPE`.
 - `WebSocketTransport` (`@openrois/sdk/transport`), under `client.transport`, with a raw `send` for methods outside the catalog, request and connect timeouts in milliseconds (30 and 10 seconds by default), and a custom WebSocket factory. The errors `TransportError`, `ConnectionError`, `RequestTimeoutError` and `RpcError` come from both entry points.
 
-[unreleased]: https://github.com/openrois/openrois/tree/dev/sdk/typescript
+[unreleased]: https://github.com/openrois/openrois/tree/dev/sdk/javascript
