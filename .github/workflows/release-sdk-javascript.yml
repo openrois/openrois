@@ -1,0 +1,274 @@
+name: Release JavaScript SDK
+
+# Publishes @openrois/sdk to npm when an sdk-javascript-v* tag is pushed, for example
+# sdk-javascript-v0.1.0-alpha.1. npm uses trusted publishing (OIDC), so no long-lived token
+# is stored in the repository. The last job then creates the GitHub release with the npm
+# tarball and the CHANGELOG section.
+
+on:
+  push:
+    tags: ["sdk-javascript-v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-sdk-javascript-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check-version:
+    name: Tag matches the package version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.versions.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compare the tag with package.json
+        id: versions
+        # The tag carries the form that package.json uses, so any pre-release label
+        # compares as it is. The lockfile holds a copy of the version, which npm ci ignores.
+        run: |
+          tag="${GITHUB_REF_NAME#sdk-javascript-v}"
+          npm_version=$(python3 -c "import json;print(json.load(open('sdk/javascript/package.json'))['version'])")
+          lock_version=$(python3 -c "import json;print(json.load(open('sdk/javascript/package-lock.json'))['version'])")
+          if [ "$npm_version" != "$tag" ] || [ "$lock_version" != "$tag" ]; then
+            echo "::error::Tag $tag, package.json $npm_version, package-lock.json $lock_version"
+            exit 1
+          fi
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Write the release notes
+        # This runs before anything is uploaded, so a missing CHANGELOG section stops the
+        # release while the version is still free on npm.
+        env:
+          VERSION: ${{ steps.versions.outputs.version }}
+        run: python3 .github/scripts/release_notes.py --part sdk/javascript/CHANGELOG.md "$VERSION" > release-notes.md
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
+
+  test:
+    # The dependencies come from npm, with nothing from the tree over them, which is what a
+    # consumer gets. Pull request CI tests the tree.
+    name: Node.js ${{ matrix.node-version }}
+    needs: check-version
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ["22", "24"]
+    defaults:
+      run:
+        working-directory: sdk/javascript
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: The four consumer checks
+        # These pack the build and install the tarball into an empty folder, with the rest
+        # from npm, then check Node ESM, Node require, tsc under nodenext and a Vite browser
+        # build. So this is the clean install too. TMPDIR holds the folder, so the next step
+        # can find the tarball that passed.
+        env:
+          TMPDIR: ${{ runner.temp }}/consumer
+        run: |
+          mkdir "$TMPDIR"
+          npm run test:consumer
+
+      - name: Keep the tarball that passed
+        # Node.js 24 is the one the npm job publishes with.
+        if: matrix.node-version == '24'
+        working-directory: ${{ runner.temp }}
+        run: |
+          mkdir npm-tarball
+          mv consumer/openrois-sdk-consumer-*/openrois-sdk-*.tgz npm-tarball/
+
+      - uses: actions/upload-artifact@v7
+        if: matrix.node-version == '24'
+        with:
+          name: npm-tarball
+          path: ${{ runner.temp }}/npm-tarball/openrois-sdk-*.tgz
+          if-no-files-found: error
+
+  hri-client:
+    # The pull request job builds this application on its file: links. This one replaces both
+    # links, so the application builds as a consumer of what goes to npm.
+    name: hri-client on the tarball
+    needs: test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/hri-client
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: npm-tarball
+          path: ${{ runner.temp }}/npm-tarball
+
+      - name: Install the tarball over the links
+        # The interfaces are the published version that the SDK lockfile tested.
+        run: |
+          interfaces=$(node -p "require('../../sdk/javascript/package-lock.json').packages['node_modules/@openrois/interfaces'].version")
+          npm ci
+          npm install --no-save "$RUNNER_TEMP"/npm-tarball/openrois-sdk-*.tgz "@openrois/interfaces@$interfaces"
+          if [ -L node_modules/@openrois/sdk ] || [ -L node_modules/@openrois/interfaces ]; then
+            echo "::error::A file: link is still in place, so this would test the tree"
+            exit 1
+          fi
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+  conformance:
+    # The list against the stack that frozen.txt pins, installed from PyPI, so the SDK cannot
+    # ship against a stack it was not tested with. Pull request CI runs the list against the
+    # tree and leaves this direction open. The list imports the tarball that goes to npm, not
+    # the sources, so a fault only in the build stops the release. Nothing here builds it.
+    name: The list on frozen.txt, Node.js ${{ matrix.node-version }}
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ["22", "24"]
+    env:
+      OPENROIS_GATEWAY_URL: ws://127.0.0.1:8765
+      # Both vitest configs read this, relative to sdk/javascript.
+      OPENROIS_SDK_PACKAGE: .tarball/package
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install the frozen stack
+        # openrois-components-common comes from the tree under the same pins until it is
+        # released, for the mock adapter. The venv goes on the PATH, because the suite starts
+        # the scripted server with python3, which needs the websockets package.
+        run: |
+          python -m venv /tmp/frozen
+          /tmp/frozen/bin/pip install -r testing/conformance/frozen.txt
+          /tmp/frozen/bin/pip install --constraint testing/conformance/frozen.txt ./components/common
+          /tmp/frozen/bin/pip list
+          echo /tmp/frozen/bin >> "$GITHUB_PATH"
+
+      - name: Start the gateway and the mock adapter
+        # They stay up for the steps below. The suite waits until the adapter has joined.
+        run: |
+          openrois-gateway --log-level warning > gateway.log 2>&1 &
+          python testing/mock-adapter/mock_adapter.py \
+            --config testing/mock-adapter/adapter.fast.yaml --log-level warning \
+            > adapter.log 2>&1 &
+
+      - name: Install the SDK
+        working-directory: sdk/javascript
+        run: npm ci
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: npm-tarball
+          path: ${{ runner.temp }}/npm-tarball
+
+      - name: Unpack the tarball
+        # It goes inside sdk/javascript, so its imports resolve to the node_modules above,
+        # which hold the dependencies of the lockfile.
+        working-directory: sdk/javascript
+        run: |
+          mkdir .tarball
+          tar -xzf "$RUNNER_TEMP"/npm-tarball/openrois-sdk-*.tgz -C .tarball
+
+      - name: The list in Node.js
+        working-directory: sdk/javascript
+        run: npx vitest run tests/conformance.test.ts tests/gateway.test.ts
+
+      - name: Install Chromium
+        working-directory: sdk/javascript
+        run: npx playwright install --with-deps --only-shell chromium
+
+      - name: The list in a browser
+        working-directory: sdk/javascript
+        run: npm run test:browser
+
+      - name: Logs
+        if: always()
+        run: cat gateway.log adapter.log
+
+  npm:
+    name: npm
+    needs: [hri-client, conformance]
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # The tarball that passed the consumer checks is the file that goes up, so the registry
+      # and the release asset hold the same bytes and this job does not build it again.
+      - uses: actions/download-artifact@v8
+        with:
+          name: npm-tarball
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      # Trusted publishing needs npm 11.5.1 or later.
+      - run: npm install -g npm@latest
+
+      # npm refuses a pre-release version with no tag, so latest is named here. No stable
+      # version exists yet, and next would leave a plain npm install on the 0.0.0-stage
+      # placeholder. Once a stable version exists, a tag with a hyphen must publish to next,
+      # so that a pre-release does not replace it as latest.
+      - run: npm publish ./openrois-sdk-*.tgz --access public --provenance --tag latest
+
+  github-release:
+    name: GitHub release
+    needs: [check-version, npm]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - uses: ./.github/actions/github-release
+        with:
+          title: JavaScript SDK ${{ needs.check-version.outputs.version }}
+          notes-file: artifacts/release-notes/release-notes.md
+          files: artifacts/npm-tarball/*.tgz

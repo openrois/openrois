@@ -40,7 +40,12 @@ client.On(RoISNotifications.Completed, (CompletedParams p) => ended[p.CommandId]
 
 await client.BindAsync(nav);
 var ids = await client.ExecuteAsync(new[] { new CommandUnit(nav, RoISCommandTypes.Start) });
-// Later: ended[ids[0]] is OK once the navigation has ended.
+// Wait here, because ReleaseAsync aborts a running command, which then ends with ABORT.
+while (!ended.ContainsKey(ids[0]))
+{
+    await Awaitable.NextFrameAsync();
+}
+Debug.Log(ended[ids[0]]);
 await client.ReleaseAsync(nav);
 ```
 
@@ -68,8 +73,9 @@ tests needs `com.unity.test-framework` in the project.
 
 OpenRoIS SDK version 0.1.0-alpha.1 includes the following known limitations:
 
-- Android builds, but the run on a device is pending, so Android and VR headsets are
-  unconfirmed. iOS has not been built. Windows and macOS players have not been run.
+- Android builds, but nothing has run on a device for this release, so Android and VR
+  headsets are unconfirmed. iOS has not been built. Windows and macOS players have not
+  been run.
 - `wss://` has not been exercised. Every run so far used `ws://`.
 - A project that already contains an assembly named like one in `Runtime/Plugins` does
   not compile with this package.

@@ -1,0 +1,149 @@
+name: Release Unity SDK
+
+# Creates the GitHub pre-release of org.openrois.sdk when an sdk-unity-v* tag is pushed, for
+# example sdk-unity-v0.1.0-alpha.1. The tag itself is what a user installs, by Git URL, so
+# there is no registry and no tarball, and nothing is signed. The release carries the
+# CHANGELOG section, and the README gives the Git URL.
+
+on:
+  push:
+    tags: ["sdk-unity-v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-sdk-unity-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check-version:
+    name: Tag matches the package version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.versions.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compare the tag with package.json
+        id: versions
+        # The tag carries the form that package.json uses, so any pre-release label
+        # compares as it is.
+        run: |
+          tag="${GITHUB_REF_NAME#sdk-unity-v}"
+          upm_version=$(python3 -c "import json;print(json.load(open('sdk/unity/package.json'))['version'])")
+          if [ "$upm_version" != "$tag" ]; then
+            echo "::error::Tag $tag, package.json $upm_version"
+            exit 1
+          fi
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Write the release notes
+        # This runs before the release exists, so a missing CHANGELOG section stops it.
+        env:
+          VERSION: ${{ steps.versions.outputs.version }}
+        run: |
+          python3 .github/scripts/release_notes.py --part sdk/unity/CHANGELOG.md "$VERSION" > release-notes.md
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
+
+  test:
+    name: Bundled DLLs and Unity core
+    needs: check-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      # The compiler version decides the exact bytes of OpenRoIS.Interfaces.dll, so this job
+      # uses the SDK that the script pins, which is also a .NET 10 SDK for the test project.
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: sdk/unity/scripts~/global.json
+
+      - name: Bundled DLLs are up to date
+        run: python3 sdk/unity/scripts~/bundle_dlls.py --check
+
+      - name: Install the scripted server's dependency
+        run: python -m pip install websockets
+
+      - name: Test
+        # This builds the runtime sources as C# 9 on netstandard2.1 first, so newer C# or an
+        # API that only .NET has fails here and not in the Editor of a user. With no gateway,
+        # it skips C01 to C17, which the next job runs.
+        working-directory: sdk/unity/Tests~
+        run: dotnet test
+
+  conformance:
+    # The list against the stack that frozen.txt pins, installed from PyPI, so the SDK cannot
+    # ship against a stack it was not tested with. Pull request CI runs the list against the
+    # tree and leaves this direction open.
+    name: The list on frozen.txt
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      OPENROIS_GATEWAY_URL: ws://127.0.0.1:8765
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: sdk/unity/scripts~/global.json
+
+      - name: Install the frozen stack
+        # openrois-components-common comes from the tree under the same pins until it is
+        # released, for the mock adapter. The venv goes on the PATH, because the suite starts
+        # the scripted server with python3, which needs the websockets package.
+        run: |
+          python -m venv /tmp/frozen
+          /tmp/frozen/bin/pip install -r testing/conformance/frozen.txt
+          /tmp/frozen/bin/pip install --constraint testing/conformance/frozen.txt ./components/common
+          /tmp/frozen/bin/pip list
+          echo /tmp/frozen/bin >> "$GITHUB_PATH"
+
+      - name: Start the gateway and the mock adapter
+        # They stay up for the step below. The suite waits until the adapter has joined.
+        run: |
+          openrois-gateway --log-level warning > gateway.log 2>&1 &
+          python testing/mock-adapter/mock_adapter.py \
+            --config testing/mock-adapter/adapter.fast.yaml --log-level warning \
+            > adapter.log 2>&1 &
+
+      - name: The list
+        working-directory: sdk/unity/Tests~
+        run: dotnet test --filter "FullyQualifiedName~ConformanceTests"
+
+      - name: Logs
+        if: always()
+        run: cat gateway.log adapter.log
+
+  github-release:
+    name: GitHub release
+    needs: [check-version, conformance]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      # The package has no assets: a user installs the tag by Git URL.
+      - uses: ./.github/actions/github-release
+        with:
+          title: Unity SDK ${{ needs.check-version.outputs.version }}
+          notes-file: artifacts/release-notes/release-notes.md
+          files: ""

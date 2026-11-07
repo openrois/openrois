@@ -103,7 +103,7 @@ robots and virtual agents alike.
 
 | RoIS concept | OpenRoIS realization |
 |--------------|----------------------|
-| Service Application | Your application, built with the JavaScript or Unity SDK |
+| Service Application | Your application, built with the JavaScript, Python, or Unity client SDK |
 | Main HRI Engine | The gateway process: `Engine` with child engines, behind a WebSocket server |
 | Sub HRI Engine | An adapter process: `Engine` with local components, connected to the gateway |
 | HRI Component | A class decorated with `@component`, hosted by an adapter |
@@ -117,7 +117,7 @@ details.
 
 Run a gateway with a simulated robot behind it, and inspect it from the browser. You need
 [Docker](https://docs.docker.com/get-started/get-docker/) with Compose, and
-[Node.js](https://nodejs.org/) 22 or later for the web inspector.
+[Node.js](https://nodejs.org/) 22.12 or later for the web inspector.
 
 ```bash
 git clone https://github.com/openrois/openrois.git
@@ -136,10 +136,11 @@ cd examples/hri-client && npm install && npm run dev
 ```
 
 The inspector reads the engine profile and renders every component it finds, with its
-queries, parameters, commands, and events: `mock/navigation`, `mock/person_detection`
-and `mock/system_information`, served by the mock adapter, an engine of its own below the
-gateway. Nothing in the client is specific to the components on the other side.
-`python testing/conformance/wire_check.py` checks the same stack from the command line.
+queries, parameters, commands, and events: `mock/navigation`, `mock/person_detection`,
+`mock/system_information` and the test fixture `mock/fault`, served by the mock adapter, an
+engine of its own below the gateway. Nothing in the client is specific to the components on
+the other side. `python testing/conformance/wire_check.py` checks the same stack from the
+command line, after `pip install websockets`.
 
 To develop a client without Docker, run the gateway and the
 [mock adapter](testing/mock-adapter/README.md) as Python processes.
@@ -154,8 +155,14 @@ To develop a client without Docker, run the gateway and the
 
 ### Write a Service Application
 
-The JavaScript SDK exposes the RoIS interfaces with typed responses and runtime
-validation.
+Three client SDKs expose the RoIS interfaces, with one method per operation of the RoIS
+method catalog. All three are Alpha, pre-1.0, unstable API.
+
+| SDK | For | Install |
+|-----|-----|---------|
+| [JavaScript](sdk/javascript/README.md) | Browsers and Node.js 22.12 or later | `npm install @openrois/sdk` |
+| [Python](sdk/python/README.md) | Asyncio on Python 3.12 or later | `pip install openrois-sdk` |
+| [Unity](sdk/unity/README.md) | Unity 6000.0 and later | By Git URL: `https://github.com/openrois/openrois.git?path=sdk/unity#sdk-unity-v0.1.0-alpha.1` |
 
 ```ts
 import { RoISClient, componentRef, componentType } from "@openrois/sdk";
@@ -170,19 +177,32 @@ const target = componentRef(nav);
 const status = await client.query("component_status", target);
 
 // Subscribe to events.
-client.on("reached_target", (event) => console.log(event.results));
+client.on("rois.event.notify_event", ({ event_type, results }) => {
+  console.log(event_type, results);
+});
 await client.subscribe("reached_target", target);
 
-// Bind the component, configure it, command it, then release it. Every command
-// operation needs a bind, and the engine assigns the command ids.
+// Record how each command ends before running any, because a command can end before
+// the reply to execute() is read.
+const statuses = new Map<string, string>();
+const waiters = new Map<string, () => void>();
+client.on("rois.command.completed", ({ command_id, status }) => {
+  statuses.set(command_id, status);
+  waiters.get(command_id)?.();
+});
+
+// Bind the component, configure it, command it, wait for it, then release it. Every
+// command operation needs a bind, and the engine assigns the command ids.
 await client.bind(nav);
 await client.setParameter(nav, [
   { name: "target_positions", data_type_ref: "string[]", value: '["kitchen"]' },
 ]);
 const [commandId] = await client.execute([{ component_ref: nav, command_type: "start" }]);
-client.on("rois.command.completed", ({ command_id, status }) => {
-  if (command_id === commandId) console.log("navigation ended:", status);
-});
+// Wait here, because release aborts a running command, which then ends with ABORT.
+if (!statuses.has(commandId)) {
+  await new Promise<void>((resolve) => waiters.set(commandId, resolve));
+}
+console.log(statuses.get(commandId));
 await client.release(nav);
 
 await client.disconnect();
@@ -258,16 +278,17 @@ makes no conformance claim. The rest of the RoIS surface is being built in the o
 | Recursive engine with the RoIS behavior of CP1 to CP3, WebSocket server and client | Available, hardening |
 | Component and adapter SDK (Python): decorators, resources, RoIS_Common default, `adapter.yaml` | Available |
 | Gateway process, container image, and Docker Compose with a mock adapter | Available |
-| JavaScript client SDK and web inspector | Available |
-| Unity SDK | In progress (JSON-RPC layer) |
-| Python client SDK | Planned |
+| JavaScript client SDK and web inspector | Alpha, pre-1.0, unstable API |
+| Python client SDK | Alpha, pre-1.0, unstable API |
+| Unity client SDK | Alpha, pre-1.0, unstable API. Run in Linux players and the Editor. The Android build has not run on a device, and iOS has not been built |
 | Open reference platform based on the Pollen Robotics Reachy Mini | In progress, in openrois-adapter-reachy-mini |
 | Loading XML-declared component profiles at run time | Planned |
 | Authentication (JWT) and authorization (RBAC) | Planned |
 | Streaming: AudioStreaming and VideoStreaming profiles | Available, no streaming component ships yet |
 | WebRTC media for the streaming components | Planned |
 | Alpha packages on PyPI (`openrois-interfaces`, `openrois-engine`, `openrois-components-core`, `openrois-gateway`) and npm (`@openrois/interfaces`) | Available |
-| `@openrois/sdk` on npm, `openrois-components-common` on PyPI, the Unity package in a registry | Planned |
+| First alpha of the client SDKs: `@openrois/sdk` on npm, `openrois-sdk` on PyPI, `org.openrois.sdk` by Git URL | In progress, not published yet |
+| `openrois-components-common` on PyPI, the Unity package in a registry | Planned |
 | All 17 basic RoIS HRI Components (v1.0) | Planned |
 
 The [roadmap](docs/roadmap.md) describes each phase and its exit criteria.
@@ -283,7 +304,8 @@ openrois/
 │   └── common/          Common components: a mock SystemInformation (openrois-components-common)
 ├── sdk/
 │   ├── javascript/      Client SDK for web and Node.js (@openrois/sdk)
-│   └── unity/           Client SDK for Unity (OpenRoIS.Sdk, in progress)
+│   ├── python/          Python client SDK (openrois-sdk)
+│   └── unity/           Client SDK for Unity (org.openrois.sdk)
 ├── services/
 │   └── gateway/         Gateway process and container image (openrois-gateway)
 ├── apps/hub/            Management dashboard (planned)
@@ -292,7 +314,8 @@ openrois/
 │   └── adapter-template/  Starting point for a new robot adapter
 ├── testing/
 │   ├── mock-adapter/    Adapter with simulated components
-│   └── conformance/     The scenario list for clients of a gateway
+│   ├── conformance/     The scenario list for clients of a gateway
+│   └── unity-harness/   Runs the Unity SDK in real players and in the Editor
 ├── docs/                White paper, architecture, roadmap, RoIS reference
 └── compose.yaml         The gateway with the mock adapter, in Docker Compose
 ```
@@ -319,6 +342,8 @@ generated files by hand.
 | TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test`, `npm run test:package` |
 | C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
 | JavaScript SDK | `sdk/javascript` | `npm install`, `npm run build`, `npm test` |
+| Python client SDK | `sdk/python` | `pytest`, `mypy`, `ruff check src/ tests/` |
+| Unity SDK | `sdk/unity/Tests~` | `dotnet test` |
 | Engine | `engine` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Component SDK | `components/core` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Common components | `components/common` | `pytest`, `mypy`, `ruff check src/ tests/` |

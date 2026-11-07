@@ -57,17 +57,23 @@ await client.subscribe("reached_target", target);
 
 // Record how each command ends, before running any.
 const statuses = new Map<string, string>();
+const waiters = new Map<string, () => void>();
 client.on("rois.command.completed", ({ command_id, status }) => {
   statuses.set(command_id, status);
+  waiters.get(command_id)?.();
 });
 
-// Reserve, configure, command, release.
+// Reserve, configure, command, wait, release.
 await client.bind(nav);
 await client.setParameter(nav, [
   { name: "target_positions", data_type_ref: "string[]", value: '["kitchen"]' },
 ]);
 const [commandId] = await client.execute([{ component_ref: nav, command_type: "start" }]);
-// ... later: statuses.get(commandId) is "OK" once the navigation has ended.
+// Wait here, because release aborts a running command, which then ends with ABORT.
+if (!statuses.has(commandId)) {
+  await new Promise<void>((resolve) => waiters.set(commandId, resolve));
+}
+console.log(statuses.get(commandId));
 await client.release(nav);
 
 await client.disconnect();
@@ -85,7 +91,9 @@ A command that ends at once can complete before the reply reaches your code, so 
 2. Record each status by `command_id`.
 3. Read the status with the ids in the reply.
 
-The quickstart above does this. To `await` a command, resolve a promise from the same listener, and check the record first in case the command has already ended.
+The quickstart above does this, and checks the record first, because a command that has already ended fires no listener. A real application also stops waiting on `close`, or after a timeout.
+
+Wait before you release the component: `release()` aborts your running commands on it, and they end with `ABORT`. `disconnect()` aborts them too.
 
 ## API
 
@@ -172,6 +180,8 @@ try {
 
 The package is one ES module build, with no separate CommonJS build. `import` works in Node.js 22.12 or later and in browsers, and `require` works from Node.js 22.12. `moduleResolution` can be `nodenext` or `bundler`. It uses the global `WebSocket`, which both have, so it installs no WebSocket package.
 
+Browsers are the target, but this release has run in headless Chromium only. Firefox and Safari have not been run. `wss://` has not been exercised: every run used `ws://`. The gateway does not authenticate connections in the alpha releases, so use it on trusted networks only.
+
 `RoISClient.connect()` takes the transport options, with times in milliseconds:
 
 ```ts
@@ -251,6 +261,8 @@ OPENROIS_GATEWAY_URL=ws://127.0.0.1:8765 npm test
 npx playwright install --only-shell chromium   # once, for the browser run
 OPENROIS_GATEWAY_URL=ws://127.0.0.1:8765 npm run test:browser
 ```
+
+With `OPENROIS_SDK_PACKAGE` naming an unpacked tarball inside this folder, these tests import its `dist` in place of `src`, which is how the release workflow runs them.
 
 ## License
 

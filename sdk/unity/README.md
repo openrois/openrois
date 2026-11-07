@@ -33,14 +33,16 @@ A target is not yet a proof. This is what has been run for this release:
 | Linux | IL2CPP, stripping High | 6000.0, 6000.3, 6000.6 | Run in a real player |
 | Linux | Mono | 6000.0, 6000.3 | Run in a real player |
 | Editor Play Mode on Linux | Mono | 6000.0, 6000.3, 6000.6 | Run with domain reload off, and with it on for 6000.0 and 6000.6 |
-| Android ARM64 | IL2CPP, stripping High | 6000.0, 6000.6 | Builds. The run on a device is pending |
-| VR headsets | | | Not run. A standalone headset takes the Android ARM64 build, so it waits on the same run |
+| Android ARM64 | IL2CPP, stripping High | 6000.0, 6000.6 | Builds. Not run on a device |
+| VR headsets | | | Not run. A standalone headset takes the Android ARM64 build, which has not run on a device |
 | iOS | | | Not built |
 | Windows, macOS | | | Not run |
 
-Until the device run is done, treat Android and headsets as unconfirmed. Public sources do not settle how `ClientWebSocket` behaves there.
+Nothing has run on a device for this release, so treat Android and headsets as unconfirmed. Public sources do not settle how `ClientWebSocket` behaves there.
 
 Unity adds the Android internet permission when it sees its own networking classes, and `ClientWebSocket` is not one of them. An Android build needs **Internet Access** set to **Require** in the Player settings, which is `PlayerSettings.Android.forceInternetPermission`.
+
+`wss://` has not been exercised: every run used `ws://`. The gateway does not authenticate connections in the alpha releases, so use it on trusted networks only.
 
 ## Usage
 
@@ -79,12 +81,17 @@ public sealed class Navigator : MonoBehaviour
         var statuses = new Dictionary<string, CompletedStatus>();
         client.On(RoISNotifications.Completed, (CompletedParams c) => statuses[c.CommandId] = c.Status);
 
-        // Reserve, configure, command, release.
+        // Reserve, configure, command, wait, release.
         await client.BindAsync(nav);
         await client.SetParameterAsync(
             nav, new[] { new Parameter("target_positions", "string[]", "[\"kitchen\"]") });
         var ids = await client.ExecuteAsync(new[] { new CommandUnit(nav, RoISCommandTypes.Start) });
-        // Later: statuses[ids[0]] is OK once the navigation has ended.
+        // Wait here, because ReleaseAsync aborts a running command, which then ends with ABORT.
+        while (!statuses.ContainsKey(ids[0]))
+        {
+            await Awaitable.NextFrameAsync(destroyCancellationToken);
+        }
+        Debug.Log(statuses[ids[0]]);
         await client.ReleaseAsync(nav);
     }
 }
@@ -110,7 +117,9 @@ A command that ends at once can complete before the reply reaches your code, so 
 2. Record each status by `CommandId`.
 3. Read the status with the ids in the reply.
 
-The usage above does this. To wait inside an `async` method, read the record once per frame, as the sample does, and stop when `close` fires. The listener and the method both run on the main thread, so the record needs no lock.
+The usage above does this, and reads the record once per frame. A real script also stops when `close` fires, as the sample does. The listener and the method both run on the main thread, so the record needs no lock.
+
+Wait before you release the component: `ReleaseAsync` aborts your running commands on it, and they end with `ABORT`. `DisconnectAsync` aborts them too.
 
 ## API
 
@@ -254,7 +263,7 @@ private async void OnClosed(int code, string reason)
 
 Listeners run on the main thread, so an app hears `close` only once its main thread runs again. The client adds no heartbeat, so a network that goes away without closing the connection can stay unnoticed, and a request that times out can be the first sign.
 
-How a real device behaves here has not been observed yet: the device run is pending.
+How a real device behaves here has not been observed: nothing has run on a device for this release.
 
 ## The Editor
 
