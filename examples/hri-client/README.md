@@ -17,7 +17,7 @@ profiles.
 ```bash
 # Once, from the repository root: build the types and the SDK.
 (cd interfaces/typescript && npm install && npm run build)
-(cd sdk/typescript && npm install && npm run build)
+(cd sdk/javascript && npm install && npm run build)
 
 # Terminal 1: the gateway on ws://127.0.0.1:8765, with the mock adapter behind it.
 docker compose up --build
@@ -44,7 +44,7 @@ qualified ref, and the client renders a panel for each.
 | `mock-adapter` | Sub HRI Engine, a working adapter with no robot |
 | `adapter-template` | Sub HRI Engine, a blank starting point |
 
-The client uses `RoISClient` from [`@openrois/sdk`](../../sdk/typescript/README.md) for the
+The client uses `RoISClient` from [`@openrois/sdk`](../../sdk/javascript/README.md) for the
 transport and the JSON-RPC protocol.
 
 ## License

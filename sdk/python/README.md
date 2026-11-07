@@ -200,7 +200,7 @@ Its `notification` event receives each notification as a mapping with `jsonrpc`,
 
 It accepts messages of up to 16 MiB, where the default of the `websockets` package is 1 MiB, so that a large `get_profile` does not close the connection. A larger message closes the connection with code 1009, and the `close` listeners and the failed requests carry that code and its reason.
 
-With `websockets` 15 or later, the client connects through the proxy that the environment names in variables such as `http_proxy` and `https_proxy`, for a local gateway too. Add the gateway to `no_proxy` to reach it directly. Earlier versions of `websockets` and the TypeScript client on its default socket ignore these variables.
+With `websockets` 15 or later, the client connects through the proxy that the environment names in variables such as `http_proxy` and `https_proxy`, for a local gateway too. Add the gateway to `no_proxy` to reach it directly. Earlier versions of `websockets` and the JavaScript client on its default socket ignore these variables.
 
 ## Modules
 

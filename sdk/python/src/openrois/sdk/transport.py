@@ -60,7 +60,7 @@ ABNORMAL_CLOSE = 1006
 #: The most bytes of UTF-8 that a close frame has room for as its reason.
 MAX_CLOSE_REASON_BYTES = 123
 
-#: The shortest method name a notification can have, as in the TypeScript client.
+#: The shortest method name a notification can have, as in the JavaScript client.
 MIN_METHOD_LENGTH = 3
 
 #: How many cancelled requests a transport remembers. A peer might never answer them, so the

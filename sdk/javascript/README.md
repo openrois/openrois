@@ -2,7 +2,7 @@
 
 ![Node.js](https://img.shields.io/badge/Node.js-22.12+-5FA04E?logo=nodedotjs&logoColor=white)
 
-TypeScript client SDK for [OpenRoIS](https://openrois.org/), an open-source middleware implementing the [OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0).
+JavaScript client SDK for [OpenRoIS](https://openrois.org/), an open-source middleware implementing the [OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0).
 
 Connect to an OpenRoIS engine, discover the components of every connected physical robot, virtual avatar, or AI service, and drive them through the standard RoIS interfaces. Runs in browsers and in Node.js.
 
@@ -20,7 +20,7 @@ npm install @openrois/sdk
 
 ```bash
 git clone https://github.com/openrois/openrois.git
-cd openrois/sdk/typescript
+cd openrois/sdk/javascript
 npm install
 npm run build
 ```
@@ -30,7 +30,7 @@ Then reference from your project:
 ```json
 {
   "dependencies": {
-    "@openrois/sdk": "file:../path/to/openrois/sdk/typescript"
+    "@openrois/sdk": "file:../path/to/openrois/sdk/javascript"
   }
 }
 ```

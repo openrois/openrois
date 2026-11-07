@@ -65,7 +65,7 @@ monorepo keeps the component SDK and the common components.
 
 ### Phase 3: Client SDKs and First End-to-End Demonstration (In Progress)
 
-**Done:** the TypeScript SDK (`@openrois/sdk`), the profile-driven web client
+**Done:** the JavaScript SDK (`@openrois/sdk`), the profile-driven web client
 (`examples/hri-client`), and an end-to-end demonstration of a web application controlling
 a physical robot through the gateway and an adapter.
 
@@ -86,7 +86,7 @@ messages (CP1 to CP3) as [rois-reference
 RoSO function, engine-assigned command ids, branches, timeouts, the RoIS_Common default
 and the error channel. A test suite runs the engine in process and over real sockets,
 including a gateway under a gateway. The mock adapter, the adapter template and the
-Reachy Mini and Kachaka adapters run on it, and the TypeScript SDK runs its sessions
+Reachy Mini and Kachaka adapters run on it, and the JavaScript SDK runs its sessions
 against it.
 
 **In progress:** the `0.1.0` release of `openrois-engine` with `openrois-components-core`,

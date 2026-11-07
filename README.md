@@ -103,7 +103,7 @@ robots and virtual agents alike.
 
 | RoIS concept | OpenRoIS realization |
 |--------------|----------------------|
-| Service Application | Your application, built with the TypeScript or Unity SDK |
+| Service Application | Your application, built with the JavaScript or Unity SDK |
 | Main HRI Engine | The gateway process: `Engine` with child engines, behind a WebSocket server |
 | Sub HRI Engine | An adapter process: `Engine` with local components, connected to the gateway |
 | HRI Component | A class decorated with `@component`, hosted by an adapter |
@@ -131,7 +131,7 @@ docker compose up --build
 # Terminal 2: build the types and the SDK, start the web inspector, then open
 # http://localhost:5173 and click Connect.
 (cd interfaces/typescript && npm install && npm run build)
-(cd sdk/typescript && npm install && npm run build)
+(cd sdk/javascript && npm install && npm run build)
 cd examples/hri-client && npm install && npm run dev
 ```
 
@@ -154,7 +154,7 @@ To develop a client without Docker, run the gateway and the
 
 ### Write a Service Application
 
-The TypeScript SDK exposes the RoIS interfaces with typed responses and runtime
+The JavaScript SDK exposes the RoIS interfaces with typed responses and runtime
 validation.
 
 ```ts
@@ -258,7 +258,7 @@ makes no conformance claim. The rest of the RoIS surface is being built in the o
 | Recursive engine with the RoIS behavior of CP1 to CP3, WebSocket server and client | Available, hardening |
 | Component and adapter SDK (Python): decorators, resources, RoIS_Common default, `adapter.yaml` | Available |
 | Gateway process, container image, and Docker Compose with a mock adapter | Available |
-| TypeScript client SDK and web inspector | Available |
+| JavaScript client SDK and web inspector | Available |
 | Unity SDK | In progress (JSON-RPC layer) |
 | Python client SDK | Planned |
 | Open reference platform based on the Pollen Robotics Reachy Mini | In progress, in openrois-adapter-reachy-mini |
@@ -282,7 +282,7 @@ openrois/
 │   ├── core/            Component SDK: decorators, resources, RoIS_Common default (openrois-components-core)
 │   └── common/          Common components: a mock SystemInformation (openrois-components-common)
 ├── sdk/
-│   ├── typescript/      Client SDK for web and Node.js (@openrois/sdk)
+│   ├── javascript/      Client SDK for web and Node.js (@openrois/sdk)
 │   └── unity/           Client SDK for Unity (OpenRoIS.Sdk, in progress)
 ├── services/
 │   └── gateway/         Gateway process and container image (openrois-gateway)
@@ -318,7 +318,7 @@ generated files by hand.
 | Python types | `interfaces/python` | `pip install -e ".[dev]"`, `pytest`, `mypy src/`, `ruff check src/` |
 | TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test`, `npm run test:package` |
 | C# types | `interfaces/csharp` | `dotnet build`, `dotnet test` |
-| TypeScript SDK | `sdk/typescript` | `npm install`, `npm run build`, `npm test` |
+| JavaScript SDK | `sdk/javascript` | `npm install`, `npm run build`, `npm test` |
 | Engine | `engine` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Component SDK | `components/core` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Common components | `components/common` | `pytest`, `mypy`, `ruff check src/ tests/` |

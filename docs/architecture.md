@@ -60,7 +60,7 @@
   assume hardware, a world model, or any specific middleware.
 - Allow a **service application in a remote location** to control any RoIS host
   (robot or avatar) securely.
-- Expose a **simple client SDK** (TypeScript for web first, Unity second)
+- Expose a **simple client SDK** (JavaScript for web first, Unity second)
   so a scenario can be written in a few lines, identically regardless of the host
   paradigm.
 - Support **live audio/video** for both telepresence (robot) and rendered avatars.
@@ -130,7 +130,7 @@ Logical Layer (control plane)
 | Main HRI Engine | Engine (hosted by the gateway) | Routes to child engines, aggregates profiles |
 | Sub HRI Engine | Engine (hosted by an adapter) | Hosts components, owns data-plane transport |
 | HRI Component | Component registered by a sub HRI Engine | Translation layer: RoIS calls to backend calls |
-| Service Application | Client SDK (TypeScript or Unity) | Drives robot scenarios via RoIS interfaces |
+| Service Application | Client SDK (JavaScript or Unity) | Drives robot scenarios via RoIS interfaces |
 | RoIS interfaces (SystemIF, CommandIF, QueryIF, EventIF, StreamingIF) | JSON-RPC 2.0 methods over WebSocket | Service application to gateway boundary (control plane) |
 | Main HRI Engine to sub HRI Engine | The same JSON-RPC 2.0 methods, sent by the parent engine | Gateway to sub HRI Engine boundary (control plane) |
 | (no spec term) | Component contract (`ComponentContract`) | Inside an engine: its own components and its child engines behind one interface |
@@ -240,7 +240,7 @@ layers align with the RoIS specification.
 |-----------|----------------------|----------------|
 | Interfaces | Transport-independent types authored in Python, generated to TypeScript and C# | The single-source-of-truth type pipeline works across three languages |
 | Engine (main) | The engine behind a WebSocket server: it routes JSON-RPC 2.0 calls, aggregates sub HRI Engine profiles, broadcasts profile changes | The engine is a pure router with zero paradigm-specific imports when acting as the main engine without local components |
-| Client SDK | A TypeScript SDK with one method per operation of the RoIS method catalog, over WebSocket | The SDK is paradigm-neutral: it does not know what robot is behind the gateway |
+| Client SDK | A JavaScript SDK with one method per operation of the RoIS method catalog, over WebSocket | The SDK is paradigm-neutral: it does not know what robot is behind the gateway |
 | Service application | A web application that connects to the gateway, fetches the profile, and renders a dynamic UI for every discovered component | Profile-driven discovery works: the same application works for any gateway without hardcoded component names |
 | Adapter SDK | A Python component SDK: a component is a class that declares its profile and marks its handlers with decorators | The adapter pattern works: a thin container that hosts components in an engine |
 | Sub HRI Engine (adapter) | An adapter for a real robot, connecting to the robot via gRPC and to the gateway via WebSocket | The sub HRI Engine bridges a real robot backend to the RoIS control plane |
@@ -279,7 +279,7 @@ interface of its own: the AudioStreaming and VideoStreaming components take thei
 through `execute`, answer `get_stream_status` through `query`, and send
 `notify_stream_status` as an event ([§13](#13-control-plane-vs-data-plane-streaming)).
 
-The TypeScript SDK (`@openrois/sdk`) is the client for web service applications.
+The JavaScript SDK (`@openrois/sdk`) is the client for web service applications.
 `RoISClient` has one method per operation of the method catalog, each taking the
 operation's IDL parameters in IDL order. The Unity SDK will have the same methods
 (in progress).
@@ -293,7 +293,7 @@ RoISClient
 ├─ Event     subscribe() · unsubscribe() · getEventDetail()
 ```
 
-Developer experience (TypeScript / web, primary client):
+Developer experience (JavaScript / web, primary client):
 
 ```ts
 import { RoISClient, componentRef, componentType } from "@openrois/sdk";
@@ -1103,7 +1103,7 @@ openrois/
 ├── interfaces/    # Shared types: single source of truth (Python to JSON Schema to C#/TS)
 ├── engine/        # Engine library: recursive Engine, LocalComponents, ChildEngine, WsServer, WsClient (openrois-engine)
 ├── components/    # Component SDK (core) and common components
-├── sdk/           # Client SDKs (TypeScript, Unity)
+├── sdk/           # Client SDKs (JavaScript, Python, Unity)
 ├── services/      # Network processes: the gateway and its container image (openrois-gateway)
 ├── apps/          # Product applications (Hub visualizer, planned)
 ├── examples/      # Web client, adapter template
@@ -1117,7 +1117,7 @@ openrois/
 | `engine/` | Engine library (`openrois-engine`). Recursive RoIS dispatch logic: one `Engine` class used by both the gateway and adapters, plus `WsServer` and `WsClient`. Zero media and zero paradigm-specific imports. |
 | `services/gateway/` | Gateway process (`openrois-gateway`). Composes `Engine` and `WsServer` into the process that hosts the Main HRI Engine, with configuration, logging, a graceful stop, and a container image. |
 | `components/` | The component SDK (`openrois-components-core`) and the common components (`openrois-components-common`). |
-| `sdk/` | Client SDKs: TypeScript for web and Node.js, Unity (in progress). |
+| `sdk/` | Client SDKs: JavaScript for web and Node.js, Python, and Unity. |
 | `apps/` | Product applications: the Hub (a gateway visualizer, planned). |
 | `examples/` | Reference implementations and templates for onboarding. |
 | `testing/` | Fixtures that tests and CI depend on: the mock adapter and the conformance list. |

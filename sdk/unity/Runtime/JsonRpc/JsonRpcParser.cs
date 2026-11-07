@@ -14,7 +14,7 @@ namespace OpenRoIS.Sdk.JsonRpc
   /// Stateless static methods. <see cref="Parse"/> inspects the fields of
   /// a message to classify it as Request, Response, Error, or Notification,
   /// then deserializes to the matching type through
-  /// <see cref="RoISJson.Options"/>. The rules are those of the TypeScript
+  /// <see cref="RoISJson.Options"/>. The rules are those of the JavaScript
   /// and Python clients, so a message they refuse is refused here too.
   /// </remarks>
   public static class JsonRpcParser
