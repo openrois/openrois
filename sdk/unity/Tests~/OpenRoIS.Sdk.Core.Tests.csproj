@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <!-- These have a copy inside .NET 10, which would otherwise replace the one that ships. -->
+    <InBoxCopies>System.Text.Json|System.Text.Encodings.Web|System.Runtime.CompilerServices.Unsafe</InBoxCopies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="*.cs" />
+    <!-- The tests Unity runs in the Editor, which cover the JSON-RPC layer. -->
+    <Compile Include="../Tests/Runtime/*.cs" LinkBase="Package" />
+    <ProjectReference Include="Core/OpenRoIS.Sdk.csproj" />
+    <Reference Include="../Runtime/Plugins/*.dll" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="4.2.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+
+  <!-- What a test reads at run time: the list, and the server every SDK shares. -->
+  <ItemGroup>
+    <None Include="../../../testing/conformance/README.md" Link="suite/README.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../../testing/conformance/scripted_server.py" Link="suite/scripted_server.py" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="ConformanceTests.cs" Link="suite/ConformanceTests.cs" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!--
+    A plain Reference is not enough to test what ships. .NET 10 keeps its own System.Text.Json,
+    which is another version and another build than a Unity player loads, and says nothing about
+    it. These two targets make the bundled copies the ones that compile and load, and
+    BundleTests fails if they stop doing so.
+  -->
+  <Target Name="CompileAgainstBundledCopies" AfterTargets="ResolveTargetingPackAssets">
+    <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Reference.FrameworkReferenceName)' != '' and $([System.Text.RegularExpressions.Regex]::IsMatch('%(Filename)', '^($(InBoxCopies))$'))" />
+      <!-- This list is what would drop the bundled files from the output folder. -->
+      <PackageConflictPlatformManifests Remove="@(PackageConflictPlatformManifests)" />
+    </ItemGroup>
+  </Target>
+
+  <!-- The host loads the higher assembly version it finds, and only this file tells it. -->
+  <Target Name="LoadBundledCopies" AfterTargets="GenerateBuildDependencyFile">
+    <PropertyGroup>
+      <Dependencies>$([System.IO.File]::ReadAllText('$(ProjectDepsFilePath)'))</Dependencies>
+      <Dependencies>$([System.Text.RegularExpressions.Regex]::Replace('$(Dependencies)', '("($(InBoxCopies))\.dll": \{\s*"assemblyVersion": )"[^"]+"', '$1"65535.0.0.0"'))</Dependencies>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(ProjectDepsFilePath)" Lines="$(Dependencies)" Overwrite="true" />
+  </Target>
+
+</Project>

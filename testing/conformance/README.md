@@ -6,8 +6,9 @@ runs the same list against the same stack, a gateway with the
 of its test. A scenario missing from an SDK then shows up in a diff.
 
 `wire_check.py` runs the list on raw JSON-RPC, with no SDK, to prove the engine and the
-gateway on their own. The [TypeScript suite](#the-typescript-suite) and the
-[Python suite](#the-python-suite) run it through their SDKs. The Unity suite is in progress.
+gateway on their own. The [TypeScript suite](#the-typescript-suite), the
+[Python suite](#the-python-suite) and the [Unity suite](#the-unity-suite) run it through their
+SDKs.
 
 ## Run
 
@@ -108,6 +109,40 @@ by default.
 The file ends with tests that need no stack. They fail when an id of [the list](#the-list) has
 no test, or a test has no id in the list, and when a method of the catalog has no client member.
 
+## The Unity Suite
+
+`sdk/unity/Tests~/ConformanceTests.cs` has one test for each id from C01 to C21. W01 to W03
+stay with `wire_check.py`. The file uses only the public surface of the SDK and takes only URLs.
+It needs the .NET 10 SDK and no Unity, and the tilde keeps the folder out of the package as
+Unity sees it:
+
+```bash
+pip install -e interfaces/python -e engine -e components/core -e components/common \
+  -e services/gateway websockets
+openrois-gateway &
+python testing/mock-adapter/mock_adapter.py --config testing/mock-adapter/adapter.fast.yaml &
+cd sdk/unity/Tests~
+OPENROIS_GATEWAY_URL=ws://127.0.0.1:8765 dotnet test --filter "FullyQualifiedName~ConformanceTests"
+```
+
+The project compiles `sdk/unity/Runtime` as a Unity Editor does, with C# 9 on `netstandard2.1`,
+and runs it against the assemblies in `Runtime/Plugins`, which take the place of the copies
+inside .NET. So it tests what ships, and it does not prove a Unity player:
+[the harness](../unity-harness/README.md) does that.
+
+The first test that needs the scripted server starts it with `python3`, which needs the
+websockets package, and the run stops it at the end. The suite waits until the mock adapter has
+joined, so it can start with the stack. Without `OPENROIS_GATEWAY_URL`, `dotnet test` skips C01
+to C17 and still runs C18 to C21, because those need only the scripted server.
+`OPENROIS_MOCK_ENGINE_ID` names the engine of the mock adapter, `mock` by default.
+
+C18 checks which caller got which reply, and not the order in which callers resumed, because
+the thread pool decides that order. `scripted_check.py` proves that the server answers in reverse.
+
+The file ends with tests that need no stack. They fail when an id of [the list](#the-list) has
+no test, or a test has no id in the list, and when a method of the catalog has no client member,
+or one whose last parameter is not an optional `CancellationToken`.
+
 ## Wire Fixtures
 
 `capture.py` drives one session through the same stack and records the params and the result
@@ -141,7 +176,8 @@ python testing/mock-adapter/mock_adapter.py --config testing/mock-adapter/adapte
 ```
 
 Then run a suite as usual. The Python suite needs its SDK in the same venv, with
-`pip install "./sdk/python[dev]"`, which leaves the pins as they are. The mock adapter stays the
+`pip install "./sdk/python[dev]"`, which leaves the pins as they are. The Unity suite needs nothing
+more than that venv, because its `python3` has the websockets package. The mock adapter stays the
 one of the tree, because it is a fixture and no package holds it.
 
 ## The List

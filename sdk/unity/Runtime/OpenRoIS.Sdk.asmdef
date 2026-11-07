@@ -11,5 +11,6 @@
         "System.Runtime.CompilerServices.Unsafe.dll",
         "Microsoft.Bcl.AsyncInterfaces.dll"
     ],
-    "autoReferenced": true
+    "autoReferenced": true,
+    "noEngineReferences": true
 }

@@ -26,7 +26,7 @@ using UnityEngine.Networking;
 namespace OpenRoIS.Harness
 {
   /// <summary>
-  /// Runs the shared fixtures and a live session inside a real player.
+  /// Runs the shared fixtures, a live session and the conformance list inside a real player.
   /// </summary>
   /// <remarks>
   /// Every line this class prints starts with <c>HARNESS</c>, so a runner can pick them
@@ -38,14 +38,17 @@ namespace OpenRoIS.Harness
   /// because reflection is invisible to the linker, and a link.xml here to keep them
   /// could also hide a gap in the link.xml of the SDK, which is what a player has to prove.
   /// </remarks>
-  public sealed class HarnessRunner : MonoBehaviour
+  public sealed partial class HarnessRunner : MonoBehaviour
   {
     private const string Prefix = "HARNESS ";
     private const string ConfigFile = "harness.json";
     private const string GatewayUrlVariable = "OPENROIS_GATEWAY_URL";
+    private const string GatewayUrlField = "gateway_url";
+    private const string ScriptedUrlVariable = "OPENROIS_SCRIPTED_URL";
+    private const string ScriptedUrlField = "scripted_url";
     private const string Language = "csharp";
     private const string Navigation = "mock/navigation";
-    private const int RunLimitSeconds = 180;
+    private const int RunLimitSeconds = 300;
     private const int SessionLimitSeconds = 60;
     private const int AdapterJoinAttempts = 50;
     private const int AdapterJoinDelayMilliseconds = 200;
@@ -63,9 +66,14 @@ namespace OpenRoIS.Harness
     private CancellationToken _cancel;
 
     /// <summary>Starts the harness with no scene object, so the scene can stay empty.</summary>
+    /// <remarks>
+    /// The Editor run has its own driver, and this would end its Play Mode with a quit.
+    /// </remarks>
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Boot()
     {
+      if (Application.isEditor)
+        return;
       new GameObject("harness").AddComponent<HarnessRunner>();
     }
 
@@ -117,11 +125,21 @@ namespace OpenRoIS.Harness
       }
       try
       {
-        await RunSession(await OnMain(ReadGatewayUrl(), "read gateway url"));
+        await RunSession(await OnMain(ReadUrl(GatewayUrlVariable, GatewayUrlField), "read gateway url"));
       }
       catch (Exception e)
       {
         Fail("session", Describe(e));
+      }
+      try
+      {
+        await RunConformance(
+            await OnMain(ReadUrl(GatewayUrlVariable, GatewayUrlField), "read gateway url"),
+            await OnMain(ReadUrl(ScriptedUrlVariable, ScriptedUrlField), "read scripted url"));
+      }
+      catch (Exception e)
+      {
+        Fail("conformance", Describe(e));
       }
     }
 
@@ -750,19 +768,19 @@ namespace OpenRoIS.Harness
     // Input
 
     /// <summary>
-    /// On Android a device reaches the gateway over the LAN and a launched app has no
-    /// environment of its own, so the address comes from the build.
+    /// On Android a device reaches its servers over the LAN and a launched app has no
+    /// environment of its own, so the addresses come from the build.
     /// </summary>
-    private async Task<string> ReadGatewayUrl()
+    private async Task<string> ReadUrl(string variable, string field)
     {
       if (Application.platform == RuntimePlatform.Android)
       {
         var config = await OnMain(ReadStreamingAsset(ConfigFile), "read " + ConfigFile);
-        return (string)config["gateway_url"]!;
+        return (string)config[field]!;
       }
-      var url = Environment.GetEnvironmentVariable(GatewayUrlVariable);
+      var url = Environment.GetEnvironmentVariable(variable);
       if (string.IsNullOrEmpty(url))
-        throw new InvalidOperationException(GatewayUrlVariable + " is not set.");
+        throw new InvalidOperationException(variable + " is not set.");
       return url;
     }
 
@@ -772,6 +790,12 @@ namespace OpenRoIS.Harness
     /// </summary>
     private static async Task<JsonNode> ReadStreamingAsset(string name)
     {
+      return JsonNode.Parse(await ReadStreamingBytes(name))!;
+    }
+
+    /// <inheritdoc cref="ReadStreamingAsset(string)"/>
+    private static async Task<byte[]> ReadStreamingBytes(string name)
+    {
       var path = Path.Combine(Application.streamingAssetsPath, name);
       using var request = UnityWebRequest.Get(path.Contains("://") ? path : new Uri(path).AbsoluteUri);
       var finished = new TaskCompletionSource<bool>();
@@ -779,7 +803,7 @@ namespace OpenRoIS.Harness
       await finished.Task;
       if (request.result != UnityWebRequest.Result.Success)
         throw new IOException($"Cannot read {name}: {request.error}");
-      return JsonNode.Parse(request.downloadHandler.data)!;
+      return request.downloadHandler.data;
     }
 
     // Reporting

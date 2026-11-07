@@ -118,6 +118,16 @@ namespace OpenRoIS.Sdk.Tests
       Assert.That(msg.RawJson, Is.EqualTo("not json at all"));
     }
 
+    [TestCase(@"{""jsonrpc"":""2.0"",""method"":""\ud800abc""}")]
+    [TestCase(@"{""jsonrpc"":""\ud800"",""method"":""abc""}")]
+    public void Parse_StringWithALoneSurrogate_ClassifiesAsUnknown(string json)
+    {
+      var msg = JsonRpcParser.Parse(json);
+
+      Assert.That(msg.Type, Is.EqualTo(JsonRpcMessageType.Unknown));
+      Assert.That(msg.RawJson, Is.EqualTo(json));
+    }
+
     [Test]
     public void Parse_EmptyJson_ClassifiesAsUnknown()
     {

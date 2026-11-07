@@ -1,5 +1,6 @@
 #nullable enable
 using System.Text.Json;
+using OpenRoIS.Interfaces.Hri;
 
 namespace OpenRoIS.Sdk.JsonRpc
 {
@@ -10,17 +11,16 @@ namespace OpenRoIS.Sdk.JsonRpc
   /// <remarks>
   /// Stateless static methods. The caller manages ID generation.
   /// The <c>params</c> argument is serialized as-is. The caller passes
-  /// a typed object (e.g. <c>ExecuteParams</c>,
-  /// <c>SearchParams</c>) or an anonymous object.
+  /// a generated params object (e.g. <c>ExecuteParams</c>,
+  /// <c>SearchParams</c>), or a <c>Dictionary&lt;string, object&gt;</c> for
+  /// a method outside the catalog. An anonymous object does not work in a
+  /// build: stripping at High removes its getters, and it is written as
+  /// <c>{}</c>. Every message goes through <see cref="RoISJson.Options"/>,
+  /// because the engine refuses the nulls and the enumeration numbers that
+  /// default options write.
   /// </remarks>
   public static class JsonRpcBuilder
   {
-
-    private static readonly JsonSerializerOptions _options = new()
-    {
-      // Match the wire format: no indentation, no extra whitespace.
-      WriteIndented = false,
-    };
 
     /// <summary>
     /// Build a JSON-RPC 2.0 request string.
@@ -29,13 +29,13 @@ namespace OpenRoIS.Sdk.JsonRpc
     /// gateway echoes it back in the response.</param>
     /// <param name="method">Namespaced method name, e.g.
     /// "rois.command.search".</param>
-    /// <param name="params">Parameter object, or null if the method
+    /// <param name="parameters">Parameter object, or null if the method
     /// takes no args. Serialized as-is.</param>
     /// <returns>JSON string ready to send.</returns>
     /// <example>
     /// <code>
     /// var json = JsonRpcBuilder.CreateRequest("1", "rois.command.search",
-    ///     new { condition = "" });
+    ///     new SearchParams(""));
     /// </code>
     /// </example>
     public static string CreateRequest(
@@ -47,7 +47,7 @@ namespace OpenRoIS.Sdk.JsonRpc
         Method = method,
         Params = ToJsonElement(parameters),
       };
-      return JsonSerializer.Serialize(request, _options);
+      return JsonSerializer.Serialize(request, RoISJson.Options);
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ namespace OpenRoIS.Sdk.JsonRpc
     /// </remarks>
     /// <param name="method">Namespaced push method name, e.g.
     /// "rois.event.notify_event".</param>
-    /// <param name="params">Event payload, or null.</param>
+    /// <param name="parameters">Event payload, or null.</param>
     /// <returns>JSON string ready to send.</returns>
     public static string CreateNotification(
         string method, object? parameters = null)
@@ -69,7 +69,7 @@ namespace OpenRoIS.Sdk.JsonRpc
         Method = method,
         Params = ToJsonElement(parameters),
       };
-      return JsonSerializer.Serialize(notification, _options);
+      return JsonSerializer.Serialize(notification, RoISJson.Options);
     }
 
     /// <summary>
@@ -89,11 +89,10 @@ namespace OpenRoIS.Sdk.JsonRpc
         return element;
       }
 
-      // Serialize to JSON, then parse back to a JsonElement.
-      // This ensures the params field is a proper JSON value, not a
-      // nested serialized string.
-      var json = JsonSerializer.Serialize(obj, obj.GetType(), _options);
-      return JsonDocument.Parse(json).RootElement.Clone();
+      // An element, so the params field is a proper JSON value and not
+      // a nested serialized string.
+      return JsonSerializer.SerializeToElement(
+          obj, obj.GetType(), RoISJson.Options);
     }
   }
 
