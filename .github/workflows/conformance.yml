@@ -17,6 +17,7 @@ on:
       - "testing/**"
       - "sdk/typescript/**"
       - "sdk/python/**"
+      - "sdk/unity/**"
       - "compose.yaml"
       - ".dockerignore"
       - ".github/workflows/conformance.yml"
@@ -31,6 +32,7 @@ on:
       - "testing/**"
       - "sdk/typescript/**"
       - "sdk/python/**"
+      - "sdk/unity/**"
       - "compose.yaml"
       - ".dockerignore"
       - ".github/workflows/conformance.yml"
@@ -65,6 +67,10 @@ jobs:
             interfaces/typescript/package-lock.json
             sdk/typescript/package-lock.json
 
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
       - name: Start the gateway and the mock adapter
         run: docker compose up --build --detach
 
@@ -96,6 +102,12 @@ jobs:
         run: |
           python -m pip install -e interfaces/python -e "sdk/python[dev]"
           python -m pytest sdk/python/tests/test_conformance.py
+
+      - name: The list on the Unity core
+        working-directory: sdk/unity/Tests~
+        env:
+          OPENROIS_GATEWAY_URL: ws://127.0.0.1:8765
+        run: dotnet test --filter "FullyQualifiedName~ConformanceTests"
 
       - name: Stop gracefully
         # The gateway runs as the container's main process and must handle SIGTERM

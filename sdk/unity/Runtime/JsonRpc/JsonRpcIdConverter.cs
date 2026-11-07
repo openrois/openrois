@@ -21,7 +21,7 @@ namespace OpenRoIS.Sdk.JsonRpc
   /// This keeps the <c>Id</c> property as a simple <c>string?</c> while
   /// accepting any spec-compliant <c>id</c> value from the wire.
   /// </remarks>
-  internal class JsonRpcIdConverter : JsonConverter<string?>
+  internal sealed class JsonRpcIdConverter : JsonConverter<string?>
   {
     /// <inheritdoc/>
     public override string? Read(

@@ -1,6 +1,8 @@
 #nullable enable
 using System;
+using System.Linq;
 using System.Text.Json;
+using OpenRoIS.Interfaces.Hri;
 
 namespace OpenRoIS.Sdk.JsonRpc
 {
@@ -9,18 +11,18 @@ namespace OpenRoIS.Sdk.JsonRpc
   /// Parse and classify JSON-RPC 2.0 messages.
   /// </summary>
   /// <remarks>
-  /// Stateless static methods. <see cref="Parse"/> inspects the presence
-  /// of <c>id</c>, <c>result</c>, <c>error</c>, and <c>method</c> fields
-  /// to classify the message as Request, Response, Error, or
-  /// Notification, then deserializes to the matching type.
+  /// Stateless static methods. <see cref="Parse"/> inspects the fields of
+  /// a message to classify it as Request, Response, Error, or Notification,
+  /// then deserializes to the matching type through
+  /// <see cref="RoISJson.Options"/>. The rules are those of the TypeScript
+  /// and Python clients, so a message they refuse is refused here too.
   /// </remarks>
   public static class JsonRpcParser
   {
 
-    private static readonly JsonSerializerOptions _options = new()
-    {
-      PropertyNameCaseInsensitive = true,
-    };
+    // The shortest method name a notification can have, as in the other
+    // two clients.
+    private const int MinMethodLength = 3;
 
     /// <summary>
     /// Parse a JSON string into a classified <see cref="JsonRpcMessage"/>.
@@ -32,87 +34,110 @@ namespace OpenRoIS.Sdk.JsonRpc
     /// if the JSON is invalid or does not match any known type.</returns>
     public static JsonRpcMessage Parse(string json)
     {
-      JsonDocument doc;
       try
       {
-        doc = JsonDocument.Parse(json);
+        using var document = JsonDocument.Parse(json);
+        return Classify(document.RootElement, json);
       }
-      catch (Exception)
+      catch (Exception error) when (error is JsonException || error is InvalidOperationException)
       {
+        // A peer decides what arrives here, so a bad message is an answer
+        // for the caller to handle and not a failure of this class. A string
+        // with a lone surrogate is valid JSON, and only reading it throws,
+        // with the second exception.
         return new JsonRpcMessage
         {
           Type = JsonRpcMessageType.Unknown,
           RawJson = json,
         };
       }
+    }
 
-      using (doc)
+    private static JsonRpcMessage Classify(JsonElement root, string json)
+    {
+      var message = new JsonRpcMessage
       {
-        var root = doc.RootElement;
-        var hasId = root.TryGetProperty("id", out _);
-        var hasResult = root.TryGetProperty("result", out _);
-        var hasError = root.TryGetProperty("error", out _);
-        var hasMethod = root.TryGetProperty("method", out _);
-
-        // Response: has id + result
-        if (hasId && hasResult)
-        {
-          var response = JsonSerializer.Deserialize<JsonRpcResponse>(
-              json, _options);
-          return new JsonRpcMessage
-          {
-            Type = JsonRpcMessageType.Response,
-            RawJson = json,
-            Response = response,
-          };
-        }
-
-        // Error: has id + error
-        if (hasId && hasError)
-        {
-          var error = JsonSerializer.Deserialize<JsonRpcError>(
-              json, _options);
-          return new JsonRpcMessage
-          {
-            Type = JsonRpcMessageType.Error,
-            RawJson = json,
-            Error = error,
-          };
-        }
-
-        // Notification: has method, no id
-        if (hasMethod && !hasId)
-        {
-          var notification = JsonSerializer.Deserialize<JsonRpcNotification>(
-              json, _options);
-          return new JsonRpcMessage
-          {
-            Type = JsonRpcMessageType.Notification,
-            RawJson = json,
-            Notification = notification,
-          };
-        }
-
-        // Request: has method + id (should not come from gateway, but
-        // classify it for completeness)
-        if (hasMethod && hasId)
-        {
-          var request = JsonSerializer.Deserialize<JsonRpcRequest>(
-              json, _options);
-          return new JsonRpcMessage
-          {
-            Type = JsonRpcMessageType.Request,
-            RawJson = json,
-            Request = request,
-          };
-        }
-
-        return new JsonRpcMessage
-        {
-          Type = JsonRpcMessageType.Unknown,
-          RawJson = json,
-        };
+        Type = JsonRpcMessageType.Unknown,
+        RawJson = json,
+      };
+      if (root.ValueKind != JsonValueKind.Object
+          || !root.TryGetProperty("jsonrpc", out var version)
+          || version.ValueKind != JsonValueKind.String
+          || version.GetString() != JsonRpcConstants.Version)
+      {
+        return message;
       }
+
+      var fields = root.EnumerateObject().Count();
+      var hasId = root.TryGetProperty("id", out var id);
+      var hasMethod = root.TryGetProperty("method", out var method);
+      var hasParams = root.TryGetProperty("params", out var parameters);
+      if (hasId && !IsId(id))
+      {
+        return message;
+      }
+
+      if (hasId && fields == 3 && root.TryGetProperty("result", out _))
+      {
+        message.Type = JsonRpcMessageType.Response;
+        message.Response = root.Deserialize<JsonRpcResponse>(RoISJson.Options);
+      }
+      else if (hasId && fields == 3
+          && root.TryGetProperty("error", out var error) && IsErrorObject(error))
+      {
+        message.Type = JsonRpcMessageType.Error;
+        message.Error = root.Deserialize<JsonRpcError>(RoISJson.Options);
+      }
+      else if (hasMethod && IsMethod(method) && (!hasParams || AreParams(parameters))
+          && fields == (hasId ? 3 : 2) + (hasParams ? 1 : 0))
+      {
+        // Only a server-to-client notification is expected. A request is
+        // classified as well, so the caller can report what it received.
+        if (hasId)
+        {
+          message.Type = JsonRpcMessageType.Request;
+          message.Request = root.Deserialize<JsonRpcRequest>(RoISJson.Options);
+        }
+        else
+        {
+          message.Type = JsonRpcMessageType.Notification;
+          message.Notification =
+              root.Deserialize<JsonRpcNotification>(RoISJson.Options);
+        }
+      }
+
+      return message;
+    }
+
+    private static bool IsId(JsonElement id)
+    {
+      return id.ValueKind == JsonValueKind.String
+          || id.ValueKind == JsonValueKind.Number
+          || id.ValueKind == JsonValueKind.Null;
+    }
+
+    private static bool IsMethod(JsonElement method)
+    {
+      return method.ValueKind == JsonValueKind.String
+          && method.GetString()!.Length >= MinMethodLength;
+    }
+
+    private static bool AreParams(JsonElement parameters)
+    {
+      return parameters.ValueKind == JsonValueKind.Object
+          || parameters.ValueKind == JsonValueKind.Array;
+    }
+
+    private static bool IsErrorObject(JsonElement error)
+    {
+      return error.ValueKind == JsonValueKind.Object
+          && error.EnumerateObject().All(
+              field => field.Name == "code" || field.Name == "message" || field.Name == "data")
+          && error.TryGetProperty("code", out var code)
+          && code.ValueKind == JsonValueKind.Number
+          && code.TryGetInt32(out _)
+          && error.TryGetProperty("message", out var text)
+          && text.ValueKind == JsonValueKind.String;
     }
   }
 

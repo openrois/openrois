@@ -14,8 +14,8 @@
 	"licensesUrl": "https://github.com/openrois/openrois/blob/dev/sdk/unity/LICENSE.md",
 	"samples": [
 		{
-			"displayName": "JSON-RPC Round Trip",
-			"description": "Builds a RoIS request and parses a gateway response with the JSON-RPC layer of the SDK, without a network connection.",
+			"displayName": "Navigation Session",
+			"description": "Connects to a gateway, binds the navigation component of the mock adapter, runs a command and reads how it ended. Needs a gateway with the mock adapter behind it.",
 			"path": "Samples~/Example"
 		}
 	]

@@ -21,11 +21,14 @@ namespace OpenRoIS.Harness.Editor
     private const string ConfigFile = "harness.json";
     private const string ApplicationId = "org.openrois.harness";
     private const string FixturesFromProject = "../../interfaces/fixtures";
+    private const string ConformanceListFromProject = "../conformance/README.md";
+    private const string ConformanceListFile = "conformance-list.md";
 
     [Serializable]
     private sealed class HarnessConfig
     {
       public string gateway_url = "";
+      public string scripted_url = "";
     }
 
     /// <summary>Builds the target named by the environment and exits the Editor.</summary>
@@ -88,6 +91,9 @@ namespace OpenRoIS.Harness.Editor
       Directory.CreateDirectory(StreamingAssets);
       foreach (var fixture in Directory.GetFiles(FixturesFromProject, "*.json"))
         File.Copy(fixture, Path.Combine(StreamingAssets, Path.GetFileName(fixture)), overwrite: true);
+
+      // The player compares its scenarios to this list, so a new id fails on a device as well.
+      File.Copy(ConformanceListFromProject, Path.Combine(StreamingAssets, ConformanceListFile), overwrite: true);
     }
 
     private static void ConfigureLinux(ScriptingImplementation backend, ref BuildPlayerOptions options)
@@ -107,7 +113,11 @@ namespace OpenRoIS.Harness.Editor
       EditorUserBuildSettings.buildAppBundle = false;
       options.target = BuildTarget.Android;
 
-      var config = new HarnessConfig { gateway_url = Required("OPENROIS_GATEWAY_URL") };
+      var config = new HarnessConfig
+      {
+        gateway_url = Required("OPENROIS_GATEWAY_URL"),
+        scripted_url = Required("OPENROIS_SCRIPTED_URL"),
+      };
       File.WriteAllText(Path.Combine(StreamingAssets, ConfigFile), JsonUtility.ToJson(config));
     }
 
