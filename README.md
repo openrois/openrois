@@ -287,7 +287,7 @@ makes no conformance claim. The rest of the RoIS surface is being built in the o
 | Streaming: AudioStreaming and VideoStreaming profiles | Available, no streaming component ships yet |
 | WebRTC media for the streaming components | Planned |
 | Alpha packages on PyPI (`openrois-interfaces`, `openrois-engine`, `openrois-components-core`, `openrois-gateway`) and npm (`@openrois/interfaces`) | Available |
-| First alpha of the client SDKs: `@openrois/sdk` on npm, `openrois-sdk` on PyPI, `org.openrois.sdk` by Git URL | In progress, not published yet |
+| First alpha of the client SDKs: `@openrois/sdk` on npm, `openrois-sdk` on PyPI, `org.openrois.sdk` by Git URL | Available |
 | `openrois-components-common` on PyPI, the Unity package in a registry | Planned |
 | All 17 basic RoIS HRI Components (v1.0) | Planned |
 

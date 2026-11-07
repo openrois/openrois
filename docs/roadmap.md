@@ -76,9 +76,10 @@ The Unity SDK has run in Linux players, with IL2CPP and Mono, and in the Editor.
 ARM64 build has not run on a device, no VR headset has run it, iOS has not been built, and
 Windows and macOS players have not been run.
 
-**In progress:** the first alpha of the three client SDKs, tagged
-`sdk-javascript-v0.1.0-alpha.1`, `sdk-python-v0.1.0-alpha.1` and
-`sdk-unity-v0.1.0-alpha.1`. A run on a device is not part of this alpha.
+**Released:** the first alpha of the three client SDKs, on 2026-11-07: `@openrois/sdk`
+0.1.0-alpha.1 on npm, `openrois-sdk` 0.1.0a1 on PyPI, and `org.openrois.sdk`
+0.1.0-alpha.1 by Git URL, tagged `sdk-javascript-v0.1.0-alpha.1`,
+`sdk-python-v0.1.0-alpha.1` and `sdk-unity-v0.1.0-alpha.1`.
 
 **Exit criteria:** tagged release `v0.1.0`.
 

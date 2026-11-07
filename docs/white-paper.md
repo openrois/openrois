@@ -24,7 +24,7 @@
 > a simulated robot behind it. The engine implements the RoIS interfaces, profiles and common messages (CP1 to CP3)
 > as [rois-reference §16](rois-reference.md#16-known-normative-divergences) records them,
 > without a conformance claim. Each robot's components live in its adapter repository,
-> such as the Reachy Mini adapter. The first alpha of the client SDKs is in progress, and
+> such as the Reachy Mini adapter. The client SDKs have their first alpha releases, and
 > authentication and WebRTC media are planned. This document
 > describes the target architecture and marks features that are not implemented yet.
 
@@ -93,7 +93,7 @@ This white paper describes the following contributions:
 4. A **JSON-RPC 2.0 binding of the RoIS interfaces** over WebSocket: a method catalog
    of 16 methods and 4 notifications named after the IDL, with conditions in a subset
    of CQL2-Text and a small set of documented extensions (section 9).
-5. **SDKs for both sides of the system**: client SDKs for TypeScript, Python and
+5. **SDKs for both sides of the system**: client SDKs for JavaScript, Python and
    Unity that behave identically regardless of the host paradigm
    behind the gateway, and a Python component SDK in which a component is a class that
    declares the profile of its RoIS component type (section 8).
@@ -1937,7 +1937,7 @@ details and open decisions.
 | 0 | Paradigm-Neutral Interfaces | type pipeline, tests against the normative files | done |
 | 1 | Engine and Sub HRI Engine | TypeScript proof of concept, child engines, mock components | done |
 | 2 | Adapter Framework and Components | component framework, reference components, real robot adapter | done |
-| 3 | Client SDKs and First Demonstration | TypeScript, Python and Unity client SDKs and web client done, their first alpha in progress, exit tag `v0.1.0` | in progress |
+| 3 | Client SDKs and First Demonstration | JavaScript, Python and Unity client SDKs and web client done, their first alpha released, exit tag `v0.1.0` | in progress |
 | 4 | Recursive Engine in Python | the Python engine on the RoIS method catalog is the only dispatch implementation | in progress |
 | 5 | Hardening the Engine | graceful shutdown, reconnection, package loading, health endpoints | planned |
 | 6 | Gateway Process | `openrois-gateway` from `Engine` + `WsServer`, Docker Compose quickstart | in progress |
@@ -1973,7 +1973,7 @@ Pre-1.0 releases are Alpha, unstable API. Do not use in production until v1.0.
 
 The type pipeline with the RoIS method catalog, the recursive Python engine
 (`openrois-engine`), the gateway process (`openrois-gateway`), the component SDK
-(`openrois-components-core`), and the TypeScript, Python and Unity client SDKs are built.
+(`openrois-components-core`), and the JavaScript, Python and Unity client SDKs are released as alphas.
 The engine implements the
 RoIS interfaces, profiles and common messages (CP1 to CP3) as
 [rois-reference §16](rois-reference.md#16-known-normative-divergences) records them. A
@@ -2084,7 +2084,7 @@ The single-source-of-truth type pipeline (Python Pydantic to JSON Schema to C# a
 TypeScript) keeps three language stacks consistent without manual synchronization. The
 JSON-RPC 2.0 binding of the RoIS method catalog over WebSocket provides a
 browser-native, NAT-friendly control plane with full async event support. The client
-SDKs (TypeScript, Python and Unity) expose identical behavior
+SDKs (JavaScript, Python and Unity) expose identical behavior
 regardless of the host paradigm behind the gateway.
 
 The project is in alpha. The type pipeline, the recursive engine, the gateway process,
