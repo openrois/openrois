@@ -27,12 +27,19 @@ jobs:
 
       - name: Compare the tag with pyproject.toml
         id: versions
-        # The tag carries the npm form (0.1.0-alpha.2), and PyPI normalizes it to
-        # 0.1.0a2, as for the interfaces tags.
+        # The tag carries the npm form (0.1.0-alpha.2), and PyPI normalizes it to 0.1.0a2.
+        # beta and rc tags normalize the same way. A tag in the PyPI form (0.1.0a2) would
+        # also equal pyproject.toml, and the GitHub release would then be a full release,
+        # because the release action reads a pre-release from a hyphen. So the form comes
+        # first, and it refuses any other label too.
         run: |
           tag="${GITHUB_REF_NAME#engine-v}"
+          if [[ ! "$tag" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?$ ]]; then
+            echo "::error::Tag $tag is not in the npm form, for example 0.1.0-alpha.1"
+            exit 1
+          fi
           py_version=$(python3 -c "import tomllib;print(tomllib.load(open('engine/pyproject.toml','rb'))['project']['version'])")
-          py_expected=$(python3 -c "import re,sys;print(re.sub(r'-alpha\.', 'a', sys.argv[1]))" "$tag")
+          py_expected=$(sed -E -e 's/-alpha\./a/' -e 's/-beta\./b/' -e 's/-rc\./rc/' <<< "$tag")
           if [ "$py_version" != "$py_expected" ]; then
             echo "::error::Tag $tag, PyPI $py_version (expected $py_expected)"
             exit 1
