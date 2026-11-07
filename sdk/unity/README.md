@@ -20,6 +20,8 @@ The package is not on a registry. Add it by Git URL, with the tag of the release
 
 The `path` selects the package in the repository, and the part after `#` is the tag. Without a tag, Unity follows the default branch.
 
+Each release from 0.1.0-alpha.1 on also carries the package as `org.openrois.sdk-<version>.tgz`, for **Install package from tarball**, with no Git needed. The tarball is not signed, so Unity 6000.3 and later note that in the Package Manager.
+
 To work on the package, point the manifest at a local clone instead, with `"file:../../openrois/sdk/unity"`.
 
 ## Platforms

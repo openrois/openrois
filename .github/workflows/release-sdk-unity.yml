@@ -2,8 +2,8 @@ name: Release Unity SDK
 
 # Creates the GitHub pre-release of org.openrois.sdk when an sdk-unity-v* tag is pushed, for
 # example sdk-unity-v0.1.0-alpha.1. The tag itself is what a user installs, by Git URL, so
-# there is no registry and no tarball, and nothing is signed. The release carries the
-# CHANGELOG section, and the README gives the Git URL.
+# there is no registry, and nothing is signed. The release carries the CHANGELOG section and
+# the package as a tarball, for "Install package from tarball" in the Package Manager.
 
 on:
   push:
@@ -81,6 +81,22 @@ jobs:
         working-directory: sdk/unity/Tests~
         run: dotnet test
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      # The tarball holds the files of the tag under sdk/unity, the same as a Git URL install,
+      # and is packed here so only a tested tree is attached.
+      - name: Pack the tarball
+        working-directory: sdk/unity
+        run: npm pack --pack-destination "$RUNNER_TEMP/unity-tarball"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: unity-tarball
+          path: ${{ runner.temp }}/unity-tarball/*.tgz
+          if-no-files-found: error
+
   conformance:
     # The list against the stack that frozen.txt pins, installed from PyPI, so the SDK cannot
     # ship against a stack it was not tested with. Pull request CI runs the list against the
@@ -137,16 +153,20 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # The notes are the only artifact, and download-artifact puts a lone artifact straight
-      # into its path with no folder of its own, so the name and the path are given here.
+      # Each artifact is downloaded by name, because download-artifact puts a lone artifact
+      # straight into its path with no folder of its own.
       - uses: actions/download-artifact@v8
         with:
           name: release-notes
           path: artifacts/release-notes
 
-      # The package has no assets: a user installs the tag by Git URL.
+      - uses: actions/download-artifact@v8
+        with:
+          name: unity-tarball
+          path: artifacts/unity-tarball
+
       - uses: ./.github/actions/github-release
         with:
           title: Unity SDK ${{ needs.check-version.outputs.version }}
           notes-file: artifacts/release-notes/release-notes.md
-          files: ""
+          files: artifacts/unity-tarball/*.tgz
