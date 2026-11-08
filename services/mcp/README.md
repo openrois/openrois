@@ -99,7 +99,7 @@ the session that ran it. Each server process holds one session.
 | `get_parameters(ref)` | The current parameters. An actuation component must be bound first. Another component is bound for the read, only by a server that may act on it |
 | `subscribe(ref, event_type)`, `unsubscribe(subscribe_id)` | Follow an event of one component. For a component with a `start` command, the reply says it may send events only once started |
 | `get_events(since?, limit?)` | The notifications after a cursor, and the next cursor |
-| `wait_for_event(event_type?, ref?, timeout?, since?)` | Waits for a matching event, an error, a loss, or the timeout. Without `since`, it starts at the cursor the last tool returned |
+| `wait_for_event(event_type?, ref?, timeout?, since?)` | Waits for a matching event, an error, a loss, or the timeout. Without `since`, it starts at the cursor of the `subscribe`, `run_commands` or `set_parameters` just before it, or else at the newest entry |
 | `get_error_detail(error_id)` | The details of an error entry |
 | `command_status(command_ids)` | How commands of this session ended, with their results |
 | `bind(ref, wait_seconds?)` | Reserves a component. With `wait_seconds`, retries while another session holds it |
@@ -116,10 +116,14 @@ dropped), `connection_closed` and `idle_release`.
 ### Waiting for Events
 
 `subscribe`, `run_commands`, `set_parameters`, `get_events` and `wait_for_event` each return a
-`cursor`, and `wait_for_event` without `since` starts at the last one. So an event a component
-sends while a command runs, before the command completes, still reaches the wait that
-follows, as in `subscribe`, then `run_commands` with a person detector's `start`, then
-`wait_for_event("person_detected")`. A wait that times out returns the cursor it started at.
+`cursor`. The first `wait_for_event` without `since` after `subscribe`, `run_commands` or
+`set_parameters` starts at the cursor that call returned. So an event a component sends while
+a command runs, before the command completes, still reaches the wait that follows, as in
+`subscribe`, then `run_commands` with a person detector's `start`, then
+`wait_for_event("person_detected")`. Any other wait without `since` starts at the newest entry,
+so asking again later waits for a fresh count instead of returning an old one. To read every
+entry in turn, pass the `cursor` of the last wait as `since`. A wait that times out returns the
+cursor it started at.
 
 Some components, such as a person detector, send events only between their `start` and
 `stop` commands. A read-only server cannot start them.

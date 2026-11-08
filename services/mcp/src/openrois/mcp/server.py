@@ -24,8 +24,9 @@ gateway through the OMG RoIS Framework 2.0 interfaces.
 1. list_components shows every component, its type, its status for this session and what
    it offers. describe_component gives the commands, queries, events and parameters of one.
 2. query reads state. subscribe, then get_events or wait_for_event, follows what happens.
-   wait_for_event starts at the cursor the last tool returned, so an event sent while a
-   command ran is not missed. Some components, such as a person detector, send events only
+   Right after subscribe, run_commands or set_parameters, wait_for_event starts at the
+   cursor that call returned, so an event sent while a command ran is not missed. Any other
+   wait waits for a fresh event. Some components, such as a person detector, send events only
    between their start and stop commands.
 3. To act (when this server allows actions): bind a component, run_commands, then release.
    Many commands, such as a reaction or speech start, take no arguments and read the
@@ -166,7 +167,7 @@ def build_server(
         """Subscribe to an event of one component. Read occurrences with get_events.
 
         Some components send events only between their start and stop commands: the reply
-        then has a hint. wait_for_event without since starts at the cursor this returns.
+        then has a hint. The next wait_for_event without since starts at the cursor this returns.
         """
         return await _run(rois, rois.subscribe(ref, event_type))
 
@@ -197,17 +198,19 @@ def build_server(
             int | None,
             Field(
                 description=(
-                    "Match entries after this cursor. Empty: after the cursor the last tool "
-                    "returned, from subscribe, run_commands, set_parameters, get_events or "
-                    "wait_for_event"
+                    "Match entries after this cursor, such as the cursor of the last wait to "
+                    "read each entry in turn. Empty: right after subscribe, run_commands or "
+                    "set_parameters, after the cursor that call returned; otherwise only "
+                    "entries that arrive from now on"
                 )
             ),
         ] = None,
     ) -> dict[str, Any]:
         """Wait until a matching event arrives, an error or a loss arrives, or the timeout passes.
 
-        So that an event a component sends during a command is not missed, the wait starts
-        at the cursor of the call before it, not at the moment it is called.
+        So that an event a component sends during a command is not missed, the first wait
+        after subscribe, run_commands or set_parameters starts at the cursor that call
+        returned. Any other wait without since waits for a fresh entry, not an old one.
         """
         return await rois.wait_for_event(event_type, ref, timeout, since)
 

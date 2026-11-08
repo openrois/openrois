@@ -293,9 +293,10 @@ class Session:
         # Checks of the binds and subscriptions after a profile change, one at a time.
         self._checking = asyncio.Lock()
         self._checks: set[asyncio.Task[None]] = set()
-        # The event cursor this server last handed to the agent, where wait_for_event
-        # starts without since.
-        self._cursor = 0
+        # Where the next wait_for_event without since starts: the cursor of the last
+        # subscribe, run_commands or set_parameters, until a wait uses it. None: the next
+        # wait starts at the newest entry, so it waits for a fresh one.
+        self._cursor: int | None = None
         # What the agent must hear, until a tool response carries it.
         self._notices: list[str] = []
 
@@ -1158,9 +1159,13 @@ class Session:
     def get_events(self, since: int = 0, limit: int = 50) -> dict[str, Any]:
         """The buffered notifications after a cursor."""
         entries, cursor, dropped = self.events.since(since, limit)
+        if self._cursor is not None:
+            # A wait after a command starts after what the agent has read since, but never
+            # goes back, as when it reads from the oldest entry kept.
+            self._cursor = max(self._cursor, cursor)
         result: dict[str, Any] = {
             "entries": [entry.as_dict() for entry in entries],
-            "cursor": self._hand_out(cursor),
+            "cursor": cursor,
             "more": self.events.last > cursor,
         }
         if dropped:
@@ -1176,11 +1181,19 @@ class Session:
     ) -> dict[str, Any]:
         """Wait for an event that matches, an error, a loss, or the timeout.
 
-        Without ``since`` the wait starts at the cursor this server last handed out, from
-        subscribe, run_commands, set_parameters, get_events or wait_for_event. So an event
-        that a component sends while a command runs, before its completion, still counts.
+        Without ``since``, the first wait after subscribe, run_commands or set_parameters
+        starts at the cursor that call returned, so an event that a component sends while
+        a command runs, before its completion, still counts. Any other wait starts at the
+        newest entry, so it waits for a fresh event rather than returning an old one.
         """
-        start = self._cursor if since is None else since
+        if since is not None:
+            start = since
+        elif self._cursor is not None:
+            start = self._cursor
+        else:
+            start = self.events.last
+        # A wait uses the cursor of the call before it once.
+        self._cursor = None
 
         def matches(entry: Entry) -> bool:
             if entry.kind in ("error", "connection_closed", "lost"):
@@ -1194,11 +1207,11 @@ class Session:
         limit = max(0.0, min(timeout, self.settings.command_timeout))
         found = await self.events.wait_for(start, matches, limit)
         if found is None:
-            # The cursor stays where the wait started, so an entry another filter would
-            # match is not skipped.
-            return self._with_notice({"timed_out": True, "cursor": self._hand_out(start)})
+            # The cursor is where the wait started, so a wait with another filter can pass
+            # it as since and not skip an entry.
+            return self._with_notice({"timed_out": True, "cursor": start})
         return self._with_notice(
-            {"timed_out": False, "entry": found.as_dict(), "cursor": self._hand_out(found.seq)}
+            {"timed_out": False, "entry": found.as_dict(), "cursor": found.seq}
         )
 
     async def get_error_detail(self, error_id: str) -> dict[str, Any]:
@@ -1253,7 +1266,7 @@ class Session:
             raise rois_failure(error, ref=ref, held=held, hint=override) from error
 
     def _hand_out(self, cursor: int) -> int:
-        """Record a cursor given to the agent, where wait_for_event starts next."""
+        """Record the cursor of a call that starts something, where the next wait starts."""
         self._cursor = cursor
         return cursor
 

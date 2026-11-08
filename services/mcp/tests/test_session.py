@@ -643,9 +643,51 @@ async def test_wait_for_event_sees_an_event_sent_during_the_command() -> None:
     assert waited["timed_out"] is False
     assert waited["entry"]["results"][0]["value"] == 2
     assert waited["entry"]["seq"] > ran["cursor"]
-    # The next wait starts after it, and a timeout keeps the cursor where it started.
+    # The next wait waits for a fresh entry, and a timeout returns the cursor it started at.
+    newest = session.events.last
     again = await session.wait_for_event("person_detected", timeout=0.05)
-    assert again == {"timed_out": True, "cursor": waited["cursor"]}
+    assert again == {"timed_out": True, "cursor": newest}
+
+
+async def test_a_wait_long_after_the_command_waits_for_a_fresh_event() -> None:
+    engine = Engine()
+    session = make(engine)
+    subscribed = await session.subscribe(PEOPLE, "person_detected")
+    fake = engine.sessions[0]
+    fake.fire(subscribed["subscribe_id"], 1)
+    first = await session.wait_for_event("person_detected", timeout=0.2)
+    assert first["entry"]["results"][0]["value"] == 1
+    # Counts keep arriving while the agent does something else.
+    fake.fire(subscribed["subscribe_id"], 2)
+    fake.fire(subscribed["subscribe_id"], 3)
+    await asyncio.sleep(0)
+    # Asking again later does not return the old count 2, but waits for the next one.
+    asyncio.get_running_loop().call_later(0.05, fake.fire, subscribed["subscribe_id"], 0)
+    later = await session.wait_for_event("person_detected", timeout=1)
+    assert later["entry"]["results"][0]["value"] == 0
+    # The cursor of a wait, passed as since, reads every entry in turn.
+    again = await session.wait_for_event("person_detected", since=first["cursor"], timeout=0.2)
+    assert again["entry"]["results"][0]["value"] == 2
+
+
+async def test_reading_old_events_does_not_move_the_wait_back() -> None:
+    engine = Engine()
+    session = make(engine)
+    subscribed = await session.subscribe(PEOPLE, "person_detected")
+    fake = engine.sessions[0]
+    for count in range(5):
+        fake.fire(subscribed["subscribe_id"], count)
+    await asyncio.sleep(0)
+    # A page from the oldest entry, while the agent has not waited since the subscribe.
+    page = session.get_events(limit=2)
+    assert page["more"] is True
+    waited = await session.wait_for_event("person_detected", timeout=0.2)
+    assert waited["entry"]["results"][0]["value"] == 2
+    # Without a command before it, a page from the oldest entry sets no cursor.
+    session.get_events(limit=2)
+    asyncio.get_running_loop().call_later(0.05, fake.fire, subscribed["subscribe_id"], 9)
+    fresh = await session.wait_for_event("person_detected", timeout=1)
+    assert fresh["entry"]["results"][0]["value"] == 9
 
 
 async def test_the_subscribe_cursor_comes_before_the_subscription() -> None:
