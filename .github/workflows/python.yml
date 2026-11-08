@@ -1,7 +1,7 @@
 name: Python
 
-# The Python engine, gateway and component packages. The interfaces workflow covers the
-# types they build on, and the conformance workflow runs them together.
+# The Python engine, gateway, component packages and MCP server. The interfaces workflow
+# covers the types they build on, and the conformance workflow runs them together.
 
 on:
   push:
@@ -12,6 +12,9 @@ on:
       - "components/**"
       - "engine/**"
       - "services/gateway/**"
+      - "services/mcp/**"
+      - "sdk/python/**"
+      - "testing/mock-adapter/**"
       - ".github/workflows/python.yml"
   pull_request:
     paths:
@@ -20,6 +23,9 @@ on:
       - "components/**"
       - "engine/**"
       - "services/gateway/**"
+      - "services/mcp/**"
+      - "sdk/python/**"
+      - "testing/mock-adapter/**"
       - ".github/workflows/python.yml"
   workflow_dispatch:
 
@@ -134,3 +140,68 @@ jobs:
       - name: Test
         working-directory: services/gateway
         run: pytest
+
+  mcp:
+    # The MCP server is a client of the Python SDK, so it runs against a stack from the tree,
+    # as the SDK does: a change to the SDK, the engine or the gateway that breaks it fails in
+    # its own pull request. The integration tests drive every tool through the MCP client,
+    # in process and through the console script over stdio.
+    name: MCP server, Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    env:
+      OPENROIS_GATEWAY_URL: ws://127.0.0.1:8765
+    defaults:
+      run:
+        working-directory: services/mcp
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            interfaces/python/pyproject.toml
+            engine/pyproject.toml
+            components/core/pyproject.toml
+            components/common/pyproject.toml
+            services/gateway/pyproject.toml
+            sdk/python/pyproject.toml
+            services/mcp/pyproject.toml
+
+      - name: Install the stack, the SDK and the server
+        working-directory: .
+        run: >-
+          python -m pip install
+          -e interfaces/python -e engine -e components/core -e components/common
+          -e services/gateway -e sdk/python -e "services/mcp[dev]"
+
+      - name: Start the gateway and the mock adapter
+        # They stay up for the steps below. The suite waits until the adapter has joined.
+        working-directory: .
+        run: |
+          openrois-gateway --log-level warning > gateway.log 2>&1 &
+          python testing/mock-adapter/mock_adapter.py \
+            --config testing/mock-adapter/adapter.fast.yaml --log-level warning \
+            > adapter.log 2>&1 &
+
+      - name: Lint
+        run: |
+          ruff check src/ tests/
+          ruff format --check src/ tests/
+
+      - name: Type check
+        run: mypy
+
+      - name: Test
+        # The unit tests, then the integration tests, which OPENROIS_GATEWAY_URL turns on.
+        run: pytest
+
+      - name: Logs
+        if: always()
+        working-directory: .
+        run: cat gateway.log adapter.log
