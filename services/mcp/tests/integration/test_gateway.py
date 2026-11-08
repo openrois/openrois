@@ -13,10 +13,13 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import sys
 from typing import Any
 
 import pytest
-from mcp import Client
+from mcp import Client, ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
 
 from openrois.mcp.config import Settings
 from openrois.mcp.server import build_server
@@ -231,3 +234,21 @@ async def test_a_profile_change_that_drops_nothing_keeps_the_binds() -> None:
         read = await call(client, "get_events", since=0, limit=500)
         kinds = {entry["kind"] for entry in read["entries"]}
         assert "profile_changed" in kinds and "lost" not in kinds
+
+
+async def test_the_console_script_serves_over_stdio() -> None:
+    command = shutil.which("openrois-mcp") or os.path.join(
+        os.path.dirname(sys.executable), "openrois-mcp"
+    )
+    server = StdioServerParameters(
+        command=command, args=["--gateway-url", URL], env=dict(os.environ)
+    )
+    async with stdio_client(server) as (read, write), ClientSession(read, write) as session:
+        await session.initialize()
+        names = {tool.name for tool in (await session.list_tools()).tools}
+        # Read-only without --allow-actions.
+        assert "list_components" in names and "run_commands" not in names
+        result = await session.call_tool("list_components", {})
+        assert not result.is_error
+        listed = json.loads(result.content[0].text)  # type: ignore[union-attr]
+        assert NAV in {component["ref"] for component in listed["components"]}
