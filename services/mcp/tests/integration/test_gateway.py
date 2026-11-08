@@ -11,6 +11,7 @@ and mock/system_information.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import shutil
@@ -225,15 +226,28 @@ async def test_a_profile_change_that_drops_nothing_keeps_the_binds() -> None:
             steps=[{"component_ref": FAULT, "command_type": "peer_join"}],
             auto_bind=True,
         )
-        ran = await call(
-            client, "run_commands", steps=[{"component_ref": NAV, "command_type": "stop"}]
-        )
-        assert ran["commands"][0]["status"] == "OK"
+        # The server checks its binds in the background after profile_changed, so the test
+        # waits for that entry and gives the check time to finish before it looks.
+        kinds: set[str] = set()
+        for _ in range(50):
+            read = await call(client, "get_events", since=0, limit=500)
+            kinds = {entry["kind"] for entry in read["entries"]}
+            if "profile_changed" in kinds:
+                break
+            await asyncio.sleep(0.1)
+        assert "profile_changed" in kinds
+        await asyncio.sleep(1.0)
         listed = await call(client, "list_components", pattern="mock/nav%")
         assert listed["components"][0]["held_by_this_session"] is True
+        ran = await call(
+            client,
+            "run_commands",
+            steps=[{"component_ref": NAV, "command_type": "stop"}],
+            auto_bind=False,
+        )
+        assert ran["commands"][0]["status"] == "OK"
         read = await call(client, "get_events", since=0, limit=500)
-        kinds = {entry["kind"] for entry in read["entries"]}
-        assert "profile_changed" in kinds and "lost" not in kinds
+        assert "lost" not in {entry["kind"] for entry in read["entries"]}
 
 
 async def test_the_console_script_serves_over_stdio() -> None:
