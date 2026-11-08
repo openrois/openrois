@@ -1186,7 +1186,7 @@ openrois/
 ├── engine/        # Engine library: recursive Engine, LocalComponents, ChildEngine, WsServer, WsClient (openrois-engine)
 ├── components/    # Component SDK (core) and common components
 ├── sdk/           # Client SDKs (JavaScript, Python, Unity)
-├── services/      # Network processes: the gateway and its container image (openrois-gateway)
+├── services/      # Network processes: the gateway (openrois-gateway) and the MCP server (openrois-mcp)
 ├── apps/          # Product applications (Hub visualizer, planned)
 ├── examples/      # Web client, adapter template
 ├── testing/       # Test fixtures: mock adapter, conformance list, Unity harness
@@ -1198,6 +1198,7 @@ openrois/
 | `interfaces/` | Type pipeline. Pydantic models are the source of truth. JSON Schema is the canonical wire contract. C# and TypeScript types are generated. |
 | `engine/` | Engine library (`openrois-engine`). Recursive RoIS dispatch logic: one `Engine` class used by both the gateway and adapters, plus `WsServer` and `WsClient`. Zero media and zero paradigm-specific imports. |
 | `services/gateway/` | Gateway process (`openrois-gateway`). Composes `Engine` and `WsServer` into the process that hosts the Main HRI Engine, with configuration, logging, a graceful stop, and a container image. |
+| `services/mcp/` | MCP server (`openrois-mcp`). Serves the components behind a gateway to an AI agent as MCP tools, through one RoIS session opened with the Python client SDK. Read-only unless actions are allowed. |
 | `components/` | The component SDK (`openrois-components-core`) and the common components (`openrois-components-common`). |
 | `sdk/` | Client SDKs: JavaScript for browsers and Node.js, Python for asyncio, and Unity. |
 | `apps/` | Product applications: the Hub (a gateway visualizer, planned). |

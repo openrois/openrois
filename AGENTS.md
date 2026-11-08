@@ -16,6 +16,7 @@ What exists today:
 | RoIS interface types (Python, JSON Schema, TypeScript, C#) | `interfaces/` | Available |
 | Recursive engine with the RoIS behavior of CP1 to CP3, WebSocket server and client | `engine/` | Available, hardening |
 | Gateway process (`openrois-gateway`) | `services/gateway/` | Available |
+| MCP server for AI agents (`openrois-mcp`) | `services/mcp/` | Alpha, pre-1.0, unstable API. Not on PyPI yet |
 | Component and adapter SDK, and the common components | `components/` | Available |
 | JavaScript client SDK | `sdk/javascript/` | Alpha, pre-1.0, unstable API. Passes the conformance list in Node.js and Chromium |
 | Python client SDK | `sdk/python/` | Alpha, pre-1.0, unstable API. Passes the conformance list |
@@ -74,6 +75,7 @@ its description. The IDL and XSD cross-check tests fail on any other addition.
 | C# types | `interfaces/csharp` | `dotnet build src/OpenRoIS.Interfaces`, `dotnet test tests/OpenRoIS.Interfaces.Tests` |
 | Engine | `engine` | `pip install -e ../components/core -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | Gateway | `services/gateway` | `pip install -e ../../interfaces/python -e ../../engine -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
+| MCP server | `services/mcp` | `pip install -e ../../interfaces/python -e ../../sdk/python -e ".[dev]"`, `pytest` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway), `mypy`, `ruff check src/ tests/` |
 | Component SDK | `components/core` | `pip install -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | Common components | `components/common` | `pip install -e ../../interfaces/python -e ../core -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | JavaScript SDK | `sdk/javascript` | `npm install`, `npm run build`, `npm test` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway) |
