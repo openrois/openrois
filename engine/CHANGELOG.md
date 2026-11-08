@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `pydantic` 2.10 or later is required, because `openrois.engine` does not import with earlier versions, which the declared floor of 2.0 allowed.
+- `rois.command.release` also aborts the caller's commands on the component that are still waiting their turn in an `execute` sequence or branch. They complete with `ABORT` at the release and never start. Before, they still ran once their turn came, even after another session had bound the component. The engine that holds the binds needs this release, which for clients of a gateway is the gateway.
 
 ## [0.1.0a2] - 2026-11-06
 

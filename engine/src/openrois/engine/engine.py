@@ -16,8 +16,8 @@ The engine does what is the same for every component:
 - It holds the binds. Every Command interface operation needs a bind from the calling
   session on the component it names. An actuation component takes one bind at a time,
   any other component one bind per session. ``release`` aborts the caller's commands
-  still running on the component. Requests from a parent engine skip the check, since
-  the parent made it.
+  on the component, those still running and those still waiting their turn in a
+  sequence. Requests from a parent engine skip the check, since the parent made it.
 - It answers ``component_status`` for the asking session: BUSY when another session
   holds an actuation component the asker cannot bind now.
 - It assigns the command id of every command of an ``execute`` and returns the sequence
@@ -139,7 +139,8 @@ class _Command:
 
     ``source`` ran the command and keeps its results. It is None for a command that
     never ran, which has no results. ``task`` runs the command while it runs, so a
-    release can abort it.
+    release can abort it. ``queued`` marks a command of an execute whose turn in its
+    sequence has not come yet, so a release can end it before it starts.
     """
 
     session_id: str
@@ -147,6 +148,7 @@ class _Command:
     source: ComponentContract | None = None
     status: CompletedStatus | None = None
     task: asyncio.Future[CompletedStatus] | None = None
+    queued: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -440,8 +442,15 @@ class Engine:
             return ReleaseResult(return_code=ReturnCode.UNSUPPORTED)
         self._binds.get(ref, set()).discard(session.id)
         # A bind that ends while the component still runs the caller's commands would
-        # let the next session take an actuator mid-motion, so they end with ABORT.
+        # let the next session take an actuator mid-motion, so they end with ABORT. So do
+        # the caller's commands there that wait for their turn in a sequence: they must
+        # not start later on a component the caller no longer holds. They end before the
+        # wait, so no sequence starts one meanwhile, but the session learns of them after
+        # the running ones, in the order of their sequence.
+        queued = self._skip_queued(session, ref)
         await self._abort_commands(session, ref)
+        for command_id in queued:
+            self._notify_completed(session, command_id, CompletedStatus.ABORT)
         return ReleaseResult(return_code=ReturnCode.OK)
 
     async def _get_parameter(
@@ -520,7 +529,9 @@ class Engine:
         for item in items:
             for unit in _units(item):
                 source = components[unit.component_ref][1]
-                self._commands[unit.command_id] = _Command(session.id, unit.component_ref, source)
+                self._commands[unit.command_id] = _Command(
+                    session.id, unit.component_ref, source, queued=True
+                )
         self._prune_commands()
         self._run_for(session, self._run_sequence(session, items))
         return ExecuteResult(return_code=ReturnCode.OK, command_unit_list=items)
@@ -649,12 +660,20 @@ class Engine:
         return True
 
     async def _run_unit(self, session: Session, unit: CommandUnit) -> CompletedStatus:
-        """Run one command and finish it. A release aborts it by cancelling its task."""
+        """Run one command and finish it. A release aborts it by cancelling its task.
+
+        A command that ended already, or whose component the session no longer holds,
+        does not run: a release before its turn ended it, or ends it now, with ABORT.
+        """
         command = self._commands.get(unit.command_id)
         entry = self._components().get(unit.component_ref)
         if command is None or entry is None:
             status = CompletedStatus.ERROR
+        elif command.status is not None or not self._holds(session, unit.component_ref):
+            self._skip(session, [unit])
+            return CompletedStatus.ABORT
         else:
+            command.queued = False
             task = asyncio.ensure_future(entry[1].run(unit))
             command.task = task
             try:
@@ -711,6 +730,27 @@ class Engine:
             ):
                 command.source.keep_running(command_id)
 
+    def _skip_queued(self, session: Session, ref: str) -> list[str]:
+        """End with ABORT the commands of a session on a component that wait their turn.
+
+        It does not tell the session: it returns their ids, in the order they were
+        executed, for the caller to send their completion once the running commands
+        ended.
+        """
+        ended: list[str] = []
+        for command_id, command in self._commands.items():
+            if (
+                command.session_id == session.id
+                and command.ref == ref
+                and command.queued
+                and command.status is None
+            ):
+                command.queued = False
+                command.source = None
+                command.status = CompletedStatus.ABORT
+                ended.append(command_id)
+        return ended
+
     def _skip(self, session: Session, units: Sequence[CommandUnit]) -> None:
         """End with ABORT the commands that never ran, and forget their source."""
         for unit in units:
@@ -733,6 +773,10 @@ class Engine:
         if command.status is not None:
             return
         command.status = status
+        self._notify_completed(session, command_id, status)
+
+    def _notify_completed(self, session: Session, command_id: str, status: CompletedStatus) -> None:
+        """Tell the session that started a command how it ended, while it is there."""
         if session.connected and session.id in self._sessions:
             session.notify(
                 "rois.command.completed", CompletedParams(command_id=command_id, status=status)

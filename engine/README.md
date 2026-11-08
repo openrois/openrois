@@ -163,12 +163,13 @@ runs exactly this with configuration and signal handling.
   session on every component they name, and answer ERROR without it. An actuation
   component takes one bind at a time, and a second session gets OUT_OF_RESOURCES. Any
   other component, one declared without a RoSO function included, takes one bind per
-  session. `release` drops the caller's bind and aborts its commands still running on
-  the component. A parent engine checked the binds before it forwarded a request, so the
-  session of a parent is trusted. Clients therefore connect to the top engine of a
-  hierarchy, which holds the binds for every engine below it. To abort a command on a
-  child engine, the parent sends it a `stop` of the component and then a `release`, but
-  only when no other client of the parent still holds the component.
+  session. `release` drops the caller's bind and aborts its commands on the component,
+  both those still running and those still waiting their turn in a sequence. A parent
+  engine checked the binds before it forwarded a request, so the session of a parent is
+  trusted. Clients therefore connect to the top engine of a hierarchy, which holds the
+  binds for every engine below it. To abort a command on a child engine, the parent
+  sends it a `stop` of the component and then a `release`, but only when no other client
+  of the parent still holds the component.
 - **execute.** The engine checks the whole sequence before it answers: UNSUPPORTED for a
   command no component serves, ERROR for a component the session has not bound, and
   BAD_PARAMETER for arguments that do not fit the profile. It then runs the items in
