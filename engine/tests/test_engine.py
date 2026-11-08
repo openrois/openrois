@@ -478,6 +478,68 @@ async def test_each_command_of_a_concurrent_item_waits_its_own_delay(robot: Robo
     assert robot.gripper.forces == [1.0, 2.0]
 
 
+async def test_release_aborts_a_command_that_waits_its_turn_in_a_sequence(
+    robot: Robot,
+) -> None:
+    await bound(robot, NAV, GRIP)
+    start, grip = await robot.client.execute(unit(NAV, "start"), unit(GRIP, "grip", force="1.0"))
+    await asyncio.sleep(0.02)
+    released = await robot.client.call("rois.command.release", component_ref=GRIP)
+    assert released["return_code"] == "OK"
+    assert robot.client.status_of(grip) == "ABORT"
+    # A second session takes the gripper, and the old command never reaches it.
+    other = await Peer.connected(robot.engine)
+    assert (await other.call("rois.command.bind", component_ref=GRIP))["return_code"] == "OK"
+    assert robot.client.status_of(start) is None
+    robot.navigation.arrive.set()
+    assert await robot.client.completed(start) == "OK"
+    await asyncio.sleep(0.02)
+    assert robot.gripper.forces == []
+    assert [p["command_id"] for p in robot.client.sent("rois.command.completed")] == [grip, start]
+    never_ran = await robot.client.call(
+        "rois.command.get_command_result", command_id=grip, condition=""
+    )
+    assert never_ran == {"return_code": "OK", "results": []}
+    [theirs] = await other.execute(unit(GRIP, "grip", force="2.0"))
+    assert await other.completed(theirs) == "OK"
+    assert robot.gripper.forces == [2.0]
+
+
+async def test_a_command_released_before_its_turn_stays_aborted_after_a_new_bind(
+    robot: Robot,
+) -> None:
+    await bound(robot, NAV, GRIP)
+    start, grip = await robot.client.execute(unit(NAV, "start"), unit(GRIP, "grip", force="1.0"))
+    await robot.client.call("rois.command.release", component_ref=GRIP)
+    await bound(robot, GRIP)
+    robot.navigation.arrive.set()
+    assert await robot.client.completed(start) == "OK"
+    await asyncio.sleep(0.02)
+    assert robot.client.status_of(grip) == "ABORT"
+    assert robot.gripper.forces == []
+
+
+async def test_release_aborts_the_later_commands_of_a_branch_on_that_component(
+    robot: Robot,
+) -> None:
+    await bound(robot, NAV, GRIP)
+    together = branches(
+        [unit(NAV, "start"), unit(GRIP, "grip", force="1.0")],
+        [unit(GRIP, "grip", delay_time=200, force="2.0")],
+    )
+    start, grip, delayed = await robot.client.execute(together)
+    await asyncio.sleep(0.02)
+    await robot.client.call("rois.command.release", component_ref=GRIP)
+    assert robot.client.status_of(grip) == "ABORT"
+    assert robot.client.status_of(delayed) == "ABORT"
+    await asyncio.sleep(0.25)
+    robot.navigation.arrive.set()
+    assert await robot.client.completed(start) == "OK"
+    await asyncio.sleep(0.02)
+    assert robot.gripper.forces == []
+    assert len(robot.client.sent("rois.command.completed")) == 3
+
+
 # -- Parameters ----------------------------------------------------------------------------
 
 
