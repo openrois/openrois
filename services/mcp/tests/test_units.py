@@ -94,7 +94,7 @@ def test_summary_names_what_a_component_offers() -> None:
         "engine": "robot",
         "function": "actuation",
         "commands": ["start", "stop", "go"],
-        "queries": ["component_status"],
+        "queries": ["component_status", "available_targets"],
         "events": ["reached_target"],
     }
 
@@ -106,6 +106,13 @@ def test_describe_types_every_field() -> None:
     assert go["arguments"] == [{"name": "speed", "type": "double"}]
     assert {"name": "model", "type": "string", "read_only": True} in described["parameters"]
     assert profiles.describe("robot/person_detection", PEOPLE)["needs_exclusive_bind"] is False
+
+
+def test_parameters_show_their_initial_value_as_json() -> None:
+    described = profiles.describe("robot/navigation", NAVIGATION)
+    target = next(p for p in described["parameters"] if p["name"] == "target_positions")
+    assert target == {"name": "target_positions", "type": "string[]", "initial_value": []}
+    assert "stay on the component between sessions" in described["parameters_note"]
 
 
 def test_engine_of_nested_refs() -> None:

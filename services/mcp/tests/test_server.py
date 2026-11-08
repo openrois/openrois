@@ -67,3 +67,25 @@ async def test_resources_and_shutdown() -> None:
     # Leaving the client ends the server's lifespan, which releases and disconnects.
     assert engine.sessions[0].disconnected
     assert (1, "robot/navigation") in engine.released
+
+
+async def test_a_failed_call_carries_the_lost_session_notice() -> None:
+    engine = Engine()
+    settings = Settings(allow_actions=True)
+    server = build_server(settings, session=Session(settings, factory_for(engine)))
+    async with Client(server) as client:
+        await client.call_tool("bind", {"ref": "robot/navigation"})
+        engine.sessions[0].drop()
+        # A resource read reconnects, but it cannot carry the notice.
+        await client.read_resource("rois://components")
+        result = await client.call_tool(
+            "run_commands",
+            {"steps": [{"component_ref": "robot/navigation", "command_type": "start"}]},
+        )
+        assert result.is_error
+        message = text(result)
+        failure = json.loads(message[message.index("{") :])
+        assert failure["return_code"] == "NOT_BOUND"
+        assert "connection to the gateway was lost" in failure["notice"]
+        listed = await client.call_tool("list_components", {})
+        assert "notice" not in json.loads(text(listed))

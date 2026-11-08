@@ -129,3 +129,105 @@ async def test_leaving_releases_the_binds() -> None:
     async with agent() as second:
         bound = await call(second, "bind", ref=NAV)
         assert bound["bound"] is True
+
+
+FAULT = "mock/fault"
+
+
+async def test_parameters_set_in_the_same_run_as_the_command() -> None:
+    async with agent() as client:
+        ran = await call(
+            client,
+            "run_commands",
+            steps=[
+                {
+                    "component_ref": NAV,
+                    "command_type": "set_parameter",
+                    "arguments": {"target_positions": ["hall"]},
+                },
+                {"component_ref": NAV, "command_type": "start"},
+            ],
+            auto_bind=True,
+        )
+        assert [command["status"] for command in ran["commands"]] == ["OK", "OK"]
+        read = await call(client, "get_parameters", ref=NAV)
+        values = {item["name"]: item["value"] for item in read["parameters"]}
+        assert values["target_positions"] == ["hall"]
+
+
+async def test_an_event_sent_during_a_command_reaches_the_wait_after_it() -> None:
+    async with agent() as client:
+        await call(client, "subscribe", ref=FAULT, event_type="echoed")
+        # echo sends echoed before it completes, so the event is in before the wait starts.
+        await call(
+            client,
+            "run_commands",
+            steps=[{"component_ref": FAULT, "command_type": "echo", "arguments": {"text": "hi"}}],
+            auto_bind=True,
+        )
+        waited = await call(client, "wait_for_event", event_type="echoed", timeout=5)
+        assert waited["timed_out"] is False
+
+
+async def test_a_command_after_a_failed_one_says_why_it_ended() -> None:
+    async with agent() as client:
+        ran = await call(
+            client,
+            "run_commands",
+            steps=[
+                {
+                    "component_ref": FAULT,
+                    "command_type": "end_with",
+                    "arguments": {"status": "ERROR"},
+                },
+                {"component_ref": FAULT, "command_type": "echo", "arguments": {"text": "x"}},
+            ],
+            auto_bind=True,
+        )
+        failed, skipped = ran["commands"]
+        assert failed["status"] == "ERROR" and "RoIS carries no reason" in failed["hint"]
+        assert skipped["status"] == "ABORT"
+        assert failed["command_id"] in skipped["hint"]
+
+
+async def test_release_reports_as_aborted_only_what_ended_abort() -> None:
+    async with agent() as client:
+        await call(client, "bind", ref=NAV)
+        await call(client, "bind", ref=FAULT)
+        await call(client, "set_parameters", ref=NAV, values={"target_positions": ["kitchen"]})
+        started = await call(
+            client,
+            "run_commands",
+            steps=[
+                {"component_ref": NAV, "command_type": "start"},
+                {"component_ref": FAULT, "command_type": "echo", "arguments": {"text": "x"}},
+            ],
+            wait=False,
+        )
+        released = await call(client, "release", ref=FAULT)
+        ended = await call(client, "command_status", command_ids=started["command_ids"])
+        status = {command["command_id"]: command["status"] for command in ended["commands"]}
+        for command_id in released.get("aborted_command_ids", []):
+            assert status[command_id] == "ABORT"
+
+
+async def test_a_profile_change_that_drops_nothing_keeps_the_binds() -> None:
+    async with agent() as client:
+        await call(client, "bind", ref=NAV)
+        await call(client, "subscribe", ref=PEOPLE, event_type="person_detected")
+        # peer_join makes a second engine join the gateway and leave it again.
+        await call(
+            client,
+            "run_commands",
+            steps=[{"component_ref": FAULT, "command_type": "peer_join"}],
+            auto_bind=True,
+        )
+        ran = await call(
+            client, "run_commands", steps=[{"component_ref": NAV, "command_type": "stop"}]
+        )
+        assert ran["commands"][0]["status"] == "OK"
+        listed = await call(client, "list_components", pattern="mock/nav%")
+        assert listed["components"][0]["held_by_this_session"] is True
+        read = await call(client, "get_events", since=0, limit=500)
+        kinds = {entry["kind"] for entry in read["entries"]}
+        assert "profile_changed" in kinds and "lost" not in kinds
