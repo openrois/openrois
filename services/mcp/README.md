@@ -11,9 +11,15 @@ reads state, follows events and, when you allow it, runs commands. It needs no k
 any robot's own API. The server is built on
 [`openrois-sdk`](https://github.com/openrois/openrois/blob/dev/sdk/python/README.md).
 
-> **Alpha, pre-1.0, unstable API.** Not released yet.
+> **Alpha, pre-1.0, unstable API.**
 
 ## Install
+
+```bash
+pip install openrois-mcp
+```
+
+From source:
 
 ```bash
 git clone https://github.com/openrois/openrois.git
