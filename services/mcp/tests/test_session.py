@@ -518,6 +518,35 @@ async def test_a_refused_value_names_the_queries_that_list_valid_ones() -> None:
     assert "available_targets list the values it takes" in str(caught.value)
 
 
+async def test_a_set_parameter_that_ends_error_names_the_queries_that_list_valid_ones() -> None:
+    # Inside a sequence, the engine ends a refused set_parameter with ERROR, not with
+    # BAD_PARAMETER, and the commands after it with ABORT.
+    engine = Engine()
+    engine.outcome["set_parameter"] = "ERROR"
+    engine.outcome["start"] = "ABORT"
+    session = make(engine)
+    await session.bind(NAV)
+    result = await session.run_commands(
+        [
+            {
+                "component_ref": NAV,
+                "command_type": "set_parameter",
+                "arguments": {"target_positions": ["moon"]},
+            },
+            {"component_ref": NAV, "command_type": "start"},
+        ]
+    )
+    refused, aborted = result["commands"]
+    assert refused["status"] == "ERROR"
+    assert "available_targets list the values it takes" in refused["hint"]
+    assert "Tell the user rather than retrying" not in refused["hint"]
+    assert f"because {refused['command_id']} on {NAV} ended ERROR" in aborted["hint"]
+    # The same holds for set_parameters when the completion carries the ERROR.
+    alone = await session.set_parameters(NAV, {"target_positions": ["moon"]})
+    assert alone["status"] == "ERROR"
+    assert "available_targets list the values it takes" in alone["hint"]
+
+
 async def test_a_failed_command_comes_with_what_the_engine_reported() -> None:
     engine = Engine()
     engine.outcome["go"] = "ERROR"

@@ -242,6 +242,16 @@ def refused_value_hint(profile: HRIComponentProfile) -> str:
     return f"{hint}, see describe_component for the types"
 
 
+def failed_set_hint(profile: HRIComponentProfile) -> str:
+    """The hint of a set_parameter command that ended ERROR.
+
+    Inside a sequence, and in its completion, the engine reports a value the component
+    refused as ERROR rather than BAD_PARAMETER, so the hint names the queries that list
+    valid values instead of telling the agent not to retry.
+    """
+    return f"the component did not take the values: {refused_value_hint(profile)}"
+
+
 @dataclass
 class _Command:
     """A command this session started, until the agent stops asking about it."""
@@ -782,7 +792,9 @@ class Session:
         if wait:
             await self._wait([command_id], self.settings.command_timeout)
             result["status"] = command.status
-            if command.status in STATUS_HINTS:
+            if command.status == "ERROR":
+                result["hint"] = failed_set_hint(profile)
+            elif command.status in STATUS_HINTS:
                 result["hint"] = STATUS_HINTS[command.status]
         return self._with_notice(result)
 
@@ -926,6 +938,8 @@ class Session:
         with contextlib.suppress(AgentError, TransportError):
             profile = (await self._component_profiles(client)).get(command.ref)
         if profile is not None:
+            if command.command_type == "set_parameter":
+                entry["hint"] = failed_set_hint(profile)
             status = await self._declared_status(client, command.ref, profile)
             if status is not None:
                 entry["component_status"] = status

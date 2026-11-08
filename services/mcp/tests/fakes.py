@@ -251,8 +251,7 @@ class FakeClient:
             raise RoISError(ReturnCode.BAD_PARAMETER, "rois.command.set_parameter")
         command_id = self.engine.new_id("param")
         # The completion comes before the reply, as it can on a real engine.
-        completed = CompletedParams(command_id=command_id, status=CompletedStatus.OK)
-        self.emit("rois.command.completed", completed)
+        self._complete(command_id, self.engine.outcome["set_parameter"] or "OK")
         return command_id
 
     async def execute(self, command_unit_list: Sequence[Any]) -> list[str]:
