@@ -208,6 +208,38 @@ async def test_a_sequence_runs_across_two_adapters(gateway: Gateway, client: Rpc
         await second.stop()
 
 
+async def test_a_released_command_that_waits_its_turn_never_reaches_the_adapter(
+    gateway: Gateway, client: RpcClient
+) -> None:
+    navigation = Navigation()
+    gripper = Gripper()
+    adapter = await start_adapter(
+        gateway.url, gateway, "robot", {"navigation": navigation, "gripper": gripper}
+    )
+    other = await RpcClient.connect(gateway.url)
+    try:
+        for ref in (NAV, "robot/gripper"):
+            assert (await client.call("rois.command.bind", component_ref=ref))[
+                "return_code"
+            ] == "OK"
+        start, grip = await client.execute(
+            unit(NAV, "start"), unit("robot/gripper", "grip", force="1.5")
+        )
+        await asyncio.sleep(0.05)
+        released = await client.call("rois.command.release", component_ref="robot/gripper")
+        assert released["return_code"] == "OK"
+        assert await client.completed(grip) == "ABORT"
+        bound = await other.call("rois.command.bind", component_ref="robot/gripper")
+        assert bound["return_code"] == "OK"
+        navigation.arrive.set()
+        assert await client.completed(start) == "OK"
+        await asyncio.sleep(0.05)
+        assert gripper.forces == []
+    finally:
+        await other.close()
+        await adapter.stop()
+
+
 async def test_the_ids_of_a_child_name_the_engine_that_owns_them(
     adapter: Adapter, client: RpcClient
 ) -> None:

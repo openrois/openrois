@@ -444,9 +444,13 @@ class Engine:
         # A bind that ends while the component still runs the caller's commands would
         # let the next session take an actuator mid-motion, so they end with ABORT. So do
         # the caller's commands there that wait for their turn in a sequence: they must
-        # not start later on a component the caller no longer holds.
-        self._skip_queued(session, ref)
+        # not start later on a component the caller no longer holds. They end before the
+        # wait, so no sequence starts one meanwhile, but the session learns of them after
+        # the running ones, in the order of their sequence.
+        queued = self._skip_queued(session, ref)
         await self._abort_commands(session, ref)
+        for command_id in queued:
+            self._notify_completed(session, command_id, CompletedStatus.ABORT)
         return ReleaseResult(return_code=ReturnCode.OK)
 
     async def _get_parameter(
@@ -726,9 +730,15 @@ class Engine:
             ):
                 command.source.keep_running(command_id)
 
-    def _skip_queued(self, session: Session, ref: str) -> None:
-        """End with ABORT the commands of a session on a component that wait their turn."""
-        for command_id, command in list(self._commands.items()):
+    def _skip_queued(self, session: Session, ref: str) -> list[str]:
+        """End with ABORT the commands of a session on a component that wait their turn.
+
+        It does not tell the session: it returns their ids, in the order they were
+        executed, for the caller to send their completion once the running commands
+        ended.
+        """
+        ended: list[str] = []
+        for command_id, command in self._commands.items():
             if (
                 command.session_id == session.id
                 and command.ref == ref
@@ -737,7 +747,9 @@ class Engine:
             ):
                 command.queued = False
                 command.source = None
-                self._finish(session, command_id, CompletedStatus.ABORT)
+                command.status = CompletedStatus.ABORT
+                ended.append(command_id)
+        return ended
 
     def _skip(self, session: Session, units: Sequence[CommandUnit]) -> None:
         """End with ABORT the commands that never ran, and forget their source."""
@@ -761,6 +773,10 @@ class Engine:
         if command.status is not None:
             return
         command.status = status
+        self._notify_completed(session, command_id, status)
+
+    def _notify_completed(self, session: Session, command_id: str, status: CompletedStatus) -> None:
+        """Tell the session that started a command how it ended, while it is there."""
         if session.connected and session.id in self._sessions:
             session.notify(
                 "rois.command.completed", CompletedParams(command_id=command_id, status=status)

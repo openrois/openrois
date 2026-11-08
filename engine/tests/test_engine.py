@@ -540,6 +540,37 @@ async def test_release_aborts_the_later_commands_of_a_branch_on_that_component(
     assert len(robot.client.sent("rois.command.completed")) == 3
 
 
+async def test_release_ends_the_commands_of_a_sequence_in_their_order(robot: Robot) -> None:
+    await bound(robot, NAV)
+    first, second = await robot.client.execute(unit(NAV, "start"), unit(NAV, "start"))
+    await asyncio.sleep(0.02)
+    await robot.client.call("rois.command.release", component_ref=NAV)
+    assert robot.client.status_of(first) == "ABORT"
+    assert robot.client.status_of(second) == "ABORT"
+    assert [p["command_id"] for p in robot.client.sent("rois.command.completed")] == [
+        first,
+        second,
+    ]
+
+
+async def test_release_by_a_parent_aborts_its_command_that_waits_its_turn(
+    robot: Robot,
+) -> None:
+    parent = await Peer.connected(robot.engine, trusted=True)
+    assert (await parent.call("rois.command.bind", component_ref=GRIP))["return_code"] == "OK"
+    sequence = [named(unit(NAV, "start"), "p/1"), named(unit(GRIP, "grip", force="1.0"), "p/2")]
+    assert await execute(parent, *sequence) == "OK"
+    await asyncio.sleep(0.02)
+    await parent.call("rois.command.release", component_ref=GRIP)
+    assert parent.status_of("p/2") == "ABORT"
+    # A parent skips the binding check, so only the ended command keeps it from running.
+    robot.navigation.arrive.set()
+    assert await parent.completed("p/1") == "OK"
+    await asyncio.sleep(0.02)
+    assert robot.gripper.forces == []
+    assert [p["command_id"] for p in parent.sent("rois.command.completed")] == ["p/2", "p/1"]
+
+
 # -- Parameters ----------------------------------------------------------------------------
 
 
