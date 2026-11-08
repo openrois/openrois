@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0a3] - 2026-11-08
+
 ### Fixed
 
 - `pydantic` 2.10 or later is required, because `openrois.engine` does not import with earlier versions, which the declared floor of 2.0 allowed.
@@ -33,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Type information for every public name (`py.typed`).
 - `openrois-interfaces` 0.1.0a5 or later is required, because the engine reads the `Branch` model that release introduced.
 
-[unreleased]: https://github.com/openrois/openrois/compare/engine-v0.1.0-alpha.2...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/engine-v0.1.0-alpha.3...HEAD
+[0.1.0a3]: https://github.com/openrois/openrois/releases/tag/engine-v0.1.0-alpha.3
 [0.1.0a2]: https://github.com/openrois/openrois/releases/tag/engine-v0.1.0-alpha.2
 [0.1.0a1]: https://github.com/openrois/openrois/releases/tag/engine-v0.1.0-alpha.1

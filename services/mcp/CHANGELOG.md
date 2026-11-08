@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0a1] - 2026-11-08
+
 ### Added
 
 - The `openrois-mcp` command and `python -m openrois.mcp`: an MCP server over stdio, or streamable HTTP on loopback by default, that serves the components behind an OpenRoIS gateway to an AI agent through one RoIS session.
@@ -22,4 +24,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A warning in the log when streamable HTTP listens on an address beyond loopback, since the server has no authentication.
 - The resources `rois://components`, `rois://components/{ref}` and `rois://session`.
 
-[unreleased]: https://github.com/openrois/openrois/tree/dev/services/mcp
+[unreleased]: https://github.com/openrois/openrois/compare/mcp-v0.1.0-alpha.1...HEAD
+[0.1.0a1]: https://github.com/openrois/openrois/releases/tag/mcp-v0.1.0-alpha.1
