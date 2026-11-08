@@ -141,8 +141,13 @@ serves a real or simulated Reachy Mini with PersonDetection, Reaction, SpeechSyn
 and SystemInformation from `openrois.components.reachy_mini`, configured by
 `adapter.yaml`. Its end-to-end check of the whole RoIS workflow, from `connect` through
 binds, a branched `execute`, events, `notify_error` and the daemon's return to
-`disconnect`, passed against Pollen's simulator on October 16, 2026. Still to come: a run
-on the hardware and the mixed demonstration.
+`disconnect`, passed against Pollen's simulator on October 16, 2026, and on a Reachy Mini
+Wireless on November 8, 2026, where an AI agent also drove the robot through
+`openrois-mcp`. Still to come: the mixed demonstration.
+
+**Released:** on 2026-11-08, `openrois-adapter-reachy-mini` 0.1.0a1 on PyPI, tagged
+`v0.1.0-alpha.1` in its repository, and the MCP server `openrois-mcp` 0.1.0a1 on PyPI,
+tagged `mcp-v0.1.0-alpha.1`.
 
 **Goal:** a reference platform based on the open-source Pollen Robotics Reachy Mini,
 shipped with OpenRoIS so that anyone can run the full stack on affordable, openly

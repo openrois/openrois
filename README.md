@@ -280,9 +280,9 @@ makes no conformance claim. The rest of the RoIS surface is being built in the o
 | Gateway process, container image, and Docker Compose with a mock adapter | Available |
 | JavaScript client SDK and web inspector | Alpha, pre-1.0, unstable API |
 | Python client SDK | Alpha, pre-1.0, unstable API |
-| MCP server that gives AI agents the components behind a gateway (`openrois-mcp`) | Alpha, pre-1.0, unstable API. Not on PyPI yet |
+| MCP server that gives AI agents the components behind a gateway (`openrois-mcp`) | Alpha, pre-1.0, unstable API. On PyPI |
 | Unity client SDK | Alpha, pre-1.0, unstable API. Run in Linux players and the Editor. The Android build has not run on a device, and iOS has not been built |
-| Open reference platform based on the Pollen Robotics Reachy Mini | In progress, in openrois-adapter-reachy-mini |
+| Open reference platform based on the Pollen Robotics Reachy Mini | In progress. The adapter, `openrois-adapter-reachy-mini`, is an alpha on PyPI and has run on the hardware |
 | Loading XML-declared component profiles at run time | Planned |
 | Authentication (JWT) and authorization (RBAC) | Planned |
 | Streaming: AudioStreaming and VideoStreaming profiles | Available, no streaming component ships yet |
