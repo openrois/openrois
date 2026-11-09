@@ -11,19 +11,17 @@ formal/26-06-03, June 2026). It is **alpha, pre-1.0, with an unstable API**.
 
 What exists today:
 
-| Area | Directory | State |
-|------|-----------|-------|
-| RoIS interface types (Python, JSON Schema, TypeScript, C#) | `interfaces/` | Available |
-| Recursive engine with the RoIS behavior of CP1 to CP3, WebSocket server and client | `engine/` | Available, hardening |
-| Gateway process (`openrois-gateway`) | `services/gateway/` | Available |
-| MCP server for AI agents (`openrois-mcp`) | `services/mcp/` | Alpha, pre-1.0, unstable API. Not on PyPI yet |
-| Component and adapter SDK, and the common components | `components/` | Available |
-| JavaScript client SDK | `sdk/javascript/` | Alpha, pre-1.0, unstable API. Passes the conformance list in Node.js and Chromium |
-| Python client SDK | `sdk/python/` | Alpha, pre-1.0, unstable API. Passes the conformance list |
-| Unity SDK | `sdk/unity/` | Alpha, pre-1.0, unstable API. Passes the conformance list in Linux players. Not run on a device, not built for iOS |
-| Examples: web client, adapter template | `examples/` | Available |
+| Layer | Directory | State |
+|-------|-----------|-------|
+| Interfaces: RoIS types, method catalog, profiles, XML codec | `interfaces/` | `v0.1.0` |
+| Engine: recursive, CP1 to CP3, `WsServer`, `WsClient` | `engine/` | `v0.1.0` |
+| Engine processes: gateway (`openrois-gateway`) | `services/gateway/` | `v0.1.0` |
+| Components: component SDK and common components | `components/` | `v0.1.0` |
+| Client SDKs: JavaScript, Python, Unity | `sdk/` | `v0.1.0`. Unity run in Linux players and the Editor only |
+| Applications: MCP server (`openrois-mcp`) | `services/mcp/` | `v0.1.0` |
+| Applications: HRI web client; adapter template | `examples/` | Available |
 | Test fixtures: mock adapter, conformance list, Unity harness | `testing/` | Available |
-| Hub management application | `apps/hub/` | Not started, scaffold only |
+| Hub management application | `apps/hub/` | After `v1.0`, scaffold only |
 
 Each robot's components live in its adapter repository, not here. The reference example
 is `openrois.components.reachy_mini` in openrois-adapter-reachy-mini (openrois

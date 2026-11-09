@@ -461,7 +461,7 @@ network, and both speak JSON-RPC 2.0 over WebSocket.
 
 The **gateway** is the process that hosts the main engine and faces the
 network. It is the only internet-facing process and the single enforcement point
-for security once authentication and authorization land (roadmap Phase 9).
+for security once authentication and authorization land (`v0.3` on the roadmap).
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -491,7 +491,7 @@ logic lives in the engine, which is fully open source.
 
 - **Terminate the control-plane transport** (WebSocket, with TLS in front of it) and,
   once authentication lands, authenticate every connection before any RoIS message is
-  processed (planned, Phase 9).
+  processed (planned, `v0.3`).
 - **Hold the bindings** of its clients for every engine below it. Clients connect to the
   top engine of a hierarchy.
 - **Route** each call to the sub HRI Engine that owns the target component, and run
@@ -503,7 +503,7 @@ logic lives in the engine, which is fully open source.
   `rois.system.profile_changed` when a sub HRI Engine connects, changes or disconnects.
   Clients re-fetch the profile automatically. No polling needed.
 - **Filter** `search()`/`query()` results and **guard** `bind()`/`execute()` per
-  the caller's authorization scope (planned, Phase 9).
+  the caller's authorization scope (planned, `v0.3`).
 
 The gateway accepts both adapter connections (on the `/adapter` path) and client
 connections (on any other path) on the same WebSocket port. It distinguishes them by the
@@ -1047,7 +1047,7 @@ Example JWT claims used downstream for authorization:
 Recommended path: engine-internal JWT for the prototype, then OIDC provider for
 multi-tenant deployments. The current engine does not authenticate or authorize
 connections at all, so the alpha should run only on trusted networks. Authentication
-and authorization are Phase 9 of the [roadmap](roadmap.md).
+and authorization are `v0.3` on the [roadmap](roadmap.md).
 
 ---
 

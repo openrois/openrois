@@ -28,7 +28,7 @@ As a result:
 - Treat every connected robot as reachable by every client on that network.
 
 Authentication with JSON Web Tokens, role-based authorization per RoIS operation, and
-TLS by default are Phase 9 of the [roadmap](docs/roadmap.md). The intended design is
+TLS by default are planned for `v0.3` on the [roadmap](docs/roadmap.md). The intended design is
 documented at [openrois.org](https://openrois.org/docs/concepts/security).
 
 ## Reporting a Vulnerability
@@ -40,7 +40,7 @@ Email **info@coarobo.com** with the subject "OpenRoIS security report".
 GitHub private vulnerability reporting is intentionally not enabled yet. The alpha
 releases implement the message-passing framework only, and access control sits outside
 the middleware, so advisory reports would not describe an OpenRoIS defect. It will be
-enabled when authentication and session management land (roadmap Phase 9).
+enabled when authentication and session management land (`v0.3` on the roadmap).
 
 Please include the affected component and version or commit, a description of the issue,
 the steps to reproduce it, and the impact you expect.

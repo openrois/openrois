@@ -272,7 +272,7 @@ Alpha, pre-1.0, unstable API. The engine implements the RoIS interfaces, profile
 common messages (CP1 to CP3) as
 [rois-reference §16](https://github.com/openrois/openrois/blob/dev/docs/rois-reference.md#16-known-normative-divergences) records
 them, without a conformance claim. It does not yet load XML-declared profiles at run time.
-Re-subscription after an adapter reconnects and health endpoints are planned for [Phase 5](https://openrois.org/docs/project/roadmap).
+Re-subscription after an adapter reconnects and health endpoints are next on the [roadmap](https://github.com/openrois/openrois/blob/dev/docs/roadmap.md).
 
 ## License
 
