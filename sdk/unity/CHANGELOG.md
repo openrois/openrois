@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-10
+
 ### Changed
 
-- The bundled `OpenRoIS.Interfaces` assembly is version 0.1.0.
+- The first release numbered 0.1.0, in step with OpenRoIS 0.1.0. `org.openrois.sdk` 0.1.0 bundles `OpenRoIS.Interfaces` 0.1.0, and is tested against `openrois-gateway` and `openrois-engine` 0.1.0.
 
 ## [0.1.0-alpha.1] - 2026-11-07
 
@@ -35,5 +37,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for stripped builds: the assemblies that `System.Text.Json` reads by reflection are preserved.
 - A `Navigation Session` sample, which runs connect, bind, execute and the completed notification against the mock adapter.
 
-[unreleased]: https://github.com/openrois/openrois/compare/sdk-unity-v0.1.0-alpha.1...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/sdk-unity-v0.1.0...HEAD
+[0.1.0]: https://github.com/openrois/openrois/releases/tag/sdk-unity-v0.1.0
 [0.1.0-alpha.1]: https://github.com/openrois/openrois/releases/tag/sdk-unity-v0.1.0-alpha.1

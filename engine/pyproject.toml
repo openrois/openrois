@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openrois-engine"
-version = "0.1.0a4"
+version = "0.1.0"
 description = "OpenRoIS engine: the recursive RoIS HRI Engine, with its WebSocket server and client"
 readme = "README.md"
 license = "Apache-2.0"
@@ -20,7 +20,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "openrois-interfaces>=0.1.0a5",
+    "openrois-interfaces>=0.1.0,<0.2",
     "pydantic>=2.10",
     "pyyaml>=6.0",
     "websockets>=14.0",
@@ -28,7 +28,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "openrois-components-core>=0.1.0a2",
+    "openrois-components-core>=0.1.0a2,<0.2",
     "mypy>=1.8",
     "pytest>=8.4",
     "pytest-asyncio>=1.0",

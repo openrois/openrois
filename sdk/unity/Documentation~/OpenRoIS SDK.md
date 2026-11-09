@@ -17,7 +17,7 @@ Package Manager window or in `Packages/manifest.json`. Unity needs Git on the ma
 ```json
 {
   "dependencies": {
-    "org.openrois.sdk": "https://github.com/openrois/openrois.git?path=sdk/unity#sdk-unity-v0.1.0-alpha.1"
+    "org.openrois.sdk": "https://github.com/openrois/openrois.git?path=sdk/unity#sdk-unity-v0.1.0"
   }
 }
 ```
@@ -71,7 +71,7 @@ tests needs `com.unity.test-framework` in the project.
 
 ## Known Limitations
 
-OpenRoIS SDK version 0.1.0-alpha.1 includes the following known limitations:
+OpenRoIS SDK version 0.1.0 includes the following known limitations:
 
 - Android builds, but nothing has run on a device for this release, so Android and VR
   headsets are unconfirmed. iOS has not been built. Windows and macOS players have not
@@ -106,5 +106,6 @@ OpenRoIS SDK version 0.1.0-alpha.1 includes the following known limitations:
 
 | Date | Reason |
 |------|--------|
+| November 10, 2026 | Updated for package version 0.1.0 |
 | November 7, 2026 | Rewritten for `RoISClient` |
 | September 18, 2026 | Document created for package version 0.1.0-alpha.1 |

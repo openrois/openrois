@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-10
+
+### Changed
+
+- The first release numbered 0.1.0, in step with OpenRoIS 0.1.0. `openrois-engine` 0.1.0 requires `openrois-interfaces` 0.1.0 or later, before 0.2.
+
 ### Fixed
 
 - A parent engine that reconnects, such as a restarted gateway above a running adapter, can name the same command ids again. Before, a valid command whose id the parent had used before it left ended with `ERROR`. An engine now forgets the commands of its parent when the parent's session ends.
@@ -45,7 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Type information for every public name (`py.typed`).
 - `openrois-interfaces` 0.1.0a5 or later is required, because the engine reads the `Branch` model that release introduced.
 
-[unreleased]: https://github.com/openrois/openrois/compare/engine-v0.1.0-alpha.4...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/engine-v0.1.0...HEAD
+[0.1.0]: https://github.com/openrois/openrois/releases/tag/engine-v0.1.0
 [0.1.0a4]: https://github.com/openrois/openrois/releases/tag/engine-v0.1.0-alpha.4
 [0.1.0a3]: https://github.com/openrois/openrois/releases/tag/engine-v0.1.0-alpha.3
 [0.1.0a2]: https://github.com/openrois/openrois/releases/tag/engine-v0.1.0-alpha.2

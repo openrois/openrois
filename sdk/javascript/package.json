@@ -1,6 +1,6 @@
 {
   "name": "@openrois/sdk",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0",
   "description": "JavaScript client SDK for the OpenRoIS middleware",
   "license": "Apache-2.0",
   "author": "OpenRoIS Community",
@@ -42,7 +42,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@openrois/interfaces": "^0.1.0-alpha.6",
+    "@openrois/interfaces": "^0.1.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

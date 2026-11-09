@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-10
+
+### Changed
+
+- The first release numbered 0.1.0, in step with OpenRoIS 0.1.0. `@openrois/sdk` 0.1.0 requires `@openrois/interfaces` 0.1.0 or a later 0.1 release, and is tested against `openrois-gateway` and `openrois-engine` 0.1.0.
+
 ## [0.1.0-alpha.1] - 2026-11-07
 
 ### Added
@@ -25,5 +31,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The builders for CQL2-Text conditions, exported from `@openrois/sdk`: `componentRef`, `componentType`, `componentTypeUrn`, `eq`, `like`, `allOf` and `quote`, with the property names `COMPONENT_REF` and `COMPONENT_TYPE`.
 - `WebSocketTransport` (`@openrois/sdk/transport`), under `client.transport`, with a raw `send` for methods outside the catalog, request and connect timeouts in milliseconds (30 and 10 seconds by default), and a custom WebSocket factory. The errors `TransportError`, `ConnectionError`, `RequestTimeoutError` and `RpcError` come from both entry points.
 
-[unreleased]: https://github.com/openrois/openrois/compare/sdk-javascript-v0.1.0-alpha.1...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/sdk-javascript-v0.1.0...HEAD
+[0.1.0]: https://github.com/openrois/openrois/releases/tag/sdk-javascript-v0.1.0
 [0.1.0-alpha.1]: https://github.com/openrois/openrois/releases/tag/sdk-javascript-v0.1.0-alpha.1
