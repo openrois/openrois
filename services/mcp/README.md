@@ -3,7 +3,7 @@
 ![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)
 
 An [MCP](https://modelcontextprotocol.io/) server that gives an AI agent the physical robots,
-virtual avatars, and AI services behind an [OpenRoIS](https://openrois.org/) gateway, through
+digital avatars, and AI services behind an [OpenRoIS](https://openrois.org/) gateway, through
 the standard interfaces of the [OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0).
 
 An agent such as Claude Code or Claude Desktop finds the components, reads their profiles,
