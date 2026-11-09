@@ -286,7 +286,7 @@ makes no conformance claim. The rest of the RoIS surface is being built in the o
 | Loading XML-declared component profiles at run time | Planned |
 | Authentication (JWT) and authorization (RBAC) | Planned |
 | Streaming: AudioStreaming and VideoStreaming profiles | Available, no streaming component ships yet |
-| WebRTC media for the streaming components | Planned |
+| Media for the streaming components, transport-neutral, with an optional WebRTC integration | Planned |
 | Alpha packages on PyPI (`openrois-interfaces`, `openrois-engine`, `openrois-components-core`, `openrois-gateway`) and npm (`@openrois/interfaces`) | Available |
 | First alpha of the client SDKs: `@openrois/sdk` on npm, `openrois-sdk` on PyPI, `org.openrois.sdk` by Git URL | Available |
 | `openrois-components-common` on PyPI, the Unity package in a registry | Planned |

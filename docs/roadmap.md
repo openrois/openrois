@@ -157,8 +157,10 @@ gateway, controlled by one application that does not know which is which.
 ### Phase 9: Authentication, Security, and Media (Planned)
 
 JWT authentication at the WebSocket upgrade, role-based authorization per RoIS
-operation, WebRTC media for the AudioStreaming and VideoStreaming components, and DDS
-Security for ROS 2 based adapters.
+operation, and DDS Security for ROS 2 based adapters. Media for the AudioStreaming and
+VideoStreaming components ships as a release of its own: OpenRoIS does not prescribe a
+media transport, streaming components return a descriptor of their stream, and an
+optional WebRTC integration serves deployments that have no media stack of their own.
 
 ### Phase 10: Full Component Library (Planned)
 
