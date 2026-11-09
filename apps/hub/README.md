@@ -5,7 +5,7 @@ connected adapters, their components, status, and reservations, plus profile and
 management through the gateway API.
 
 > **Not started.** This directory currently holds a Vite and React scaffold with no
-> OpenRoIS code. The Hub is [Phase 11 of the roadmap](https://openrois.org/docs/project/roadmap),
+> OpenRoIS code. The Hub is on the [roadmap](https://github.com/openrois/openrois/blob/dev/docs/roadmap.md)
 > after version 1.0, and it is gated on adoption.
 
 ## Looking for a Tool to Inspect an Engine Today?

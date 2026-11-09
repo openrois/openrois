@@ -121,7 +121,7 @@ package generates the constants from the XML profiles and `OWL.ttl`, and exports
 
 Components without a typed model still work: they carry generic `Result` lists validated
 against their declared profile. Typed models for the other components arrive with the
-full component library in [Phase 10](https://openrois.org/docs/project/roadmap).
+full component library of `v1.0` ([roadmap](https://github.com/openrois/openrois/blob/dev/docs/roadmap.md)).
 
 ## Traceability
 

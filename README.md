@@ -272,27 +272,19 @@ interfaces, profiles and common messages (CP1 to CP3), with the exceptions that
 [rois-reference §16](docs/rois-reference.md#16-known-normative-divergences) records, and
 makes no conformance claim. The rest of the RoIS surface is being built in the open.
 
-| Area | Status |
-|------|--------|
-| RoIS interface types (Python, JSON Schema, TypeScript, C#) and the XML profile codec (Python) | Available |
-| Recursive engine with the RoIS behavior of CP1 to CP3, WebSocket server and client | Available, hardening |
-| Component and adapter SDK (Python): decorators, resources, RoIS_Common default, `adapter.yaml` | Available |
-| Gateway process, container image, and Docker Compose with a mock adapter | Available |
-| JavaScript client SDK and web inspector | Alpha, pre-1.0, unstable API |
-| Python client SDK | Alpha, pre-1.0, unstable API |
-| MCP server that gives AI agents the components behind a gateway (`openrois-mcp`) | Alpha, pre-1.0, unstable API. On PyPI |
-| Unity client SDK | Alpha, pre-1.0, unstable API. Run in Linux players and the Editor. The Android build has not run on a device, and iOS has not been built |
-| Open reference platform based on the Pollen Robotics Reachy Mini | In progress. The adapter, `openrois-adapter-reachy-mini`, is an alpha on PyPI and has run on the hardware |
-| Loading XML-declared component profiles at run time | Planned |
-| Authentication (JWT) and authorization (RBAC) | Planned |
-| Streaming: AudioStreaming and VideoStreaming profiles | Available, no streaming component ships yet |
-| Media for the streaming components, transport-neutral, with an optional WebRTC integration | Planned |
-| Alpha packages on PyPI (`openrois-interfaces`, `openrois-engine`, `openrois-components-core`, `openrois-gateway`) and npm (`@openrois/interfaces`) | Available |
-| First alpha of the client SDKs: `@openrois/sdk` on npm, `openrois-sdk` on PyPI, `org.openrois.sdk` by Git URL | Available |
-| `openrois-components-common` on PyPI, the Unity package in a registry | Planned |
-| All 17 basic RoIS HRI Components (v1.0) | Planned |
+| Layer | In `v0.1.0` | Next |
+|-------|-------------|------|
+| Interfaces | RoIS types and method catalog in Python, JSON Schema, TypeScript and C#; 18 profiles and an XML codec | Normative cross-check in CI |
+| Engine | Recursive engine with CP1 to CP3: sessions, binds, full command sequences, events, errors | XML-declared profiles at run time (CP4) |
+| Engine processes | Gateway process, container image, Docker Compose with a mock adapter; adapters from `adapter.yaml` | Packaged adapter process, health endpoints |
+| Components | Component SDK; SystemInformation; the Reachy Mini adapter, run on the real robot and in simulation | Components for a virtual agent |
+| Client SDKs | JavaScript, Python and Unity SDKs passing one conformance list | Unity beyond Linux players |
+| Applications | MCP server for AI agents; profile-driven web client | HRI client with command sequences |
 
-The [roadmap](docs/roadmap.md) describes each phase and its exit criteria.
+Next milestones: a physical robot and a virtual agent behind one gateway with a conformance
+claim (`v0.2`), authentication and authorization (`v0.3`), transport-neutral media
+(`v0.4`), and all 17 basic components (`v1.0`). The [roadmap](docs/roadmap.md) has the
+details.
 
 ## Repository Layout
 

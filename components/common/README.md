@@ -8,8 +8,8 @@ adapter up before the robot is ready, and as templates for platform-specific pac
 |-----------|----------|
 | `MockSystemInformation` | Queries `robot_position` (the origin, identified by the engine id) and `engine_status` (the status of the engine that hosts it) |
 
-More will be added with the full component library in
-[Phase 10](https://openrois.org/docs/project/roadmap).
+More will be added on the way to the full component library of `v1.0`
+([roadmap](https://github.com/openrois/openrois/blob/dev/docs/roadmap.md)).
 
 ## Install
 

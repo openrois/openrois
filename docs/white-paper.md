@@ -12,7 +12,7 @@
 >   (how the system is designed, with implementation detail).
 > - [rois-reference.md](rois-reference.md) is the OMG RoIS specification summary
 >   and reference (what the specification says).
-> - [roadmap.md](roadmap.md) is the phase roadmap (what is built and in what
+> - [roadmap.md](roadmap.md) is the layer roadmap (what is built and in what
 >   order).
 > - [openrois.org](https://openrois.org/) hosts the living documentation, including
 >   guides and a wire protocol reference with the implementation status of every method.
@@ -284,7 +284,7 @@ it. The earlier TypeScript proof of concept has been removed. Its last version i
 The engine stays pure. It routes, aggregates profiles, tracks binds. It never
 installs packages, resolves dependencies, or manages component lifecycle setup.
 Package management will live in a management API of the gateway process and a
-loader of the adapter process, both planned (roadmap Phase 5). This keeps the engine reusable and
+loader of the adapter process, both next on the roadmap. This keeps the engine reusable and
 testable in isolation. See section 14 for the package management boundary.
 
 ### 3.7 The SDK Is the Product
@@ -486,7 +486,7 @@ control-plane router when acting as the main engine without local components.
 
 ### 5.2 Gateway Responsibilities
 
-The gateway is the only internet-facing process and, once Phase 9 lands, the single
+The gateway is the only internet-facing process and, once `v0.3` lands, the single
 enforcement point for security. It:
 
 - Terminates the control-plane transport (WebSocket, with TLS in front of it) and,
@@ -1747,9 +1747,9 @@ transport carries the media.
 
 ## 13. Security Architecture
 
-> **Status:** planned. The alpha releases do not authenticate or authorize
-> connections. Run the gateway only on trusted networks until Phase 9 of the
-> roadmap delivers the mechanisms below.
+> **Status:** target design, planned for `v0.3`. Until then the gateway does not
+> authenticate or authorize connections; run it on a trusted network, and put a reverse
+> proxy that terminates TLS in front of it for remote access.
 
 ### 13.1 Authentication Flow
 
@@ -1919,7 +1919,7 @@ at import time, not at runtime. No factory, no Protocol, no runtime selection.
 
 The engine stays pure. It routes, aggregates profiles, tracks binds. It never
 installs packages, resolves dependencies, or manages component lifecycle setup.
-Package management is a process feature (planned, roadmap Phase 5):
+Package management is a process feature (next on the roadmap):
 
 - The gateway `Api` exposes management endpoints: list installed component
   packages, enable or disable a package for a fleet, configure a package,
@@ -1936,69 +1936,41 @@ lives in the `Api` (gateway) and the package loader (adapter), never in the `Eng
 
 ## 15. Roadmap and Maturity
 
-OpenRoIS is built in phases. Each phase delivers a coherent architectural shift or
-a working end-to-end capability. See [roadmap.md](roadmap.md) for the full phase
-details and open decisions.
+OpenRoIS is built layer by layer, bottom up. See [roadmap.md](roadmap.md) for the status
+of record, which this table copies.
 
-| Phase | Theme | Exit criteria | Status |
-|-------|-------|---------------|--------|
-| 0 | Paradigm-Neutral Interfaces | type pipeline, tests against the normative files | done |
-| 1 | Engine and Sub HRI Engine | TypeScript proof of concept, child engines, mock components | done |
-| 2 | Adapter Framework and Components | component framework, reference components, real robot adapter | done |
-| 3 | Client SDKs and First Demonstration | JavaScript, Python and Unity client SDKs and web client done, their first alpha released, exit tag `v0.1.0` | in progress |
-| 4 | Recursive Engine in Python | the Python engine on the RoIS method catalog is the only dispatch implementation | in progress |
-| 5 | Hardening the Engine | graceful shutdown, reconnection, package loading, health endpoints | planned |
-| 6 | Gateway Process | `openrois-gateway` from `Engine` + `WsServer`, Docker Compose quickstart | in progress |
-| 7 | Adapter Process | a packaged adapter process that builds its components from a configuration | planned |
-| 8 | Open Reference Platform and Mixed Paradigm | reference platform on open hardware, paradigm-neutrality proof | in progress |
-| 9 | Auth, Security, Media | parallelizable after Phase 7 | planned |
-| 10 | Full Component Library | all 17 basic components, packages published, `v1.0` | planned |
-| 11 | Component Registry and Hub | post-1.0, adoption-gated | after 1.0 |
+| Layer | In `v0.1.0` | Next |
+|-------|-------------|------|
+| Interfaces | RoIS types and method catalog in Python, JSON Schema, TypeScript and C#; 18 profiles and an XML codec | Normative cross-check in CI |
+| Engine | Recursive engine with CP1 to CP3: sessions, binds, full command sequences, events, errors | XML-declared profiles at run time (CP4) |
+| Engine processes | Gateway process, container image, Docker Compose with a mock adapter; adapters from `adapter.yaml` | Packaged adapter process, health endpoints |
+| Components | Component SDK; SystemInformation; the Reachy Mini adapter, run on the real robot and in simulation | Components for a virtual agent |
+| Client SDKs | JavaScript, Python and Unity SDKs passing one conformance list | Unity beyond Linux players |
+| Applications | MCP server for AI agents; profile-driven web client | HRI client with command sequences |
 
-The **first end-to-end demonstration is Phase 3**: the minimum that lets a service
-application clone, build, and control a real robot from a web application over
-WebSocket. The
-**paradigm-neutrality proof is Phase 8** (mixed robot and avatar on one gateway).
-The **1.0 release is Phase 10**.
+| Milestone | What it delivers |
+|-----------|------------------|
+| `v0.1.0` | Every package at `0.1.0`. A physical and a simulated Reachy Mini behind one gateway |
+| `v0.2` | A physical robot and a virtual agent behind one gateway; XML-declared profiles at run time and a RoIS conformance claim. This is the **paradigm-neutrality proof** |
+| `v0.3` | Authentication and authorization (section 13) |
+| `v0.4` | Transport-neutral media with an optional WebRTC integration (section 12) |
+| `v1.0` | All 17 basic components across both paradigms; semantic versioning guarantees |
+| After `v1.0` | Component registry and Hub (section 16) |
 
 ### 15.1 Versioning
 
-- During the alpha, each package is tagged on its own, for example
-  `interfaces-v0.1.0-alpha.3`, and all packages converge on `0.1.0`.
-- `v0.1.0` (Phase 3): first pre-release. MVP demonstration. Unstable API, breaking
-  changes may occur without notice.
-- `v0.x` (Phases 4 to 9): incremental pre-releases. Unstable API.
-- `v1.0` (Phase 10): first stable release with semantic versioning guarantees.
-  All 17 basic components implemented across both paradigms.
-- Phase 11: post-1.0. No version tag until the Hub and marketplace are feature
-  complete and adoption-gated.
-
-Pre-1.0 releases are Alpha, unstable API. Do not use in production until v1.0.
-
-### 15.2 Current State
-
-The type pipeline with the RoIS method catalog, the recursive Python engine
-(`openrois-engine`), the gateway process (`openrois-gateway`), the component SDK
-(`openrois-components-core`), and the JavaScript, Python and Unity client SDKs are released as alphas.
-The engine implements the
-RoIS interfaces, profiles and common messages (CP1 to CP3) as
-[rois-reference §16](rois-reference.md#16-known-normative-divergences) records them. A
-Docker Compose stack runs the gateway with a mock adapter behind it, and the three client
-SDKs pass one conformance list against a gateway with that adapter. Each robot's components live in its adapter
-repository: the Reachy Mini adapter of the openrois organization is the reference
-example, and Coarobo maintains a Kachaka adapter. The first end-to-end demonstration, a web application
-driving a physical robot over gRPC, ran on the earlier TypeScript proof of concept. The
-next one, a physical robot and a virtual agent behind one gateway on the Reachy Mini
-reference platform, is Phase 8, and the Reachy Mini adapter is built. The Unity SDK has run
-in Linux players and in the Editor. Its Android build has not run on a device, and iOS has
-not been built.
+- The packages share their major and minor version and are released together under a
+  project tag such as `v0.1.0`.
+- `0.x` releases are alpha with an unstable API, and may break it without notice. Do not
+  use them in production.
+- `v1.0` is the first release with semantic versioning guarantees.
 
 ---
 
 ## 16. Long-Term Vision: Hub and Marketplace
 
 The Hub and component marketplace are long-term, post-1.0 goals. They build on the
-package management mechanism from Phase 5, not on a monolithic engine. They are
+package management mechanism of the adapter process, not on a monolithic engine. They are
 parked until the core is solid and has real adoption.
 
 ### 16.1 Hub
@@ -2111,7 +2083,7 @@ build applications against the SDK today.
 - **Architecture**: [architecture.md](architecture.md)
 - **Specification reference**: [rois-reference.md](rois-reference.md)
 
-Contributions are welcome. The phase roadmap defines clear, parallelizable work
+Contributions are welcome. The layer roadmap defines clear, parallelizable work
 items. Reference components are the natural entry point for new contributors.
 
 ---
