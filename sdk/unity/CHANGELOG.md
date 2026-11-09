@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The bundled `OpenRoIS.Interfaces` assembly is version 0.1.0.
+
 ## [0.1.0-alpha.1] - 2026-11-07
 
 ### Added

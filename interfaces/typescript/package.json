@@ -1,6 +1,6 @@
 {
   "name": "@openrois/interfaces",
-  "version": "0.1.0-alpha.6",
+  "version": "0.1.0",
   "description": "RoIS Framework 2.0 interface types for the OpenRoIS middleware",
   "license": "Apache-2.0",
   "author": "OpenRoIS Community",
@@ -62,7 +62,10 @@
       "default": "./dist/components/index.js"
     }
   },
-  "files": ["dist", "NOTICE"],
+  "files": [
+    "dist",
+    "NOTICE"
+  ],
   "publishConfig": {
     "access": "public"
   },
