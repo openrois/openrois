@@ -272,19 +272,16 @@ interfaces, profiles and common messages (CP1 to CP3), with the exceptions that
 [rois-reference §16](docs/rois-reference.md#16-known-normative-divergences) records, and
 makes no conformance claim. The rest of the RoIS surface is being built in the open.
 
-| Layer | In `v0.1.0` | Next |
-|-------|-------------|------|
-| Interfaces | RoIS types and method catalog in Python, JSON Schema, TypeScript and C#; 18 profiles and an XML codec | Normative cross-check in CI |
-| Engine | Recursive engine with CP1 to CP3: sessions, binds, full command sequences, events, errors | XML-declared profiles at run time (CP4) |
-| Engine processes | Gateway process, container image, Docker Compose with a mock adapter; adapters from `adapter.yaml` | Packaged adapter process, health endpoints |
-| Components | Component SDK; SystemInformation; the Reachy Mini adapter, run on the real robot and in simulation | Components for a virtual agent |
-| Client SDKs | JavaScript, Python and Unity SDKs passing one conformance list | Unity beyond Linux players |
-| Applications | MCP server for AI agents; profile-driven web client | HRI client with command sequences |
+| Milestone | Status | What it delivers |
+|-----------|--------|------------------|
+| **`v0.1.0`** (November 2026) | ![Released](https://img.shields.io/badge/Released-2E7D32) | Every package at `0.1.0`, released together. A physical Reachy Mini and a simulated one behind one gateway, driven by one application and by an AI agent |
+| **`v0.2`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | A physical robot and a virtual agent behind one gateway, controlled by one application that does not know which is which. Components declared by XML profiles at run time, and a RoIS conformance claim |
+| **`v0.3`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | Authentication at the WebSocket upgrade and authorization per RoIS operation. Until then, a reverse proxy in front of the gateway terminates TLS ([SECURITY.md](SECURITY.md)) |
+| **`v0.4`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | Media for the AudioStreaming and VideoStreaming components. OpenRoIS does not prescribe a media transport: a streaming component returns a descriptor of its stream, and an optional WebRTC integration serves deployments that have none |
+| **`v1.0`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | All 17 basic RoIS HRI Components, for physical robots and virtual agents. The first release with semantic versioning guarantees |
+| After `v1.0` | ![After 1.0](https://img.shields.io/badge/After%201.0-8B98A8) | A registry of community components and adapters, and a Hub that shows operators the adapters, sessions and health of a deployment |
 
-Next milestones: a physical robot and a virtual agent behind one gateway with a conformance
-claim (`v0.2`), authentication and authorization (`v0.3`), transport-neutral media
-(`v0.4`), and all 17 basic components (`v1.0`). The [roadmap](docs/roadmap.md) has the
-details.
+The [roadmap](docs/roadmap.md) also describes each layer of the stack.
 
 ## Repository Layout
 
@@ -321,7 +318,7 @@ openrois/
 | [White paper](docs/white-paper.md) | Motivation, design decisions, wire protocol, deployment topologies |
 | [Architecture](docs/architecture.md) | Engineering design of the engine, adapters, and components |
 | [RoIS reference](docs/rois-reference.md) | Summary of the OMG RoIS Framework 2.0 specification |
-| [Roadmap](docs/roadmap.md) | Phases, status, and exit criteria |
+| [Roadmap](docs/roadmap.md) | Milestones, their status, and the layers of the stack |
 | [openrois.org](https://openrois.org/) | The same documentation as a website |
 
 ## Development

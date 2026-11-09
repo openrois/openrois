@@ -140,5 +140,5 @@ descriptions.
 | Architecture and design rationale | [docs/architecture.md](docs/architecture.md) |
 | Motivation, wire protocol, topologies | [docs/white-paper.md](docs/white-paper.md) |
 | The RoIS specification, summarized | [docs/rois-reference.md](docs/rois-reference.md) |
-| Phases, status, exit criteria | [docs/roadmap.md](docs/roadmap.md) |
+| Milestones, status, the layers of the stack | [docs/roadmap.md](docs/roadmap.md) |
 | Contribution process | [CONTRIBUTING.md](CONTRIBUTING.md) |
