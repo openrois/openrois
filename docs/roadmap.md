@@ -1,37 +1,39 @@
 # OpenRoIS Roadmap
 
-> What OpenRoIS has built and what comes next, layer by layer, for an open-source
-> middleware implementing the [OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0).
+> What OpenRoIS has built and what comes next, for an open-source middleware implementing
+> the [OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0).
 > [openrois.org](https://openrois.org/docs/project/roadmap) hosts the same roadmap.
 
 Until `v1.0`, OpenRoIS is **alpha, pre-1.0, with an unstable API**.
 
 ---
 
-## 1. The Stack, Bottom Up
+## 1. Milestones
 
-Each layer builds on the one below it. The table is the status of record: the README,
-`AGENTS.md`, the white paper, the website and the organization profile copy it.
+This table is the status of record: the README, the white paper, the website and the
+organization profiles copy it.
 
-| Layer | Packages | In `v0.1.0` | Next |
-|-------|----------|-------------|------|
-| **Interfaces** | `openrois-interfaces` (PyPI), `@openrois/interfaces` (npm), C# types inside the Unity package | The RoIS types and method catalog, authored in Python and generated through JSON Schema into TypeScript and C#. All 18 normative profiles and an XML profile codec, cross-checked against the OMG machine-readable files | The cross-check running in CI |
-| **Engine** | `openrois-engine` | One recursive engine for the main and sub HRI Engine roles. The RoIS interfaces, profiles and common messages (CP1 to CP3) as [rois-reference §16](rois-reference.md#16-known-normative-divergences) records them: sessions, binds, full command sequences with concurrent branches, timeouts, events and the error channel. `WsServer` and `WsClient`, a gateway under a gateway | Components declared by XML profiles at run time (CP4). Sessions told when an engine stops, subscriptions restored after an adapter reconnects |
-| **Engine processes** | `openrois-gateway`; the adapter process | The gateway process: YAML, environment and flag configuration, a container image, and Docker Compose with a mock adapter. Adapters configured by `adapter.yaml` | A packaged adapter process that needs no hand-written script. Health and status endpoints. Component packages loaded from a local path or a Git URL |
-| **Components** | `openrois-components-core`, `openrois-components-common`; each robot's package in its adapter repository | The component SDK: `@component`, `@query`, `@invoke`, `@subscribe`, resources, the RoIS_Common default, ROS 2 support. SystemInformation. The Reachy Mini adapter with PersonDetection, Reaction, SpeechSynthesis and SystemInformation, run on the real robot and in simulation | Components for a virtual agent. More of the 17 basic components |
-| **Client SDKs** | `@openrois/sdk` (npm), `openrois-sdk` (PyPI), `org.openrois.sdk` (Unity, by Git URL) | One conformance list passed by all three SDKs. The Unity SDK run in Linux players and the Editor | Unity on Windows, macOS, Android and VR headsets. Readable error reasons |
-| **Applications** | `openrois-mcp`; the HRI client | An MCP server that lets AI agents drive the robots behind a gateway. A profile-driven web client | The HRI client as an application with command sequences. A Hub for operators, after `v1.0` |
+| Milestone | Status | What it delivers |
+|-----------|--------|------------------|
+| **`v0.1.0`** (November 2026) | ![Released](https://img.shields.io/badge/Released-2E7D32) | Every package at `0.1.0`, released together. A physical Reachy Mini and a simulated one behind one gateway, driven by one application and by an AI agent |
+| **`v0.2`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | A physical robot and a virtual agent behind one gateway, controlled by one application that does not know which is which. Components declared by XML profiles at run time, and a RoIS conformance claim |
+| **`v0.3`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | Authentication at the WebSocket upgrade and authorization per RoIS operation. Until then, a reverse proxy in front of the gateway terminates TLS ([SECURITY.md](../SECURITY.md)) |
+| **`v0.4`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | Media for the AudioStreaming and VideoStreaming components. OpenRoIS does not prescribe a media transport: a streaming component returns a descriptor of its stream, and an optional WebRTC integration serves deployments that have none |
+| **`v1.0`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | All 17 basic RoIS HRI Components, for physical robots and virtual agents. The first release with semantic versioning guarantees |
+| After `v1.0` | ![After 1.0](https://img.shields.io/badge/After%201.0-8B98A8) | A registry of community components and adapters, and a Hub that shows operators the adapters, sessions and health of a deployment |
 
-## 2. Milestones
+## 2. The Stack, Bottom Up
 
-| Milestone | What it delivers |
-|-----------|------------------|
-| **`v0.1.0`** (November 2026) | Every package above at `0.1.0`, released together. A physical Reachy Mini and a simulated one behind one gateway, driven by one application and by an AI agent |
-| **`v0.2`** | A physical robot and a virtual agent behind one gateway, controlled by one application that does not know which is which. Components declared by XML profiles at run time, and a RoIS conformance claim |
-| **`v0.3`** | Authentication at the WebSocket upgrade and authorization per RoIS operation. Until then, a reverse proxy in front of the gateway terminates TLS ([SECURITY.md](../SECURITY.md)) |
-| **`v0.4`** | Media for the AudioStreaming and VideoStreaming components. OpenRoIS does not prescribe a media transport: a streaming component returns a descriptor of its stream, and an optional WebRTC integration serves deployments that have none |
-| **`v1.0`** | All 17 basic RoIS HRI Components, for physical robots and virtual agents. The first release with semantic versioning guarantees |
-| After `v1.0` | A registry of community components and adapters, and a Hub that shows operators the adapters, sessions and health of a deployment |
+Each layer builds on the one below it.
+
+| Layer | Packages | Role |
+|-------|----------|------|
+| **Interfaces** | `openrois-interfaces` (PyPI), `@openrois/interfaces` (npm), C# types inside the Unity package | The RoIS types and method catalog that every other layer speaks. Authored once in Python and generated through JSON Schema into TypeScript and C#, with all 18 normative profiles and an XML profile codec, cross-checked against the OMG machine-readable files |
+| **Engine** | `openrois-engine` | One recursive engine for both the main and the sub HRI Engine roles. It carries the RoIS interfaces, profiles and common messages: sessions, binds, command sequences with concurrent branches, timeouts, events and the error channel, as [rois-reference §16](rois-reference.md#16-known-normative-divergences) records them. It serves and consumes RoIS over WebSocket, so a gateway can sit under a gateway, and grows to components declared by XML profiles at run time |
+| **Engine processes** | `openrois-gateway`; the adapter process | The engine as deployable processes. The gateway is the main HRI Engine that applications connect to, configured by YAML, environment or flags and shipped as a container image with Docker Compose. An adapter process is a sub HRI Engine that hosts the components of one robot or agent, configured by `adapter.yaml` |
+| **Components** | `openrois-components-core`, `openrois-components-common`; each robot's package in its adapter repository | The RoIS HRI Components themselves. The component SDK (`@component`, `@query`, `@invoke`, `@subscribe`, resources, ROS 2 support) turns a capability of a robot or a virtual agent into a component, and the common and per-robot packages build on it toward the 17 basic components. The Reachy Mini adapter is the reference, run on the real robot and in simulation |
+| **Client SDKs** | `@openrois/sdk` (npm), `openrois-sdk` (PyPI), `org.openrois.sdk` (Unity, by Git URL) | How service applications speak RoIS from JavaScript, Python and Unity, with typed models over the wire protocol and one conformance list that all three pass |
+| **Applications** | `openrois-mcp`; the HRI client | Ready-made service applications: an MCP server that lets AI agents drive the robots behind a gateway, and the HRI client, a profile-driven web client for trying components. A Hub for operators follows after `v1.0` |
 
 ## 3. Versioning
 
