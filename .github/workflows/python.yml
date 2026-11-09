@@ -74,24 +74,15 @@ jobs:
         run: pytest
 
   components:
-    name: Components ${{ matrix.package }}, Python ${{ matrix.python-version }}
+    name: Components core, Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.12", "3.13"]
-        package: [core, common]
-        include:
-          # The OpenRoIS packages each one needs from the tree. The rest come from
-          # PyPI: the core tests run components in openrois-engine, against a stand-in
-          # for rclpy.
-          - package: core
-            needs-packages: ""
-          - package: common
-            needs-packages: -e interfaces/python -e components/core
     defaults:
       run:
-        working-directory: components/${{ matrix.package }}
+        working-directory: components/core
     steps:
       - uses: actions/checkout@v7
 
@@ -99,14 +90,53 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-          cache-dependency-path: components/${{ matrix.package }}/pyproject.toml
+          cache-dependency-path: components/core/pyproject.toml
 
       - name: Install
+        # The rest comes from PyPI: the core tests run components in openrois-engine,
+        # against a stand-in for rclpy.
         working-directory: .
-        run: python -m pip install ${{ matrix.needs-packages }} -e "components/${{ matrix.package }}[dev]"
+        run: python -m pip install -e "components/core[dev]"
 
       - name: Lint
         run: ruff check src/ tests/
+
+      - name: Type check
+        run: mypy
+
+      - name: Test
+        run: pytest
+
+  mock-adapter:
+    name: Mock adapter, Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    defaults:
+      run:
+        working-directory: testing/mock-adapter
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            interfaces/python/pyproject.toml
+            engine/pyproject.toml
+            components/core/pyproject.toml
+
+      - name: Install
+        working-directory: .
+        run: >-
+          python -m pip install -e interfaces/python -e engine -e components/core
+          pytest pytest-asyncio mypy ruff
+
+      - name: Lint
+        run: ruff check .
 
       - name: Type check
         run: mypy
@@ -172,7 +202,6 @@ jobs:
             interfaces/python/pyproject.toml
             engine/pyproject.toml
             components/core/pyproject.toml
-            components/common/pyproject.toml
             services/gateway/pyproject.toml
             sdk/python/pyproject.toml
             services/mcp/pyproject.toml
@@ -181,7 +210,7 @@ jobs:
         working-directory: .
         run: >-
           python -m pip install
-          -e interfaces/python -e engine -e components/core -e components/common
+          -e interfaces/python -e engine -e components/core
           -e services/gateway -e sdk/python -e "services/mcp[dev]"
 
       - name: Start the gateway and the mock adapter

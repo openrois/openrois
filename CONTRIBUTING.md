@@ -62,8 +62,8 @@ apply to all documentation, code comments, commit messages, and PR descriptions.
 
 ## 4. Changelog
 
-The `interfaces/*`, `sdk/*`, `engine`, `services/gateway`, `services/mcp`, `components/core`
-and `components/common` packages have a `CHANGELOG.md` file. Update it when you change one of
+The `interfaces/*`, `sdk/*`, `engine`, `services/gateway`, `services/mcp` and
+`components/core` packages have a `CHANGELOG.md` file. Update it when you change one of
 them.
 
 - Format: [Keep a Changelog](https://keepachangelog.com/en/2.0.0/)
@@ -332,7 +332,7 @@ before you open a pull request.
 | Gateway | `services/gateway` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | MCP server | `services/mcp` | `pytest`, and with `OPENROIS_GATEWAY_URL=ws://127.0.0.1:8765` against the Compose stack, `mypy`, `ruff check src/ tests/` |
 | Component SDK | `components/core` | `pytest`, `mypy`, `ruff check src/ tests/` |
-| Common components | `components/common` | `pytest`, `mypy`, `ruff check src/ tests/` |
+| Mock adapter | `testing/mock-adapter` | `pytest`, `mypy`, `ruff check .` |
 
 Some tests in `interfaces/python` cross-check the models against the normative RoIS
 machine-readable files, which this repository does not redistribute: they carry OMG's

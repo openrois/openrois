@@ -1,0 +1,23 @@
+# Tool settings for the mock adapter and its tests. The mock adapter is a script, not a
+# package: it runs from this directory and installs nothing of its own.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+files = ["mock_adapter.py", "tests"]
+mypy_path = "."
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]

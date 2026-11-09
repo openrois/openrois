@@ -137,13 +137,11 @@ jobs:
           path: dist
 
       - name: Install the frozen stack and the wheel
-        # openrois-components-common comes from the tree under the same pins until it is
-        # released, for the mock adapter. The wheel goes in under those pins too, so the tests
-        # read the file that goes up, with the interfaces of the stack.
+        # The wheel goes in under the same pins, so the tests read the file that goes up,
+        # with the interfaces of the stack.
         run: |
           python -m venv /tmp/frozen
           /tmp/frozen/bin/pip install -r testing/conformance/frozen.txt
-          /tmp/frozen/bin/pip install --constraint testing/conformance/frozen.txt ./components/common
           /tmp/frozen/bin/pip install --constraint testing/conformance/frozen.txt "$(echo dist/*.whl)[dev]"
           /tmp/frozen/bin/pip list
           echo /tmp/frozen/bin >> "$GITHUB_PATH"

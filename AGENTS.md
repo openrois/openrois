@@ -16,7 +16,7 @@ What exists today:
 | Interfaces: RoIS types, method catalog, profiles, XML codec | `interfaces/` | `v0.1.0` |
 | Engine: recursive, CP1 to CP3, `WsServer`, `WsClient` | `engine/` | `v0.1.0` |
 | Engine processes: gateway (`openrois-gateway`) | `services/gateway/` | `v0.1.0` |
-| Components: component SDK and common components | `components/` | `v0.1.0` |
+| Components: component SDK | `components/` | `v0.1.0` |
 | Client SDKs: JavaScript, Python, Unity | `sdk/` | `v0.1.0`. Unity run in Linux players and the Editor only |
 | Applications: MCP server (`openrois-mcp`) | `services/mcp/` | `v0.1.0` |
 | Applications: OpenRoIS Inspector, a service application for the browser | `apps/inspector/` | Available |
@@ -75,7 +75,7 @@ its description. The IDL and XSD cross-check tests fail on any other addition.
 | Gateway | `services/gateway` | `pip install -e ../../interfaces/python -e ../../engine -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
 | MCP server | `services/mcp` | `pip install -e ../../interfaces/python -e ../../sdk/python -e ".[dev]"`, `pytest` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway), `mypy`, `ruff check src/ tests/` |
 | Component SDK | `components/core` | `pip install -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
-| Common components | `components/common` | `pip install -e ../../interfaces/python -e ../core -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
+| Mock adapter | `testing/mock-adapter` | `pip install -e ../../interfaces/python -e ../../engine -e ../../components/core pytest pytest-asyncio mypy ruff`, `pytest`, `mypy`, `ruff check .` |
 | JavaScript SDK | `sdk/javascript` | `npm install`, `npm run build`, `npm test` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway) |
 | Python client SDK | `sdk/python` | `pip install -e ../../interfaces/python -e ".[dev]"`, `pytest` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway), `mypy`, `ruff check src/ tests/` |
 | Unity SDK | `sdk/unity/Tests~` | `dotnet test` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway) |

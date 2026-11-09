@@ -1,7 +1,6 @@
 # The stack the client SDKs are released against. A change a client can see needs a new
-# alpha and a change here. openrois-components-common comes from the tree until it is
-# released, for the mock adapter.
+# alpha and a change here. openrois-components-core is here for the mock adapter.
 openrois-gateway==0.1.0a1
-openrois-engine==0.1.0a2
+openrois-engine==0.1.0a4
 openrois-interfaces==0.1.0a6
-openrois-components-core==0.1.0a1
+openrois-components-core==0.1.0a2
