@@ -235,6 +235,19 @@ async def test_a_parent_must_name_each_command_once(robot: Robot) -> None:
     assert await execute(parent, twice) == "BAD_PARAMETER"
 
 
+async def test_a_parent_that_comes_back_may_reuse_its_command_ids(robot: Robot) -> None:
+    # A restarted gateway numbers its command ids from the start again, while the
+    # adapter below it keeps running.
+    grip = named(unit(GRIP, "grip", force="1.0"), "gateway/cmd-1")
+    first = await Peer.connected(robot.engine, trusted=True)
+    assert await execute(first, grip) == "OK"
+    assert await first.completed("gateway/cmd-1") == "OK"
+    await robot.engine.close_session(first.session)
+    second = await Peer.connected(robot.engine, trusted=True)
+    assert await execute(second, grip) == "OK"
+    assert await second.completed("gateway/cmd-1") == "OK"
+
+
 async def test_a_parent_may_not_name_an_id_in_the_namespace_of_an_engine(
     robot: Robot,
 ) -> None:

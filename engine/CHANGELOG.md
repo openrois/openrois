@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A parent engine that reconnects, such as a restarted gateway above a running adapter, can name the same command ids again. Before, a valid command whose id the parent had used before it left ended with `ERROR`. An engine now forgets the commands of its parent when the parent's session ends.
+
 ## [0.1.0a4] - 2026-11-09
 
 ### Changed
