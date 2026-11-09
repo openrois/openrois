@@ -21,7 +21,6 @@ What exists today:
 | Applications: MCP server (`openrois-mcp`) | `services/mcp/` | `v0.1.0` |
 | Applications: HRI web client; adapter template | `examples/` | Available |
 | Test fixtures: mock adapter, conformance list, Unity harness | `testing/` | Available |
-| Hub management application | `apps/hub/` | After `v1.0`, scaffold only |
 
 Each robot's components live in its adapter repository, not here. The reference example
 is `openrois.components.reachy_mini` in openrois-adapter-reachy-mini (openrois
