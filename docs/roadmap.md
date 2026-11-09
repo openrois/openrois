@@ -154,9 +154,6 @@ shipped with OpenRoIS so that anyone can run the full stack on affordable, openl
 documented hardware. A demonstration of a physical robot and a virtual agent behind one
 gateway, controlled by one application that does not know which is which.
 
-Completing this phase starts the transfer of OpenRoIS to a neutral open-source
-foundation.
-
 ### Phase 9: Authentication, Security, and Media (Planned)
 
 JWT authentication at the WebSocket upgrade, role-based authorization per RoIS
