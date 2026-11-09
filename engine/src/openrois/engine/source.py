@@ -1,15 +1,17 @@
-"""The component contract: where the components of an engine live.
+"""The component source: where the components of an engine live.
 
-An engine reaches every component through this contract, whether the component runs
-in the engine's own process or behind a child engine on another machine. The engine
-itself answers the method catalog: it validates requests, selects components by
-condition, holds the bindings, runs command sequences and routes ids. A source behind
-the contract runs what the engine hands it, for the components it owns.
+An engine reaches every component through a source, whether the component runs in the
+engine's own process or behind a child engine on another machine. The engine itself
+answers the RoIS method catalog: it validates requests, selects components by condition,
+holds the bindings, runs command sequences and routes ids. A source runs what the engine
+hands it, for the components it owns. Its operations carry the names and the models of
+the RoIS operations they serve, so a request reaches a child engine as the same catalog
+request a client sends.
 
-``LocalComponents`` implements the contract for the components of this process, and
-``ChildEngine`` implements it for one child engine, as a client of the method catalog.
-The contract names no transport and no robot paradigm, which keeps the engine
-paradigm-neutral (docs/architecture.md, section 8).
+``LocalComponents`` is the source of the components of this process, and
+``ChildEngine`` the source of one child engine, as a client of the method catalog. A
+source names no transport and no robot paradigm, which keeps the engine paradigm-neutral
+(docs/architecture.md, section 8).
 """
 
 from __future__ import annotations
@@ -38,7 +40,7 @@ type Deliver = Callable[[NotifyEventParams], None]
 type OnError = Callable[[str, str, ErrorType], None]
 
 
-class ComponentContract(Protocol):
+class ComponentSource(Protocol):
     """A source of components for an engine.
 
     Every component ref belongs to exactly one source. The ids a source assigns, for
@@ -64,7 +66,7 @@ class ComponentContract(Protocol):
         """Hand the source the callback that receives every error it raises."""
         ...
 
-    async def run(self, unit: CommandUnit) -> CompletedStatus:
+    async def execute(self, unit: CommandUnit) -> CompletedStatus:
         """Run one command until it ends, and return how it ended.
 
         Cancelling the call aborts the command: the source halts what it started.
@@ -72,7 +74,7 @@ class ComponentContract(Protocol):
         ...
 
     def keep_running(self, command_id: str) -> None:
-        """Let a running command run on when the engine next cancels its ``run``.
+        """Let a running command run on when the engine next cancels its ``execute``.
 
         The engine calls it before it aborts a command of a client on a component that
         other clients still hold, so the cancel only stops the wait for the command.
@@ -93,7 +95,7 @@ class ComponentContract(Protocol):
         """The current parameter values of a component."""
         ...
 
-    async def command_result(self, command_id: str) -> GetCommandResultResult:
+    async def get_command_result(self, command_id: str) -> GetCommandResultResult:
         """The results of a command this source ran."""
         ...
 
@@ -116,10 +118,10 @@ class ComponentContract(Protocol):
         """End a subscription. An unknown id is ignored."""
         ...
 
-    async def event_detail(self, event_id: str) -> GetEventDetailResult:
+    async def get_event_detail(self, event_id: str) -> GetEventDetailResult:
         """The results of an event until it expires."""
         ...
 
-    async def error_detail(self, error_id: str) -> GetErrorDetailResult:
+    async def get_error_detail(self, error_id: str) -> GetErrorDetailResult:
         """The detail of an error until it is cleared."""
         ...

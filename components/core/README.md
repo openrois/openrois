@@ -35,7 +35,7 @@ pip install openrois-engine
 ## Write a Component
 
 ```python
-from openrois.components.core import CommandFailed, Component, component, invoke, subscribe
+from openrois.components.core import CommandFailed, Component, command, component, event
 from openrois.interfaces.components import NAVIGATION_PROFILE
 from openrois.interfaces.service import CompletedStatus
 
@@ -51,7 +51,7 @@ class Navigation(Component):
     async def disconnect(self) -> None:
         await self._robot.close()
 
-    @invoke("start")
+    @command("start")
     async def start(self) -> dict[str, object]:
         target = self.parameters["target_positions"][0]
         if not await self._robot.knows(target):
@@ -60,11 +60,11 @@ class Navigation(Component):
         self.emit("reached_target", target=target, is_final_target=True)
         return {}
 
-    @invoke("stop")
+    @command("stop")
     async def stop(self) -> None:
         await self._robot.halt()
 
-    @subscribe("reached_target")
+    @event("reached_target")
     async def reached_target(self) -> None:
         pass  # start emits the event when the robot arrives.
 ```
@@ -105,10 +105,11 @@ wire, so names and types come from the profile.
 **Parameters.** `self.parameters` holds the current values, converted from their profile
 types: a `string[]` parameter reads as a list. The engine stores them, fills them from the
 profile defaults and answers `get_parameter`. To apply new values to the backend, or to
-refuse them, mark a method with `@on_set_parameter`:
+refuse them, handle the `set_parameter` command. Its handler takes the new values as one
+mapping, by name, after the engine has checked them against the profile:
 
 ```python
-    @on_set_parameter
+    @command("set_parameter")
     async def apply(self, values: Mapping[str, Any]) -> None:
         if "routing_policy" in values:
             await self._robot.set_policy(values["routing_policy"])
@@ -116,14 +117,14 @@ refuse them, mark a method with `@on_set_parameter`:
 
 Raising refuses the values, and the engine keeps the old ones.
 
-**Events.** `@subscribe` marks an event the component emits. Its method runs on each new
+**Events.** `@event` marks an event the component emits. Its method runs on each new
 subscription, for example to start a detector, and may do nothing. `self.emit` sends an
 event with its results by name, and is safe to call from any thread, for example a ROS 2
 callback.
 
 **Arguments of queries and events.** Some queries and events take arguments, such as the
 `stream_id` of `get_stream_status` and `notify_stream_status`. A client gives them in the
-condition, and the handler and the `@subscribe` method take them by name. An event about
+condition, and the handler and the `@event` method take them by name. An event about
 one stream names its values when it is emitted, so it reaches the subscriptions for that
 stream only:
 
@@ -165,10 +166,9 @@ class Speech(Component):
 | `Component` | Base class of a component: `parameters`, `emit`, `ref`, `connect()`, `disconnect()`, `uses`, `raise_status`, `clear_status`, `engine_state` |
 | `Resource` | Base class of what several components share: `open()`, `close()`, `raise_status`, `clear_status` |
 | `@component(profile)` | Declare the component type, checked against the handlers |
-| `@invoke(command_type)` | Mark the handler of a command |
-| `@query(query_type)` | Mark the handler of a query |
-| `@subscribe(event_type)` | Mark an event the component emits, with a method run on each subscription |
-| `@on_set_parameter` | Mark the hook that applies new parameter values |
+| `@command(command_type)` | Mark the handler of a command message. The handler of `set_parameter` applies new parameter values |
+| `@query(query_type)` | Mark the handler of a query message |
+| `@event(event_type)` | Mark an event message the component emits, with a method run on each subscription |
 | `CommandFailed(status)` | End a command with ERROR, ABORT, OUT_OF_RESOURCES or TIMEOUT |
 | `EngineBinding` | What a component needs from the engine that hosts it |
 

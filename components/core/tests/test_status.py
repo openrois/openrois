@@ -13,7 +13,7 @@ from openrois.interfaces.components import (
 )
 from openrois.interfaces.hri import Argument
 
-from openrois.components.core import Component, Resource, component, query, subscribe
+from openrois.components.core import Component, Resource, component, event, query
 from tests._support import RecordingBinding, RecordingResourceBinding
 
 
@@ -37,7 +37,7 @@ class Microphone(Component):
     async def get_stream_status(self, stream_id: str) -> dict[str, object]:
         return {"status": "STREAMING_RUNNING"}
 
-    @subscribe("notify_stream_status")
+    @event("notify_stream_status")
     async def notify_stream_status(self, stream_id: str | None = None) -> None:
         self.watched.append(stream_id)
 

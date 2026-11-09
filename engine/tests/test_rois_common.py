@@ -20,10 +20,9 @@ import pytest
 from openrois.components.core import (
     CommandFailed,
     Component,
+    command,
     component,
-    invoke,
-    on_set_parameter,
-    subscribe,
+    event,
 )
 from openrois.interfaces.components import ROIS_COMMON_PROFILE, ROIS_COMMON_URN
 from openrois.interfaces.condition import COMPONENT_REF, eq
@@ -77,24 +76,24 @@ class Camera(Component):
         self.recorded = asyncio.Event()
         self.zooms: list[int] = []
 
-    @invoke("wave")
+    @command("wave")
     async def wave(self) -> None:
         self.log.append("wave")
 
-    @invoke("record")
+    @command("record")
     async def record(self) -> None:
         self.log.append("record")
         await self.recorded.wait()
 
-    @invoke("snap")
+    @command("snap")
     async def snap(self) -> None:
         self.log.append("snap")
 
-    @subscribe("snapped")
+    @event("snapped")
     async def snapped(self) -> None:
         return None
 
-    @on_set_parameter
+    @command("set_parameter")
     async def apply(self, values: Mapping[str, Any]) -> None:
         self.zooms.append(values["zoom"])
 
@@ -116,7 +115,7 @@ class HandledCamera(Camera):
         self.suspending: asyncio.Event | None = None
         self.resuming: asyncio.Event | None = None
 
-    @invoke("start")
+    @command("start")
     async def start(self) -> None:
         self.log.append("start")
         if self.fail_start:
@@ -124,11 +123,11 @@ class HandledCamera(Camera):
         if self.starting is not None:
             await self.starting.wait()
 
-    @invoke("stop")
+    @command("stop")
     async def stop(self) -> None:
         self.log.append("stop")
 
-    @invoke("suspend")
+    @command("suspend")
     async def suspend(self) -> None:
         self.log.append("suspend")
         if self.suspending is not None:
@@ -136,7 +135,7 @@ class HandledCamera(Camera):
         if self.fail_suspend:
             raise CommandFailed(CompletedStatus.OUT_OF_RESOURCES, "The buffer is full.")
 
-    @invoke("resume")
+    @command("resume")
     async def resume(self) -> None:
         self.log.append("resume")
         if self.resuming is not None:
@@ -252,7 +251,7 @@ async def test_stop_ends_started(handled: Robot) -> None:
 class StubbornCamera(HandledCamera):
     """A camera whose start, cancelled once, keeps waiting until it is cancelled again."""
 
-    @invoke("start")
+    @command("start")
     async def start(self) -> None:
         self.log.append("start")
         try:

@@ -2,7 +2,7 @@
 
 ``Engine`` answers the RoIS method catalog for the sessions connected to it: clients of
 a gateway, or the parent engine of an adapter. It reaches its components through the
-component contract (``openrois.engine.contract``): the components it hosts in its own
+component sources (``openrois.engine.source``): the components it hosts in its own
 process, and the components of its child engines. One class serves an adapter (local
 components), a gateway (child engines) and a middle tier (both).
 
@@ -116,9 +116,9 @@ from openrois.interfaces.service import (
 from openrois.interfaces.values import decode_value
 from pydantic import BaseModel
 
-from openrois.engine.contract import ComponentContract, Deliver
 from openrois.engine.local import LocalComponent, LocalComponents
 from openrois.engine.session import Notify, Session
+from openrois.engine.source import ComponentSource, Deliver
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +145,7 @@ class _Command:
 
     session_id: str
     ref: str
-    source: ComponentContract | None = None
+    source: ComponentSource | None = None
     status: CompletedStatus | None = None
     task: asyncio.Future[CompletedStatus] | None = None
     queued: bool = False
@@ -154,7 +154,7 @@ class _Command:
 @dataclass(frozen=True, slots=True)
 class _Subscription:
     session_id: str
-    source: ComponentContract
+    source: ComponentSource
     ref: str
     # The event type and the condition as parsed, so a repeated subscribe finds it.
     key: tuple[str, str]
@@ -201,7 +201,7 @@ class Engine:
         self._engine_id = engine_id
         self._local = LocalComponents(engine_id, event_lifetime=event_lifetime)
         self._local.on_error(self._notify_error)
-        self._children: list[ComponentContract] = []
+        self._children: list[ComponentSource] = []
         self._sessions: dict[str, Session] = {}
         self._binds: dict[str, set[str]] = {}
         self._commands: dict[str, _Command] = {}
@@ -250,7 +250,7 @@ class Engine:
         """The components this engine hosts in its process."""
         return self._local.components()
 
-    def add_child(self, child: ComponentContract) -> None:
+    def add_child(self, child: ComponentSource) -> None:
         """Add a discovered child engine and tell every session that the profile changed.
 
         Raises:
@@ -261,7 +261,7 @@ class Engine:
         self._children.append(child)
         self.profile_changed()
 
-    def check_engine_ids(self, child: ComponentContract, engine_ids: frozenset[str]) -> None:
+    def check_engine_ids(self, child: ComponentSource, engine_ids: frozenset[str]) -> None:
         """Refuse engine ids for a child that this engine or another child already uses.
 
         Raises:
@@ -275,7 +275,7 @@ class Engine:
         if clash:
             raise ValueError(f"Engine id {clash[0]} is already in use.")
 
-    def remove_child(self, child: ComponentContract) -> None:
+    def remove_child(self, child: ComponentSource) -> None:
         """Remove a child engine whose connection is gone, with its binds."""
         if child not in self._children:
             return
@@ -408,7 +408,7 @@ class Engine:
         source = self._owner_of(params.error_id)
         if not _empty_filter(params.condition) or source is None:
             return GetErrorDetailResult(return_code=ReturnCode.BAD_PARAMETER)
-        return await source.error_detail(params.error_id)
+        return await source.get_error_detail(params.error_id)
 
     # -- CommandIF -----------------------------------------------------------------------
 
@@ -545,7 +545,7 @@ class Engine:
         if command.source is None:
             # The command never ran, because its sequence stopped before it.
             return GetCommandResultResult(return_code=ReturnCode.OK)
-        return await command.source.command_result(params.command_id)
+        return await command.source.get_command_result(params.command_id)
 
     # -- QueryIF and EventIF -------------------------------------------------------------
 
@@ -593,7 +593,7 @@ class Engine:
         source = self._owner_of(params.event_id)
         if not _empty_filter(params.condition) or source is None:
             return GetEventDetailResult(return_code=ReturnCode.BAD_PARAMETER)
-        return await source.event_detail(params.event_id)
+        return await source.get_event_detail(params.event_id)
 
     # -- Commands ------------------------------------------------------------------------
 
@@ -674,7 +674,7 @@ class Engine:
             return CompletedStatus.ABORT
         else:
             command.queued = False
-            task = asyncio.ensure_future(entry[1].run(unit))
+            task = asyncio.ensure_future(entry[1].execute(unit))
             command.task = task
             try:
                 status = await task
@@ -816,9 +816,9 @@ class Engine:
 
     # -- Helpers -------------------------------------------------------------------------
 
-    def _components(self) -> dict[str, tuple[HRIComponentProfile, ComponentContract]]:
+    def _components(self) -> dict[str, tuple[HRIComponentProfile, ComponentSource]]:
         """Every component this engine reaches: profile and source, by ref."""
-        components: dict[str, tuple[HRIComponentProfile, ComponentContract]] = {}
+        components: dict[str, tuple[HRIComponentProfile, ComponentSource]] = {}
         for source in (self._local, *self._children):
             for ref, profile in source.profiles().items():
                 components.setdefault(ref, (profile, source))
@@ -847,7 +847,7 @@ class Engine:
 
     def _pick(
         self, condition: str, name: str, *, events: bool
-    ) -> tuple[str, ComponentContract, list[Argument], str] | ReturnCode:
+    ) -> tuple[str, ComponentSource, list[Argument], str] | ReturnCode:
         """The one component a query or a subscribe selects, and its arguments.
 
         The condition selects with component_ref and component_type, and gives the
@@ -899,7 +899,7 @@ class Engine:
             )
         return ref, components[ref][1], list(arguments.values()), str(parsed)
 
-    def _owner_of(self, assigned_id: str) -> ComponentContract | None:
+    def _owner_of(self, assigned_id: str) -> ComponentSource | None:
         """The source that assigned an id, by the engine id it starts with."""
         engine_id, separator, _ = assigned_id.partition("/")
         if not separator:

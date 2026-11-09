@@ -18,11 +18,10 @@ from openrois.components.core import (
     CommandFailed,
     Component,
     Resource,
+    command,
     component,
-    invoke,
-    on_set_parameter,
+    event,
     query,
-    subscribe,
 )
 from openrois.interfaces.common import ComponentStatus
 from openrois.interfaces.components import (
@@ -87,29 +86,29 @@ class Navigation(Component):
     async def disconnect(self) -> None:
         self.connected = False
 
-    @invoke("start")
+    @command("start")
     async def start(self) -> None:
         target = self.parameters.get("target_positions", ["home"])[0]
         await self.arrive.wait()
         self.emit("reached_target", target=target, is_final_target=True)
 
-    @invoke("stop")
+    @command("stop")
     async def stop(self) -> None:
         self.stops += 1
 
-    @invoke("suspend")
+    @command("suspend")
     async def suspend(self) -> None:
         raise CommandFailed(CompletedStatus.OUT_OF_RESOURCES, "The brakes are hot.")
 
-    @invoke("resume")
+    @command("resume")
     async def resume(self) -> None:
         raise RuntimeError("The motor driver is gone.")
 
-    @subscribe("reached_target")
+    @event("reached_target")
     async def reached_target(self) -> None:
         self.subscribed += 1
 
-    @on_set_parameter
+    @command("set_parameter")
     async def apply(self, values: Mapping[str, Any]) -> None:
         if self.refuse:
             raise CommandFailed(CompletedStatus.ERROR, "Unknown place.")
@@ -144,11 +143,11 @@ class PersonDetection(Component):
             self.emit("person_detected", number=count)
             await asyncio.sleep(0.001)
 
-    @invoke("start")
+    @command("start")
     async def start(self) -> None:
         return None
 
-    @subscribe("person_detected")
+    @event("person_detected")
     async def person_detected(self) -> None:
         return None
 
@@ -183,12 +182,12 @@ class Gripper(Component):
     def __init__(self) -> None:
         self.forces: list[float] = []
 
-    @invoke("grip")
+    @command("grip")
     async def grip(self, force: float) -> dict[str, object]:
         self.forces.append(force)
         return {"held": force > 0}
 
-    @invoke("squeeze")
+    @command("squeeze")
     async def squeeze(self) -> None:
         await asyncio.Event().wait()
 
@@ -214,7 +213,7 @@ class Watcher(Component):
         self.done = asyncio.Event()
         self.watching = 0
 
-    @invoke("watch")
+    @command("watch")
     async def watch(self) -> None:
         self.watching += 1
         try:
@@ -235,7 +234,7 @@ LAMP_PROFILE = HRIComponentProfile(
 class Lamp(Component):
     """A lamp whose type names no RoSO function."""
 
-    @invoke("blink")
+    @command("blink")
     async def blink(self) -> None:
         return None
 
@@ -259,7 +258,7 @@ class Arm(Component):
     def __init__(self) -> None:
         self.starts = 0
 
-    @invoke("start")
+    @command("start")
     async def start(self) -> None:
         self.starts += 1
         try:
@@ -268,7 +267,7 @@ class Arm(Component):
             await asyncio.sleep(0.3)
             raise
 
-    @invoke("stop")
+    @command("stop")
     async def stop(self) -> None:
         return None
 
@@ -325,7 +324,7 @@ class Microphone(Component):
         self.asked.append(stream_id)
         return {"status": "STREAMING_RUNNING"}
 
-    @subscribe("notify_stream_status")
+    @event("notify_stream_status")
     async def notify_stream_status(self, stream_id: str | None = None) -> None:
         self.watched.append(stream_id)
 

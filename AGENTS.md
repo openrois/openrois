@@ -101,10 +101,11 @@ skipped unless `OPENROIS_NORMATIVE_DIR` points to a local copy of the files.
 - C# `netstandard2.1` (Unity 6000.0+), `sealed class`, `Nullable` enabled.
 - `interfaces/python/src/` and `engine/src/` stay transport-neutral and paradigm-neutral.
   No ROS, DDS, gRPC, or game engine imports. Those belong in components.
-- Do not change the component contract (`ComponentContract` in
-  `engine/src/openrois/engine/contract.py`) without reading section 8 of
-  [docs/architecture.md](docs/architecture.md). It is the seam that keeps the engine
-  paradigm-neutral: local components and child engines both sit behind it.
+- OpenRoIS has one control-plane protocol, the RoIS method catalog, at every hop
+  (section 8 of [docs/architecture.md](docs/architecture.md)). The engine reaches its
+  local components and its child engines with the same operations and models
+  (`engine/src/openrois/engine/source.py`). Do not add an OpenRoIS protocol or
+  operation names of its own below RoIS.
 - Components own their backend connections, created in `connect()` and closed in
   `disconnect()`. Adapters never hold shared backend state.
 

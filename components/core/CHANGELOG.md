@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** components mark their RoIS messages with decorators named after the kind of message: `@command(command_type)`, `@query(query_type)` and `@event(event_type)`. Code that uses `@invoke` or `@subscribe` uses `@command` or `@event`.
+- **Breaking:** a component applies new parameter values with `@command("set_parameter")`, whose handler takes the new values as its one argument. The engine checks the values against the profile first, and stores them only if the handler does not raise. Code that uses `@on_set_parameter` uses `@command("set_parameter")`.
+
 ## [0.1.0a1] - 2026-11-05
 
 ### Added

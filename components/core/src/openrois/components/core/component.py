@@ -99,14 +99,14 @@ class Component:
 
         @component(NAVIGATION_PROFILE)
         class Navigation(Component):
-            @invoke("start")
+            @command("start")
             async def start(self) -> dict[str, object]:
                 target = self.parameters["target_positions"][0]
                 await self._robot.go_to(target)
                 self.emit("reached_target", target=target, is_final_target=True)
                 return {}
 
-            @subscribe("reached_target")
+            @event("reached_target")
             async def reached_target(self) -> None:
                 pass  # start emits the event when the robot arrives.
 
@@ -185,7 +185,7 @@ class Component:
         if event_type not in spec.events:
             raise ValueError(
                 f"{type(self).__qualname__} does not serve the event {event_type!r}. "
-                "Mark it with @subscribe"
+                "Mark it with @event"
             )
         message = _message(spec.served.event_profiles, event_type)
         concerns = _concerns(message, concerning or {})
@@ -305,7 +305,7 @@ class Component:
         return _results(message, values)
 
     async def rois_subscribed(self, event_type: str, arguments: Sequence[Argument] = ()) -> None:
-        """Run the @subscribe method of an event for a new subscription.
+        """Run the @event method of an event for a new subscription.
 
         The method receives the arguments the subscription gave, by name.
 
@@ -321,9 +321,9 @@ class Component:
         await getattr(self, method)(**_arguments(message, arguments))
 
     async def rois_set_parameters(self, parameters: Sequence[Parameter]) -> None:
-        """Run the @on_set_parameter hook with new values, before the engine stores them.
+        """Run the set_parameter handler with new values, before the engine stores them.
 
-        Without a hook this returns at once. An exception from the hook refuses the
+        Without a handler this returns at once. An exception from the handler refuses the
         values, and the engine keeps the old ones.
 
         Raises:

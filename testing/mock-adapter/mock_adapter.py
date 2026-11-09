@@ -38,11 +38,10 @@ from openrois.components.common import MockSystemInformation
 from openrois.components.core import (
     CommandFailed,
     Component,
+    command,
     component,
-    invoke,
-    on_set_parameter,
+    event,
     query,
-    subscribe,
 )
 from openrois.engine import Engine, WsClient
 from openrois.engine.config import AdapterConfig, ConfigError, load_adapter_config
@@ -128,23 +127,23 @@ class MockPersonDetection(Component):
             # is none.
             self.emit("person_detected", number=count, timestamp=datetime.now(UTC))
 
-    @invoke("start")
+    @command("start")
     async def start(self) -> None:
         await asyncio.sleep(self._timing.command)
 
-    @invoke("stop")
+    @command("stop")
     async def stop(self) -> None:
         await asyncio.sleep(self._timing.command)
 
-    @invoke("suspend")
+    @command("suspend")
     async def suspend(self) -> None:
         await asyncio.sleep(self._timing.command)
 
-    @invoke("resume")
+    @command("resume")
     async def resume(self) -> None:
         await asyncio.sleep(self._timing.command)
 
-    @subscribe("person_detected")
+    @event("person_detected")
     async def person_detected(self) -> None:
         pass  # The detector emits the event on its own.
 
@@ -156,7 +155,7 @@ class MockNavigation(Component):
     def __init__(self, timing: Timing) -> None:
         self._timing = timing
 
-    @invoke("start")
+    @command("start")
     async def start(self) -> None:
         targets = self.parameters.get("target_positions", [])
         if not targets:
@@ -168,23 +167,23 @@ class MockNavigation(Component):
         self.emit("reached_target", target=target, is_final_target=True)
         logger.info("Reached %s", target)
 
-    @invoke("stop")
+    @command("stop")
     async def stop(self) -> None:
         pass  # Nothing moves, so there is nothing to halt.
 
-    @invoke("suspend")
+    @command("suspend")
     async def suspend(self) -> None:
         await asyncio.sleep(self._timing.command)
 
-    @invoke("resume")
+    @command("resume")
     async def resume(self) -> None:
         await asyncio.sleep(self._timing.command)
 
-    @subscribe("reached_target")
+    @event("reached_target")
     async def reached_target(self) -> None:
         pass  # start emits the event when the drive ends.
 
-    @on_set_parameter
+    @command("set_parameter")
     async def apply(self, values: Mapping[str, Any]) -> None:
         logger.info("New parameters: %s", dict(values))
         await asyncio.sleep(self._timing.command)
@@ -223,14 +222,14 @@ class MockFault(Component):
     def __init__(self, gateway_url: str) -> None:
         self._gateway_url = gateway_url
 
-    @invoke("raise_error")
+    @command("raise_error")
     async def raise_error(self) -> None:
         self.raise_status(ComponentStatus.ERROR, "raised on request")
         # An engine refuses every command of a component in ERROR, so no command could
         # clear this one.
         asyncio.get_running_loop().call_later(FAULT_HOLD, self.clear_status)
 
-    @invoke("peer_join")
+    @command("peer_join")
     async def peer_join(self) -> None:
         # A second engine joins the gateway and leaves it, which leaves this one alone.
         peer = asyncio.create_task(WsClient(Engine("mock_peer"), self._gateway_url).run_async())
@@ -238,12 +237,12 @@ class MockFault(Component):
         peer.cancel()
         await asyncio.gather(peer, return_exceptions=True)
 
-    @invoke("echo")
+    @command("echo")
     async def echo(self, text: str) -> dict[str, str]:
         self.emit("echoed", concerning={"text": text}, text=text)
         return {"text": text}
 
-    @invoke("end_with")
+    @command("end_with")
     async def end_with(self, status: str) -> None:
         raise CommandFailed(CompletedStatus(status), "ended on request")
 
@@ -251,7 +250,7 @@ class MockFault(Component):
     async def answer_echo(self, text: str) -> dict[str, str]:
         return {"text": text}
 
-    @subscribe("echoed")
+    @event("echoed")
     async def echoed(self, text: str | None = None) -> None:
         pass  # The echo command emits the event.
 

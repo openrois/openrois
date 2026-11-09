@@ -14,11 +14,10 @@ from openrois.interfaces.profiles import HRIComponentProfile, RoISIdentifierType
 
 from openrois.components.core import (
     Component,
+    command,
     component,
-    invoke,
-    on_set_parameter,
+    event,
     query,
-    subscribe,
 )
 
 
@@ -30,7 +29,7 @@ def _names(messages: list[Any]) -> list[str]:
 class StartOnly(Component):
     """A Navigation that implements start and nothing else."""
 
-    @invoke("start")
+    @command("start")
     async def start(self) -> None:
         return None
 
@@ -44,7 +43,7 @@ class TestServedProfile:
     def test_serves_every_rois_common_command_without_handlers(self) -> None:
         @component(PERSON_DETECTION_PROFILE)
         class Detector(Component):
-            @subscribe("person_detected")
+            @event("person_detected")
             async def person_detected(self) -> None:
                 return None
 
@@ -77,13 +76,13 @@ class TestServedProfile:
 
         @component(profile)
         class Suspendable(Component):
-            @invoke("suspend")
+            @command("suspend")
             async def suspend(self) -> None:
                 return None
 
         @component(profile)
         class Startable(Component):
-            @invoke("start")
+            @command("start")
             async def start(self) -> None:
                 return None
 
@@ -102,7 +101,7 @@ class TestServedProfile:
     def test_serves_an_event_marked_with_subscribe(self) -> None:
         @component(PERSON_DETECTION_PROFILE)
         class Detector(Component):
-            @subscribe("person_detected")
+            @event("person_detected")
             async def person_detected(self) -> None:
                 return None
 
@@ -144,7 +143,7 @@ class TestDeclarationErrors:
 
             @component(NAVIGATION_PROFILE)
             class Jumper(Component):
-                @invoke("jump")
+                @command("jump")
                 async def jump(self) -> None:
                     return None
 
@@ -162,18 +161,21 @@ class TestDeclarationErrors:
 
             @component(NAVIGATION_PROFILE)
             class Arrival(Component):
-                @subscribe("arrived")
+                @event("arrived")
                 async def arrived(self) -> None:
                     return None
 
-    def test_set_parameter_is_not_a_command(self) -> None:
-        with pytest.raises(ValueError, match="on_set_parameter"):
+    def test_set_parameter_handler_applies_the_values(self) -> None:
+        @component(NAVIGATION_PROFILE)
+        class Setter(Component):
+            @command("set_parameter")
+            async def apply(self, values: dict[str, object]) -> None:
+                return None
 
-            @component(NAVIGATION_PROFILE)
-            class Setter(Component):
-                @invoke("set_parameter")
-                async def set_parameter(self) -> None:
-                    return None
+        spec = Setter.__rois_spec__
+        assert spec is not None
+        assert spec.set_parameter_hook == "apply"
+        assert "set_parameter" not in spec.commands
 
     def test_component_status_is_answered_by_the_engine(self) -> None:
         with pytest.raises(ValueError, match="engine answers"):
@@ -189,11 +191,11 @@ class TestDeclarationErrors:
 
             @component(NAVIGATION_PROFILE)
             class Twice(Component):
-                @invoke("start")
+                @command("start")
                 async def first(self) -> None:
                     return None
 
-                @invoke("start")
+                @command("start")
                 async def second(self) -> None:
                     return None
 
@@ -201,8 +203,8 @@ class TestDeclarationErrors:
         with pytest.raises(ValueError, match="already handles"):
 
             class Double(Component):
-                @invoke("start")
-                @invoke("stop")
+                @command("start")
+                @command("stop")
                 async def both(self) -> None:
                     return None
 
@@ -211,7 +213,7 @@ class TestDeclarationErrors:
 
             @component(NAVIGATION_PROFILE)
             class Sync(Component):
-                @invoke("start")
+                @command("start")
                 def start(self) -> None:
                     return None
 
@@ -220,7 +222,7 @@ class TestDeclarationErrors:
 
             @component(NAVIGATION_PROFILE)
             class Targeted(Component):
-                @invoke("start")
+                @command("start")
                 async def start(self, target: str) -> None:
                     return None
 
@@ -233,34 +235,34 @@ class TestDeclarationErrors:
                 async def robot_position(self, precise: bool) -> dict[str, object]:
                     return {}
 
-    def test_hook_needs_parameters_in_the_profile(self) -> None:
+    def test_set_parameter_needs_parameters_in_the_profile(self) -> None:
         with pytest.raises(ValueError, match="declares no parameters"):
 
             @component(PERSON_DETECTION_PROFILE)
-            class Hooked(Component):
-                @on_set_parameter
+            class Setter(Component):
+                @command("set_parameter")
                 async def apply(self, values: dict[str, object]) -> None:
                     return None
 
-    def test_one_hook(self) -> None:
-        with pytest.raises(ValueError, match="two @on_set_parameter"):
+    def test_one_set_parameter_handler(self) -> None:
+        with pytest.raises(ValueError, match="both handle the command 'set_parameter'"):
 
             @component(NAVIGATION_PROFILE)
-            class TwoHooks(Component):
-                @on_set_parameter
+            class TwoSetters(Component):
+                @command("set_parameter")
                 async def first(self, values: dict[str, object]) -> None:
                     return None
 
-                @on_set_parameter
+                @command("set_parameter")
                 async def second(self, values: dict[str, object]) -> None:
                     return None
 
-    def test_hook_takes_the_values(self) -> None:
+    def test_set_parameter_takes_the_values(self) -> None:
         with pytest.raises(TypeError, match="one argument"):
 
             @component(NAVIGATION_PROFILE)
             class NoValues(Component):
-                @on_set_parameter
+                @command("set_parameter")
                 async def apply(self) -> None:
                     return None
 
@@ -290,7 +292,7 @@ def test_user_defined_profile() -> None:
 
     @component(profile)
     class Speech(Component):
-        @invoke("say")
+        @command("say")
         async def say(self, text: str) -> None:
             return None
 

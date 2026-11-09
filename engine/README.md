@@ -40,10 +40,10 @@ pip install openrois-components-core
 |------|---------|
 | `Engine` | The recursive HRI Engine: the method catalog, bindings, command sequences and id routing |
 | `Session` | A client of an engine, or its parent engine |
-| `ComponentContract` | Where the components of an engine live, local or behind a child engine |
+| `ComponentSource` | Where the components of an engine live, local or behind a child engine, with the RoIS operations it serves for them |
 | `LocalComponent` | The shape of a component the engine hosts in its process, which `Component` has |
-| `LocalComponents` | The contract for the components of this process: parameters, commands, status and events |
-| `ChildEngine` | The contract for one child engine, reached over the method catalog |
+| `LocalComponents` | The source of the components of this process: parameters, commands, status and events |
+| `ChildEngine` | The source of one child engine, reached over the method catalog |
 | `WsServer` | WebSocket server, for a gateway |
 | `WsClient` | WebSocket client, for an adapter connecting out to a gateway |
 
@@ -182,8 +182,9 @@ runs exactly this with configuration and signal handling.
 - **Parameters.** `set_parameter` applies the values before it replies and then sends
   `rois.command.completed`. A parameter the profile marks `read_only`, one it does not
   list, a value that does not fit its type, or values the component's
-  `@on_set_parameter` hook refuses answer BAD_PARAMETER with no command id, and none of
-  the values is applied. Inside `execute`, a hook refusal ends that command with ERROR.
+  `@command("set_parameter")` handler refuses answer BAD_PARAMETER with no command id, and
+  none of the values is applied. Inside `execute`, a refusal of the handler ends that
+  command with ERROR.
 - **Status and errors.** The engine answers `component_status` for the asking session:
   BUSY when another session holds an actuation component, UNINITIALIZED until the
   component's resources are open and it has connected, and WARNING or ERROR as the
@@ -246,7 +247,7 @@ session, and reconnects with a growing delay, also when the gateway refuses it.
 ## Design Constraints
 
 - The engine is transport-neutral and paradigm-neutral. It reaches every component
-  through the `ComponentContract`, so no ROS, DDS, gRPC, or game engine import belongs in
+  with the RoIS operations, so no ROS, DDS, gRPC, or game engine import belongs in
   this package. ROS 2 nodes are spun by `RclpyExecutor` in `openrois-components-core`,
   a resource the components share.
 - Components own their backend connections. The engine holds no shared backend state.
