@@ -1194,7 +1194,6 @@ openrois/
 ├── components/    # Component SDK (core) and common components
 ├── sdk/           # Client SDKs (JavaScript, Python, Unity)
 ├── services/      # Network processes: the gateway (openrois-gateway) and the MCP server (openrois-mcp)
-├── apps/          # Product applications (Hub visualizer, planned)
 ├── examples/      # Web client, adapter template
 ├── testing/       # Test fixtures: mock adapter, conformance list, Unity harness
 └── docs/          # Architecture, white paper, roadmap, spec reference
@@ -1208,7 +1207,6 @@ openrois/
 | `services/mcp/` | MCP server (`openrois-mcp`). Serves the components behind a gateway to an AI agent as MCP tools, through one RoIS session opened with the Python client SDK. Read-only unless actions are allowed. |
 | `components/` | The component SDK (`openrois-components-core`) and the common components (`openrois-components-common`). |
 | `sdk/` | Client SDKs: JavaScript for browsers and Node.js, Python for asyncio, and Unity. |
-| `apps/` | Product applications: the Hub (a gateway visualizer, planned). |
 | `examples/` | Reference implementations and templates for onboarding. |
 | `testing/` | Fixtures that tests and CI depend on: the mock adapter, the conformance list, and the Unity harness. |
 | `docs/` | Documentation. |

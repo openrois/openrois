@@ -299,7 +299,6 @@ openrois/
 ├── services/
 │   ├── gateway/         Gateway process and container image (openrois-gateway)
 │   └── mcp/             MCP server for AI agents (openrois-mcp)
-├── apps/hub/            Management dashboard (planned)
 ├── examples/
 │   ├── hri-client/      Profile-driven web inspector for any RoIS engine
 │   └── adapter-template/  Starting point for a new robot adapter
