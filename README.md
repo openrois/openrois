@@ -364,8 +364,10 @@ guide](CONTRIBUTING.md) before opening a pull request.
 
 ## Citation
 
-The position paper describing OpenRoIS was submitted to SII 2027 and is under review. Its
-preprint is on arXiv as [arXiv:2609.21178](https://arxiv.org/abs/2609.21178), with the DOI
+The position paper describing OpenRoIS is accepted at the 2027 IEEE/SICE International
+Symposium on System Integration (SII 2027), held in Kobe in January 2027. Until it appears
+in the proceedings, please cite its preprint on arXiv,
+[arXiv:2609.21178](https://arxiv.org/abs/2609.21178), with the DOI
 [10.48550/arXiv.2609.21178](https://doi.org/10.48550/arXiv.2609.21178).
 
 ```bibtex
@@ -382,8 +384,8 @@ preprint is on arXiv as [arXiv:2609.21178](https://arxiv.org/abs/2609.21178), wi
   primaryClass  = {cs.RO},
   doi           = {10.48550/arXiv.2609.21178},
   url           = {https://arxiv.org/abs/2609.21178},
-  note          = {Submitted to the 2027 IEEE/SICE International Symposium on
-                   System Integration (SII 2027)}
+  note          = {Accepted at the 2027 IEEE/SICE International Symposium on
+                   System Integration (SII 2027), to appear}
 }
 ```
 

@@ -24,7 +24,7 @@ version: 0.1.0-alpha.2
 date-released: "2026-09-18"
 preferred-citation:
   type: conference-paper
-  status: submitted
+  status: in-press
   title: >-
     OpenRoIS: A Community-Driven Open-Source Middleware Implementing the Robotic
     Interaction Service (RoIS) Framework for Physical Robots and Virtual Agents
@@ -53,7 +53,7 @@ preferred-citation:
   doi: 10.48550/arXiv.2609.21178
   url: "https://arxiv.org/abs/2609.21178"
   notes: >-
-    Submitted to SII 2027 and under review. Preprint on arXiv as
+    Accepted at SII 2027, to appear in the proceedings. Preprint on arXiv as
     arXiv:2609.21178.
 keywords:
   - RoIS
