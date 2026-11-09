@@ -12,7 +12,7 @@ The Reaction component inherits from RoIS_Common:
   - Event: (no component-specific events)
 
 The Reaction component triggers expressive reactions on a host. On a physical
-robot this maps to LED patterns or gestures. On a virtual avatar this maps to
+robot this maps to LED patterns or gestures. On a digital avatar this maps to
 animations or facial expressions. The interface is paradigm-neutral: the
 ``reaction_ref`` identifier is an opaque string whose meaning is defined by the
 host backend, not by the type system.
