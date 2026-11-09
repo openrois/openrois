@@ -69,8 +69,9 @@
 ### Non-Goals
 
 - We do **not** invent a new wire protocol. RoIS defines messages, not transport. We
-  use WebSocket + JSON-RPC 2.0 for the control plane and WebRTC for the data plane.
-- We do **not** define media codecs. Streaming media formats are out of RoIS scope.
+  use WebSocket + JSON-RPC 2.0 for the control plane.
+- We do **not** define media codecs or a media transport. Streaming media is out of RoIS
+  scope, and a streaming component describes its stream instead of carrying it.
 - We do **not** mandate any single data-plane transport. gRPC, ROS 2 / DDS, IPC, and
   WebRTC are all valid sub HRI Engine internal transports. None is privileged in the core.
 - We do **not** assume any specific deployment topology. The same code runs on a
@@ -265,7 +266,7 @@ layers align with the RoIS specification.
 ### What the MVP Does Not Yet Demonstrate
 
 - Authentication and RBAC.
-- WebRTC media streaming.
+- Media streaming.
 - The full 17-component library.
 - Mixed paradigm (robot and avatar on one gateway).
 
@@ -482,8 +483,8 @@ for security once authentication and authorization land (roadmap Phase 9).
 ```
 
 The gateway hosts the main engine and provides the WebSocket server. It may later
-include infrastructure such as a REST API for authentication and fleet management, a
-WebRTC signaling server, an SFU for larger fleets, and monitoring (planned). The RoIS
+include infrastructure such as a REST API for authentication and fleet management, and
+monitoring (planned). The RoIS
 logic lives in the engine, which is fully open source.
 
 ### Gateway Responsibilities
@@ -514,8 +515,7 @@ URL path.
   whose messages ride the Command, Query and Event interfaces like any other
   component's. The media itself travels outside the control plane
   ([§13](#13-control-plane-vs-data-plane-streaming)).
-- No WebRTC signaling (SDP, ICE) in the current implementation. No streaming component
-  ships yet.
+- No media handling and no media signaling. No streaming component ships yet.
 - No paradigm-specific knowledge. The engine never imports DDS, gRPC, ROS,
   or any game engine library. It sees only the component contract.
 - No network I/O of its own. The engine is a library. The gateway provides the
@@ -803,8 +803,8 @@ actuation, world model, and stream source differ.
 | Navigation | Nav2 (physical) | NavMesh (virtual) | paradigm-specific |
 | Follow | Nav2 + tracker | virtual follow | paradigm-specific |
 | Move | `cmd_vel` to motors | transform to avatar | paradigm-specific |
-| Audio Streaming | mic to WebRTC | TTS output to WebRTC | diff source |
-| Video Streaming | camera to WebRTC | rendered frames to WebRTC | diff source |
+| Audio Streaming | microphone stream | TTS output stream | diff source |
+| Video Streaming | camera stream | rendered frames stream | diff source |
 | System Information | battery, CPU, joints | FPS, memory, avatar state | diff state |
 
 **Legend:** `yes` = identical. `diff` = same interface, different source/output.
@@ -942,7 +942,7 @@ transport**.
 | Control plane | Service application to Gateway | **WebSocket + TLS** | NAT/firewall friendly, browser-native, easy auth, async events. Matches the spec's Annex F.2.3 WebSocket example. |
 | Control plane | Gateway to Sub HRI Engine | **WebSocket + TLS, JSON-RPC 2.0** | NAT-friendly, one protocol for all sub HRI Engines. No alternatives at this boundary. |
 | Data plane | Sub HRI Engine to backend | **Chosen by the sub HRI Engine** | gRPC, DDS, IPC, WebRTC, WHEP/WHIP, RTSP, or any other. The gateway never knows or cares. |
-| Data plane | Media (camera/mic or rendered) | **WebRTC (SRTP/DTLS)** | Built-in NAT traversal (ICE/STUN/TURN), adaptive bitrate, encrypted, browser-native. |
+| Data plane | Media (camera/mic or rendered) | **Described, not prescribed** | The streaming component returns a descriptor of its stream. WebRTC is the planned optional default. |
 
 The control plane is WebSocket + JSON-RPC 2.0 at every middleware boundary. No
 alternatives, no exceptions. The data plane is whatever the sub HRI Engine needs. This
@@ -964,8 +964,14 @@ query and `notify_stream_status` an event, both with a `stream_id` argument, and
 `Stream_Status` comes from `RoIS_Common.idl`. OpenRoIS has no separate stream interface:
 the engine serves the two profiles like any other, binds them as RoSO `function`
 components (one bind per session) and answers `rois.stream.*` with `METHOD_NOT_FOUND`.
-The media data plane is out of scope, which makes **WebRTC** a natural fit for it. No
-streaming component ships yet, and the WebRTC mapping below is planned.
+OpenRoIS does not prescribe a media transport. A streaming component returns a
+descriptor of the stream (its protocol, its endpoint, and what a client needs to
+connect), and the engine routes it like any other result without touching media. A
+WebRTC integration is planned as an optional default for deployments that have no media
+stack of their own; an adapter that already publishes RTSP, WHEP, a ROS 2 topic or a
+managed video service returns that instead.
+No streaming component ships yet. The mapping below shows how the planned WebRTC
+integration fits the RoIS messages.
 
 ```
         RoIS Streaming Control (in scope)             WebRTC Media (out of RoIS scope)
@@ -978,22 +984,23 @@ streaming component ships yet, and the WebRTC mapping below is planned.
         execute(disconnect_stream)               ↔   pc.close()
 ```
 
-WebRTC **signaling travels over the existing WebSocket** RoIS connection (passed as
-`set_parameter` arguments), so no separate signaling server is required.
+With the WebRTC integration, signaling can travel over the existing RoIS connection
+(passed as `set_parameter` arguments) or through a signaling service of the deployment's
+choice. Neither is required of an adapter that uses another transport.
 
 Important distinction the spec preserves:
 
 - **Speech Synthesis** is a *command* component (text to robot speaker locally), not
   a stream.
 - **Audio/Video Streaming** are *stream-control* components (live media robot to
-  operator), using WebRTC.
+  operator), whatever transport carries the media.
 
 ### P2P vs. SFU
 
-- **Fleet of 1-3 robots**: peer-to-peer WebRTC is sufficient.
+- **Fleet of 1-3 robots**: peer-to-peer WebRTC is sufficient, when WebRTC is used.
 - **Larger fleets**: route media through a **Selective Forwarding Unit** (mediasoup,
   LiveKit). The RoIS streaming control messages are identical either way. The SFU is
-  an implementation detail of the gateway.
+  part of the media infrastructure, not of the engine or the gateway.
 
 ---
 
@@ -1095,7 +1102,7 @@ Because the gateway filters at `search()`, robots outside a caller's scope are
 2. **JWT/OIDC** authentication at WebSocket upgrade.
 3. **RBAC** authorization per RoIS operation in the gateway.
 4. **DDS-Security** (or per-fleet DDS domains) in the data plane, when using ROS 2.
-5. **DTLS/SRTP** on WebRTC media (data plane).
+5. **Transport encryption** on media (DTLS/SRTP with WebRTC), in the data plane.
 
 ---
 
@@ -1158,7 +1165,7 @@ Web App                  Gateway                 Sub HRI Engine
   │    component_profiles: { "robot_1/navigation": { command_profiles: [...] } } }
 ```
 
-### 17.3 Video Stream Setup (WebRTC, Planned)
+### 17.3 Video Stream Setup (with the Planned WebRTC Integration)
 
 ```
 Web App                         Gateway                    Robot
@@ -1230,7 +1237,7 @@ in the monorepo under `components/`.
 | Data plane (avatar/services) | IPC, WebSocket, or other | none |
 | Control plane (all boundaries) | **WebSocket + TLS, JSON-RPC 2.0** | none |
 | RPC envelope | JSON-RPC 2.0 | Protobuf, CBOR |
-| Media | WebRTC (aiortc / GStreamer webrtcbin) | RTSP, HLS |
+| Media | Any, described by the streaming component; optional WebRTC integration (aiortc / GStreamer webrtcbin) as the default | none prescribed |
 | SFU (large fleets) | mediasoup, LiveKit | Janus |
 | Auth | Keycloak (OIDC) / engine JWT | Auth0, Dex, mTLS |
 | Perception | YOLO, MediaPipe, Whisper | platform-specific |

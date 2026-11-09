@@ -25,7 +25,7 @@
 > as [rois-reference §16](rois-reference.md#16-known-normative-divergences) records them,
 > without a conformance claim. Each robot's components live in its adapter repository,
 > such as the Reachy Mini adapter. The client SDKs have their first alpha releases, and
-> authentication and WebRTC media are planned. This document
+> authentication and media streaming are planned. This document
 > describes the target architecture and marks features that are not implemented yet.
 
 ---
@@ -370,8 +370,7 @@ flowchart TB
 ```
 
 The gateway process composes `Engine` + `WsServer`, with its configuration, logging, a
-graceful stop, and a container image. A management `Api`, `Auth`, and WebRTC signaling
-are planned. The adapter process composes `Engine` + `WsClient` + its components. Both
+graceful stop, and a container image. A management `Api` and `Auth` are planned. The adapter process composes `Engine` + `WsClient` + its components. Both
 use the same `Engine` class.
 
 ### 4.3 Why This Eliminates the Duplicate Dispatch Problem
@@ -1664,7 +1663,7 @@ flowchart LR
         B1["Service Application to Gateway<br/>WebSocket + TLS<br/>NAT/firewall friendly, browser-native"]
         B2["Gateway to Adapter<br/>WebSocket + TLS<br/>JSON-RPC 2.0, one per adapter"]
         B3["Adapter internal transport<br/>DDS, gRPC, WebRTC, WHEP/WHIP, RTSP, IPC<br/>Chosen by the adapter, not the gateway"]
-        B4["Media (camera/mic or rendered)<br/>WebRTC (SRTP/DTLS)<br/>NAT traversal, adaptive bitrate"]
+        B4["Media (camera/mic or rendered)<br/>Described by the streaming component<br/>WebRTC as the optional default"]
     end
 ```
 
@@ -1673,19 +1672,28 @@ flowchart LR
 | Service Application to Gateway | WebSocket + TLS | NAT/firewall friendly, browser-native, easy auth, async events. Matches the spec's Annex F.2.3 WebSocket example. |
 | Gateway to Adapter | WebSocket + TLS | JSON-RPC 2.0, one connection per adapter. The gateway-to-adapter boundary is always the same transport. |
 | Adapter internal transport | DDS, gRPC, WebRTC, WHEP/WHIP, RTSP, IPC | Chosen by the adapter based on what its backend requires. The gateway does not know or care. |
-| Media (camera/mic or rendered) | WebRTC (SRTP/DTLS) | Built-in NAT traversal (ICE/STUN/TURN), adaptive bitrate, encrypted, browser-native. |
+| Media (camera/mic or rendered) | Not prescribed | The streaming component returns a descriptor of its stream. A WebRTC integration is the planned optional default: NAT traversal, adaptive bitrate, encrypted, browser-native. |
 
 All middleware boundaries use WebSocket + JSON-RPC 2.0. Each adapter's internal
 transport (DDS, gRPC, WebRTC, WHEP/WHIP, RTSP, IPC) is chosen by the adapter, not
-the gateway. WebSocket solves the remote control boundary. WebRTC solves real-time
-media. The gateway never touches media data.
+the gateway. WebSocket solves the remote control boundary. Media goes wherever its
+descriptor points, and the gateway never touches it.
 
 ---
 
 ## 12. Control Plane vs. Data Plane
 
 RoIS defines only the streaming **control plane**. The media **data plane** is out
-of scope, which makes WebRTC a natural fit.
+of scope, and OpenRoIS keeps it that way:
+
+OpenRoIS does not prescribe a media transport. A streaming component returns a
+descriptor of the stream (its protocol, its endpoint, and what a client needs to
+connect), and the engine routes it like any other result without touching media. A
+WebRTC integration is planned as an optional default for deployments that have no media
+stack of their own; an adapter that already publishes RTSP, WHEP, a ROS 2 topic or a
+managed video service returns that instead.
+
+The diagram shows how the planned WebRTC integration maps onto the RoIS messages.
 
 ```mermaid
 flowchart LR
@@ -1717,23 +1725,23 @@ flowchart LR
     C6 -.->|"corresponds to"| D6
 ```
 
-WebRTC signaling is handled by the application layer. The gateway brokers media
-descriptor exchange through the parameters and commands of the AudioStreaming and
+Signaling, when a transport needs it, is handled outside the engine. The gateway brokers
+the descriptor exchange through the parameters and commands of the AudioStreaming and
 VideoStreaming components, which ride the Command, Query and Event interfaces, but never
 touches media data. The engine serves both profiles today. No streaming component ships
-yet, and the WebRTC mapping above is planned.
+yet, and the WebRTC integration above is planned.
 
 An important distinction the specification preserves: Speech Synthesis is a
 **command** component (text to robot speaker locally), not a stream. Audio and Video
-Streaming are **stream-control** components (live media robot to operator), using
-WebRTC.
+Streaming are **stream-control** components (live media robot to operator), whatever
+transport carries the media.
 
 ### 12.1 P2P vs. SFU
 
-- **Fleet of 1 to 3 robots**: peer-to-peer WebRTC is sufficient.
+- **Fleet of 1 to 3 robots**: peer-to-peer WebRTC is sufficient, when WebRTC is used.
 - **Larger fleets**: route media through a Selective Forwarding Unit (mediasoup,
   LiveKit). The RoIS streaming control messages are identical either way. The SFU is
-  an implementation detail of the gateway, not the engine.
+  part of the media infrastructure, not of the engine or the gateway.
 
 ---
 
@@ -1880,8 +1888,8 @@ flowchart TB
 | Navigation | Nav2 (physical) | NavMesh (virtual) | paradigm-specific |
 | Follow | Nav2 + tracker | virtual follow | paradigm-specific |
 | Move | `cmd_vel` to motors | transform to avatar | paradigm-specific |
-| Audio Streaming | mic to WebRTC | TTS output to WebRTC | diff source |
-| Video Streaming | camera to WebRTC | rendered frames to WebRTC | diff source |
+| Audio Streaming | microphone stream | TTS output stream | diff source |
+| Video Streaming | camera stream | rendered frames stream | diff source |
 | System Information | battery, CPU, joints | FPS, memory, avatar state | diff state |
 
 The component's logic is the same across adapters. Only the binding differs.
