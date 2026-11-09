@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0a4] - 2026-11-09
+
 ### Changed
 
 - **Breaking:** the engine reaches its components through `ComponentSource`, in `openrois.engine.source`, whose operations carry the names of the RoIS operations they serve: `execute`, `set_parameter`, `get_parameter`, `get_command_result`, `query`, `subscribe`, `unsubscribe`, `get_event_detail` and `get_error_detail`. `LocalComponents` and `ChildEngine` implement it. Code that implements or calls `ComponentContract` from `openrois.engine.contract` uses `ComponentSource`, with `execute` for `run`, `get_command_result` for `command_result`, `get_event_detail` for `event_detail` and `get_error_detail` for `error_detail`. Adapters and gateways built on `Engine` need no change.
@@ -39,7 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Type information for every public name (`py.typed`).
 - `openrois-interfaces` 0.1.0a5 or later is required, because the engine reads the `Branch` model that release introduced.
 
-[unreleased]: https://github.com/openrois/openrois/compare/engine-v0.1.0-alpha.3...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/engine-v0.1.0-alpha.4...HEAD
+[0.1.0a4]: https://github.com/openrois/openrois/releases/tag/engine-v0.1.0-alpha.4
 [0.1.0a3]: https://github.com/openrois/openrois/releases/tag/engine-v0.1.0-alpha.3
 [0.1.0a2]: https://github.com/openrois/openrois/releases/tag/engine-v0.1.0-alpha.2
 [0.1.0a1]: https://github.com/openrois/openrois/releases/tag/engine-v0.1.0-alpha.1

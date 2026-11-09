@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0a2] - 2026-11-09
+
 ### Changed
 
 - **Breaking:** components mark their RoIS messages with decorators named after the kind of message: `@command(command_type)`, `@query(query_type)` and `@event(event_type)`. Code that uses `@invoke` or `@subscribe` uses `@command` or `@event`.
@@ -29,5 +31,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Type information for every public name (`py.typed`).
 - `openrois-interfaces` 0.1.0a5 or later is required, because the SDK reads the `arguments` of query and event profiles, which that release introduced.
 
-[unreleased]: https://github.com/openrois/openrois/compare/components-core-v0.1.0-alpha.1...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/components-core-v0.1.0-alpha.2...HEAD
+[0.1.0a2]: https://github.com/openrois/openrois/releases/tag/components-core-v0.1.0-alpha.2
 [0.1.0a1]: https://github.com/openrois/openrois/releases/tag/components-core-v0.1.0-alpha.1
