@@ -1951,9 +1951,7 @@ The **first end-to-end demonstration is Phase 3**: the minimum that lets a servi
 application clone, build, and control a real robot from a web application over
 WebSocket. The
 **paradigm-neutrality proof is Phase 8** (mixed robot and avatar on one gateway).
-The **foundation migration trigger fires after Phase 8, before Phase 10**: the
-paradigm-neutrality proof is the governance milestone that initiates migration to a
-neutral foundation home. The **1.0 release is Phase 10**.
+The **1.0 release is Phase 10**.
 
 ### 15.1 Versioning
 
