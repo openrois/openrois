@@ -89,7 +89,10 @@ jobs:
       # and is packed here so only a tested tree is attached.
       - name: Pack the tarball
         working-directory: sdk/unity
-        run: npm pack --pack-destination "$RUNNER_TEMP/unity-tarball"
+        # npm pack does not create the destination folder.
+        run: |
+          mkdir -p "$RUNNER_TEMP/unity-tarball"
+          npm pack --pack-destination "$RUNNER_TEMP/unity-tarball"
 
       - uses: actions/upload-artifact@v7
         with:
