@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openrois-mcp"
-version = "0.1.0a1"
+version = "0.1.0"
 description = "OpenRoIS MCP server: physical robots, virtual avatars and AI services as tools for an AI agent"
 readme = "README.md"
 license = "Apache-2.0"
@@ -21,8 +21,8 @@ classifiers = [
 ]
 dependencies = [
     "mcp>=2.3,<3",
-    "openrois-interfaces>=0.1.0a6",
-    "openrois-sdk>=0.1.0a1",
+    "openrois-interfaces>=0.1.0,<0.2",
+    "openrois-sdk>=0.1.0,<0.2",
     "pydantic>=2.10",
 ]
 

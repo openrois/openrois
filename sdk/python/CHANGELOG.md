@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-10
+
+### Changed
+
+- The first release numbered 0.1.0, in step with OpenRoIS 0.1.0. `openrois-sdk` 0.1.0 requires `openrois-interfaces` 0.1.0 or later, before 0.2, and is tested against `openrois-gateway` and `openrois-engine` 0.1.0.
+
 ## [0.1.0a1] - 2026-11-07
 
 ### Added
@@ -28,5 +34,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The errors `TransportError`, `RoISConnectionError`, `RequestTimeoutError` and `RpcError`. `RoISConnectionError` is also a builtin `ConnectionError`, and `RequestTimeoutError` is also a builtin `TimeoutError`.
 - Type information for every public name (`py.typed`).
 
-[unreleased]: https://github.com/openrois/openrois/compare/sdk-python-v0.1.0-alpha.1...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/sdk-python-v0.1.0...HEAD
+[0.1.0]: https://github.com/openrois/openrois/releases/tag/sdk-python-v0.1.0
 [0.1.0a1]: https://github.com/openrois/openrois/releases/tag/sdk-python-v0.1.0-alpha.1

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-10
+
+### Changed
+
+- The first release numbered 0.1.0, in step with OpenRoIS 0.1.0. `openrois-mcp` 0.1.0 requires `openrois-sdk` and `openrois-interfaces` 0.1.0 or later, before 0.2.
+
 ## [0.1.0a1] - 2026-11-08
 
 ### Added
@@ -24,5 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A warning in the log when streamable HTTP listens on an address beyond loopback, since the server has no authentication.
 - The resources `rois://components`, `rois://components/{ref}` and `rois://session`.
 
-[unreleased]: https://github.com/openrois/openrois/compare/mcp-v0.1.0-alpha.1...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/mcp-v0.1.0...HEAD
+[0.1.0]: https://github.com/openrois/openrois/releases/tag/mcp-v0.1.0
 [0.1.0a1]: https://github.com/openrois/openrois/releases/tag/mcp-v0.1.0-alpha.1

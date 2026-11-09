@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-10
+
+### Changed
+
+- The first release numbered 0.1.0, in step with OpenRoIS 0.1.0. `openrois-gateway` 0.1.0 requires `openrois-engine` 0.1.0 or later, before 0.2.
+
 ### Fixed
 
 - `pydantic` 2.10 or later is required, because `openrois.gateway` does not import with earlier versions, which the declared floor of 2.0 allowed.
@@ -23,5 +29,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A graceful stop on SIGTERM and SIGINT that closes every connection with code 1001 and exits with code 0. Exit code 1 reports a gateway that cannot start, and exit code 2 an invalid configuration.
 - `Gateway` and `GatewayConfig`, to run the gateway inside another program.
 
-[unreleased]: https://github.com/openrois/openrois/compare/gateway-v0.1.0-alpha.1...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/gateway-v0.1.0...HEAD
+[0.1.0]: https://github.com/openrois/openrois/releases/tag/gateway-v0.1.0
 [0.1.0a1]: https://github.com/openrois/openrois/releases/tag/gateway-v0.1.0-alpha.1

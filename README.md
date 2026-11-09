@@ -156,7 +156,7 @@ method catalog. All three are Alpha, pre-1.0, unstable API.
 |-----|-----|---------|
 | [JavaScript](sdk/javascript/README.md) | Browsers and Node.js 22.12 or later | `npm install @openrois/sdk` |
 | [Python](sdk/python/README.md) | Asyncio on Python 3.12 or later | `pip install openrois-sdk` |
-| [Unity](sdk/unity/README.md) | Unity 6000.0 and later | By Git URL: `https://github.com/openrois/openrois.git?path=sdk/unity#sdk-unity-v0.1.0-alpha.1` |
+| [Unity](sdk/unity/README.md) | Unity 6000.0 and later | By Git URL: `https://github.com/openrois/openrois.git?path=sdk/unity#sdk-unity-v0.1.0` |
 
 ```ts
 import { RoISClient, componentRef, componentType } from "@openrois/sdk";

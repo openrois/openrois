@@ -226,6 +226,7 @@ The wire has no version handshake, so a mismatch shows only when a message carri
 
 | `openrois-sdk` | `openrois-gateway` | `openrois-engine` | `openrois-interfaces` | `openrois-components-core` |
 |---|---|---|---|---|
+| 0.1.0 | 0.1.0 | 0.1.0 | 0.1.0 | 0.1.0 |
 | 0.1.0a1 | 0.1.0a1 | 0.1.0a2 | 0.1.0a6 | 0.1.0a1 |
 
 ## Development

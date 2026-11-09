@@ -13,7 +13,7 @@ The package is not on a registry. Add it by Git URL, with the tag of the release
 ```json title="Packages/manifest.json"
 {
   "dependencies": {
-    "org.openrois.sdk": "https://github.com/openrois/openrois.git?path=sdk/unity#sdk-unity-v0.1.0-alpha.1"
+    "org.openrois.sdk": "https://github.com/openrois/openrois.git?path=sdk/unity#sdk-unity-v0.1.0"
   }
 }
 ```
@@ -318,6 +318,7 @@ The wire has no version handshake, so a mismatch shows only when a message carri
 
 | `org.openrois.sdk` | `OpenRoIS.Interfaces` | `openrois-gateway` | `openrois-engine` | `openrois-interfaces` | `openrois-components-core` |
 |---|---|---|---|---|---|
+| 0.1.0 | 0.1.0 | 0.1.0 | 0.1.0 | 0.1.0 | 0.1.0 |
 | 0.1.0-alpha.1 | 0.1.0-alpha.6 | 0.1.0a1 | 0.1.0a2 | 0.1.0a6 | 0.1.0a1 |
 
 ## Development

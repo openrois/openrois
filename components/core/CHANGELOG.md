@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-10
+
+### Changed
+
+- The first release numbered 0.1.0, in step with OpenRoIS 0.1.0. `openrois-components-core` 0.1.0 requires `openrois-interfaces` 0.1.0 or later, before 0.2, and runs in `openrois-engine` 0.1.0.
+
 ## [0.1.0a2] - 2026-11-09
 
 ### Changed
@@ -31,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Type information for every public name (`py.typed`).
 - `openrois-interfaces` 0.1.0a5 or later is required, because the SDK reads the `arguments` of query and event profiles, which that release introduced.
 
-[unreleased]: https://github.com/openrois/openrois/compare/components-core-v0.1.0-alpha.2...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/components-core-v0.1.0...HEAD
+[0.1.0]: https://github.com/openrois/openrois/releases/tag/components-core-v0.1.0
 [0.1.0a2]: https://github.com/openrois/openrois/releases/tag/components-core-v0.1.0-alpha.2
 [0.1.0a1]: https://github.com/openrois/openrois/releases/tag/components-core-v0.1.0-alpha.1

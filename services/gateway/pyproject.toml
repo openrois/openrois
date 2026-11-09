@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openrois-gateway"
-version = "0.1.0a1"
+version = "0.1.0"
 description = "OpenRoIS gateway: the process that hosts the main RoIS HRI Engine and faces the network"
 readme = "README.md"
 license = "Apache-2.0"
@@ -20,7 +20,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "openrois-engine>=0.1.0a2",
+    "openrois-engine>=0.1.0,<0.2",
     "pydantic>=2.10",
 ]
 

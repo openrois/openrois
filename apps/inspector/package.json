@@ -1,6 +1,6 @@
 {
   "name": "@openrois/inspector",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0",
   "description": "OpenRoIS Inspector: a RoIS service application to explore and drive the engines and components behind a gateway",
   "license": "Apache-2.0",
   "author": "OpenRoIS Community",
