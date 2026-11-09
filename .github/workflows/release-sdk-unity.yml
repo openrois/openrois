@@ -118,13 +118,11 @@ jobs:
           global-json-file: sdk/unity/scripts~/global.json
 
       - name: Install the frozen stack
-        # openrois-components-common comes from the tree under the same pins until it is
-        # released, for the mock adapter. The venv goes on the PATH, because the suite starts
-        # the scripted server with python3, which needs the websockets package.
+        # The venv goes on the PATH, because the suite starts the scripted server with
+        # python3, which needs the websockets package.
         run: |
           python -m venv /tmp/frozen
           /tmp/frozen/bin/pip install -r testing/conformance/frozen.txt
-          /tmp/frozen/bin/pip install --constraint testing/conformance/frozen.txt ./components/common
           /tmp/frozen/bin/pip list
           echo /tmp/frozen/bin >> "$GITHUB_PATH"
 

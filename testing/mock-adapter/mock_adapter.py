@@ -34,7 +34,6 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from openrois.components.common import MockSystemInformation
 from openrois.components.core import (
     CommandFailed,
     Component,
@@ -46,7 +45,11 @@ from openrois.components.core import (
 from openrois.engine import Engine, WsClient
 from openrois.engine.config import AdapterConfig, ConfigError, load_adapter_config
 from openrois.interfaces.common import ComponentStatus
-from openrois.interfaces.components import NAVIGATION_PROFILE, PERSON_DETECTION_PROFILE
+from openrois.interfaces.components import (
+    NAVIGATION_PROFILE,
+    PERSON_DETECTION_PROFILE,
+    SYSTEM_INFORMATION_PROFILE,
+)
 from openrois.interfaces.declaration import (
     Command,
     ComponentDeclaration,
@@ -213,6 +216,32 @@ TEST_FAULT_PROFILE = ComponentDeclaration(
     events=(Event("echoed", arguments=[ECHO_TEXT], results=[ECHO_TEXT]),),
     sub_profiles=(),
 ).profile()
+
+
+@component(SYSTEM_INFORMATION_PROFILE)
+class MockSystemInformation(Component):
+    """SystemInformation of a robot standing still at the origin.
+
+    SystemInformation.xml includes no RoIS_Common profile, so this component has the
+    robot_position and engine_status queries only, no commands and no component_status.
+    """
+
+    def __init__(self) -> None:
+        self._started = datetime.now(UTC)
+
+    @query("robot_position")
+    async def robot_position(self) -> dict[str, object]:
+        """Report the robot at the origin of its map, measured now."""
+        return {
+            "position_data": ["0.0,0.0,0.0"],
+            "robot_ref": [self.ref.split("/", 1)[0]],
+            "timestamp": datetime.now(UTC),
+        }
+
+    @query("engine_status")
+    async def engine_status(self) -> dict[str, object]:
+        """Report the status of the engine, operable since the component was created."""
+        return {"operable_time": self._started, "status": self.engine_state()}
 
 
 @component(TEST_FAULT_PROFILE)

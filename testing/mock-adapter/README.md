@@ -36,9 +36,8 @@ makes the simulated work ten times faster.
 ## Run Without Docker
 
 ```bash
-# From the repository root. openrois-components-common is not on PyPI yet.
-pip install -e ./interfaces/python -e ./engine -e ./components/core -e ./components/common \
-    -e ./services/gateway
+# From the repository root.
+pip install -e ./interfaces/python -e ./engine -e ./components/core -e ./services/gateway
 
 # Terminal 1: the gateway, on ws://127.0.0.1:8765.
 openrois-gateway
@@ -67,8 +66,16 @@ The mock adapter reaches no robot, so it ignores `robot_address`.
 ## Read It as an Example
 
 `mock_adapter.py` is a single file that shows the whole adapter shape: components written
-with [`openrois-components-core`](../../components/core/README.md), one of them reused from
-[`openrois-components-common`](../../components/common/README.md), settings declared as a
+with [`openrois-components-core`](../../components/core/README.md), settings declared as a
 subclass of `AdapterConfig` and loaded with `load_adapter_config`, components hosted with
 `Engine.add_component` and served with `WsClient`. To start an adapter of your own, copy
 [`examples/adapter-template`](../../examples/adapter-template/README.md).
+
+## Test
+
+```bash
+# From the repository root.
+pip install -e ./interfaces/python -e ./engine -e ./components/core \
+    pytest pytest-asyncio mypy ruff
+cd testing/mock-adapter && pytest && mypy && ruff check .
+```

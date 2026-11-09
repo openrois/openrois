@@ -43,7 +43,7 @@ Desktop runs need a virtual environment that holds the gateway and the mock adap
 
 ```bash
 python3.12 -m venv /path/to/venv
-/path/to/venv/bin/pip install -e interfaces/python -e components/core -e components/common \
+/path/to/venv/bin/pip install -e interfaces/python -e components/core \
   -e engine -e services/gateway
 export OPENROIS_VENV=/path/to/venv
 ```

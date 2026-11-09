@@ -630,8 +630,7 @@ semantics into the engine) is structurally prevented.
 
 ## 9. Components
 
-The monorepo ships the component SDK (`openrois-components-core`) and the common
-components (`openrois-components-common`, today a mock SystemInformation). Each robot's
+The monorepo ships the component SDK (`openrois-components-core`). Each robot's
 components live in its adapter repository. The reference example is
 `openrois.components.reachy_mini`, from
 [openrois-adapter-reachy-mini](https://github.com/openrois/openrois-adapter-reachy-mini)
@@ -1158,7 +1157,7 @@ product component, not an example or a demo.
 openrois/
 ├── interfaces/    # Shared types: single source of truth (Python to JSON Schema to C#/TS)
 ├── engine/        # Engine library: recursive Engine, LocalComponents, ChildEngine, WsServer, WsClient (openrois-engine)
-├── components/    # Component SDK (core) and common components
+├── components/    # Component SDK (core)
 ├── sdk/           # Client SDKs (JavaScript, Python, Unity)
 ├── services/      # Network processes: the gateway (openrois-gateway) and the MCP server (openrois-mcp)
 ├── examples/      # Web client, adapter template
@@ -1172,7 +1171,7 @@ openrois/
 | `engine/` | Engine library (`openrois-engine`). Recursive RoIS dispatch logic: one `Engine` class used by both the gateway and adapters, plus `WsServer` and `WsClient`. Zero media and zero paradigm-specific imports. |
 | `services/gateway/` | Gateway process (`openrois-gateway`). Composes `Engine` and `WsServer` into the process that hosts the Main HRI Engine, with configuration, logging, a graceful stop, and a container image. |
 | `services/mcp/` | MCP server (`openrois-mcp`). Serves the components behind a gateway to an AI agent as MCP tools, through one RoIS session opened with the Python client SDK. Read-only unless actions are allowed. |
-| `components/` | The component SDK (`openrois-components-core`) and the common components (`openrois-components-common`). |
+| `components/` | The component SDK (`openrois-components-core`). |
 | `sdk/` | Client SDKs: JavaScript for browsers and Node.js, Python for asyncio, and Unity. |
 | `examples/` | Reference implementations and templates for onboarding. |
 | `testing/` | Fixtures that tests and CI depend on: the mock adapter, the conformance list, and the Unity harness. |
@@ -1181,8 +1180,8 @@ openrois/
 Adapters for specific robots live in separate repositories. They consume the
 SDK and component packages. The adapter repository owns the adapter script, its
 configuration, and its robot's components, for example `openrois.components.reachy_mini`
-in openrois-adapter-reachy-mini. Only the component SDK and the common components live
-in the monorepo under `components/`.
+in openrois-adapter-reachy-mini. Only the component SDK lives in the monorepo, under
+`components/`.
 
 ---
 

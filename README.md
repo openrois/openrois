@@ -284,8 +284,7 @@ openrois/
 ├── interfaces/          RoIS types: Python models, JSON Schema, generated TypeScript and C#
 ├── engine/              Recursive Engine, WebSocket server and client (openrois-engine)
 ├── components/
-│   ├── core/            Component SDK: decorators, resources, RoIS_Common default (openrois-components-core)
-│   └── common/          Common components: a mock SystemInformation (openrois-components-common)
+│   └── core/            Component SDK: decorators, resources, RoIS_Common default (openrois-components-core)
 ├── sdk/
 │   ├── javascript/      Client SDK for web and Node.js (@openrois/sdk)
 │   ├── python/          Python client SDK (openrois-sdk)
@@ -331,7 +330,7 @@ generated files by hand.
 | Unity SDK | `sdk/unity/Tests~` | `dotnet test` |
 | Engine | `engine` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | Component SDK | `components/core` | `pytest`, `mypy`, `ruff check src/ tests/` |
-| Common components | `components/common` | `pytest`, `mypy`, `ruff check src/ tests/` |
+| Mock adapter | `testing/mock-adapter` | `pytest`, `mypy`, `ruff check .` |
 | Gateway | `services/gateway` | `pytest`, `mypy`, `ruff check src/ tests/` |
 | MCP server | `services/mcp` | `pytest` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway), `mypy`, `ruff check src/ tests/` |
 

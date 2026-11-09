@@ -92,7 +92,7 @@ test, or a test has no id in the list, and when a method of the catalog has no c
 stay with `wire_check.py`. The file uses only the public surface of the SDK and takes only URLs:
 
 ```bash
-pip install -e interfaces/python -e engine -e components/core -e components/common \
+pip install -e interfaces/python -e engine -e components/core \
   -e services/gateway -e "sdk/python[dev]"
 openrois-gateway &
 python testing/mock-adapter/mock_adapter.py --config testing/mock-adapter/adapter.fast.yaml &
@@ -117,7 +117,7 @@ It needs the .NET 10 SDK and no Unity, and the tilde keeps the folder out of the
 Unity sees it:
 
 ```bash
-pip install -e interfaces/python -e engine -e components/core -e components/common \
+pip install -e interfaces/python -e engine -e components/core \
   -e services/gateway websockets
 openrois-gateway &
 python testing/mock-adapter/mock_adapter.py --config testing/mock-adapter/adapter.fast.yaml &
@@ -170,7 +170,6 @@ see needs a new alpha and a change to that file.
 ```bash
 python -m venv /tmp/frozen && . /tmp/frozen/bin/activate
 pip install -r testing/conformance/frozen.txt websockets
-pip install ./components/common                    # not on PyPI yet, under the same pins
 openrois-gateway &
 python testing/mock-adapter/mock_adapter.py --config testing/mock-adapter/adapter.fast.yaml &
 ```

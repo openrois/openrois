@@ -18,11 +18,10 @@ WORKDIR /src
 COPY interfaces/python interfaces/python
 COPY engine engine
 COPY components/core components/core
-COPY components/common components/common
-# Build wheels for the four packages and every dependency, so the runtime stage
+# Build wheels for the three packages and every dependency, so the runtime stage
 # installs offline and carries no source tree or build tools.
 RUN pip wheel --no-cache-dir --wheel-dir /wheels \
-    ./interfaces/python ./engine ./components/core ./components/common
+    ./interfaces/python ./engine ./components/core
 
 
 FROM python:3.12-slim
@@ -34,7 +33,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # --pre: the OpenRoIS packages are alpha releases, the only versions in /wheels.
 RUN --mount=type=bind,from=build,source=/wheels,target=/wheels \
     pip install --no-cache-dir --no-index --find-links /wheels --pre \
-    openrois-engine openrois-components-core openrois-components-common
+    openrois-engine openrois-components-core
 
 RUN useradd --system --uid 10001 --no-create-home openrois
 

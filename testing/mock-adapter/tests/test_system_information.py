@@ -1,4 +1,4 @@
-"""Tests for MockSystemInformation."""
+"""Tests for the SystemInformation component of the mock adapter."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from openrois.interfaces.common import ComponentStatus
 from openrois.interfaces.hri import Parameter, Result
 
-from openrois.components.common import MockSystemInformation
+from mock_adapter import MockSystemInformation
 
 
 @dataclass

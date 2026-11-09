@@ -15,7 +15,6 @@
 
 # testing/mock-adapter/Dockerfile
 !components/core
-!components/common
 !testing/mock-adapter
 
 # Local state inside the included directories.
