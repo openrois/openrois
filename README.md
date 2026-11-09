@@ -116,41 +116,34 @@ details.
 
 ## Quickstart
 
-Run a gateway with a simulated robot behind it, and inspect it from the browser. You need
-[Docker](https://docs.docker.com/get-started/get-docker/) with Compose, and
-[Node.js](https://nodejs.org/) 22.12 or later for the web inspector.
+Run a gateway with a simulated robot behind it, and explore it in the browser. All you need
+is [Docker](https://docs.docker.com/get-started/get-docker/) with Compose.
 
 ```bash
 git clone https://github.com/openrois/openrois.git
 cd openrois
-
-# Terminal 1: the gateway on ws://127.0.0.1:8765, with the mock adapter behind it.
 docker compose up --build
 ```
 
-```bash
-# Terminal 2: build the types and the SDK, start the web inspector, then open
-# http://localhost:5173 and click Connect.
-(cd interfaces/typescript && npm install && npm run build)
-(cd sdk/javascript && npm install && npm run build)
-cd examples/hri-client && npm install && npm run dev
-```
-
-The inspector reads the engine profile and renders every component it finds, with its
-queries, parameters, commands, and events: `mock/navigation`, `mock/person_detection`,
-`mock/system_information` and the test fixture `mock/fault`, served by the mock adapter, an
-engine of its own below the gateway. Nothing in the client is specific to the components on
-the other side. `python testing/conformance/wire_check.py` checks the same stack from the
-command line, after `pip install websockets`.
-
-To develop a client without Docker, run the gateway and the
-[mock adapter](testing/mock-adapter/README.md) as Python processes.
+Then open [http://localhost:8080/?autoconnect=1](http://localhost:8080/?autoconnect=1). The
+[OpenRoIS Inspector](apps/inspector/README.md) connects to the gateway on
+`ws://localhost:8765` and shows the engines behind it and their components:
+`mock/navigation`, `mock/person_detection`, `mock/system_information` and the test fixture
+`mock/fault`, served by the mock adapter, an engine of its own below the gateway. Bind a
+component, run its commands one at a time or as a sequence with concurrent branches, query
+it, subscribe to its events, and follow every JSON-RPC message in the activity log, with the
+`@openrois/sdk` code for each action. Nothing in the Inspector is specific to the components
+on the other side.
 
 <p align="center">
-  <img src="docs/assets/hri-client-demo.gif" alt="Screen recording of the OpenRoIS HRI Client connecting to the mock adapter, querying components, binding, subscribing to events, and executing a command." width="760">
+  <img src="docs/assets/inspector-demo.gif" alt="Screen recording of the OpenRoIS Inspector connecting to the gateway, binding mock/navigation, and running a command sequence with a concurrent group of two branches until every command ends OK." width="760">
 </p>
 
-<p align="center"><sub>Recorded from this quickstart, with no robot attached. A <a href="https://openrois.org/#see-it-run">higher-resolution version</a> is on the website.</sub></p>
+<p align="center"><sub>Recorded from this quickstart, with the mock adapter and no robot attached.</sub></p>
+
+`python testing/conformance/wire_check.py` checks the same stack from the command line,
+after `pip install websockets`. To develop a client without Docker, run the gateway and the
+[mock adapter](testing/mock-adapter/README.md) as Python processes.
 
 ## Usage
 
@@ -300,15 +293,16 @@ openrois/
 ├── services/
 │   ├── gateway/         Gateway process and container image (openrois-gateway)
 │   └── mcp/             MCP server for AI agents (openrois-mcp)
+├── apps/
+│   └── inspector/       OpenRoIS Inspector: explore and drive the engines behind a gateway
 ├── examples/
-│   ├── hri-client/      Profile-driven web inspector for any RoIS engine
 │   └── adapter-template/  Starting point for a new robot adapter
 ├── testing/
 │   ├── mock-adapter/    Adapter with simulated components
 │   ├── conformance/     The scenario list for clients of a gateway
 │   └── unity-harness/   Runs the Unity SDK in real players and in the Editor
 ├── docs/                White paper, architecture, roadmap, RoIS reference
-└── compose.yaml         The gateway with the mock adapter, in Docker Compose
+└── compose.yaml         The gateway, the mock adapter and the Inspector, in Docker Compose
 ```
 
 ## Documentation

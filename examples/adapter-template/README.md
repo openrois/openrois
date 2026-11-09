@@ -59,8 +59,8 @@ pip install -e ./interfaces/python -e ./engine -e ./components/core
 
 The adapter connects to the gateway, which reads its profile and lists `my_robot/navigation`,
 `my_robot/system_information` and `my_robot/battery`. Verify it with
-[`examples/hri-client`](../hri-client/README.md), which shows every component with its
-queries, commands and events.
+the [OpenRoIS Inspector](../../apps/inspector/README.md), which shows every component with
+its queries, commands and events.
 
 ## The Three Components
 

@@ -316,7 +316,7 @@ Use this template for every PR:
 ## 11. Checks
 
 Continuous integration runs the checks for the interface types (Python, TypeScript, and
-C#), the Python packages, the client SDKs, `examples/hri-client`, and the conformance list
+C#), the Python packages, the client SDKs, `apps/inspector`, and the conformance list
 on every pull request that touches them. The commands below are the same checks, to run
 before you open a pull request.
 

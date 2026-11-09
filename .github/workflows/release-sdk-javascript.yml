@@ -109,15 +109,15 @@ jobs:
           path: ${{ runner.temp }}/npm-tarball/openrois-sdk-*.tgz
           if-no-files-found: error
 
-  hri-client:
+  inspector:
     # The pull request job builds this application on its file: links. This one replaces both
     # links, so the application builds as a consumer of what goes to npm.
-    name: hri-client on the tarball
+    name: Inspector on the tarball
     needs: test
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: examples/hri-client
+        working-directory: apps/inspector
     steps:
       - uses: actions/checkout@v7
 
@@ -227,7 +227,7 @@ jobs:
 
   npm:
     name: npm
-    needs: [hri-client, conformance]
+    needs: [inspector, conformance]
     runs-on: ubuntu-latest
     environment: npm
     permissions:
