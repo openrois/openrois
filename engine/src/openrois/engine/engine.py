@@ -947,7 +947,11 @@ class Engine:
         return deliver
 
     async def _end_session(self, session: Session) -> None:
-        """Abort the sequences of a session and release its binds and subscriptions."""
+        """Abort the sequences of a session and release its binds and subscriptions.
+
+        The commands of a parent are forgotten too, so a parent that reconnects can name
+        the same ids again.
+        """
         session.connected = False
         for holders in self._binds.values():
             holders.discard(session.id)
@@ -957,6 +961,13 @@ class Engine:
             for task in running.tasks:
                 task.cancel()
             await asyncio.gather(*running.tasks, return_exceptions=True)
+        if session.trusted:
+            # A parent names the command ids, and a parent that comes back, such as a
+            # restarted gateway, numbers them from the start again. Its old commands
+            # ended with the session, so forget them and let it reuse their ids.
+            ended = [c for c, entry in self._commands.items() if entry.session_id == session.id]
+            for command_id in ended:
+                del self._commands[command_id]
         mine = [s for s, entry in self._subscriptions.items() if entry.session_id == session.id]
         for subscribe_id in mine:
             subscription = self._subscriptions.pop(subscribe_id)
