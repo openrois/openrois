@@ -128,8 +128,9 @@ descriptions.
   ("Get Started", "Project Status"). Sentence case for body text and table cells.
 - Technical, precise, confident. No marketing language. State what the software does,
   not what it "empowers".
-- Say "physical robots, virtual avatars, and AI services" (the paper says "physical
-  robots and virtual agents"), not "robots" alone. Never "digital agents".
+- Say "physical robots, digital avatars, and AI services", not "robots" alone. Never
+  "virtual agents", "virtual avatars" or "digital agents"; the title of the published
+  paper is the one place that keeps "Virtual Agents".
 - Say "Alpha, pre-1.0, unstable API". Never claim production readiness before v1.0.
 - Mark anything not implemented as "in progress" or "planned", in documentation and in
   code comments alike. Do not describe a target design as if it already works.
