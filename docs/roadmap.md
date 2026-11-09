@@ -1,137 +1,52 @@
 # OpenRoIS Roadmap
 
-> The public milestone roadmap for the OpenRoIS open-source middleware.
+> What OpenRoIS has built and what comes next, for an open-source middleware implementing
+> the [OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0).
+> [openrois.org](https://openrois.org/docs/project/roadmap) hosts the same roadmap.
+
+Until `v1.0`, OpenRoIS is **alpha, pre-1.0, with an unstable API**. The milestones are in
+order and carry no dates: each one is released when it is ready.
 
 ---
 
-## Overview
+## 1. Milestones
 
-OpenRoIS is built in vertical slices. Each milestone delivers a working
-end-to-end path, not an isolated layer. The critical path (M0 to M5) culminates
-in a web operator application controlling a ROS 2 robot over WebSocket.
+This table is the status of record: the README, the white paper, the website and the
+organization profiles copy it.
 
-| Milestone | Theme | Output | Status |
-|-----------|-------|--------|--------|
-| **M0** | Paradigm-Neutral Interfaces | `interfaces` (Pydantic to JSON Schema to C#/TS), `BusAdapter` contract | done |
-| **M1** | Engine and In-Process Bus | `engine`, `InProcessBusAdapter`, mock components | todo |
-| **M2** | Remote Gateway | `gateway` (WebSocket, JSON-RPC 2.0, auth hook) | todo |
-| **M3** | ROS 2 Bus Adapter | `ROS2BusAdapter` (rclpy), no core changes | todo |
-| **M4** | Mock ROS 2 Robot Components | `person_detection`, `navigation`, `system_information` nodes | todo |
-| **M5** | Web SDK and Robot MVP | `sdk-js`, web operator app, **v0.1.0 release** | todo |
-| **M8** | Real Robot Component and Mixed Paradigm | YOLO `person_detection`, robot + avatar on one gateway | todo |
-| **M9** | Auth and Bus Security | `auth`, `rbac`, per-fleet isolation | todo |
-| **M10** | WebRTC Media | Streaming components, telepresence | todo |
-| **M11** | Full Component Library | All 17 basic components, both paradigms, **v1.0** | todo |
+| Milestone | Status | What it delivers |
+|-----------|--------|------------------|
+| **`v0.1.0`** (November 2026) | ![Released](https://img.shields.io/badge/Released-2E7D32) | Every package at `0.1.0`, released together. A physical Reachy Mini and a simulated one behind one gateway, driven by one application and by an AI agent |
+| **`v0.2`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | RoIS conformance: components declared by XML profiles at run time, the types checked against the normative RoIS files on every change, a test suite that adapter authors run against their own adapter, and a conformance claim. Applications and engines that recover when a gateway or an adapter restarts |
+| **`v0.3`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | A physical robot and a digital avatar behind one gateway, controlled by one application that does not know which is which |
+| **`v0.4`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | Authentication at the WebSocket upgrade and authorization per RoIS operation. Until then, a reverse proxy in front of the gateway terminates TLS ([SECURITY.md](../SECURITY.md)). An adapter for a second robot |
+| **`v0.5`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | Media for the AudioStreaming and VideoStreaming components. OpenRoIS does not prescribe a media transport: a streaming component returns a descriptor of its stream, and an optional WebRTC integration serves deployments that have none |
+| **`v1.0`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | A stable API, and the first release with semantic versioning guarantees. It stands on the milestones above: the conformance claim, authentication, and reference adapters for two robots and a digital avatar, on Linux, Windows and macOS |
+| Beyond `v1.0` | ![Beyond 1.0](https://img.shields.io/badge/Beyond%201.0-8B98A8) | The remaining basic RoIS HRI Components, each released when it is ready. A registry of community components and adapters, and a Hub that shows operators the adapters, sessions and health of a deployment |
 
-The **MVP is M5**: the minimum that lets an operator clone, build, and control a
-ROS 2 robot from a web application over WebSocket. The **paradigm-neutrality
-proof is M8** (mixed robot + avatar on one gateway). The **1.0 release is M11**.
+## 2. The Stack, Bottom Up
 
----
+Each layer builds on the one below it.
 
-## Dependency Graph
+| Layer | Packages | Role |
+|-------|----------|------|
+| **Interfaces** | `openrois-interfaces` (PyPI), `@openrois/interfaces` (npm), C# types inside the Unity package | The RoIS types and method catalog that every other layer speaks. Authored once in Python and generated through JSON Schema into TypeScript and C#, with all 18 normative profiles and an XML profile codec, cross-checked against the OMG machine-readable files |
+| **Engine** | `openrois-engine` | One recursive engine for both the main and the sub HRI Engine roles. It carries the RoIS interfaces, profiles and common messages: sessions, binds, command sequences with concurrent branches, timeouts, events and the error channel, as [rois-reference §16](rois-reference.md#16-known-normative-divergences) records them. It serves and consumes RoIS over WebSocket, so a gateway can sit under a gateway, and grows to components declared by XML profiles at run time |
+| **Engine processes** | `openrois-gateway`; the adapter process | The engine as deployable processes. The gateway is the main HRI Engine that applications connect to, configured by YAML, environment or flags and shipped as a container image with Docker Compose. An adapter process is a sub HRI Engine that hosts the components of one robot or agent, configured by `adapter.yaml` |
+| **Components** | `openrois-components-core`; each robot's package in its adapter repository | The RoIS HRI Components themselves. The component SDK (`@component`, `@command`, `@query`, `@event`, resources, ROS 2 support) turns a capability of a robot or a digital avatar into a component, and the per-robot packages build on it toward the 17 basic components. The Reachy Mini adapter is the reference, run on the real robot and in simulation |
+| **Client SDKs** | `@openrois/sdk` (npm), `openrois-sdk` (PyPI), `org.openrois.sdk` (Unity, by Git URL) | How service applications speak RoIS from JavaScript, Python and Unity, with typed models over the wire protocol and one conformance list that all three pass |
+| **Applications** | `openrois-mcp`; the OpenRoIS Inspector | Ready-made service applications: an MCP server that lets AI agents drive the robots behind a gateway, and the OpenRoIS Inspector, which shows the engines and components behind a gateway and drives them as a service application does. A Hub for operators follows beyond `v1.0` |
 
-```
-M0 -> M1 -> M2 -> M3 -> M4 -> M5 (Web SDK and Robot MVP, v0.1.0)
-                                  |
-                                  +- M8 (Mixed-paradigm proof)
-                                  +- M9 (Auth/Security)
-                                  +- M10 (Media) -> M11 (Full library, v1.0)
-```
+## 3. Versioning
 
-- **M0 to M5** is the critical path to the MVP.
-- **M8** adds a real perception component and proves the core is paradigm-neutral
-  by running a robot and an avatar behind one gateway.
-- **M9** (auth/security) and **M10** (media) can proceed in parallel after M5.
-- **M11** reuses the M4/M8 component pattern and is highly parallelizable across
-  contributors. Streaming components depend on M10.
+- The packages share their major and minor version and are released together under a
+  project tag such as `v0.1.0`. A package may carry its own pre-release or patch number
+  in between.
+- `0.x` releases may break the API without notice.
+- `v1.0` is the first release with semantic versioning guarantees.
 
----
+## 4. Contributing
 
-## Milestone Details
-
-### M0: Paradigm-Neutral Interfaces (done)
-
-Transport-independent type definitions derived from the OMG RoIS Framework 2.0
-IDL. Authored as Pydantic models in Python, exported to JSON Schema (the canonical
-wire contract), and generated into C# and TypeScript. Includes the `BusAdapter`
-protocol: the five-method contract (`discover`, `invoke`, `query`, `subscribe`,
-`unsubscribe`) that decouples the engine from any specific middleware.
-
-### M1: Engine and In-Process Bus
-
-A bus-independent engine running the RoIS interfaces (`SystemIF`, `CommandIF`,
-`QueryIF`, `EventIF`) against the `InProcessBusAdapter` with mock components. The
-engine has zero references to ROS, DDS, gRPC, or any game engine.
-
-### M2: Remote Gateway
-
-Expose the engine to remote clients over WebSocket with JSON-RPC 2.0 and a basic
-JWT auth hook. One-command bring-up via Docker Compose.
-
-### M3: ROS 2 Bus Adapter
-
-Add the robot bus as a new `BusAdapter` over `rclpy`, without changing the engine
-or gateway. RoIS operations map to ROS 2 primitives: synchronous to service,
-long-running to action, async push to topic.
-
-### M4: Mock ROS 2 Robot Components
-
-A mock ROS 2 robot (sub-engine + component nodes) that the `ROS2BusAdapter`
-discovers and controls. Includes `person_detection`, `navigation` (as a ROS 2
-action), and `system_information` (as a ROS 2 service). No hardware or heavy ML
-required.
-
-### M5: Web SDK and Robot MVP
-
-A TypeScript SDK for web applications plus a web operator app that controls the
-mock ROS 2 robot over WebSocket. This is the MVP demo, tagged as `v0.1.0`. From a
-clean checkout, an operator can bring up the gateway + mock robot and control it
-from the browser.
-
-### M8: Real Robot Component and Mixed Paradigm
-
-Replace one mock with a real YOLO `person_detection` pipeline. Add a
-mixed-paradigm test proving one gateway serves a robot (ROS 2) and an avatar
-(in-process) at the same time, behind the same SDK endpoint.
-
-### M9: Auth, Authorization and Bus Security
-
-Multi-tenant segmentation enforced per RoIS operation. JWT/OIDC authentication,
-RBAC authorization (admin, operator, viewer, maintenance), fleet scoping at
-`search()`/`bind()`/`execute()`/`query()`/`subscribe()`, and bus-level isolation
-via per-fleet DDS domains or DDS-Security.
-
-### M10: WebRTC Media and Telepresence
-
-Live audio/video for both telepresence (robot camera/mic) and rendered avatars,
-controlled via the RoIS streaming interface. WebRTC signaling travels over the
-existing WebSocket connection. P2P for small fleets, SFU for scale.
-
-### M11: Full Component Library
-
-All 17 basic RoIS components implemented across both paradigms (robot and avatar).
-Shared components (perception, speech) run the same ML models. Paradigm-specific
-components (navigation, move, reaction) have per-backend implementations. This
-milestone is the **v1.0 release**.
-
----
-
-## Versioning
-
-- `v0.x`: unstable, breaking changes may occur without notice
-- `v1.0` (M11): first stable release with semantic versioning guarantees
-
----
-
-## License
-
-All canonical milestones are **Apache-2.0**. See the `LICENSE` file in each
-package.
-
----
-
-*For the system design, see [architecture.md](architecture.md) in the internal
-repository. For the OMG specification summary, see
-[rois-reference.md](rois-reference.md) in the internal
-repository.*
+An adapter for a new robot, with its components in its own repository, is the natural
+entry point. See [CONTRIBUTING.md](../CONTRIBUTING.md), or open an issue to propose a
+change to the roadmap. All work is released under the [Apache-2.0](../LICENSE) license.

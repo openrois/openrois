@@ -1,0 +1,274 @@
+name: SDK
+
+# The client SDKs against the tree. The JavaScript and Python jobs install the interfaces from
+# the tree. The Unity core tests the assemblies bundled in its package, which unity-package.yml
+# holds to the tree. All three run the conformance list on a stack from the tree, so a change
+# that breaks a client fails in its own pull request.
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - "interfaces/python/**"
+      - "interfaces/schema/**"
+      - "interfaces/typescript/**"
+      - "components/**"
+      - "engine/**"
+      - "services/gateway/**"
+      - "testing/**"
+      - "sdk/javascript/**"
+      - "sdk/python/**"
+      - "sdk/unity/**"
+      - "apps/inspector/**"
+      - ".github/workflows/sdk.yml"
+  pull_request:
+    paths:
+      - "interfaces/python/**"
+      - "interfaces/schema/**"
+      - "interfaces/typescript/**"
+      - "components/**"
+      - "engine/**"
+      - "services/gateway/**"
+      - "testing/**"
+      - "sdk/javascript/**"
+      - "sdk/python/**"
+      - "sdk/unity/**"
+      - "apps/inspector/**"
+      - ".github/workflows/sdk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sdk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  javascript:
+    name: JavaScript SDK, Node.js ${{ matrix.node-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["22", "24"]
+    env:
+      OPENROIS_GATEWAY_URL: ws://127.0.0.1:8765
+    defaults:
+      run:
+        working-directory: sdk/javascript
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            interfaces/python/pyproject.toml
+            engine/pyproject.toml
+            components/core/pyproject.toml
+            services/gateway/pyproject.toml
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: |
+            interfaces/typescript/package-lock.json
+            sdk/javascript/package-lock.json
+
+      - name: Install the stack
+        # websockets is for the scripted server, which the test run starts by itself.
+        working-directory: .
+        run: >-
+          python -m pip install
+          -e interfaces/python -e engine -e components/core
+          -e services/gateway websockets
+
+      - name: Start the gateway and the mock adapter
+        # They stay up for the steps below. The suite waits until the adapter has joined.
+        working-directory: .
+        run: |
+          openrois-gateway --log-level warning > gateway.log 2>&1 &
+          python testing/mock-adapter/mock_adapter.py \
+            --config testing/mock-adapter/adapter.fast.yaml --log-level warning \
+            > adapter.log 2>&1 &
+
+      - name: Install the SDK
+        # The package depends on the published interfaces. The tree goes over them, so a
+        # catalog change reaches these tests before it is released.
+        run: |
+          (cd ../../interfaces/typescript && npm ci && npm run build)
+          npm ci
+          npm install ../../interfaces/typescript --no-save
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test in Node.js
+        run: npm test
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps --only-shell chromium
+
+      - name: Test in a browser
+        run: npm run test:browser
+
+      - name: Consumer checks on the packed tarball
+        run: npm run test:consumer
+
+      - name: Logs
+        if: always()
+        working-directory: .
+        run: cat gateway.log adapter.log
+
+  python:
+    name: Python SDK, Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    env:
+      OPENROIS_GATEWAY_URL: ws://127.0.0.1:8765
+    defaults:
+      run:
+        working-directory: sdk/python
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            interfaces/python/pyproject.toml
+            engine/pyproject.toml
+            components/core/pyproject.toml
+            services/gateway/pyproject.toml
+            sdk/python/pyproject.toml
+
+      - name: Install the stack and the SDK
+        # The package depends on the published interfaces. The tree goes over them, so a
+        # catalog change reaches these tests before it is released.
+        working-directory: .
+        run: >-
+          python -m pip install
+          -e interfaces/python -e engine -e components/core
+          -e services/gateway -e "sdk/python[dev]"
+
+      - name: Start the gateway and the mock adapter
+        # They stay up for the steps below. The suite waits until the adapter has joined.
+        working-directory: .
+        run: |
+          openrois-gateway --log-level warning > gateway.log 2>&1 &
+          python testing/mock-adapter/mock_adapter.py \
+            --config testing/mock-adapter/adapter.fast.yaml --log-level warning \
+            > adapter.log 2>&1 &
+
+      - name: Lint
+        run: ruff check src/ tests/
+
+      - name: Type check
+        run: mypy
+
+      - name: Test
+        run: pytest
+
+      - name: Logs
+        if: always()
+        working-directory: .
+        run: cat gateway.log adapter.log
+
+  unity:
+    name: Unity core
+    runs-on: ubuntu-latest
+    env:
+      OPENROIS_GATEWAY_URL: ws://127.0.0.1:8765
+    defaults:
+      run:
+        working-directory: sdk/unity/Tests~
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            interfaces/python/pyproject.toml
+            engine/pyproject.toml
+            components/core/pyproject.toml
+            services/gateway/pyproject.toml
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install the stack
+        # websockets is for the scripted server, which the test run starts by itself.
+        working-directory: .
+        run: >-
+          python -m pip install
+          -e interfaces/python -e engine -e components/core
+          -e services/gateway websockets
+
+      - name: Start the gateway and the mock adapter
+        # They stay up for the steps below. The suite waits until the adapter has joined.
+        working-directory: .
+        run: |
+          openrois-gateway --log-level warning > gateway.log 2>&1 &
+          python testing/mock-adapter/mock_adapter.py \
+            --config testing/mock-adapter/adapter.fast.yaml --log-level warning \
+            > adapter.log 2>&1 &
+
+      - name: Test
+        # This builds the runtime sources as C# 9 on netstandard2.1 first, so newer C# or an
+        # API that only .NET has fails here and not in the Editor of a user.
+        run: dotnet test
+
+      - name: Logs
+        if: always()
+        working-directory: .
+        run: cat gateway.log adapter.log
+
+  inspector:
+    name: Inspector
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            interfaces/typescript/package-lock.json
+            sdk/javascript/package-lock.json
+            apps/inspector/package-lock.json
+
+      - name: Build the packages it links
+        # Its file: links need both built, and the SDK needs the interfaces of the tree.
+        run: |
+          (cd interfaces/typescript && npm ci && npm run build)
+          (cd sdk/javascript && npm ci && npm install ../../interfaces/typescript --no-save && npm run build)
+
+      - name: Install
+        working-directory: apps/inspector
+        run: npm ci
+
+      - name: Type check
+        working-directory: apps/inspector
+        run: npm run typecheck
+
+      - name: Test
+        working-directory: apps/inspector
+        run: npm test
+
+      - name: Build
+        working-directory: apps/inspector
+        run: npm run build

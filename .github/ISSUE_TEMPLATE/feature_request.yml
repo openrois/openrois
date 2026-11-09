@@ -1,0 +1,33 @@
+name: Feature request
+description: Propose a change or an addition to OpenRoIS.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that OpenRoIS makes hard or impossible?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: dropdown
+    id: spec
+    attributes:
+      label: Relationship to the RoIS specification
+      description: OpenRoIS implements OMG RoIS 2.0, and additions should stay traceable to it.
+      options:
+        - Implements an operation or component defined by RoIS 2.0
+        - A user-defined component, as allowed by the specification
+        - An OpenRoIS implementation concern, outside the specification
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

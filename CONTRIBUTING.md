@@ -18,7 +18,8 @@
 8. [Conventional Comments](#8-conventional-comments)
 9. [Additional Conventions](#9-additional-conventions)
 10. [Git Workflow](#10-git-workflow)
-11. [CI](#11-ci)
+11. [Checks](#11-checks)
+12. [Base Branch](#12-base-branch)
 
 ---
 
@@ -48,7 +49,7 @@ apply to all documentation, code comments, commit messages, and PR descriptions.
 
 ### C\#
 
-- `netstandard2.1` (Unity 6.3+), `sealed class`, `Nullable` enabled
+- `netstandard2.1` (Unity 6000.0+), `sealed class`, `Nullable` enabled
 
 ## 3. Testing
 
@@ -61,12 +62,15 @@ apply to all documentation, code comments, commit messages, and PR descriptions.
 
 ## 4. Changelog
 
-Every package has a `CHANGELOG.md` file. Update it when you make changes.
+The `interfaces/*`, `sdk/*`, `engine`, `services/gateway`, `services/mcp` and
+`components/core` packages have a `CHANGELOG.md` file. Update it when you change one of
+them.
 
 - Format: [Keep a Changelog](https://keepachangelog.com/en/2.0.0/)
 - Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Add entries under `## [Unreleased]` as you work
-- Move them to a versioned section when you tag a release
+- Move them to a versioned section before you tag a release: the release workflow turns
+  that section into the notes of the GitHub release, and stops if it is missing or empty
 - Categories: `Added`, `Changed`, `Fixed`, `Removed`, `Deprecated`, `Security`
 
 Example entry:
@@ -132,7 +136,7 @@ feat(transport): add WebSocket transport with browser and Node.js support
 fix(jsonrpc): handle missing id field in notifications
 docs(readme): add quickstart guide and error handling section
 test(events): add unsubscribe cleanup test
-chore(ci): add sdk-js workflow with vitest and coverage
+chore(ci): add sdk typescript workflow with vitest and coverage
 ```
 
 **Rules:**
@@ -140,7 +144,11 @@ chore(ci): add sdk-js workflow with vitest and coverage
 - Lowercase, no period at the end
 - Description under 72 characters in the subject line
 - Body explains *why*, not *what* (the diff shows what)
-- Use `BREAKING CHANGE:` in the footer for breaking changes (rare at alpha stage)
+- Use `BREAKING CHANGE:` in the footer for breaking changes. Before v1.0 they are
+  expected: OpenRoIS keeps no backwards compatibility, so change APIs and wire formats
+  outright instead of adding deprecated aliases, fallbacks, or compatibility shims. The
+  only exception is the TypeScript gateway proof of concept, which was removed from this
+  repository and stays as it was at tag `ts-gateway-final`.
 
 ## 7. Conventional Branches
 
@@ -190,7 +198,7 @@ feedback (both giving and receiving). Prefix each comment with a label:
 
 These are conventions the team follows that are not yet formalized elsewhere.
 
-### Error messages
+### Error Messages
 
 - Write error messages as complete sentences: "WebSocket connection failed" not
   "ws error" or "failed"
@@ -200,7 +208,7 @@ These are conventions the team follows that are not yet formalized elsewhere.
 - Error classes should carry structured data (e.g., `ReturnCodeError.returnCode`,
   `ReturnCodeError.method`), not just a string
 
-### Import ordering (TypeScript)
+### Import Ordering (TypeScript)
 
 Group imports in this order, separated by blank lines:
 
@@ -224,14 +232,14 @@ import { JsonRpcRequest } from "./jsonrpc";
 Use `import type` for type-only imports. This helps bundlers tree-shake and makes
 the intent clear.
 
-### File naming
+### File Naming
 
 - Source files: `kebab-case.ts` (e.g., `system-client.ts`, `component-proxy.ts`)
 - Test files: `kebab-case.test.ts` (e.g., `transport.test.ts`)
 - Types and interfaces: defined in the module that owns them, not in a shared
   `types.ts` unless they are truly cross-cutting
 
-### Export style
+### Export Style
 
 - Use named exports, not default exports. Named exports are refactor-safe and
   explicit.
@@ -239,7 +247,7 @@ the intent clear.
   imported directly by consumers.
 - Group exports logically: core classes first, then errors, then types.
 
-### Dependency management
+### Dependency Management
 
 - Pin major versions in `package.json` (e.g., `"ws": "^8.0"`, not `"ws": "*"`)
 - Use `devDependencies` for test, build, and lint tools
@@ -248,7 +256,7 @@ the intent clear.
   Apache-2.0 compatible
 - Run `npm audit` before tagging a release
 
-### Code review etiquette
+### Code Review Etiquette
 
 - Review within 24 hours of PR submission
 - Be specific: reference line numbers or code snippets
@@ -257,7 +265,7 @@ the intent clear.
 - Approve only when you would be comfortable maintaining the code yourself
 - Do not approve your own PRs
 
-### PR descriptions
+### PR Descriptions
 
 Use this template for every PR:
 
@@ -278,7 +286,7 @@ Use this template for every PR:
 
 - [ ] All tests pass (`npm test`)
 - [ ] Type checking passes (`npm run typecheck`)
-- [ ] Linting passes (`npm run lint`)
+- [ ] Linting passes (`npm run lint`, where the package defines it)
 - [ ] New tests added for new functionality
 - [ ] CHANGELOG.md updated
 ```
@@ -298,16 +306,50 @@ Use this template for every PR:
 - Keep commits focused: one logical change per commit
 - If a commit needs a long explanation, the code might need simplifying
 
-### Pull requests
+### Pull Requests
 
 - Open a PR when a feature is ready for review (not when it is perfect, but when it
   is testable)
 - Address review feedback in new commits (do not force-push during review)
 - Squash-merge when approved
 
-## 11. CI
+## 11. Checks
 
-- The CI pipeline (`.github/workflows/ci.yml`) runs on every push
-- CI must be green before merge
-- New packages should add their own workflow file (e.g.,
-  `.github/workflows/sdk-js.yml`)
+Continuous integration runs the checks for the interface types (Python, TypeScript, and
+C#), the Python packages, the client SDKs, `apps/inspector`, and the conformance list
+on every pull request that touches them. The commands below are the same checks, to run
+before you open a pull request.
+
+| Stack | Directory | Commands |
+|-------|-----------|----------|
+| Python types | `interfaces/python` | `pytest`, `mypy src/`, `ruff check src/` |
+| TypeScript types | `interfaces/typescript` | `npm run build`, `npm test`, `npm run test:package` |
+| C# types | `interfaces/csharp` | `dotnet build src/OpenRoIS.Interfaces`, `dotnet test tests/OpenRoIS.Interfaces.Tests` |
+| JavaScript SDK | `sdk/javascript` | `npm run build`, `npm test`, and with `OPENROIS_GATEWAY_URL=ws://127.0.0.1:8765` against the Compose stack |
+| Python client SDK | `sdk/python` | `pytest`, and with `OPENROIS_GATEWAY_URL=ws://127.0.0.1:8765` against the Compose stack, `mypy`, `ruff check src/ tests/` |
+| Unity SDK | `sdk/unity/Tests~` | `dotnet test`, and with `OPENROIS_GATEWAY_URL=ws://127.0.0.1:8765` against the Compose stack |
+| Engine | `engine` | `pytest`, `mypy`, `ruff check src/ tests/` |
+| Gateway | `services/gateway` | `pytest`, `mypy`, `ruff check src/ tests/` |
+| MCP server | `services/mcp` | `pytest`, and with `OPENROIS_GATEWAY_URL=ws://127.0.0.1:8765` against the Compose stack, `mypy`, `ruff check src/ tests/` |
+| Component SDK | `components/core` | `pytest`, `mypy`, `ruff check src/ tests/` |
+| Mock adapter | `testing/mock-adapter` | `pytest`, `mypy`, `ruff check .` |
+
+Some tests in `interfaces/python` cross-check the models against the normative RoIS
+machine-readable files, which this repository does not redistribute: they carry OMG's
+copyright and licence. Those tests are skipped unless `OPENROIS_NORMATIVE_DIR` points to
+a local copy of the OMG RoIS Framework 2.0 machine-readable files, downloaded from
+<https://www.omg.org/spec/RoIS/2.0>.
+
+```bash
+OPENROIS_NORMATIVE_DIR=~/omg/rois-2.0/machine-readable pytest
+```
+
+`testing/unity-harness` is not in continuous integration, because automating it needs a
+Unity license. It runs the Unity SDK in real players and in the Editor. After a change that
+`dotnet test` cannot reach, such as IL2CPP, stripping or the main thread, run it by hand and
+say in the pull request which runs you did.
+
+## 12. Base Branch
+
+Development happens on `dev`. Base your branch on `dev` and open pull requests against
+it. The `main` branch holds released snapshots.

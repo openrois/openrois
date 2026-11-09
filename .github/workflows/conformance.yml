@@ -1,0 +1,133 @@
+name: Conformance
+
+# A gateway with the mock adapter in Docker Compose, built from the tree, against the
+# conformance list. wire_check.py runs it with no SDK, and the client SDKs run it through
+# their own APIs, so a change that breaks the contract fails in its own pull request.
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - "interfaces/python/**"
+      - "interfaces/schema/**"
+      - "interfaces/typescript/**"
+      - "components/**"
+      - "engine/**"
+      - "services/gateway/**"
+      - "testing/**"
+      - "sdk/javascript/**"
+      - "sdk/python/**"
+      - "sdk/unity/**"
+      - "compose.yaml"
+      - ".dockerignore"
+      - ".github/workflows/conformance.yml"
+  pull_request:
+    paths:
+      - "interfaces/python/**"
+      - "interfaces/schema/**"
+      - "interfaces/typescript/**"
+      - "components/**"
+      - "engine/**"
+      - "services/gateway/**"
+      - "testing/**"
+      - "sdk/javascript/**"
+      - "sdk/python/**"
+      - "sdk/unity/**"
+      - "compose.yaml"
+      - ".dockerignore"
+      - ".github/workflows/conformance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: conformance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  conformance:
+    name: Conformance
+    runs-on: ubuntu-latest
+    env:
+      # The mock adapter simulates its work ten times faster than in real time.
+      OPENROIS_ADAPTER_CONFIG: /opt/mock-adapter/adapter.fast.yaml
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            interfaces/typescript/package-lock.json
+            sdk/javascript/package-lock.json
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Start the gateway and the mock adapter
+        run: docker compose up --build --detach
+
+      - name: Install the checks
+        run: python -m pip install websockets ruff
+
+      - name: Lint
+        run: ruff check --line-length 100 testing/conformance/
+
+      - name: The list on raw JSON-RPC
+        run: python testing/conformance/wire_check.py --timeout 120
+
+      - name: Install the JavaScript SDK
+        # The SDK takes the interfaces from npm, so the tree goes over them here, and a
+        # change in the tree is tested before it is published.
+        run: |
+          (cd interfaces/typescript && npm ci && npm run build)
+          (cd sdk/javascript && npm ci && npm install ../../interfaces/typescript --no-save)
+
+      - name: The list on the JavaScript SDK
+        working-directory: sdk/javascript
+        env:
+          OPENROIS_GATEWAY_URL: ws://127.0.0.1:8765
+        run: npx vitest run tests/conformance.test.ts tests/gateway.test.ts
+
+      - name: The list on the Python SDK
+        env:
+          OPENROIS_GATEWAY_URL: ws://127.0.0.1:8765
+        run: |
+          python -m pip install -e interfaces/python -e "sdk/python[dev]"
+          python -m pytest sdk/python/tests/test_conformance.py
+
+      - name: The list on the Unity core
+        working-directory: sdk/unity/Tests~
+        env:
+          OPENROIS_GATEWAY_URL: ws://127.0.0.1:8765
+        run: dotnet test --filter "FullyQualifiedName~ConformanceTests"
+
+      - name: Stop gracefully
+        # The gateway runs as the container's main process and must handle SIGTERM
+        # itself, so a clean stop shows as code 1001 to a client and exit code 0.
+        run: |
+          python testing/conformance/wire_check.py --watch-close &
+          watcher=$!
+          sleep 2
+          docker compose stop --timeout 10
+          wait "$watcher"
+          code="$(docker compose ps --all --format '{{.ExitCode}}' gateway)"
+          if [ "$code" != "0" ]; then
+            echo "::error::The gateway exited with code $code after SIGTERM."
+            exit 1
+          fi
+
+      - name: Logs
+        if: always()
+        run: docker compose logs --no-color
+
+      - name: Remove the stack
+        if: always()
+        run: docker compose down --volumes

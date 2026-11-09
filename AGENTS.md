@@ -1,13 +1,34 @@
 # AGENTS.md
 
 > Guide for AI coding agents working in this repository. Read this first.
+> Human contributors should read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## What This Is
 
-OpenRoIS is an open-source middleware implementing the OMG RoIS Framework
-**Version 2.0-beta2**. The spec is beta and may change. Only the **interfaces**
-layer (M0) exists. The engine, gateway, bus adapters, components, and SDKs are
-planned but not built. See `docs/roadmap.md` for the milestone roadmap.
+OpenRoIS is an open-source middleware implementing the
+[OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0) (OMG document
+formal/26-06-03, June 2026). It is **alpha, pre-1.0, with an unstable API**.
+
+What exists today:
+
+| Layer | Directory | State |
+|-------|-----------|-------|
+| Interfaces: RoIS types, method catalog, profiles, XML codec | `interfaces/` | `v0.1.0` |
+| Engine: recursive, CP1 to CP3, `WsServer`, `WsClient` | `engine/` | `v0.1.0` |
+| Engine processes: gateway (`openrois-gateway`) | `services/gateway/` | `v0.1.0` |
+| Components: component SDK | `components/` | `v0.1.0` |
+| Client SDKs: JavaScript, Python, Unity | `sdk/` | `v0.1.0`. Unity run in Linux players and the Editor only |
+| Applications: MCP server (`openrois-mcp`) | `services/mcp/` | `v0.1.0` |
+| Applications: OpenRoIS Inspector, a service application for the browser | `apps/inspector/` | Available |
+| Examples: adapter template | `examples/` | Available |
+| Test fixtures: mock adapter, conformance list, Unity harness | `testing/` | Available |
+
+Each robot's components live in its adapter repository, not here. The reference example
+is `openrois.components.reachy_mini` in openrois-adapter-reachy-mini (openrois
+organization). The Kachaka components live in the Kachaka adapter maintained by Coarobo.
+
+See [docs/roadmap.md](docs/roadmap.md) for what comes next, and
+[openrois.org](https://openrois.org/) for the living documentation.
 
 ## The One Critical Rule
 
@@ -18,46 +39,108 @@ Python (Pydantic) → JSON Schema → C# + TypeScript
 ```
 
 - **Edit:** `interfaces/python/src/openrois/interfaces/*.py`
-- **Don't edit:** `interfaces/schema/`, `interfaces/csharp/src/OpenRoIS.Interfaces/Generated/`, `interfaces/typescript/src/`
+- **Never edit:** `interfaces/schema/`, `interfaces/csharp/src/OpenRoIS.Interfaces/`
+  (except `Condition.cs`, `Values.cs` and `IsExternalInit.cs`, which are hand-written),
+  `interfaces/typescript/src/` (except `condition.ts`, `values.ts` and the `index.ts`
+  barrels, which are hand-written), `interfaces/fixtures/wire.json` (written by
+  `testing/conformance/capture.py`)
 
-After editing Python models, run the full pipeline and all tests:
+After editing the Python models, run the full pipeline and the tests:
 
 ```bash
 cd interfaces/python && python scripts/export_schema.py
 cd ../typescript && npx tsx scripts/generate.ts && npm run typecheck && npm test
-cd ../csharp && dotnet run --project scripts/Generator/Generator.csproj -- ../../schema && dotnet test
+cd ../csharp && dotnet run --project scripts/Generator/Generator.csproj && dotnet test tests/OpenRoIS.Interfaces.Tests
 ```
+
+Every interface type must stay traceable to the normative RoIS files: the IDL, the XML
+component profiles, and `XML-Profiles.xsd`. Do not invent field names. When the IDL and
+the XML profile disagree, follow the XML profile and document the divergence in
+[docs/rois-reference.md](docs/rois-reference.md).
+
+A field or message the spec does not define is allowed only as an OpenRoIS extension. It
+must pass the extension policy in section 17 of
+[docs/rois-reference.md](docs/rois-reference.md), be listed in `EXTENSIONS` in
+`interfaces/python/src/openrois/interfaces/catalog.py`, and say "OpenRoIS extension" in
+its description. The IDL and XSD cross-check tests fail on any other addition.
 
 ## Build and Test
 
-| Stack | Dir | Commands |
-|-------|-----|----------|
-| Python (source) | `interfaces/python` | `pip install -e ".[dev]"`, `ruff check src/`, `mypy src/`, `pytest -q` |
-| TypeScript (generated) | `interfaces/typescript` | `npm install`, `npm run generate`, `npm run typecheck`, `npm test` |
-| C# (generated) | `interfaces/csharp` | `dotnet build`, `dotnet test` |
+| Stack | Directory | Commands |
+|-------|-----------|----------|
+| Python types | `interfaces/python` | `pip install -e ".[dev]"`, `pytest`, `mypy src/`, `ruff check src/` |
+| TypeScript types | `interfaces/typescript` | `npm install`, `npm run build`, `npm test`, `npm run test:package` |
+| C# types | `interfaces/csharp` | `dotnet build src/OpenRoIS.Interfaces`, `dotnet test tests/OpenRoIS.Interfaces.Tests` |
+| Engine | `engine` | `pip install -e ../components/core -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
+| Gateway | `services/gateway` | `pip install -e ../../interfaces/python -e ../../engine -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
+| MCP server | `services/mcp` | `pip install -e ../../interfaces/python -e ../../sdk/python -e ".[dev]"`, `pytest` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway), `mypy`, `ruff check src/ tests/` |
+| Component SDK | `components/core` | `pip install -e ".[dev]"`, `pytest`, `mypy`, `ruff check src/ tests/` |
+| Mock adapter | `testing/mock-adapter` | `pip install -e ../../interfaces/python -e ../../engine -e ../../components/core pytest pytest-asyncio mypy ruff`, `pytest`, `mypy`, `ruff check .` |
+| JavaScript SDK | `sdk/javascript` | `npm install`, `npm run build`, `npm test` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway) |
+| Python client SDK | `sdk/python` | `pip install -e ../../interfaces/python -e ".[dev]"`, `pytest` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway), `mypy`, `ruff check src/ tests/` |
+| Unity SDK | `sdk/unity/Tests~` | `dotnet test` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway) |
+| Inspector | `apps/inspector` | build `interfaces/typescript` and `sdk/javascript` first, then `npm install`, `npm test`, `npm run typecheck`, `npm run build` |
 
-CI (`.github/workflows/ci.yml`) runs all three on changes to `interfaces/**`.
+`sdk/unity/Tests~` compiles the runtime sources without Unity. `testing/unity-harness` runs them
+in real players and in the Editor. It runs by hand before a tag, because automating it needs a
+Unity license in CI.
+
+Some tests in `interfaces/python` cross-check the models against the normative RoIS
+machine-readable files, which are not redistributed in this repository. Those tests are
+skipped unless `OPENROIS_NORMATIVE_DIR` points to a local copy of the files.
 
 ## Key Conventions
 
-- Python 3.12+, Pydantic v2, `from __future__ import annotations`, PEP 695 `type` statements, mypy strict, ruff line-length 100
-- TypeScript ESM, strict typecheck, vitest
-- C# `netstandard2.1` (Unity 6.3+), `sealed class`, `Nullable` enabled
-- `normative/` is read-only (OMG/JARA copyright). Never modify.
-- `interfaces/python/src/` must stay transport-neutral. No ROS, DDS, gRPC, or WebSocket imports.
-- Don't change the `BusAdapter` protocol without reading
-  `docs/architecture.md` section 7.5.
+- **No backwards compatibility before v1.0.** Rename, remove, or reshape any API, wire
+  format, or file layout outright. Do not add deprecated aliases, fallback code paths,
+  dual formats, or compatibility shims, and remove existing ones when you touch that
+  code. Mark the change with `BREAKING CHANGE:` in the commit footer and in the package
+  CHANGELOG. The only exception is the TypeScript gateway proof of concept, which was
+  removed from this repository and stays as it was at tag `ts-gateway-final`.
+- Python 3.12+, Pydantic v2, `from __future__ import annotations`, PEP 695 `type`
+  statements, mypy strict, ruff line length 100.
+- TypeScript ESM, strict typecheck, vitest.
+- C# `netstandard2.1` (Unity 6000.0+), `sealed class`, `Nullable` enabled.
+- `interfaces/python/src/` and `engine/src/` stay transport-neutral and paradigm-neutral.
+  No ROS, DDS, gRPC, or game engine imports. Those belong in components.
+- OpenRoIS has one control-plane protocol, the RoIS method catalog, at every hop
+  (section 8 of [docs/architecture.md](docs/architecture.md)). The engine reaches its
+  local components and its child engines with the same operations and models
+  (`engine/src/openrois/engine/source.py`). Do not add an OpenRoIS protocol or
+  operation names of its own below RoIS.
+- Components own their backend connections, created in `connect()` and closed in
+  `disconnect()`. Adapters never hold shared backend state.
 
 ## Writing Style
 
-Applies to all documentation, code comments, commit messages, and PR descriptions.
+Applies to documentation, code comments, commit messages, and pull request
+descriptions.
 
-- **No em-dashes** (`—`), **no en-dashes** (`–`), **no double dashes** (`--`) as punctuation, **no semicolons** in prose. Use colons, commas, parentheses, or separate sentences.
-- **OpenRoIS**: project and org name (always this capitalization). **openrois**: URL slug and package scope (always lowercase). **OpenRoIS Community**: author field. **OMG RoIS Framework 2.0-beta2**: full spec name. **Apache-2.0**: license identifier.
-- Technical, precise, confident. No marketing language. State what the thing does, not what it "empowers."
-- Say "robots, avatars, and digital agents" (not "robots" alone). Say "Alpha, pre-1.0, unstable API" (not "production-ready" until v1.0).
-- Code comments: complete sentences, explain *why* not *what*, no em-dashes or semicolons.
+- **No em dashes** (`—`), **no en dashes** (`–`), **no double dashes** (`--`) as
+  punctuation, and **no semicolons** in prose. Use colons, commas, parentheses, or
+  separate sentences.
+- **OpenRoIS** is the project and organization name, always with this capitalization.
+  **openrois** is the URL slug and package scope, always lowercase. **OpenRoIS
+  Community** is the author field in package metadata. **Coarobo GK** is the copyright
+  holder in legal files. **OMG RoIS Framework 2.0** is the full specification name.
+  **Apache-2.0** is the license identifier.
+- **Title Case** for headings, buttons, navigation labels, badges, and card titles
+  ("Get Started", "Project Status"). Sentence case for body text and table cells.
+- Technical, precise, confident. No marketing language. State what the software does,
+  not what it "empowers".
+- Say "physical robots, virtual avatars, and AI services" (the paper says "physical
+  robots and virtual agents"), not "robots" alone. Never "digital agents".
+- Say "Alpha, pre-1.0, unstable API". Never claim production readiness before v1.0.
+- Mark anything not implemented as "in progress" or "planned", in documentation and in
+  code comments alike. Do not describe a target design as if it already works.
+- Code comments are complete sentences that explain *why*, not *what*.
 
-Architecture: `docs/architecture.md`. Spec reference: `docs/rois-reference.md`.
-Roadmap: `docs/roadmap.md`. Style guide in the `openrois-internal` repo:
-`branding.md`.
+## Where to Look
+
+| Topic | Document |
+|-------|----------|
+| Architecture and design rationale | [docs/architecture.md](docs/architecture.md) |
+| Motivation, wire protocol, topologies | [docs/white-paper.md](docs/white-paper.md) |
+| The RoIS specification, summarized | [docs/rois-reference.md](docs/rois-reference.md) |
+| Milestones, status, the layers of the stack | [docs/roadmap.md](docs/roadmap.md) |
+| Contribution process | [CONTRIBUTING.md](CONTRIBUTING.md) |

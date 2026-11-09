@@ -1,0 +1,19 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "ConditionT": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Params of rois.command.bind_any.\n\nMaps to CommandIF::bind_any(in condition, out component_ref).\n\nAttributes:\n    condition: Selection condition on component_ref and component_type for the\n        components the engine may choose from. The engine binds a free one.",
+  "properties": {
+    "condition": {
+      "$ref": "#/$defs/ConditionT",
+      "default": "",
+      "description": "Selection condition (CQL2-Text) on the components to choose from"
+    }
+  },
+  "title": "BindAnyParams",
+  "type": "object"
+}

@@ -1,0 +1,46 @@
+# syntax=docker/dockerfile:1
+#
+# The mock adapter. Build from the repository root:
+#
+#     docker build -f testing/mock-adapter/Dockerfile -t openrois-mock-adapter .
+#     docker run --rm --init -e OPENROIS_ADAPTER_GATEWAY_URL=ws://<gateway-host>:8765 \
+#         openrois-mock-adapter
+#
+# compose.yaml at the repository root runs it next to the gateway. Settings come from
+# adapter.yaml, or adapter.fast.yaml with
+# OPENROIS_ADAPTER_CONFIG=/opt/mock-adapter/adapter.fast.yaml, then from the
+# OPENROIS_ADAPTER_* environment variables, then from flags after the image name. See
+# testing/mock-adapter/README.md.
+
+FROM python:3.12-slim AS build
+
+WORKDIR /src
+COPY interfaces/python interfaces/python
+COPY engine engine
+COPY components/core components/core
+# Build wheels for the three packages and every dependency, so the runtime stage
+# installs offline and carries no source tree or build tools.
+RUN pip wheel --no-cache-dir --wheel-dir /wheels \
+    ./interfaces/python ./engine ./components/core
+
+
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# --pre: the OpenRoIS packages are alpha releases, the only versions in /wheels.
+RUN --mount=type=bind,from=build,source=/wheels,target=/wheels \
+    pip install --no-cache-dir --no-index --find-links /wheels --pre \
+    openrois-engine openrois-components-core
+
+RUN useradd --system --uid 10001 --no-create-home openrois
+
+WORKDIR /opt/mock-adapter
+COPY testing/mock-adapter/mock_adapter.py testing/mock-adapter/adapter.yaml \
+    testing/mock-adapter/adapter.fast.yaml ./
+ENV OPENROIS_ADAPTER_CONFIG=/opt/mock-adapter/adapter.yaml
+USER openrois
+
+ENTRYPOINT ["python", "mock_adapter.py"]

@@ -3,7 +3,7 @@
   <!-- Package identity and metadata -->
   <PropertyGroup>
     <PackageId>OpenRoIS.Interfaces</PackageId>
-    <Version>0.1.0-alpha.2</Version>
+    <Version>0.1.0</Version>
     <Description>RoIS Framework 2.0 interface types for the OpenRoIS middleware</Description>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <Authors>OpenRoIS Community</Authors>
@@ -18,7 +18,8 @@
   <!-- Compiler settings -->
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <LangVersion>latest</LangVersion>
+    <!-- Unity 6000 compiles C# 9, so a newer feature must fail here and not there. -->
+    <LangVersion>9.0</LangVersion>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>CS1591</NoWarn>
@@ -34,10 +35,12 @@
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\NOTICE" Pack="true" PackagePath="\" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Text.Json" Version="9.0.0" />
+    <PackageReference Include="System.Text.Json" Version="8.0.6" />
   </ItemGroup>
 
 </Project>

@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from openrois.interfaces.common import ComponentStatus
-from openrois.interfaces.components.system_information import (
+from openrois.interfaces.components import (
     SYSTEM_INFORMATION_URN,
     SystemInformationEngineStatusResult,
     SystemInformationRobotPositionResult,

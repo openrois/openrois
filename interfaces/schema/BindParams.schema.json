@@ -1,0 +1,21 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "RoISIdentifier": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Params of rois.command.bind.\n\nMaps to CommandIF::bind(in component_ref).\n\nAttributes:\n    component_ref: The component to reserve for this client.",
+  "properties": {
+    "component_ref": {
+      "$ref": "#/$defs/RoISIdentifier",
+      "description": "The component to reserve"
+    }
+  },
+  "required": [
+    "component_ref"
+  ],
+  "title": "BindParams",
+  "type": "object"
+}

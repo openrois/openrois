@@ -21,22 +21,15 @@ Source: roadmap.md M0 Task 0.5
 from __future__ import annotations
 
 import json
+import re
+import tomllib
 from pathlib import Path
 
 from pydantic import BaseModel, TypeAdapter
 
-from openrois.interfaces.bus import (
-    CommandRequest,
-    DiscoverRequest,
-    DiscoverResponse,
-    EventEnvelope,
-    InvokeResponse,
-    QueryRequest,
-    QueryResponse,
-    SubscribeRequest,
-    SubscribeResponse,
-)
+from openrois.interfaces.catalog import METHODS, catalog_document
 from openrois.interfaces.common import ComponentStatus, StreamStatus
+from openrois.interfaces.components import profiles_document
 from openrois.interfaces.components.navigation import (
     NavigationGetParameterResult,
     NavigationReachedTargetEvent,
@@ -60,6 +53,7 @@ from openrois.interfaces.components.system_information import (
 )
 from openrois.interfaces.hri import (
     Argument,
+    Branch,
     CommandUnit,
     CommandUnitSequence,
     ConcurrentCommands,
@@ -69,6 +63,7 @@ from openrois.interfaces.hri import (
 )
 from openrois.interfaces.profiles import (
     CommandMessageProfile,
+    ComponentFunction,
     EventMessageProfile,
     HRIComponentProfile,
     HRIEngineProfileType,
@@ -78,16 +73,20 @@ from openrois.interfaces.profiles import (
     RoISIdentifierType,
 )
 from openrois.interfaces.service import (
-    CompletedEvent,
+    CompletedParams,
     CompletedStatus,
     ErrorType,
-    NotifyErrorEvent,
-    NotifyEventPayload,
+    NotifyErrorParams,
+    NotifyEventParams,
+    ProfileChangedParams,
 )
 
 # ---------------------------------------------------------------------------
 # Inventory: every exportable type
 # ---------------------------------------------------------------------------
+
+# The catalog's params and result models, in method table order.
+CATALOG_MODELS: list[type[BaseModel]] = [cls for m in METHODS for cls in (m.params, m.result)]
 
 # BaseModel subclasses → model_json_schema()
 MODELS: list[type[BaseModel]] = [
@@ -95,13 +94,15 @@ MODELS: list[type[BaseModel]] = [
     Result,
     Parameter,
     Argument,
+    Branch,
     CommandUnit,
     ConcurrentCommands,
     CommandUnitSequence,
     # service
-    NotifyErrorEvent,
-    CompletedEvent,
-    NotifyEventPayload,
+    NotifyErrorParams,
+    CompletedParams,
+    NotifyEventParams,
+    ProfileChangedParams,
     # profiles
     RoISIdentifierType,
     ParameterProfile,
@@ -111,16 +112,8 @@ MODELS: list[type[BaseModel]] = [
     EventMessageProfile,
     HRIComponentProfile,
     HRIEngineProfileType,
-    # bus
-    DiscoverRequest,
-    DiscoverResponse,
-    CommandRequest,
-    InvokeResponse,
-    QueryRequest,
-    QueryResponse,
-    SubscribeRequest,
-    SubscribeResponse,
-    EventEnvelope,
+    # catalog
+    *CATALOG_MODELS,
     # components/person_detection
     PersonDetectedEvent,
     PersonDetectionStatusResult,
@@ -145,6 +138,7 @@ ENUMS: list[type] = [
     StreamStatus,
     CompletedStatus,
     ErrorType,
+    ComponentFunction,
 ]
 
 # ---------------------------------------------------------------------------
@@ -157,6 +151,7 @@ MODULE_MAP: dict[type, str] = {
     Parameter: "hri",
     Argument: "hri",
     CommandUnit: "hri",
+    Branch: "hri",
     ConcurrentCommands: "hri",
     CommandUnitSequence: "hri",
     ReturnCode: "hri",
@@ -166,10 +161,12 @@ MODULE_MAP: dict[type, str] = {
     # service
     CompletedStatus: "service",
     ErrorType: "service",
-    NotifyErrorEvent: "service",
-    CompletedEvent: "service",
-    NotifyEventPayload: "service",
+    NotifyErrorParams: "service",
+    CompletedParams: "service",
+    NotifyEventParams: "service",
+    ProfileChangedParams: "service",
     # profiles
+    ComponentFunction: "profiles",
     RoISIdentifierType: "profiles",
     ParameterProfile: "profiles",
     MessageProfile: "profiles",
@@ -178,16 +175,8 @@ MODULE_MAP: dict[type, str] = {
     EventMessageProfile: "profiles",
     HRIComponentProfile: "profiles",
     HRIEngineProfileType: "profiles",
-    # bus
-    DiscoverRequest: "bus",
-    DiscoverResponse: "bus",
-    CommandRequest: "bus",
-    InvokeResponse: "bus",
-    QueryRequest: "bus",
-    QueryResponse: "bus",
-    SubscribeRequest: "bus",
-    SubscribeResponse: "bus",
-    EventEnvelope: "bus",
+    # catalog
+    **{cls: "catalog" for cls in CATALOG_MODELS},
     # components/person_detection
     PersonDetectedEvent: "components/person-detection",
     PersonDetectionStatusResult: "components/person-detection",
@@ -213,6 +202,21 @@ MODULE_MAP: dict[type, str] = {
 
 # scripts/export_schema.py → scripts/ → python/ → interfaces/ → schema/
 SCHEMA_DIR = Path(__file__).resolve().parents[2] / "schema"
+PYPROJECT = Path(__file__).resolve().parents[1] / "pyproject.toml"
+
+
+def package_version() -> str:
+    """The interfaces package version, written as the npm and NuGet packages spell it.
+
+    The manifest belongs to the interfaces package, so it carries that package's version
+    instead of a hard-coded string. PEP 440 "0.1.0a2" becomes "0.1.0-alpha.2".
+    """
+    version = str(tomllib.loads(PYPROJECT.read_text())["project"]["version"])
+    match = re.fullmatch(r"(\d+\.\d+\.\d+)(?:a(\d+))?", version)
+    if match is None:
+        raise ValueError(f"Unsupported version in {PYPROJECT}: {version}")
+    base, alpha = match.groups()
+    return f"{base}-alpha.{alpha}" if alpha else base
 
 
 def export_model(model: type[BaseModel]) -> dict[str, object]:
@@ -253,9 +257,23 @@ def write_manifest() -> Path:
     # Sort file lists for deterministic output
     for file_list in modules.values():
         file_list.sort()
-    manifest = {"version": "0.1.0-alpha.1", "modules": modules}
+    manifest = {"version": package_version(), "modules": modules}
     path = SCHEMA_DIR / "manifest.json"
     path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False))
+    return path
+
+
+def write_catalog() -> Path:
+    """Write catalog.json, the method table the TypeScript and C# generators read."""
+    path = SCHEMA_DIR / "catalog.json"
+    path.write_text(json.dumps(catalog_document(), indent=2, ensure_ascii=False))
+    return path
+
+
+def write_profiles() -> Path:
+    """Write profiles.json, the profile constants the TypeScript generator reads."""
+    path = SCHEMA_DIR / "profiles.json"
+    path.write_text(json.dumps(profiles_document(), indent=2, ensure_ascii=False))
     return path
 
 
@@ -275,6 +293,12 @@ def main() -> None:
 
     manifest_path = write_manifest()
     written.append(manifest_path.name)
+
+    catalog_path = write_catalog()
+    written.append(catalog_path.name)
+
+    profiles_path = write_profiles()
+    written.append(profiles_path.name)
 
     print(f"Exported {len(written)} files to {SCHEMA_DIR}:")
     for name in sorted(written):

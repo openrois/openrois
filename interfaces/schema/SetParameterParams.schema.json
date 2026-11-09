@@ -1,0 +1,56 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "Parameter": {
+      "additionalProperties": false,
+      "description": "A named parameter for command operations (set_parameter, execute).\n\nMaps to RoIS_HRI::Parameter in the IDL.\n\nAttributes:\n    name: The parameter name (e.g., 'target_position', 'time_limit').\n    data_type_ref: Reference to the data type.\n    value: The parameter value as a string.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "data_type_ref": {
+          "$ref": "#/$defs/RoISIdentifier"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "data_type_ref",
+        "value"
+      ],
+      "title": "Parameter",
+      "type": "object"
+    },
+    "ParameterList": {
+      "items": {
+        "$ref": "#/$defs/Parameter"
+      },
+      "type": "array"
+    },
+    "RoISIdentifier": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Params of rois.command.set_parameter.\n\nMaps to CommandIF::set_parameter(in component_ref, in parameters, out command_id).\n\nAttributes:\n    component_ref: The component to configure.\n    parameters: The parameters to set.",
+  "properties": {
+    "component_ref": {
+      "$ref": "#/$defs/RoISIdentifier",
+      "description": "The component to configure"
+    },
+    "parameters": {
+      "$ref": "#/$defs/ParameterList",
+      "description": "The parameters to set"
+    }
+  },
+  "required": [
+    "component_ref",
+    "parameters"
+  ],
+  "title": "SetParameterParams",
+  "type": "object"
+}

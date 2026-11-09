@@ -16,8 +16,115 @@ namespace OpenRoIS.Generator;
 
 internal static class Program
 {
+    // First line of every generated file. A file without it is hand-written.
+    private const string GeneratedHeader = "// GENERATED FROM interfaces/schema — DO NOT EDIT";
+
+    // Stands in for the enum list inside SequenceItemSupport until every module is generated.
+    private const string EnumConvertersMark = "@@ENUM_CONVERTERS@@";
+
+    // The union of CommandUnit and ConcurrentCommands, and the serializer settings of the
+    // wire format, which belong to the module that defines the union.
+    private const string SequenceItemSupport = """
+    /// <summary>Marker interface for CommandUnitSequence items (CommandUnit or ConcurrentCommands).</summary>
+    [JsonConverter(typeof(CommandUnitSequenceItemConverter))]
+    public interface ICommandUnitSequenceItem { }
+
+    /// <summary>
+    /// Reads a sequence item as ConcurrentCommands when it has branch_list and as
+    /// CommandUnit otherwise, and writes the concrete type of the item.
+    /// </summary>
+    public sealed class CommandUnitSequenceItemConverter : JsonConverter<ICommandUnitSequenceItem>
+    {
+        // Without this the serializer skips the converter for null and a list can hold a
+        // null item, which no language's model allows.
+        public override bool HandleNull => true;
+
+        public override ICommandUnitSequenceItem Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            using var document = JsonDocument.ParseValue(ref reader);
+            var element = document.RootElement;
+            if (element.ValueKind != JsonValueKind.Object)
+                throw new JsonException($"A sequence item must be an object, not {element.ValueKind}.");
+            if (element.TryGetProperty("branch_list", out _))
+                return element.Deserialize<ConcurrentCommands>(options)!;
+            return element.Deserialize<CommandUnit>(options)!;
+        }
+
+        public override void Write(Utf8JsonWriter writer, ICommandUnitSequenceItem value, JsonSerializerOptions options)
+        {
+            switch (value)
+            {
+                case ConcurrentCommands group:
+                    JsonSerializer.Serialize(writer, group, options);
+                    break;
+                case CommandUnit command:
+                    JsonSerializer.Serialize(writer, command, options);
+                    break;
+                default:
+                    throw new JsonException("A sequence item must be a CommandUnit or a ConcurrentCommands.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reads an enumeration by its exact name and nothing else, as the other two languages
+    /// do. JsonStringEnumConverter also takes other casing, lists of names and numbers in
+    /// a string, and it cannot be told not to.
+    /// </summary>
+    public sealed class RoISEnumConverter<T> : JsonConverter<T> where T : struct, Enum
+    {
+        public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            var name = reader.TokenType == JsonTokenType.String ? reader.GetString() : null;
+            if (name is not null && Enum.IsDefined(typeof(T), name))
+                return (T)Enum.Parse(typeof(T), name);
+            throw new JsonException($"Not a name of {typeof(T).Name}.");
+        }
+
+        public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
+        {
+            writer.WriteStringValue(value.ToString());
+        }
+    }
+
+    /// <summary>The serializer settings of the wire format.</summary>
+    public static class RoISJson
+    {
+        /// <summary>
+        /// Options for every read and write of a RoIS message. Unset fields stay out of
+        /// the message, because the engine refuses a null such as "arguments": null. An
+        /// enumeration travels as its name. Each one is listed so that an IL2CPP player
+        /// compiles its converter, which a player cannot create at run time.
+        /// </summary>
+        public static readonly JsonSerializerOptions Options = new JsonSerializerOptions
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            Converters =
+            {
+@@ENUM_CONVERTERS@@
+            },
+        };
+    }
+""";
+
+    // Every model refuses a field it does not define, as the Python and TypeScript models do.
+    private const string RefuseUnmappedMembers = "    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]";
+
     private static string s_schemaDir = "";
     private static string s_outputDir = "";
+
+    // Namespace of every top-level schema type, built from the manifest, so a type
+    // used outside its own module is written with its fully qualified name.
+    private static readonly Dictionary<string, string> s_typeNamespaces = new();
+
+    // Qualified names of the enums emitted so far, for the converter list of RoISJson.
+    private static readonly SortedSet<string> s_emittedEnums = new(StringComparer.Ordinal);
+
+    // Names of the schema enums, the only named value types in the generated code.
+    private static readonly HashSet<string> s_enumTypes = new();
+
+    // Namespace of the module being generated.
+    private static string s_currentNamespace = "";
 
     private static int Main(string[] args)
     {
@@ -45,31 +152,50 @@ internal static class Program
 
         foreach (var (moduleName, moduleNode) in modules)
         {
+            var moduleNs = ModuleToNamespace(moduleName);
+            foreach (var file in moduleNode!.AsArray())
+                s_typeNamespaces[file!.GetValue<string>().Replace(".schema.json", "")] = moduleNs;
+        }
+
+        foreach (var file in Directory.GetFiles(s_schemaDir, "*.schema.json"))
+        {
+            var schema = JsonNode.Parse(File.ReadAllText(file))!;
+            if (schema["enum"] is not null)
+                s_enumTypes.Add(schema["title"]!.GetValue<string>());
+            if (schema["$defs"] is JsonObject defs)
+            {
+                foreach (var (defName, defNode) in defs)
+                {
+                    if (defNode!["enum"] is not null)
+                        s_enumTypes.Add(defName);
+                }
+            }
+        }
+
+        var contents = new List<(string FullPath, string RelativePath, string Content, int SchemaCount)>();
+        foreach (var (moduleName, moduleNode) in modules)
+        {
             var schemaFiles = moduleNode!.AsArray()
                 .Select(n => n!.GetValue<string>())
                 .ToList();
-
-            if (moduleName == "bus")
-            {
-                // Bus data models go to Generated/BusModels.cs
-                var output = GenerateModule("OpenRoIS.Interfaces.Bus.Models", schemaFiles, modules, moduleName);
-                var outPath = Path.Combine(s_outputDir, "Generated", "BusModels.cs");
-                WriteFile(outPath, output);
-                Console.WriteLine($"  Generated/BusModels.cs ({schemaFiles.Count} schemas)");
-                continue;
-            }
 
             // Map module name to namespace and file path
             var ns = ModuleToNamespace(moduleName);
             var relativePath = ModuleToFilePath(moduleName);
             var fullPath = Path.Combine(s_outputDir, relativePath);
 
-            var content = GenerateModule(ns, schemaFiles, modules, moduleName);
-            WriteFile(fullPath, content);
-            Console.WriteLine($"  {relativePath} ({schemaFiles.Count} schemas)");
+            contents.Add((fullPath, relativePath, GenerateModule(ns, schemaFiles, modules, moduleName), schemaFiles.Count));
         }
 
-        Console.WriteLine("\nDone. IBusAdapter interface is hand-written in Bus.cs.");
+        // RoISJson lists every enum, and those are known only once every module is generated.
+        var enumConverters = string.Join("\n", s_emittedEnums.Select(name => $"                new RoISEnumConverter<{name}>(),"));
+        foreach (var (fullPath, relativePath, content, schemaCount) in contents)
+        {
+            WriteFile(fullPath, content.Replace(EnumConvertersMark, enumConverters));
+            Console.WriteLine($"  {relativePath} ({schemaCount} schemas)");
+        }
+
+        Console.WriteLine("\nDone.");
         return 0;
     }
 
@@ -99,15 +225,17 @@ internal static class Program
 
     private static string GenerateModule(string ns, List<string> schemaFiles, JsonObject modules, string moduleName)
     {
+        s_currentNamespace = ns;
         var sb = new StringBuilder();
 
         // Header
-        sb.AppendLine("// GENERATED FROM interfaces/schema — DO NOT EDIT");
+        sb.AppendLine(GeneratedHeader);
         sb.AppendLine($"// Source: {string.Join(", ", schemaFiles)}");
         sb.AppendLine("// Generator: scripts/Generator/Program.cs");
         sb.AppendLine();
         sb.AppendLine("using System;");
         sb.AppendLine("using System.Collections.Generic;");
+        sb.AppendLine("using System.Text.Json;");
         sb.AppendLine("using System.Text.Json.Serialization;");
         sb.AppendLine();
         sb.AppendLine($"namespace {ns}");
@@ -160,8 +288,7 @@ internal static class Program
             // Emit marker interface for CommandUnit | ConcurrentCommands union (hri module)
             if (ns == "OpenRoIS.Interfaces.Hri" && allDefs.ContainsKey("CommandUnit") && allDefs.ContainsKey("ConcurrentCommands"))
             {
-                sb.AppendLine("    /// <summary>Marker interface for CommandUnitSequence items (CommandUnit or ConcurrentCommands).</summary>");
-                sb.AppendLine("    public interface ICommandUnitSequenceItem { }");
+                sb.AppendLine(SequenceItemSupport);
                 sb.AppendLine();
             }
 
@@ -194,6 +321,10 @@ internal static class Program
             EmitType(sb, name, schemaCopy, allDefs, externalTypes);
             sb.AppendLine();
         }
+
+        // The catalog module also carries the method table from catalog.json.
+        if (moduleName == "catalog")
+            EmitCatalogTable(sb);
 
         // Close block-scoped namespace
         sb.AppendLine("}");
@@ -235,6 +366,7 @@ internal static class Program
         // XML doc
         EmitDocComment(sb, schema["description"]?.GetValue<string>());
 
+        s_emittedEnums.Add($"{s_currentNamespace}.{name}");
         sb.AppendLine($"    public enum {name}");
         sb.AppendLine("    {");
 
@@ -243,7 +375,7 @@ internal static class Program
             var value = enumValues[i]!.GetValue<string>();
 
             // Use the raw wire value as the C# enum member name.
-            // This ensures JsonStringEnumConverter serializes/deserializes
+            // This ensures RoISEnumConverter serializes/deserializes
             // using the exact IDL wire values without needing [JsonPropertyName].
             sb.Append($"        {value}");
             if (i < enumValues.Count - 1)
@@ -269,7 +401,7 @@ internal static class Program
 
         if (properties == null || properties.Count == 0)
         {
-            sb.AppendLine($"    public sealed class {name} {{ }}");
+            EmitEmptyClass(sb, name);
             return;
         }
 
@@ -310,7 +442,7 @@ internal static class Program
 
         if (fields.Count == 0)
         {
-            sb.AppendLine($"    public sealed class {name} {{ }}");
+            EmitEmptyClass(sb, name);
             return;
         }
 
@@ -318,14 +450,22 @@ internal static class Program
         var interfaces = new List<string> { $"IEquatable<{name}>" };
         if (name == "CommandUnit" || name == "ConcurrentCommands")
             interfaces.Add("ICommandUnitSequenceItem");
+        var checks = fields
+            .SelectMany(f => ValueChecks(f.CsName, $"{name}.{f.PropName}", f.CsType, properties[f.PropName]!, 0, allDefs, externalTypes))
+            .ToList();
+        if (checks.Count > 0)
+            interfaces.Add("IJsonOnDeserialized");
+        sb.AppendLine(RefuseUnmappedMembers);
         sb.AppendLine($"    public sealed class {name} : {string.Join(", ", interfaces)}");
         sb.AppendLine("    {");
 
         // Properties
-        foreach (var (csType, csName, _, propName, _, _) in fields)
+        foreach (var (csType, csName, _, propName, _, isRequired) in fields)
         {
+            if (isRequired)
+                sb.AppendLine("        [JsonRequired]");
             sb.AppendLine($"        [JsonPropertyName(\"{propName}\")]");
-            sb.AppendLine($"        public {csType} {csName} {{ get; }}");
+            sb.AppendLine($"        public {csType} {csName} {{ get; init; }}");
         }
 
         sb.AppendLine();
@@ -339,6 +479,18 @@ internal static class Program
             sb.AppendLine($"            {csName} = {camelName};");
         }
         sb.AppendLine("        }");
+
+        // JsonRequired only asks that a key is present, and the check for null needs
+        // RespectNullableAnnotations from version 9, so the model refuses null itself.
+        if (checks.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("        void IJsonOnDeserialized.OnDeserialized()");
+            sb.AppendLine("        {");
+            foreach (var check in checks)
+                sb.AppendLine($"            {check}");
+            sb.AppendLine("        }");
+        }
 
         // Equals(T?) with reference equality fast path
         sb.AppendLine();
@@ -387,6 +539,90 @@ internal static class Program
         sb.AppendLine("            => !(left == right);");
 
         sb.AppendLine("    }");
+    }
+
+    private static bool IsNonNullableReference(string csType)
+    {
+        if (csType.EndsWith('?') || csType is "int" or "double" or "bool")
+            return false;
+        return !s_enumTypes.Contains(csType.Split('.').Last());
+    }
+
+    /// <summary>
+    /// The statements that refuse what the reader lets through in one value: a null where
+    /// the type has none, and at any depth the same inside a list or a map, which the
+    /// reader fills without looking at the nullability of the item type.
+    /// </summary>
+    private static List<string> ValueChecks(string value, string label, string csType, JsonNode schema, int depth, Dictionary<string, JsonNode> allDefs, HashSet<string>? externalTypes)
+    {
+        var lines = new List<string>();
+        if (IsNonNullableReference(csType))
+            lines.Add($"if ({value} is null) throw new JsonException(\"{label} must not be null.\");");
+
+        var contents = ContentChecks(value, label, UnwrapAlias(schema, allDefs), depth, allDefs, externalTypes);
+        if (contents.Count > 0 && csType.EndsWith('?'))
+        {
+            lines.Add($"if ({value} is not null)");
+            lines.AddRange(Block(contents));
+        }
+        else
+        {
+            lines.AddRange(contents);
+        }
+        return lines;
+    }
+
+    /// <summary>The statements that check what a list or a map holds, and a list's length.</summary>
+    private static List<string> ContentChecks(string value, string label, JsonNode schema, int depth, Dictionary<string, JsonNode> allDefs, HashSet<string>? externalTypes)
+    {
+        var lines = new List<string>();
+        if (schema["minItems"] is JsonNode minItems)
+            lines.Add($"if ({value}.Count < {minItems}) throw new JsonException(\"{label} must have a length of at least {minItems}.\");");
+
+        var isList = schema["type"]?.GetValue<string>() == "array";
+        var heldSchema = isList ? schema["items"] : MapValueSchema(schema);
+        if (heldSchema is null)
+            return lines;
+
+        var entry = isList ? $"item{depth}" : $"pair{depth}";
+        var held = isList ? entry : $"{entry}.Value";
+        var heldLabel = isList ? $"{label} item" : $"{label} value";
+        var heldType = JsonSchemaToCsType(heldSchema, allDefs, true, externalTypes);
+        var heldChecks = ValueChecks(held, heldLabel, heldType, heldSchema, depth + 1, allDefs, externalTypes);
+        if (heldChecks.Count > 0)
+        {
+            lines.Add($"foreach (var {entry} in {value})");
+            lines.AddRange(Block(heldChecks));
+        }
+        return lines;
+    }
+
+    /// <summary>The schema under an inline alias and the null branch of a nullable type.</summary>
+    private static JsonNode UnwrapAlias(JsonNode schema, Dictionary<string, JsonNode> allDefs)
+    {
+        if (schema["$ref"] is JsonNode refNode
+            && allDefs.TryGetValue(refNode.GetValue<string>().Replace("#/$defs/", ""), out var target)
+            && IsInlineType(target))
+            return UnwrapAlias(target, allDefs);
+
+        if (schema["anyOf"] is JsonArray anyOf && anyOf.Count == 2 && anyOf.Any(n => n!["type"]?.GetValue<string>() == "null"))
+            return UnwrapAlias(anyOf.First(n => n!["type"]?.GetValue<string>() != "null")!, allDefs);
+
+        return schema;
+    }
+
+    private static IEnumerable<string> Block(IEnumerable<string> statements)
+    {
+        yield return "{";
+        foreach (var statement in statements)
+            yield return $"    {statement}";
+        yield return "}";
+    }
+
+    private static void EmitEmptyClass(StringBuilder sb, string name)
+    {
+        sb.AppendLine(RefuseUnmappedMembers);
+        sb.AppendLine($"    public sealed class {name} {{ }}");
     }
 
     // -----------------------------------------------------------------------
@@ -447,7 +683,10 @@ internal static class Program
                 var refNames = anyOf.Select(n => n!["$ref"]!.GetValue<string>().Replace("#/$defs/", "")).ToList();
                 if (refNames.Contains("CommandUnit") && refNames.Contains("ConcurrentCommands"))
                 {
-                    return "ICommandUnitSequenceItem";
+                    // The marker interface lives in the Hri namespace.
+                    return s_currentNamespace == "OpenRoIS.Interfaces.Hri"
+                        ? "ICommandUnitSequenceItem"
+                        : "OpenRoIS.Interfaces.Hri.ICommandUnitSequenceItem";
                 }
                 return "object"; // Fallback for unknown unions
             }
@@ -464,6 +703,11 @@ internal static class Program
 
         var type = schema["type"]?.GetValue<string>();
 
+        // A map: an object whose values all share one schema. JSON object keys are
+        // always strings, so the key type is string whatever propertyNames says.
+        if (type == "object" && MapValueSchema(schema) is JsonNode mapValue)
+            return $"IReadOnlyDictionary<string, {JsonSchemaToCsType(mapValue, allDefs, true, externalTypes)}>";
+
         return type switch
         {
             "string" => "string",
@@ -477,28 +721,131 @@ internal static class Program
     }
 
     /// <summary>
-    /// Resolve an external type name to its fully qualified C# namespace.
+    /// The value schema of a map: an object with no fixed properties whose
+    /// additionalProperties is a schema. Pydantic writes a dict[str, X] field this way.
+    /// </summary>
+    private static JsonNode? MapValueSchema(JsonNode schema)
+    {
+        if (schema["properties"] is not null)
+            return null;
+        return schema["additionalProperties"] is JsonObject value ? value : null;
+    }
+
+    /// <summary>
+    /// The name to write for a top-level schema type in the module being generated:
+    /// the bare name inside its own namespace, the fully qualified name elsewhere.
+    /// </summary>
+    private static string QualifiedTypeName(string typeName)
+    {
+        return s_typeNamespaces.TryGetValue(typeName, out var ns) && ns != s_currentNamespace
+            ? $"{ns}.{typeName}"
+            : typeName;
+    }
+
+    /// <summary>
+    /// Resolve an external type name to its fully qualified C# name, using the
+    /// namespace of the module whose manifest entry defines it.
     /// </summary>
     private static string ResolveExternalType(string typeName)
     {
-        // Map type names to their canonical namespace
-        return typeName switch
+        return s_typeNamespaces.TryGetValue(typeName, out var ns)
+            ? $"{ns}.{typeName}"
+            : typeName;
+    }
+
+    // -----------------------------------------------------------------------
+    // Method catalog
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// Emit the method name constants, the method to type map and the JSON-RPC
+    /// error codes from catalog.json, the table every language shares.
+    /// </summary>
+    private static void EmitCatalogTable(StringBuilder sb)
+    {
+        var catalogPath = Path.Combine(s_schemaDir, "catalog.json");
+        var catalog = JsonNode.Parse(File.ReadAllText(catalogPath))!;
+        var methods = catalog["methods"]!.AsArray();
+
+        sb.AppendLine("    // ─── Method catalog (from catalog.json) ──────────────────────────");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>JSON-RPC method names of the RoIS method catalog, keyed by operation.</summary>");
+        sb.AppendLine("    public static class RoISMethods");
+        sb.AppendLine("    {");
+        foreach (var method in methods)
         {
-            "ReturnCode" or "Result" or "Parameter" or "Argument"
-                or "CommandUnit" or "ConcurrentCommands" or "CommandUnitSequence"
-                or "RoISIdentifier" or "ConditionT" or "DateTime" or "Integer"
-                or "RoISIdentifierList" or "ResultList" or "ParameterList" or "ArgumentList"
-                => $"OpenRoIS.Interfaces.Hri.{typeName}",
-
-            "ComponentStatus" or "StreamStatus"
-                => $"OpenRoIS.Interfaces.Common.{typeName}",
-
-            "CompletedStatus" or "ErrorType" or "CompletedEvent"
-                or "NotifyErrorEvent" or "NotifyEventPayload"
-                => $"OpenRoIS.Interfaces.Service.{typeName}",
-
-            _ => typeName, // Same namespace
-        };
+            var operation = ToPascalCase(method!["operation"]!.GetValue<string>());
+            var wireName = method["method"]!.GetValue<string>();
+            sb.AppendLine($"        public const string {operation} = \"{wireName}\";");
+        }
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>The params and result type of every catalog method.</summary>");
+        sb.AppendLine("    public static class RoISMethodTypes");
+        sb.AppendLine("    {");
+        sb.AppendLine("        /// <summary>Params and result type, keyed by JSON-RPC method name.</summary>");
+        sb.AppendLine("        public static readonly IReadOnlyDictionary<string, (Type Params, Type Result)> ByMethod =");
+        sb.AppendLine("            new Dictionary<string, (Type Params, Type Result)>");
+        sb.AppendLine("            {");
+        foreach (var method in methods)
+        {
+            var operation = ToPascalCase(method!["operation"]!.GetValue<string>());
+            var paramsType = method["params"]!.GetValue<string>();
+            var resultType = method["result"]!.GetValue<string>();
+            sb.AppendLine($"                [RoISMethods.{operation}] = (typeof({paramsType}), typeof({resultType})),");
+        }
+        sb.AppendLine("            };");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        var notifications = catalog["notifications"]!.AsArray();
+        sb.AppendLine("    /// <summary>JSON-RPC notification names an engine sends to a service application, keyed by operation.</summary>");
+        sb.AppendLine("    public static class RoISNotifications");
+        sb.AppendLine("    {");
+        foreach (var notification in notifications)
+        {
+            var operation = ToPascalCase(notification!["operation"]!.GetValue<string>());
+            var wireName = notification["method"]!.GetValue<string>();
+            sb.AppendLine($"        public const string {operation} = \"{wireName}\";");
+        }
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>The params type of every notification.</summary>");
+        sb.AppendLine("    public static class RoISNotificationTypes");
+        sb.AppendLine("    {");
+        sb.AppendLine("        /// <summary>Params type, keyed by JSON-RPC notification name.</summary>");
+        sb.AppendLine("        public static readonly IReadOnlyDictionary<string, Type> ByMethod =");
+        sb.AppendLine("            new Dictionary<string, Type>");
+        sb.AppendLine("            {");
+        foreach (var notification in notifications)
+        {
+            var operation = ToPascalCase(notification!["operation"]!.GetValue<string>());
+            var paramsType = QualifiedTypeName(notification["params"]!.GetValue<string>());
+            sb.AppendLine($"                [RoISNotifications.{operation}] = typeof({paramsType}),");
+        }
+        sb.AppendLine("            };");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>Standard command names every component may accept. A component may define its own as well.</summary>");
+        sb.AppendLine("    public static class RoISCommandTypes");
+        sb.AppendLine("    {");
+        foreach (var commandType in catalog["standard_command_types"]!.AsArray())
+        {
+            var wireName = commandType!.GetValue<string>();
+            sb.AppendLine($"        public const string {ToPascalCase(wireName)} = \"{wireName}\";");
+        }
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>JSON-RPC 2.0 error codes an engine returns for protocol faults.</summary>");
+        sb.AppendLine("    public static class JsonRpcErrorCodes");
+        sb.AppendLine("    {");
+        foreach (var code in catalog["json_rpc_error_codes"]!.AsArray())
+        {
+            var name = EnumValueToPascalCase(code!["name"]!.GetValue<string>());
+            var value = code["code"]!.GetValue<int>();
+            sb.AppendLine($"        public const int {name} = {value};");
+        }
+        sb.AppendLine("    }");
+        sb.AppendLine();
     }
 
     // -----------------------------------------------------------------------
@@ -602,6 +949,11 @@ internal static class Program
 
     private static void WriteFile(string path, string content)
     {
+        // The source folder also holds hand-written files, and the schema cannot bring
+        // them back, so a module that maps onto one stops the run.
+        if (File.Exists(path) && !File.ReadAllText(path).StartsWith(GeneratedHeader, StringComparison.Ordinal))
+            throw new InvalidOperationException($"{path} is hand-written and would be replaced.");
+
         var dir = Path.GetDirectoryName(path);
         if (dir is not null)
             Directory.CreateDirectory(dir);
@@ -676,6 +1028,9 @@ internal static class Program
             foreach (var (_, propSchema) in props)
                 CollectRefs(propSchema, allNames, refs, depth + 1);
         }
+
+        if (MapValueSchema(schema) is JsonNode mapValue)
+            CollectRefs(mapValue, allNames, refs, depth + 1);
     }
 
     /// <summary>

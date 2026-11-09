@@ -26,14 +26,13 @@
         "timeout": {
           "anyOf": [
             {
-              "type": "integer"
+              "$ref": "#/$defs/Integer"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Timeout"
+          "default": null
         }
       },
       "required": [
@@ -42,9 +41,19 @@
       "title": "CommandMessageProfile",
       "type": "object"
     },
+    "ComponentFunction": {
+      "description": "The RoSO function class of a component.\n\nNot part of XML-Profiles.xsd. The values are the Robotic Service Function\nOntology classes that the spec's ontology file assigns to the basic components:\nNavigation, Reaction and SpeechSynthesis are Actuation, the detection,\nlocalization and recognition components are Sensing, and AudioStreaming is the\ngeneric Function class. An engine requires a bind before commands on an\nactuation component.\n\nACTUATION: The component acts on the world (moves, speaks, shows).\nSENSING: The component observes the world.\nFUNCTION: The component is neither, for example a stream.",
+      "enum": [
+        "actuation",
+        "sensing",
+        "function"
+      ],
+      "title": "ComponentFunction",
+      "type": "string"
+    },
     "EventMessageProfile": {
       "additionalProperties": false,
-      "description": "An event message profile.\n\nMaps to EventMessageProfileType in XML-Profiles.xsd.\n\nEvents have results (the event payload) but no arguments.",
+      "description": "An event message profile.\n\nMaps to EventMessageProfileType in XML-Profiles.xsd.\n\nAttributes:\n    arguments: The arguments of this event. The XSD gives an event no Arguments,\n        but the streaming profiles have them (notify_stream_status names stream_id),\n        and the codec follows the profiles. A subscription selects them with its\n        condition.",
       "properties": {
         "name": {
           "title": "Name",
@@ -56,6 +65,13 @@
           },
           "title": "Results",
           "type": "array"
+        },
+        "arguments": {
+          "items": {
+            "$ref": "#/$defs/ParameterProfile"
+          },
+          "title": "Arguments",
+          "type": "array"
         }
       },
       "required": [
@@ -64,9 +80,14 @@
       "title": "EventMessageProfile",
       "type": "object"
     },
+    "Integer": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
     "ParameterProfile": {
       "additionalProperties": false,
-      "description": "Describes a parameter's data type and metadata.\n\nMaps to ParameterProfileType in XML-Profiles.xsd.\n\nUsed in both message profiles (Arguments/Results) and component-level\nparameter declarations.\n\nAttributes:\n    name: The parameter name.\n    data_type_ref: Reference to the data type (e.g., 'int', 'DateTime',\n        'RoISIdentifier[]').\n    default_value: Optional default value as a string.\n    description: Optional human-readable description.",
+      "description": "Describes a parameter's data type and metadata.\n\nMaps to ParameterProfileType in XML-Profiles.xsd.\n\nUsed in both message profiles (Arguments/Results) and component-level\nparameter declarations.\n\nAttributes:\n    name: The parameter name.\n    data_type_ref: Reference to the data type (e.g., 'int', 'DateTime',\n        'RoISIdentifier[]').\n    default_value: The default value as a string, or None when the profile gives\n        none. An empty default_value reads as None: the profiles write\n        ``default_value=\"\"`` on parameters that have no default.\n    description: Optional human-readable description.\n    read_only: True for a parameter that get_parameter returns and set_parameter\n        refuses. An OpenRoIS extension: the XSD has no such attribute.",
       "properties": {
         "name": {
           "title": "Name",
@@ -76,14 +97,27 @@
           "$ref": "#/$defs/RoISIdentifierType"
         },
         "default_value": {
-          "default": "",
-          "title": "Default Value",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Value"
         },
         "description": {
           "default": "",
           "title": "Description",
           "type": "string"
+        },
+        "read_only": {
+          "default": false,
+          "description": "Read-only parameter, refused by set_parameter (OpenRoIS extension)",
+          "title": "Read Only",
+          "type": "boolean"
         }
       },
       "required": [
@@ -95,7 +129,7 @@
     },
     "QueryMessageProfile": {
       "additionalProperties": false,
-      "description": "A query message profile.\n\nMaps to QueryMessageProfileType in XML-Profiles.xsd.\n\nQueries have results but no arguments (the query_type and condition\nare passed separately, not as message arguments).",
+      "description": "A query message profile.\n\nMaps to QueryMessageProfileType in XML-Profiles.xsd.\n\nAttributes:\n    arguments: The input arguments of this query. The XSD gives a query no\n        Arguments, but the streaming profiles have them (get_stream_status takes\n        stream_id), and the codec follows the profiles.",
       "properties": {
         "name": {
           "title": "Name",
@@ -106,6 +140,13 @@
             "$ref": "#/$defs/ParameterProfile"
           },
           "title": "Results",
+          "type": "array"
+        },
+        "arguments": {
+          "items": {
+            "$ref": "#/$defs/ParameterProfile"
+          },
+          "title": "Arguments",
           "type": "array"
         }
       },
@@ -147,7 +188,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Describes a RoIS component's capabilities, messages, and parameters.\n\nMaps to HRIComponentProfileType in XML-Profiles.xsd.\n\nAttributes:\n    identifier: The component's structured identifier (URN).\n    name: A short human-readable name (e.g., 'person_detecter').\n    sub_component_profiles: URNs of sub-component profiles (e.g., RoISCommon).\n    command_profiles: Command message profiles this component supports.\n    query_profiles: Query message profiles this component supports.\n    event_profiles: Event message profiles this component supports.\n    parameter_profiles: Parameter declarations for this component.",
+  "description": "Describes a RoIS component's capabilities, messages, and parameters.\n\nMaps to HRIComponentProfileType in XML-Profiles.xsd. One profile describes one\ncomponent instance: its messages are the ones that instance supports.\n\nAttributes:\n    identifier: The component type, for example authority 'OMG' and code\n        'PersonDetection' for urn:x-rois:def:component:OMG::PersonDetection.\n    name: A short human-readable name (e.g., 'person_detecter').\n    function: The RoSO function class. An OpenRoIS extension: the XSD has no\n        such element.\n    sub_component_profiles: URNs of sub-component profiles (e.g., RoISCommon).\n    command_profiles: Command message profiles this component supports.\n    query_profiles: Query message profiles this component supports.\n    event_profiles: Event message profiles this component supports.\n    parameter_profiles: Parameter declarations for this component.",
   "properties": {
     "identifier": {
       "$ref": "#/$defs/RoISIdentifierType"
@@ -155,6 +196,18 @@
     "name": {
       "title": "Name",
       "type": "string"
+    },
+    "function": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ComponentFunction"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "RoSO function class (OpenRoIS extension)"
     },
     "sub_component_profiles": {
       "items": {

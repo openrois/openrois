@@ -9,9 +9,9 @@ import {
   StreamStatusSchema,
   CompletedStatusSchema,
   ErrorTypeSchema,
-  DiscoverRequestSchema,
-  DiscoverResponseSchema,
-  EventEnvelopeSchema,
+  NotifyEventParamsSchema,
+  SearchParamsSchema,
+  SearchResultSchema,
 } from "../src";
 import {
   PersonDetectedEventSchema,
@@ -131,27 +131,27 @@ describe("Schema roundtrip — all schemas parse valid payloads", () => {
     expect(parsed).toEqual(data);
   });
 
-  it("DiscoverRequestSchema roundtrip with default condition", () => {
-    const parsed = DiscoverRequestSchema.parse({});
+  it("SearchParamsSchema roundtrip with default condition", () => {
+    const parsed = SearchParamsSchema.parse({});
     expect(parsed.condition).toBe("");
   });
 
-  it("DiscoverResponseSchema roundtrip", () => {
+  it("SearchResultSchema roundtrip", () => {
     const data = { return_code: "OK", component_ref_list: ["robot/nav"] };
-    const parsed = DiscoverResponseSchema.parse(data);
+    const parsed = SearchResultSchema.parse(data);
     expect(parsed).toEqual(data);
   });
 
-  it("EventEnvelopeSchema roundtrip with defaults", () => {
+  it("NotifyEventParamsSchema roundtrip with defaults", () => {
     const data = {
-      event_id: "evt-1",
+      event_id: "robot/evt-1",
       event_type: "person_detected",
+      subscribe_id: "robot/sub-1",
     };
-    const parsed = EventEnvelopeSchema.parse(data);
-    expect(parsed.event_id).toBe("evt-1");
-    expect(parsed.event_type).toBe("person_detected");
-    expect(parsed.subscribe_id).toBe("");
-    // payload is optional (no default in JSON Schema) — undefined when omitted
-    expect(parsed.payload).toBeUndefined();
+    const parsed = NotifyEventParamsSchema.parse(data);
+    expect(parsed.event_id).toBe("robot/evt-1");
+    expect(parsed.expire).toBe("");
+    // results is optional (no default in JSON Schema), undefined when omitted
+    expect(parsed.results).toBeUndefined();
   });
 });

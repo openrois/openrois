@@ -9,15 +9,16 @@ matches the structural expectations defined in the XSD schema. We check:
 4. CommandMessageProfile has Arguments and timeout
 5. HRIComponentProfile structure matches XSD HRIComponentProfileType
 6. HRIEngineProfileType supports recursive sub-profiles
+7. The two profile models add no field beyond the XSD except registered extensions
 
 This is step 10 of the M0 Task 0.1 plan.
 """
 
-from pathlib import Path
-
 import pytest
 from lxml import etree
+from pydantic import BaseModel
 
+from openrois.interfaces.catalog import EXTENSIONS
 from openrois.interfaces.profiles import (
     CommandMessageProfile,
     EventMessageProfile,
@@ -29,14 +30,11 @@ from openrois.interfaces.profiles import (
     RoISIdentifierType,
 )
 from openrois.interfaces.hri import Argument, CommandUnit, CommandUnitSequence, ConcurrentCommands
+from tests._normative import NORMATIVE_DIR, requires_normative
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-# tests/test_xsd_consistency.py  →  tests/  →  python/  →  interfaces/  →  repo root
-REPO_ROOT = Path(__file__).resolve().parents[3]
-NORMATIVE_DIR = REPO_ROOT / "normative" / "machine-readable"
 
 XSD_PATH = NORMATIVE_DIR / "XML-Profiles.xsd"
 
@@ -99,6 +97,7 @@ def _get_xsd_element_names_in_sequence(type_name: str) -> set[str]:
 # ---------------------------------------------------------------------------
 
 
+@requires_normative
 class TestXSDRoISIdentifierType:
     """Verify RoISIdentifierType Pydantic model matches XSD definition."""
 
@@ -149,6 +148,7 @@ class TestXSDRoISIdentifierType:
 # ---------------------------------------------------------------------------
 
 
+@requires_normative
 class TestXSDParameterProfile:
     """Verify ParameterProfile Pydantic model matches XSD definition."""
 
@@ -160,6 +160,8 @@ class TestXSDParameterProfile:
         # XSD has: name, default_value, description (attributes)
         # Plus data_type_ref (element)
         xsd_attrs_with_element = xsd_attrs | {"data_type_ref"}
+        extensions = {e.field for e in EXTENSIONS if e.model == "ParameterProfile"}
+        model_fields -= extensions
         assert model_fields == xsd_attrs_with_element, (
             f"ParameterProfile fields {model_fields} != XSD attrs+elements {xsd_attrs_with_element}"
         )
@@ -288,6 +290,52 @@ class TestXSDHRIEngineProfileType:
 
 
 # ---------------------------------------------------------------------------
+# Tests: the profile models add only registered extensions
+# ---------------------------------------------------------------------------
+
+# Field to XSD element. "gml:" marks an element of the gml:IdentifiedObjectType base.
+_ENGINE_PROFILE_ELEMENTS = {
+    "identifier": "gml:identifier",
+    "name": "gml:name",
+    "sub_profiles": "SubProfile",
+    "component_ids": "HRIComponent",
+    "parameter_profiles": "ParameterProfile",
+}
+_COMPONENT_PROFILE_ELEMENTS = {
+    "identifier": "gml:identifier",
+    "name": "gml:name",
+    "sub_component_profiles": "SubComponentProfile",
+    "command_profiles": "MessageProfile",
+    "query_profiles": "MessageProfile",
+    "event_profiles": "MessageProfile",
+    "parameter_profiles": "ParameterProfile",
+}
+
+
+@requires_normative
+class TestXSDProfileFields:
+    """Each profile field maps to an XSD element, or is a registered extension."""
+
+    @pytest.mark.parametrize(
+        ("model", "xsd_type", "elements"),
+        [
+            (HRIEngineProfileType, "HRIEngineProfileType", _ENGINE_PROFILE_ELEMENTS),
+            (HRIComponentProfile, "HRIComponentProfileType", _COMPONENT_PROFILE_ELEMENTS),
+        ],
+        ids=["HRIEngineProfileType", "HRIComponentProfile"],
+    )
+    def test_fields_are_xsd_elements_or_extensions(
+        self, model: type[BaseModel], xsd_type: str, elements: dict[str, str]
+    ) -> None:
+        extensions = {
+            e.field for e in EXTENSIONS if e.model == model.__name__ and e.field is not None
+        }
+        assert set(model.model_fields) - extensions == set(elements)
+        sequence = {e for e in elements.values() if not e.startswith("gml:")}
+        assert sequence == _get_xsd_element_names_in_sequence(xsd_type)
+
+
+# ---------------------------------------------------------------------------
 # Tests: CommandUnitSequence consistency
 # ---------------------------------------------------------------------------
 
@@ -315,9 +363,9 @@ class TestXSDCommandUnitSequence:
         """CommandUnit should have 'delay_time' field (XSD: delay_time from CommandBaseType)."""
         assert "delay_time" in CommandUnit.model_fields
 
-    def test_concurrent_commands_has_command_list(self) -> None:
-        """ConcurrentCommands should have 'command_list' field (XSD: command_list)."""
-        assert "command_list" in ConcurrentCommands.model_fields
+    def test_concurrent_commands_has_branch_list(self) -> None:
+        """ConcurrentCommands holds branch_list (Annex B.1), not the flat XSD command_list."""
+        assert "branch_list" in ConcurrentCommands.model_fields
 
     def test_concurrent_commands_has_delay_time(self) -> None:
         """ConcurrentCommands should have 'delay_time' field (XSD: delay_time from CommandBaseType)."""
@@ -333,6 +381,7 @@ class TestXSDCommandUnitSequence:
 # ---------------------------------------------------------------------------
 
 
+@requires_normative
 class TestXSDValidation:
     """Validate that the normative XML files are structurally consistent with the XSD schema.
 

@@ -4,14 +4,13 @@ This module maps the OMG RoIS Framework 2.0 HRI IDL types to Python Pydantic
 models. These are the fundamental data types used across all RoIS interfaces:
 SystemIF, CommandIF, QueryIF, and EventIF.
 
-Source: normative/machine-readable/RoIS_HRI.idl
-        normative/machine-readable/RoIS_HRI.hpp
+Source: OMG RoIS Framework 2.0, RoIS_HRI.idl and RoIS_HRI.hpp
 
 Design decisions:
   - ReturnCode is a string enum for JSON readability.
-  - RoIS_Identifier, Condition_t, HRI_Engine_Profile, DateTime, and Integer
-    are type aliases (not new classes) — they carry semantic meaning without
-    runtime overhead.
+  - RoIS_Identifier, Condition_t, HRI_Engine_Profile, and DateTime are type
+    aliases (not new classes), which carry semantic meaning without runtime
+    overhead. Integer is an alias too, with the bounds of an IDL long.
   - Result, Parameter, and Argument are Pydantic models with a `value` field
     typed as `str` (matching the HPP `std::string` and XSD `xsd:string`).
     Component-specific typed models provide structured typing where needed.
@@ -26,8 +25,9 @@ Design decisions:
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Annotated, Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # ---------------------------------------------------------------------------
 # Enumerations
@@ -49,11 +49,12 @@ class ReturnCode(StrEnum):
 
 
 class CommandType(StrEnum):
-    """Command operation type for RoIS commands.
+    """The standard command names.
 
-    Not an IDL enum — the IDL uses plain `string` for command_type. OpenRoIS
-    defines this enum for compile-time safety. The wire values match the
-    RoIS_Common::Command method names plus `set_parameter` and `execute`.
+    The IDL and the XSD type command_type as a plain string, and so does every model
+    here, because a component may define commands of its own. These are the names the
+    spec defines for every component: the RoIS_Common::Command operations, and the
+    set_parameter command of the component Command interfaces.
     """
 
     START = "start"
@@ -61,7 +62,6 @@ class CommandType(StrEnum):
     SUSPEND = "suspend"
     RESUME = "resume"
     SET_PARAMETER = "set_parameter"
-    EXECUTE = "execute"
 
 
 # ---------------------------------------------------------------------------
@@ -76,9 +76,9 @@ type RoISIdentifier = str
 # Ordered list of RoIS identifiers (e.g., component_ref_list from search()).
 type RoISIdentifierList = list[RoISIdentifier]
 
-# RoIS_HRI::Condition_t → string (ISO 19143 filter expression)
-# ISO 19143 filter expression used by search(), query(), subscribe(), etc.
-# Parsed and evaluated gateway-side; stored as an opaque string in the type system.
+# RoIS_HRI::Condition_t → string
+# The IDL carries an ISO 19143 filter here. OpenRoIS writes the filter in a subset of
+# CQL2-Text, defined in openrois.interfaces.condition. Empty means no filter.
 type ConditionT = str
 
 # RoIS_HRI::HRI_Engine_Profile → string
@@ -91,8 +91,13 @@ type HRIEngineProfile = str
 type DateTime = str
 
 # RoIS_HRI::Integer → long
-# 32-bit integer, matching the IDL 'long' type.
-type Integer = int
+# 32-bit integer, matching the IDL 'long' type. The bounds travel in the JSON Schema, so
+# every language refuses the same values. The XSD writes delay_time and timeout as
+# xsd:integer, which has no bound, and they use this alias too, because a value travels
+# through every language and a C# client reads them as a 32-bit int.
+INTEGER_MIN = -(2**31)
+INTEGER_MAX = 2**31 - 1
+type Integer = Annotated[int, Field(ge=INTEGER_MIN, le=INTEGER_MAX)]
 
 # RoLo::Architecture::Data → string
 # Positional or measurement data from the RoLo Architecture module.
@@ -203,9 +208,11 @@ class CommandUnit(BaseModel):
 
     Attributes:
         component_ref: The component to send the command to.
-        command_type: The command operation (e.g., 'start', 'stop',
-            'set_parameter', 'execute').
-        command_id: Unique identifier for this command instance.
+        command_type: The command name: a standard one (start, stop, suspend, resume,
+            set_parameter) or one the component profile defines.
+        command_id: Unique identifier for this command instance. The engine a client
+            calls assigns it and ignores one the client sends. An engine passes the ids
+            it assigned on to the engines below it.
         arguments: Optional list of arguments for the command.
         delay_time: Optional delay in milliseconds before executing this command.
     """
@@ -213,28 +220,63 @@ class CommandUnit(BaseModel):
     model_config = {"frozen": True, "extra": "forbid"}
 
     component_ref: RoISIdentifier
-    command_type: CommandType = Field(
-        description="Command operation: start, stop, suspend, resume, set_parameter, execute"
+    command_type: str = Field(
+        description="Command name, for example start, stop or set_parameter",
     )
-    command_id: CommandId = Field(description="Unique command instance identifier")
+    command_id: CommandId = Field(
+        default="",
+        description="Command instance identifier, assigned by the engine the client calls",
+    )
     arguments: ArgumentList = Field(default_factory=list)
     delay_time: Integer | None = Field(default=None, description="Delay in ms before execution")
 
 
-class ConcurrentCommands(BaseModel):
-    """A group of commands to be executed concurrently.
+class Branch(BaseModel):
+    """One branch of a ConcurrentCommands group: commands that run in order.
 
-    Maps to ConcurrentCommandsType in XML-Profiles.xsd.
+    Maps to BranchType in XML-Profiles.xsd, which ConcurrentCommandsType does not use.
+    Annex B.1 and Tables 8.15 and 8.16 of the specification give ConcurrentCommands a
+    branch_list of branches, and OpenRoIS follows them (docs/rois-reference.md, section
+    16).
 
     Attributes:
-        command_list: The commands to execute in parallel.
+        command_list: The commands of the branch, run one after the other.
+    """
+
+    model_config = {"frozen": True, "extra": "forbid"}
+
+    command_list: list[CommandUnit] = Field(min_length=1)
+
+
+class ConcurrentCommands(BaseModel):
+    """A group of branches executed in parallel.
+
+    Maps to ConcurrentCommandsType in XML-Profiles.xsd, with the branch_list of Annex
+    B.1. The branches run at the same time, each branch runs its commands in order, and
+    the next unit of the sequence waits for every branch.
+
+    The XSD form, a flat command_list, is read as one-command branches.
+
+    Attributes:
+        branch_list: The branches to run in parallel.
         delay_time: Optional delay in milliseconds before executing this group.
     """
 
     model_config = {"frozen": True, "extra": "forbid"}
 
-    command_list: list[CommandUnit]
+    branch_list: list[Branch]
     delay_time: Integer | None = Field(default=None, description="Delay in ms before execution")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _flat_command_list(cls, data: Any) -> Any:
+        if not isinstance(data, dict) or "command_list" not in data:
+            return data
+        if "branch_list" in data:
+            raise ValueError("Give either branch_list or command_list, not both")
+        flat = {k: v for k, v in data.items() if k != "command_list"}
+        flat["branch_list"] = [{"command_list": [unit]} for unit in data["command_list"]]
+        return flat
 
 
 # A single item in a CommandUnitSequence — either a CommandUnit or a ConcurrentCommands group.

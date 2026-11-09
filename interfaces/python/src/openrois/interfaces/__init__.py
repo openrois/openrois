@@ -1,42 +1,89 @@
 """OpenRoIS Interfaces: Transport-independent RoIS type definitions.
 
 This package contains Pydantic models derived from the OMG RoIS Framework
-Version 2.0-beta2 IDL specification. They are the single source of truth for
+Version 2.0 IDL specification. They are the single source of truth for
 all OpenRoIS types, exported to JSON Schema and generated into C# and
 TypeScript.
 
 Modules:
     hri:        Core HRI types (ReturnCode, Result, Parameter, Argument, etc.)
     common:     Common component types (ComponentStatus, StreamStatus)
-    service:    Service application callback types (CompletedStatus, ErrorType)
+    service:    Service application notifications (NotifyEventParams, CompletedParams, ...)
     profiles:   Component profile schema models (from XML-Profiles.xsd)
+    catalog:    Service-side method catalog: params and result models, interfaces
+    condition:  The CQL2-Text subset of every condition: parsing, matching, building
+    values:     How a typed value travels as a string: encode_value, decode_value
     components: Per-component typed message models
 """
 
-from openrois.interfaces.bus import (
-    BusAdapter,
-    BusAdapterError,
-    CommandRequest,
-    ComponentNotFoundError,
-    DiscoverRequest,
-    DiscoverResponse,
-    EventEnvelope,
-    EventSink,
-    InvokeResponse,
-    QueryRequest,
-    QueryResponse,
-    SubscribeRequest,
-    SubscribeResponse,
+from openrois.interfaces.catalog import (
+    EXTENSIONS,
+    METHODS,
+    METHODS_BY_NAME,
+    NOTIFICATIONS,
+    NOTIFICATIONS_BY_NAME,
+    BindAnyParams,
+    BindAnyResult,
+    BindParams,
+    BindResult,
+    CommandIF,
+    ConnectParams,
+    ConnectResult,
+    DisconnectParams,
+    DisconnectResult,
+    EventIF,
+    ExecuteParams,
+    ExecuteResult,
+    Extension,
+    GetCommandResultParams,
+    GetCommandResultResult,
+    GetErrorDetailParams,
+    GetErrorDetailResult,
+    GetEventDetailParams,
+    GetEventDetailResult,
+    GetParameterParams,
+    GetParameterResult,
+    GetProfileParams,
+    GetProfileResult,
+    JsonRpcErrorCode,
+    MethodSpec,
+    NotificationSpec,
+    QueryIF,
+    QueryParams,
+    QueryResult,
+    ReleaseParams,
+    ReleaseResult,
+    SearchParams,
+    SearchResult,
+    SetParameterParams,
+    SetParameterResult,
+    SubscribeParams,
+    SubscribeResult,
+    SystemIF,
+    UnsubscribeParams,
+    UnsubscribeResult,
 )
 from openrois.interfaces.common import (
     ComponentStatus,
-    ComponentStatusT,
     StreamStatus,
     StreamStatusT,
+)
+from openrois.interfaces.condition import (
+    COMPONENT_REF,
+    COMPONENT_TYPE,
+    SELECTION_PROPERTIES,
+    Comparison,
+    Condition,
+    ConditionError,
+    component_ref,
+    component_type,
+    component_type_urn,
+    parse_condition,
 )
 from openrois.interfaces.hri import (
     Argument,
     ArgumentList,
+    Branch,
     CommandId,
     CommandType,
     CommandUnit,
@@ -60,6 +107,7 @@ from openrois.interfaces.hri import (
 )
 from openrois.interfaces.profiles import (
     CommandMessageProfile,
+    ComponentFunction,
     EventMessageProfile,
     HRIComponentProfile,
     HRIEngineProfileType,
@@ -69,20 +117,24 @@ from openrois.interfaces.profiles import (
     RoISIdentifierType,
 )
 from openrois.interfaces.service import (
-    CompletedEvent,
+    CompletedParams,
     CompletedStatus,
     ErrorType,
-    NotifyErrorEvent,
-    NotifyEventPayload,
+    NotifyErrorParams,
+    NotifyEventParams,
+    ProfileChangedParams,
 )
+from openrois.interfaces.values import decode_value, encode_value
 
 __all__ = [
     # HRI core
     "Argument",
     "ArgumentList",
+    "Branch",
     "CommandUnit",
     "CommandUnitSequence",
     "CommandUnitSequenceItem",
+    "Branch",
     "ConcurrentCommands",
     "ConditionT",
     "DateTime",
@@ -97,11 +149,11 @@ __all__ = [
     "RoISIdentifierList",
     # Common
     "ComponentStatus",
-    "ComponentStatusT",
     "StreamStatus",
     "StreamStatusT",
     # Profiles
     "CommandMessageProfile",
+    "ComponentFunction",
     "EventMessageProfile",
     "HRIComponentProfile",
     "HRIEngineProfileType",
@@ -110,28 +162,76 @@ __all__ = [
     "QueryMessageProfile",
     "RoISIdentifierType",
     # Service
-    "CompletedEvent",
+    "CompletedParams",
     "CompletedStatus",
     "ErrorType",
-    "NotifyErrorEvent",
-    "NotifyEventPayload",
-    # Bus
-    "BusAdapter",
-    "BusAdapterError",
+    "NotifyErrorParams",
+    "NotifyEventParams",
+    "ProfileChangedParams",
+    # Method catalog
+    "BindAnyParams",
+    "BindAnyResult",
+    "BindParams",
+    "BindResult",
+    "CommandIF",
+    "ConnectParams",
+    "ConnectResult",
+    "DisconnectParams",
+    "DisconnectResult",
+    "EventIF",
+    "ExecuteParams",
+    "ExecuteResult",
+    "GetCommandResultParams",
+    "GetCommandResultResult",
+    "GetErrorDetailParams",
+    "GetErrorDetailResult",
+    "GetEventDetailParams",
+    "GetEventDetailResult",
+    "GetParameterParams",
+    "GetParameterResult",
+    "GetProfileParams",
+    "GetProfileResult",
+    "JsonRpcErrorCode",
+    "METHODS",
+    "METHODS_BY_NAME",
+    "MethodSpec",
+    "NOTIFICATIONS",
+    "NOTIFICATIONS_BY_NAME",
+    "NotificationSpec",
+    "EXTENSIONS",
+    "Extension",
+    "QueryIF",
+    "QueryParams",
+    "QueryResult",
+    "ReleaseParams",
+    "ReleaseResult",
+    "SearchParams",
+    "SearchResult",
+    "SetParameterParams",
+    "SetParameterResult",
+    "SubscribeParams",
+    "SubscribeResult",
+    "SystemIF",
+    "UnsubscribeParams",
+    "UnsubscribeResult",
+    # Conditions
+    "COMPONENT_REF",
+    "COMPONENT_TYPE",
+    "SELECTION_PROPERTIES",
+    "Comparison",
+    "Condition",
+    "ConditionError",
+    "component_ref",
+    "component_type",
+    "component_type_urn",
+    "parse_condition",
+    # Values
+    "decode_value",
+    "encode_value",
+    # Names of commands, queries, events, subscriptions and commands of a sequence
     "CommandId",
-    "CommandRequest",
     "CommandType",
-    "ComponentNotFoundError",
-    "DiscoverRequest",
-    "DiscoverResponse",
-    "EventEnvelope",
-    "EventSink",
     "EventType",
-    "InvokeResponse",
-    "QueryRequest",
-    "QueryResponse",
     "QueryType",
     "SubscribeId",
-    "SubscribeRequest",
-    "SubscribeResponse",
 ]

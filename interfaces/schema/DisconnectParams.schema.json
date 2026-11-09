@@ -1,0 +1,8 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "additionalProperties": false,
+  "description": "Params of rois.system.disconnect.\n\nMaps to SystemIF::disconnect(), which takes no arguments. A request may omit params.",
+  "properties": {},
+  "title": "DisconnectParams",
+  "type": "object"
+}

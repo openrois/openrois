@@ -1,0 +1,47 @@
+name: Component or platform support
+description: Request or offer components for a robot, avatar, or service.
+labels: ["component"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Components for new platforms are the natural entry point for contributions, and
+        they need no change to the core. See
+        [write components and adapters](https://openrois.org/docs/guides/components-and-adapters)
+        and the current [component status](https://openrois.org/docs/reference/components).
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      placeholder: "Robot, avatar runtime, or service, with model or version"
+    validations:
+      required: true
+  - type: textarea
+    id: components
+    attributes:
+      label: RoIS components involved
+      placeholder: "For example Navigation, PersonDetection, SpeechSynthesis"
+    validations:
+      required: true
+  - type: dropdown
+    id: backend
+    attributes:
+      label: How does the platform expose its functions?
+      options:
+        - ROS 2
+        - gRPC
+        - HTTP or WebSocket API
+        - Game engine or in-process API
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: offer
+    attributes:
+      label: Are you offering to implement it?
+      options:
+        - "Yes, I plan to contribute it"
+        - "Yes, with guidance"
+        - "No, this is a request"
+    validations:
+      required: true

@@ -1,5 +1,5 @@
 // GENERATED FROM interfaces/schema — DO NOT EDIT
-// Source: Argument.schema.json, CommandUnit.schema.json, CommandUnitSequence.schema.json, ConcurrentCommands.schema.json, Parameter.schema.json, Result.schema.json, ReturnCode.schema.json
+// Source: Argument.schema.json, Branch.schema.json, CommandUnit.schema.json, CommandUnitSequence.schema.json, ConcurrentCommands.schema.json, Parameter.schema.json, Result.schema.json, ReturnCode.schema.json
 // Generator: scripts/generate.ts
 
 import { z } from "zod";
@@ -10,19 +10,15 @@ import { z } from "zod";
 export type RoISIdentifier = string;
 /** Ordered list of RoIS identifiers. */
 export type RoISIdentifierList = RoISIdentifier[];
-/** ISO 19143 filter expression used by search(), query(), subscribe(). */
+/** A condition in the OpenRoIS subset of CQL2-Text. Empty means no filter. */
 export type ConditionT = string;
 /** XML profile document describing an HRI Engine's capabilities. */
 export type HRIEngineProfile = string;
 /** ISO 8601 datetime string. */
 export type DateTime = string;
 /**
- * IDL `typedef long Integer` — 32-bit signed integer.
- *
- * Note: The zod schema validates that the value is an integer but does not
- * enforce the 32-bit range (±2^31). Values outside this range will pass
- * TypeScript validation but may overflow in C# consumers (where `int` is
- * 32-bit). This is a known limitation to be addressed in a future release.
+ * IDL `typedef long Integer`: a 32-bit signed integer. The zod schemas refuse a
+ * value outside that range, as the Python and C# models do.
  */
 export type Integer = number;
 /** Positional or measurement data from the RoLo Architecture module. */
@@ -31,6 +27,8 @@ export type RoLoData = string;
 export type ResultList = Result[];
 /** Ordered list of Parameter values. */
 export type ParameterList = Parameter[];
+/** Ordered list of Argument values. */
+export type ArgumentList = Argument[];
 
 // ─── Shared type definitions ($defs) ─────────────────────────────
 
@@ -52,20 +50,6 @@ export const ArgumentSchema = z.object({
 }).strict();
 export type Argument = z.infer<typeof ArgumentSchema>;
 
-export const ArgumentListSchema = z.array(ArgumentSchema);
-export type ArgumentList = z.infer<typeof ArgumentListSchema>;
-
-/**
- * Command operation type for RoIS commands.
- * 
- * Not an IDL enum — the IDL uses plain `string` for command_type. OpenRoIS
- * defines this enum for compile-time safety. The wire values match the
- * RoIS_Common::Command method names plus `set_parameter` and `execute`.
- */
-
-export const CommandTypeSchema = z.enum(["start", "stop", "suspend", "resume", "set_parameter", "execute"]);
-export type CommandType = z.infer<typeof CommandTypeSchema>;
-
 /**
  * A single command within a CommandUnitSequence.
  * 
@@ -73,35 +57,58 @@ export type CommandType = z.infer<typeof CommandTypeSchema>;
  * 
  * Attributes:
  *     component_ref: The component to send the command to.
- *     command_type: The command operation (e.g., 'start', 'stop',
- *         'set_parameter', 'execute').
- *     command_id: Unique identifier for this command instance.
+ *     command_type: The command name: a standard one (start, stop, suspend, resume,
+ *         set_parameter) or one the component profile defines.
+ *     command_id: Unique identifier for this command instance. The engine a client
+ *         calls assigns it and ignores one the client sends. An engine passes the ids
+ *         it assigned on to the engines below it.
  *     arguments: Optional list of arguments for the command.
  *     delay_time: Optional delay in milliseconds before executing this command.
  */
 
 export const CommandUnitSchema = z.object({
   component_ref: z.string(),
-  command_type: CommandTypeSchema, // Command operation: start, stop, suspend, resume, set_parameter, execute
-  command_id: z.string(), // Unique command instance identifier
-  arguments: ArgumentListSchema.optional(),
-  delay_time: z.number().int().nullable().default(null), // Delay in ms before execution
+  command_type: z.string(), // Command name, for example start, stop or set_parameter
+  command_id: z.string().default(""), // Command instance identifier, assigned by the engine the client calls
+  arguments: z.array(ArgumentSchema).optional(),
+  delay_time: z.number().int().min(-2147483648).max(2147483647).nullable().default(null), // Delay in ms before execution
 }).strict();
 export type CommandUnit = z.infer<typeof CommandUnitSchema>;
 
 /**
- * A group of commands to be executed concurrently.
+ * One branch of a ConcurrentCommands group: commands that run in order.
  * 
- * Maps to ConcurrentCommandsType in XML-Profiles.xsd.
+ * Maps to BranchType in XML-Profiles.xsd, which ConcurrentCommandsType does not use.
+ * Annex B.1 and Tables 8.15 and 8.16 of the specification give ConcurrentCommands a
+ * branch_list of branches, and OpenRoIS follows them (docs/rois-reference.md, section
+ * 16).
  * 
  * Attributes:
- *     command_list: The commands to execute in parallel.
+ *     command_list: The commands of the branch, run one after the other.
+ */
+
+export const BranchSchema = z.object({
+  command_list: z.array(CommandUnitSchema).min(1),
+}).strict();
+export type Branch = z.infer<typeof BranchSchema>;
+
+/**
+ * A group of branches executed in parallel.
+ * 
+ * Maps to ConcurrentCommandsType in XML-Profiles.xsd, with the branch_list of Annex
+ * B.1. The branches run at the same time, each branch runs its commands in order, and
+ * the next unit of the sequence waits for every branch.
+ * 
+ * The XSD form, a flat command_list, is read as one-command branches.
+ * 
+ * Attributes:
+ *     branch_list: The branches to run in parallel.
  *     delay_time: Optional delay in milliseconds before executing this group.
  */
 
 export const ConcurrentCommandsSchema = z.object({
-  command_list: z.array(CommandUnitSchema),
-  delay_time: z.number().int().nullable().default(null), // Delay in ms before execution
+  branch_list: z.array(BranchSchema),
+  delay_time: z.number().int().min(-2147483648).max(2147483647).nullable().default(null), // Delay in ms before execution
 }).strict();
 export type ConcurrentCommands = z.infer<typeof ConcurrentCommandsSchema>;
 

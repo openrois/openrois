@@ -1,8 +1,8 @@
 """Person Detection component typed message models.
 
 Derived from:
-  - normative/machine-readable/RoIS_Person_Detection.idl
-  - normative/machine-readable/PersonDetection.xml
+  - OMG RoIS Framework 2.0, RoIS_Person_Detection.idl
+  - OMG RoIS Framework 2.0, PersonDetection.xml
 
 Component URN: urn:x-rois:def:component:OMG::PersonDetection
 
@@ -22,14 +22,6 @@ from pydantic import BaseModel, Field
 
 from openrois.interfaces.common import ComponentStatus
 from openrois.interfaces.hri import DateTime, Integer
-
-# ---------------------------------------------------------------------------
-# Component identifier
-# ---------------------------------------------------------------------------
-
-PERSON_DETECTION_URN = "urn:x-rois:def:component:OMG::PersonDetection"
-"""Canonical URN for the PersonDetection component profile."""
-
 
 # ---------------------------------------------------------------------------
 # Event models

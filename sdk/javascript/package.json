@@ -1,0 +1,81 @@
+{
+  "name": "@openrois/sdk",
+  "version": "0.1.0",
+  "description": "JavaScript client SDK for the OpenRoIS middleware",
+  "license": "Apache-2.0",
+  "author": "OpenRoIS Community",
+  "type": "module",
+  "main": "./dist/rois-client.js",
+  "types": "./dist/rois-client.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/rois-client.d.ts",
+      "default": "./dist/rois-client.js"
+    },
+    "./transport": {
+      "types": "./dist/transport.d.ts",
+      "default": "./dist/transport.js"
+    }
+  },
+  "files": [
+    "dist",
+    "NOTICE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "sideEffects": false,
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:browser": "vitest run --config vitest.browser.config.ts",
+    "test:consumer": "npm run build && node tests/consumer/run.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/ tests/",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@openrois/interfaces": "^0.1.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "@types/ws": "^8.18.1",
+    "@vitest/browser-playwright": "^4.1.9",
+    "eslint": "^10.5.0",
+    "jiti": "^2.7.0",
+    "playwright": "1.58.2",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.62.1",
+    "vite": "^8.1.0",
+    "vitest": "^4.1.9",
+    "ws": "^8.21.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openrois/openrois",
+    "directory": "sdk/javascript"
+  },
+  "homepage": "https://openrois.org/",
+  "bugs": {
+    "url": "https://github.com/openrois/openrois/issues"
+  },
+  "keywords": [
+    "rois",
+    "omg",
+    "robotics",
+    "hri",
+    "middleware",
+    "sdk",
+    "json-rpc",
+    "websocket"
+  ]
+}

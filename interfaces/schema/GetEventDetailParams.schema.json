@@ -1,0 +1,27 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "ConditionT": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Params of rois.event.get_event_detail.\n\nMaps to EventIF::get_event_detail(in event_id, in condition, out results).\n\nAttributes:\n    event_id: The event_id from a notify_event notification.\n    condition: Filter on the results. No property is defined for it yet, so it\n        must be empty.",
+  "properties": {
+    "event_id": {
+      "description": "The event_id from a notify_event notification",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "condition": {
+      "$ref": "#/$defs/ConditionT",
+      "default": "",
+      "description": "Filter on the results (CQL2-Text). Must be empty for now"
+    }
+  },
+  "required": [
+    "event_id"
+  ],
+  "title": "GetEventDetailParams",
+  "type": "object"
+}

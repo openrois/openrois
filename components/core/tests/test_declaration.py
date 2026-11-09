@@ -1,0 +1,299 @@
+"""Tests for @component: the handlers it collects and the profile it serves."""
+
+from __future__ import annotations
+
+from typing import Any
+
+import pytest
+from openrois.interfaces.components import (
+    NAVIGATION_PROFILE,
+    PERSON_DETECTION_PROFILE,
+    SYSTEM_INFORMATION_PROFILE,
+)
+from openrois.interfaces.profiles import HRIComponentProfile, RoISIdentifierType
+
+from openrois.components.core import (
+    Component,
+    command,
+    component,
+    event,
+    query,
+)
+
+
+def _names(messages: list[Any]) -> list[str]:
+    return [m.name for m in messages]
+
+
+@component(NAVIGATION_PROFILE)
+class StartOnly(Component):
+    """A Navigation that implements start and nothing else."""
+
+    @command("start")
+    async def start(self) -> None:
+        return None
+
+
+class TestServedProfile:
+    def test_serves_only_what_the_class_implements(self) -> None:
+        served = StartOnly.rois_profile()
+        assert _names(served.query_profiles) == ["component_status"]
+        assert served.event_profiles == []
+
+    def test_serves_every_rois_common_command_without_handlers(self) -> None:
+        @component(PERSON_DETECTION_PROFILE)
+        class Detector(Component):
+            @event("person_detected")
+            async def person_detected(self) -> None:
+                return None
+
+        served = Detector.rois_profile()
+        assert _names(served.command_profiles) == ["start", "stop", "suspend", "resume"]
+        assert _names(StartOnly.rois_profile().command_profiles) == [
+            "start",
+            "stop",
+            "suspend",
+            "resume",
+        ]
+
+    def test_keeps_the_identity_and_the_parameters(self) -> None:
+        served = StartOnly.rois_profile()
+        assert served.identifier == NAVIGATION_PROFILE.identifier
+        assert served.function == NAVIGATION_PROFILE.function
+        assert served.sub_component_profiles == NAVIGATION_PROFILE.sub_component_profiles
+        assert served.parameter_profiles == NAVIGATION_PROFILE.parameter_profiles
+
+    def test_without_rois_common_serves_stop_only_with_start(self) -> None:
+        # A type of its own that does not include the RoISCommon sub-profile names its
+        # commands itself, and gets no RoIS_Common default.
+        profile = HRIComponentProfile.model_validate(
+            {
+                "identifier": {"authority": "Example", "code": "Arm"},
+                "name": "arm",
+                "command_profiles": [{"name": "start"}, {"name": "stop"}, {"name": "suspend"}],
+            }
+        )
+
+        @component(profile)
+        class Suspendable(Component):
+            @command("suspend")
+            async def suspend(self) -> None:
+                return None
+
+        @component(profile)
+        class Startable(Component):
+            @command("start")
+            async def start(self) -> None:
+                return None
+
+        assert _names(Suspendable.rois_profile().command_profiles) == ["suspend"]
+        assert _names(Startable.rois_profile().command_profiles) == ["start", "stop"]
+
+    def test_system_information_serves_no_command(self) -> None:
+        @component(SYSTEM_INFORMATION_PROFILE)
+        class Info(Component):
+            @query("engine_status")
+            async def engine_status(self) -> dict[str, object]:
+                return {}
+
+        assert Info.rois_profile().command_profiles == []
+
+    def test_serves_an_event_marked_with_subscribe(self) -> None:
+        @component(PERSON_DETECTION_PROFILE)
+        class Detector(Component):
+            @event("person_detected")
+            async def person_detected(self) -> None:
+                return None
+
+        assert _names(Detector.rois_profile().event_profiles) == ["person_detected"]
+
+    def test_component_status_only_where_the_profile_has_it(self) -> None:
+        @component(SYSTEM_INFORMATION_PROFILE)
+        class Info(Component):
+            @query("engine_status")
+            async def engine_status(self) -> dict[str, object]:
+                return {}
+
+        assert _names(Info.rois_profile().query_profiles) == ["engine_status"]
+
+    def test_the_declared_constant_is_not_changed(self) -> None:
+        assert _names(NAVIGATION_PROFILE.command_profiles) == ["start", "stop", "suspend", "resume"]
+
+    def test_a_subclass_keeps_the_declaration(self) -> None:
+        class Faster(StartOnly):
+            pass
+
+        assert Faster.rois_profile() == StartOnly.rois_profile()
+
+
+class TestDeclarationErrors:
+    def test_profile_must_be_a_profile(self) -> None:
+        with pytest.raises(TypeError, match="HRIComponentProfile"):
+            component("Navigation")  # type: ignore[arg-type]
+
+    def test_class_must_subclass_component(self) -> None:
+        with pytest.raises(TypeError, match="subclass of Component"):
+
+            @component(NAVIGATION_PROFILE)
+            class Plain:  # type: ignore[type-var]
+                pass
+
+    def test_command_the_profile_lacks(self) -> None:
+        with pytest.raises(ValueError, match="'jump'"):
+
+            @component(NAVIGATION_PROFILE)
+            class Jumper(Component):
+                @command("jump")
+                async def jump(self) -> None:
+                    return None
+
+    def test_query_the_profile_lacks(self) -> None:
+        with pytest.raises(ValueError, match="'battery'"):
+
+            @component(NAVIGATION_PROFILE)
+            class Battery(Component):
+                @query("battery")
+                async def battery(self) -> dict[str, object]:
+                    return {}
+
+    def test_event_the_profile_lacks(self) -> None:
+        with pytest.raises(ValueError, match="'arrived'"):
+
+            @component(NAVIGATION_PROFILE)
+            class Arrival(Component):
+                @event("arrived")
+                async def arrived(self) -> None:
+                    return None
+
+    def test_set_parameter_handler_applies_the_values(self) -> None:
+        @component(NAVIGATION_PROFILE)
+        class Setter(Component):
+            @command("set_parameter")
+            async def apply(self, values: dict[str, object]) -> None:
+                return None
+
+        spec = Setter.__rois_spec__
+        assert spec is not None
+        assert spec.set_parameter_hook == "apply"
+        assert "set_parameter" not in spec.commands
+
+    def test_component_status_is_answered_by_the_engine(self) -> None:
+        with pytest.raises(ValueError, match="engine answers"):
+
+            @component(NAVIGATION_PROFILE)
+            class Status(Component):
+                @query("component_status")
+                async def status(self) -> dict[str, object]:
+                    return {}
+
+    def test_two_handlers_for_one_command(self) -> None:
+        with pytest.raises(ValueError, match="both handle"):
+
+            @component(NAVIGATION_PROFILE)
+            class Twice(Component):
+                @command("start")
+                async def first(self) -> None:
+                    return None
+
+                @command("start")
+                async def second(self) -> None:
+                    return None
+
+    def test_one_method_one_message(self) -> None:
+        with pytest.raises(ValueError, match="already handles"):
+
+            class Double(Component):
+                @command("start")
+                @command("stop")
+                async def both(self) -> None:
+                    return None
+
+    def test_handlers_are_coroutines(self) -> None:
+        with pytest.raises(TypeError, match="async def"):
+
+            @component(NAVIGATION_PROFILE)
+            class Sync(Component):
+                @command("start")
+                def start(self) -> None:
+                    return None
+
+    def test_command_parameters_are_its_arguments(self) -> None:
+        with pytest.raises(TypeError, match="'target'"):
+
+            @component(NAVIGATION_PROFILE)
+            class Targeted(Component):
+                @command("start")
+                async def start(self, target: str) -> None:
+                    return None
+
+    def test_a_query_takes_only_the_arguments_of_its_profile(self) -> None:
+        with pytest.raises(TypeError, match="does not define as an argument"):
+
+            @component(SYSTEM_INFORMATION_PROFILE)
+            class Positioned(Component):
+                @query("robot_position")
+                async def robot_position(self, precise: bool) -> dict[str, object]:
+                    return {}
+
+    def test_set_parameter_needs_parameters_in_the_profile(self) -> None:
+        with pytest.raises(ValueError, match="declares no parameters"):
+
+            @component(PERSON_DETECTION_PROFILE)
+            class Setter(Component):
+                @command("set_parameter")
+                async def apply(self, values: dict[str, object]) -> None:
+                    return None
+
+    def test_one_set_parameter_handler(self) -> None:
+        with pytest.raises(ValueError, match="both handle the command 'set_parameter'"):
+
+            @component(NAVIGATION_PROFILE)
+            class TwoSetters(Component):
+                @command("set_parameter")
+                async def first(self, values: dict[str, object]) -> None:
+                    return None
+
+                @command("set_parameter")
+                async def second(self, values: dict[str, object]) -> None:
+                    return None
+
+    def test_set_parameter_takes_the_values(self) -> None:
+        with pytest.raises(TypeError, match="one argument"):
+
+            @component(NAVIGATION_PROFILE)
+            class NoValues(Component):
+                @command("set_parameter")
+                async def apply(self) -> None:
+                    return None
+
+    def test_undeclared_class_has_no_profile(self) -> None:
+        class Undeclared(Component):
+            pass
+
+        with pytest.raises(TypeError, match="not declared"):
+            Undeclared.rois_profile()
+
+
+def test_user_defined_profile() -> None:
+    """A component outside the basic set declares a full profile of its own."""
+    profile = HRIComponentProfile.model_validate(
+        {
+            "identifier": RoISIdentifierType(authority="Example", code="Speech"),
+            "name": "speech",
+            "function": "actuation",
+            "command_profiles": [
+                {
+                    "name": "say",
+                    "arguments": [{"name": "text", "data_type_ref": {"code": "string"}}],
+                }
+            ],
+        }
+    )
+
+    @component(profile)
+    class Speech(Component):
+        @command("say")
+        async def say(self, text: str) -> None:
+            return None
+
+    assert _names(Speech.rois_profile().command_profiles) == ["say"]

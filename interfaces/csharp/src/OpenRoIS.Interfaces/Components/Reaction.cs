@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace OpenRoIS.Interfaces.Components.Reaction
@@ -23,17 +24,30 @@ namespace OpenRoIS.Interfaces.Components.Reaction
     ///     available_reactions: List of reaction identifiers this host can perform.
     ///     reaction_ref: Currently selected reaction identifier.
     /// </summary>
-    public sealed class ReactionGetParameterResult : IEquatable<ReactionGetParameterResult>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class ReactionGetParameterResult : IEquatable<ReactionGetParameterResult>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("available_reactions")]
-        public IReadOnlyList<string> AvailableReactions { get; }
+        public IReadOnlyList<string> AvailableReactions { get; init; }
+        [JsonRequired]
         [JsonPropertyName("reaction_ref")]
-        public string ReactionRef { get; }
+        public string ReactionRef { get; init; }
 
         public ReactionGetParameterResult(IReadOnlyList<string> availableReactions, string reactionRef)
         {
             AvailableReactions = availableReactions;
             ReactionRef = reactionRef;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (AvailableReactions is null) throw new JsonException("ReactionGetParameterResult.available_reactions must not be null.");
+            foreach (var item0 in AvailableReactions)
+            {
+                if (item0 is null) throw new JsonException("ReactionGetParameterResult.available_reactions item must not be null.");
+            }
+            if (ReactionRef is null) throw new JsonException("ReactionGetParameterResult.reaction_ref must not be null.");
         }
 
         public bool Equals(ReactionGetParameterResult? other)
@@ -74,14 +88,25 @@ namespace OpenRoIS.Interfaces.Components.Reaction
     ///         (e.g., "wave", "nod", "smile" for an avatar, or "led_green" for a
     ///         robot).
     /// </summary>
-    public sealed class ReactionSetParameter : IEquatable<ReactionSetParameter>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class ReactionSetParameter : IEquatable<ReactionSetParameter>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("reaction_ref")]
-        public IReadOnlyList<string> ReactionRef { get; }
+        public IReadOnlyList<string> ReactionRef { get; init; }
 
         public ReactionSetParameter(IReadOnlyList<string> reactionRef)
         {
             ReactionRef = reactionRef;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (ReactionRef is null) throw new JsonException("ReactionSetParameter.reaction_ref must not be null.");
+            foreach (var item0 in ReactionRef)
+            {
+                if (item0 is null) throw new JsonException("ReactionSetParameter.reaction_ref item must not be null.");
+            }
         }
 
         public bool Equals(ReactionSetParameter? other)
@@ -113,14 +138,21 @@ namespace OpenRoIS.Interfaces.Components.Reaction
     /// Attributes:
     ///     command_id: The assigned command identifier for this reaction command.
     /// </summary>
-    public sealed class ReactionSetParameterResult : IEquatable<ReactionSetParameterResult>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class ReactionSetParameterResult : IEquatable<ReactionSetParameterResult>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("command_id")]
-        public string CommandId { get; }
+        public string CommandId { get; init; }
 
         public ReactionSetParameterResult(string commandId)
         {
             CommandId = commandId;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (CommandId is null) throw new JsonException("ReactionSetParameterResult.command_id must not be null.");
         }
 
         public bool Equals(ReactionSetParameterResult? other)
@@ -152,10 +184,12 @@ namespace OpenRoIS.Interfaces.Components.Reaction
     /// Attributes:
     ///     status: Current status of the Reaction component.
     /// </summary>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
     public sealed class ReactionStatusResult : IEquatable<ReactionStatusResult>
     {
+        [JsonRequired]
         [JsonPropertyName("status")]
-        public OpenRoIS.Interfaces.Common.ComponentStatus Status { get; }
+        public OpenRoIS.Interfaces.Common.ComponentStatus Status { get; init; }
 
         public ReactionStatusResult(OpenRoIS.Interfaces.Common.ComponentStatus status)
         {

@@ -1,0 +1,22 @@
+{
+	"name": "org.openrois.sdk",
+	"displayName": "OpenRoIS SDK",
+	"version": "0.1.0",
+	"unity": "6000.0",
+	"description": "RoIS Framework 2.0 client SDK for the OpenRoIS middleware. Paradigm-neutral HRI middleware for Unity.",
+	"license": "Apache-2.0",
+	"author": {
+		"name": "OpenRoIS Community",
+		"url": "https://github.com/openrois/openrois"
+	},
+	"changelogUrl": "https://github.com/openrois/openrois/blob/dev/sdk/unity/CHANGELOG.md",
+	"documentationUrl": "https://github.com/openrois/openrois/blob/dev/sdk/unity/README.md",
+	"licensesUrl": "https://github.com/openrois/openrois/blob/dev/sdk/unity/LICENSE.md",
+	"samples": [
+		{
+			"displayName": "Navigation Session",
+			"description": "Connects to a gateway, binds the navigation component of the mock adapter, runs a command and reads how it ended. Needs a gateway with the mock adapter behind it.",
+			"path": "Samples~/Example"
+		}
+	]
+}

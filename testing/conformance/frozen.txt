@@ -1,0 +1,6 @@
+# The stack the client SDKs are released against. A change a client can see needs a new
+# alpha and a change here. openrois-components-core is here for the mock adapter.
+openrois-gateway==0.1.0
+openrois-engine==0.1.0
+openrois-interfaces==0.1.0
+openrois-components-core==0.1.0

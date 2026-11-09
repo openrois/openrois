@@ -1,0 +1,43 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "ReturnCode": {
+      "description": "Return code for all RoIS operations.\n\nMaps to RoIS_HRI::ReturnCode_t in the IDL.",
+      "enum": [
+        "OK",
+        "ERROR",
+        "BAD_PARAMETER",
+        "UNSUPPORTED",
+        "OUT_OF_RESOURCES",
+        "TIMEOUT"
+      ],
+      "title": "ReturnCode",
+      "type": "string"
+    },
+    "RoISIdentifier": {
+      "type": "string"
+    },
+    "RoISIdentifierList": {
+      "items": {
+        "$ref": "#/$defs/RoISIdentifier"
+      },
+      "type": "array"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Result of rois.command.search.\n\nMaps to CommandIF::search(in condition, out component_ref_list).\n\nAttributes:\n    return_code: Outcome of the operation.\n    component_ref_list: Refs of the matching components.",
+  "properties": {
+    "return_code": {
+      "$ref": "#/$defs/ReturnCode"
+    },
+    "component_ref_list": {
+      "$ref": "#/$defs/RoISIdentifierList",
+      "description": "Refs of the matching components"
+    }
+  },
+  "required": [
+    "return_code"
+  ],
+  "title": "SearchResult",
+  "type": "object"
+}

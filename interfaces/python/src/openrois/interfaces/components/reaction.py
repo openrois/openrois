@@ -1,8 +1,8 @@
 """Reaction component typed message models.
 
 Derived from:
-  - normative/machine-readable/RoIS_Reaction.idl
-  - normative/machine-readable/Reaction.xml
+  - OMG RoIS Framework 2.0, RoIS_Reaction.idl
+  - OMG RoIS Framework 2.0, Reaction.xml
 
 Component URN: urn:x-rois:def:component:OMG::Reaction
 
@@ -24,14 +24,6 @@ from pydantic import BaseModel, Field
 
 from openrois.interfaces.common import ComponentStatus
 from openrois.interfaces.hri import CommandId, RoISIdentifier, RoISIdentifierList
-
-# ---------------------------------------------------------------------------
-# Component identifier
-# ---------------------------------------------------------------------------
-
-REACTION_URN = "urn:x-rois:def:component:OMG::Reaction"
-"""Canonical URN for the Reaction component profile."""
-
 
 # ---------------------------------------------------------------------------
 # Command models

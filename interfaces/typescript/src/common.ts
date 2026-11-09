@@ -6,8 +6,6 @@ import { z } from "zod";
 
 // ─── Numeric type aliases (from RoIS_Common.idl) ────────────────
 
-/** Numeric representation of ComponentStatus for wire compatibility. */
-export type ComponentStatusT = number;
 /** Numeric representation of StreamStatus for wire compatibility. */
 export type StreamStatusT = number;
 

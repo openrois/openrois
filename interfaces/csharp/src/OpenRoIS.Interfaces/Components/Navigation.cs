@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace OpenRoIS.Interfaces.Components.Navigation
@@ -34,20 +35,33 @@ namespace OpenRoIS.Interfaces.Components.Navigation
     ///     time_limit: Current time limit setting.
     ///     routing_policy: Current routing policy setting.
     /// </summary>
-    public sealed class NavigationGetParameterResult : IEquatable<NavigationGetParameterResult>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class NavigationGetParameterResult : IEquatable<NavigationGetParameterResult>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("target_positions")]
-        public IReadOnlyList<string> TargetPositions { get; }
+        public IReadOnlyList<string> TargetPositions { get; init; }
+        [JsonRequired]
         [JsonPropertyName("time_limit")]
-        public int TimeLimit { get; }
+        public int TimeLimit { get; init; }
+        [JsonRequired]
         [JsonPropertyName("routing_policy")]
-        public RoutingPolicy RoutingPolicy { get; }
+        public RoutingPolicy RoutingPolicy { get; init; }
 
         public NavigationGetParameterResult(IReadOnlyList<string> targetPositions, int timeLimit, RoutingPolicy routingPolicy)
         {
             TargetPositions = targetPositions;
             TimeLimit = timeLimit;
             RoutingPolicy = routingPolicy;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (TargetPositions is null) throw new JsonException("NavigationGetParameterResult.target_positions must not be null.");
+            foreach (var item0 in TargetPositions)
+            {
+                if (item0 is null) throw new JsonException("NavigationGetParameterResult.target_positions item must not be null.");
+            }
         }
 
         public bool Equals(NavigationGetParameterResult? other)
@@ -82,17 +96,25 @@ namespace OpenRoIS.Interfaces.Components.Navigation
     ///     target: The reached target destination.
     ///     is_final_target: Whether this is the final destination point.
     /// </summary>
-    public sealed class NavigationReachedTargetEvent : IEquatable<NavigationReachedTargetEvent>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class NavigationReachedTargetEvent : IEquatable<NavigationReachedTargetEvent>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("target")]
-        public string Target { get; }
+        public string Target { get; init; }
+        [JsonRequired]
         [JsonPropertyName("is_final_target")]
-        public bool IsFinalTarget { get; }
+        public bool IsFinalTarget { get; init; }
 
         public NavigationReachedTargetEvent(string target, bool isFinalTarget)
         {
             Target = target;
             IsFinalTarget = isFinalTarget;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (Target is null) throw new JsonException("NavigationReachedTargetEvent.target must not be null.");
         }
 
         public bool Equals(NavigationReachedTargetEvent? other)
@@ -130,20 +152,31 @@ namespace OpenRoIS.Interfaces.Components.Navigation
     ///     routing_policy: Routing policy: 'time' priority or 'distance' priority
     ///         (default: 'time').
     /// </summary>
-    public sealed class NavigationSetParameter : IEquatable<NavigationSetParameter>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class NavigationSetParameter : IEquatable<NavigationSetParameter>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("target_positions")]
-        public IReadOnlyList<string> TargetPositions { get; }
+        public IReadOnlyList<string> TargetPositions { get; init; }
         [JsonPropertyName("time_limit")]
-        public int TimeLimit { get; }
+        public int TimeLimit { get; init; }
         [JsonPropertyName("routing_policy")]
-        public RoutingPolicy RoutingPolicy { get; }
+        public RoutingPolicy RoutingPolicy { get; init; }
 
         public NavigationSetParameter(IReadOnlyList<string> targetPositions, int timeLimit = 0, RoutingPolicy routingPolicy = RoutingPolicy.time)
         {
             TargetPositions = targetPositions;
             TimeLimit = timeLimit;
             RoutingPolicy = routingPolicy;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (TargetPositions is null) throw new JsonException("NavigationSetParameter.target_positions must not be null.");
+            foreach (var item0 in TargetPositions)
+            {
+                if (item0 is null) throw new JsonException("NavigationSetParameter.target_positions item must not be null.");
+            }
         }
 
         public bool Equals(NavigationSetParameter? other)
@@ -175,14 +208,21 @@ namespace OpenRoIS.Interfaces.Components.Navigation
     /// Attributes:
     ///     command_id: The assigned command identifier for this navigation command.
     /// </summary>
-    public sealed class NavigationSetParameterResult : IEquatable<NavigationSetParameterResult>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class NavigationSetParameterResult : IEquatable<NavigationSetParameterResult>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("command_id")]
-        public string CommandId { get; }
+        public string CommandId { get; init; }
 
         public NavigationSetParameterResult(string commandId)
         {
             CommandId = commandId;
+        }
+
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (CommandId is null) throw new JsonException("NavigationSetParameterResult.command_id must not be null.");
         }
 
         public bool Equals(NavigationSetParameterResult? other)
@@ -214,10 +254,12 @@ namespace OpenRoIS.Interfaces.Components.Navigation
     /// Attributes:
     ///     status: Current status of the Navigation component.
     /// </summary>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
     public sealed class NavigationStatusResult : IEquatable<NavigationStatusResult>
     {
+        [JsonRequired]
         [JsonPropertyName("status")]
-        public OpenRoIS.Interfaces.Common.ComponentStatus Status { get; }
+        public OpenRoIS.Interfaces.Common.ComponentStatus Status { get; init; }
 
         public NavigationStatusResult(OpenRoIS.Interfaces.Common.ComponentStatus status)
         {

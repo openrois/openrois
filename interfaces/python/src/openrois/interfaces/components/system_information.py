@@ -1,14 +1,15 @@
 """System Information component typed message models.
 
 Derived from:
-  - normative/machine-readable/RoIS_System_Information.idl
-  - normative/machine-readable/SystemInformation.xml
+  - OMG RoIS Framework 2.0, RoIS_System_Information.idl
+  - OMG RoIS Framework 2.0, SystemInformation.xml
 
 Component URN: urn:x-rois:def:component:OMG::SystemInformation
 
-SystemInformation is unique among basic components: it does NOT inherit
-from RoIS_Common (no start/stop/suspend/resume, no component_status).
-It only has Query operations: robot_position and engine_status.
+SystemInformation is unique among basic components: its XML profile includes no
+RoIS_Common, so it has the robot_position and engine_status queries only. The IDL
+derives its Query interface from RoIS_Common::Query, and the implementation follows
+the XML profile (docs/rois-reference.md, section 16).
 """
 
 from __future__ import annotations
@@ -17,14 +18,6 @@ from pydantic import BaseModel, Field
 
 from openrois.interfaces.common import ComponentStatus
 from openrois.interfaces.hri import DateTime, RoISIdentifierList
-
-# ---------------------------------------------------------------------------
-# Component identifier
-# ---------------------------------------------------------------------------
-
-SYSTEM_INFORMATION_URN = "urn:x-rois:def:component:OMG::SystemInformation"
-"""Canonical URN for the SystemInformation component profile."""
-
 
 # ---------------------------------------------------------------------------
 # Query models

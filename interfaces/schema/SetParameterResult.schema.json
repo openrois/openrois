@@ -1,0 +1,38 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "CommandId": {
+      "type": "string"
+    },
+    "ReturnCode": {
+      "description": "Return code for all RoIS operations.\n\nMaps to RoIS_HRI::ReturnCode_t in the IDL.",
+      "enum": [
+        "OK",
+        "ERROR",
+        "BAD_PARAMETER",
+        "UNSUPPORTED",
+        "OUT_OF_RESOURCES",
+        "TIMEOUT"
+      ],
+      "title": "ReturnCode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Result of rois.command.set_parameter.\n\nMaps to CommandIF::set_parameter(in component_ref, in parameters, out command_id).\nThe engine assigns the command_id. A completed notification reports the outcome.\n\nAttributes:\n    return_code: Outcome of the request.\n    command_id: Identifier of the parameter change, assigned by the engine.",
+  "properties": {
+    "return_code": {
+      "$ref": "#/$defs/ReturnCode"
+    },
+    "command_id": {
+      "$ref": "#/$defs/CommandId",
+      "default": "",
+      "description": "Identifier of the parameter change, assigned by the engine"
+    }
+  },
+  "required": [
+    "return_code"
+  ],
+  "title": "SetParameterResult",
+  "type": "object"
+}

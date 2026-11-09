@@ -1,9 +1,10 @@
 // GENERATED FROM interfaces/schema — DO NOT EDIT
-// Source: CompletedEvent.schema.json, CompletedStatus.schema.json, ErrorType.schema.json, NotifyErrorEvent.schema.json, NotifyEventPayload.schema.json
+// Source: CompletedParams.schema.json, CompletedStatus.schema.json, ErrorType.schema.json, NotifyErrorParams.schema.json, NotifyEventParams.schema.json, ProfileChangedParams.schema.json
 // Generator: scripts/Generator/Program.cs
 
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace OpenRoIS.Interfaces.Service
@@ -52,27 +53,40 @@ namespace OpenRoIS.Interfaces.Service
 
 
 
+
+
     /// <summary>
-    /// Event payload for ServiceApplicationBase::completed.
+    /// Params of the rois.command.completed notification.
+    /// 
+    /// Maps to ServiceApplicationBase::completed(in command_id, in status). The results
+    /// come from CommandIF::get_command_result(command_id).
     /// 
     /// Attributes:
-    ///     command_id: The command identifier that completed.
-    ///     status: The completion status.
+    ///     command_id: The command that ended, as the application named it.
+    ///     status: How the command ended.
     /// </summary>
-    public sealed class CompletedEvent : IEquatable<CompletedEvent>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class CompletedParams : IEquatable<CompletedParams>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("command_id")]
-        public string CommandId { get; }
+        public string CommandId { get; init; }
+        [JsonRequired]
         [JsonPropertyName("status")]
-        public CompletedStatus Status { get; }
+        public CompletedStatus Status { get; init; }
 
-        public CompletedEvent(string commandId, CompletedStatus status)
+        public CompletedParams(string commandId, CompletedStatus status)
         {
             CommandId = commandId;
             Status = status;
         }
 
-        public bool Equals(CompletedEvent? other)
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (CommandId is null) throw new JsonException("CompletedParams.command_id must not be null.");
+        }
+
+        public bool Equals(CompletedParams? other)
         {
             if (ReferenceEquals(other, this)) return true;
             if (other is null) return false;
@@ -81,7 +95,7 @@ namespace OpenRoIS.Interfaces.Service
 
         public override bool Equals(object? obj)
         {
-            return Equals(obj as CompletedEvent);
+            return Equals(obj as CompletedParams);
         }
 
         public override int GetHashCode()
@@ -89,33 +103,44 @@ namespace OpenRoIS.Interfaces.Service
             return System.HashCode.Combine(CommandId, Status);
         }
 
-        public static bool operator ==(CompletedEvent? left, CompletedEvent? right)
+        public static bool operator ==(CompletedParams? left, CompletedParams? right)
             => ReferenceEquals(left, right) || (left is not null && left.Equals(right));
-        public static bool operator !=(CompletedEvent? left, CompletedEvent? right)
+        public static bool operator !=(CompletedParams? left, CompletedParams? right)
             => !(left == right);
     }
 
     /// <summary>
-    /// Event payload for ServiceApplicationBase::notify_error.
+    /// Params of the rois.system.notify_error notification.
+    /// 
+    /// Maps to ServiceApplicationBase::notify_error(in error_id, in error_type). The
+    /// details come from SystemIF::get_error_detail(error_id).
     /// 
     /// Attributes:
-    ///     error_id: Unique identifier for this error instance.
+    ///     error_id: Identifier of this error, for get_error_detail.
     ///     error_type: Classification of the error.
     /// </summary>
-    public sealed class NotifyErrorEvent : IEquatable<NotifyErrorEvent>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class NotifyErrorParams : IEquatable<NotifyErrorParams>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("error_id")]
-        public string ErrorId { get; }
+        public string ErrorId { get; init; }
+        [JsonRequired]
         [JsonPropertyName("error_type")]
-        public ErrorType ErrorType { get; }
+        public ErrorType ErrorType { get; init; }
 
-        public NotifyErrorEvent(string errorId, ErrorType errorType)
+        public NotifyErrorParams(string errorId, ErrorType errorType)
         {
             ErrorId = errorId;
             ErrorType = errorType;
         }
 
-        public bool Equals(NotifyErrorEvent? other)
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (ErrorId is null) throw new JsonException("NotifyErrorParams.error_id must not be null.");
+        }
+
+        public bool Equals(NotifyErrorParams? other)
         {
             if (ReferenceEquals(other, this)) return true;
             if (other is null) return false;
@@ -124,7 +149,7 @@ namespace OpenRoIS.Interfaces.Service
 
         public override bool Equals(object? obj)
         {
-            return Equals(obj as NotifyErrorEvent);
+            return Equals(obj as NotifyErrorParams);
         }
 
         public override int GetHashCode()
@@ -132,61 +157,100 @@ namespace OpenRoIS.Interfaces.Service
             return System.HashCode.Combine(ErrorId, ErrorType);
         }
 
-        public static bool operator ==(NotifyErrorEvent? left, NotifyErrorEvent? right)
+        public static bool operator ==(NotifyErrorParams? left, NotifyErrorParams? right)
             => ReferenceEquals(left, right) || (left is not null && left.Equals(right));
-        public static bool operator !=(NotifyErrorEvent? left, NotifyErrorEvent? right)
+        public static bool operator !=(NotifyErrorParams? left, NotifyErrorParams? right)
             => !(left == right);
     }
 
     /// <summary>
-    /// Event payload for ServiceApplicationBase::notify_event.
+    /// Params of the rois.event.notify_event notification.
+    /// 
+    /// Maps to ServiceApplicationBase::notify_event(in event_id, in event_type,
+    /// in subscribe_id, in expire). The payload also comes from
+    /// EventIF::get_event_detail(event_id) until the event expires.
     /// 
     /// Attributes:
-    ///     event_id: Unique identifier for this event occurrence.
-    ///     event_type: The type of event (e.g., 'person_detected', 'face_localized').
-    ///     subscribe_id: The subscription identifier that this event matches.
-    ///     expire: ISO 8601 datetime when this event expires, or empty if no expiry.
+    ///     event_id: Identifier of this event, for get_event_detail.
+    ///     event_type: The type of event (e.g., 'person_detected').
+    ///     subscribe_id: The subscription this event matches.
+    ///     expire: ISO 8601 datetime after which get_event_detail no longer has the
+    ///         event, or empty if it does not expire.
+    ///     results: The event payload. An OpenRoIS extension that saves one
+    ///         get_event_detail round trip per event.
     /// </summary>
-    public sealed class NotifyEventPayload : IEquatable<NotifyEventPayload>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class NotifyEventParams : IEquatable<NotifyEventParams>, IJsonOnDeserialized
     {
+        [JsonRequired]
         [JsonPropertyName("event_id")]
-        public string EventId { get; }
+        public string EventId { get; init; }
+        [JsonRequired]
         [JsonPropertyName("event_type")]
-        public string EventType { get; }
+        public string EventType { get; init; }
+        [JsonRequired]
         [JsonPropertyName("subscribe_id")]
-        public string SubscribeId { get; }
+        public string SubscribeId { get; init; }
         [JsonPropertyName("expire")]
-        public string Expire { get; }
+        public string Expire { get; init; }
+        [JsonPropertyName("results")]
+        public IReadOnlyList<OpenRoIS.Interfaces.Hri.Result>? Results { get; init; }
 
-        public NotifyEventPayload(string eventId, string eventType, string subscribeId, string expire = "")
+        public NotifyEventParams(string eventId, string eventType, string subscribeId, string expire = "", IReadOnlyList<OpenRoIS.Interfaces.Hri.Result>? results = null)
         {
             EventId = eventId;
             EventType = eventType;
             SubscribeId = subscribeId;
             Expire = expire;
+            Results = results;
         }
 
-        public bool Equals(NotifyEventPayload? other)
+        void IJsonOnDeserialized.OnDeserialized()
+        {
+            if (EventId is null) throw new JsonException("NotifyEventParams.event_id must not be null.");
+            if (EventType is null) throw new JsonException("NotifyEventParams.event_type must not be null.");
+            if (SubscribeId is null) throw new JsonException("NotifyEventParams.subscribe_id must not be null.");
+            if (Expire is null) throw new JsonException("NotifyEventParams.expire must not be null.");
+            if (Results is not null)
+            {
+                foreach (var item0 in Results)
+                {
+                    if (item0 is null) throw new JsonException("NotifyEventParams.results item must not be null.");
+                }
+            }
+        }
+
+        public bool Equals(NotifyEventParams? other)
         {
             if (ReferenceEquals(other, this)) return true;
             if (other is null) return false;
-            return Equals(EventId, other.EventId) && Equals(EventType, other.EventType) && Equals(SubscribeId, other.SubscribeId) && Equals(Expire, other.Expire);
+            return Equals(EventId, other.EventId) && Equals(EventType, other.EventType) && Equals(SubscribeId, other.SubscribeId) && Equals(Expire, other.Expire) && Equals(Results, other.Results);
         }
 
         public override bool Equals(object? obj)
         {
-            return Equals(obj as NotifyEventPayload);
+            return Equals(obj as NotifyEventParams);
         }
 
         public override int GetHashCode()
         {
-            return System.HashCode.Combine(EventId, EventType, SubscribeId, Expire);
+            return System.HashCode.Combine(EventId, EventType, SubscribeId, Expire, Results);
         }
 
-        public static bool operator ==(NotifyEventPayload? left, NotifyEventPayload? right)
+        public static bool operator ==(NotifyEventParams? left, NotifyEventParams? right)
             => ReferenceEquals(left, right) || (left is not null && left.Equals(right));
-        public static bool operator !=(NotifyEventPayload? left, NotifyEventPayload? right)
+        public static bool operator !=(NotifyEventParams? left, NotifyEventParams? right)
             => !(left == right);
     }
+
+    /// <summary>
+    /// Params of the rois.system.profile_changed notification.
+    /// 
+    /// Not part of RoIS: an OpenRoIS extension. The engine sends it when its profile
+    /// changes, for example when a child engine connects or disconnects, so a client
+    /// calls get_profile again instead of polling it. It carries no params.
+    /// </summary>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    public sealed class ProfileChangedParams { }
 
 }

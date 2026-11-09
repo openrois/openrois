@@ -52,7 +52,7 @@ class TestParameterProfile:
         )
         assert pp.name == "number"
         assert pp.data_type_ref.code == "int"
-        assert pp.default_value == ""
+        assert pp.default_value is None
         assert pp.description == ""
 
     def test_with_defaults(self) -> None:

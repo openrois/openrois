@@ -3,24 +3,7 @@
 // Generator: scripts/generate.ts
 
 import { z } from "zod";
-
-// ─── Shared type definitions ($defs) ─────────────────────────────
-
-/**
- * Status of a RoIS component.
- * 
- * Maps to RoIS_Common::Component_Status in the IDL.
- * 
- * UNINITIALIZED: Component has not been initialized.
- * READY: Component is ready to operate.
- * BUSY: Component is currently processing.
- * WARNING: Component is operational but has a warning condition.
- * ERROR: Component has encountered an error.
- */
-
-export const ComponentStatusSchema = z.enum(["UNINITIALIZED", "READY", "BUSY", "WARNING", "ERROR"]);
-export type ComponentStatus = z.infer<typeof ComponentStatusSchema>;
-
+import { ComponentStatusSchema } from "../common.js";
 
 /**
  * Event payload for Person_Detection::Event::person_detected.
@@ -34,7 +17,7 @@ export type ComponentStatus = z.infer<typeof ComponentStatusSchema>;
 
 export const PersonDetectedEventSchema = z.object({
   timestamp: z.string(), // Time when measured
-  number: z.number().int(), // Number of detected persons
+  number: z.number().int().min(-2147483648).max(2147483647), // Number of detected persons
 }).strict();
 export type PersonDetectedEvent = z.infer<typeof PersonDetectedEventSchema>;
 

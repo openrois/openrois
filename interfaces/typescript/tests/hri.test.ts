@@ -5,6 +5,7 @@ import {
   ArgumentSchema,
   CommandUnitSchema,
   ConcurrentCommandsSchema,
+  BranchSchema,
   CommandUnitSequenceSchema,
   ReturnCodeSchema,
   type Result,
@@ -17,6 +18,12 @@ import {
   type DateTime,
   type Integer,
 } from "../src/hri";
+import { CommandMessageProfileSchema } from "../src/profiles";
+import {
+  NavigationGetParameterResultSchema,
+  NavigationSetParameterSchema,
+} from "../src/components/navigation";
+import { PersonDetectedEventSchema } from "../src/components/person-detection";
 
 describe("ResultSchema", () => {
   it("parses a valid result", () => {
@@ -71,10 +78,10 @@ describe("CommandUnitSchema", () => {
     expect(cmd.delay_time).toBeNull();
   });
 
-  it("parses a command with arguments and delay", () => {
+  it("parses a command the component defines, with arguments and delay", () => {
     const cmd = CommandUnitSchema.parse({
       component_ref: "robot/nav",
-      command_type: "execute",
+      command_type: "go_to",
       command_id: "cmd-2",
       arguments: [{ name: "x", data_type_ref: "int", value: "1" }],
       delay_time: 100,
@@ -102,11 +109,15 @@ describe("CommandUnitSequenceSchema", () => {
     const seq = CommandUnitSequenceSchema.parse({
       command_unit_list: [
         {
-          command_list: [
+          branch_list: [
             {
-              component_ref: "robot/nav",
-              command_type: "start",
-              command_id: "cmd-1",
+              command_list: [
+                {
+                  component_ref: "robot/nav",
+                  command_type: "start",
+                  command_id: "cmd-1",
+                },
+              ],
             },
           ],
         },
@@ -147,5 +158,75 @@ describe("Type aliases", () => {
   it("Integer is number", () => {
     const i: Integer = 42;
     expect(typeof i).toBe("number");
+  });
+});
+
+describe("Integer bounds", () => {
+  const INTEGER_MIN = -2147483648;
+  const INTEGER_MAX = 2147483647;
+
+  const fields: [string, (value: number) => { success: boolean }][] = [
+    [
+      "CommandUnit.delay_time",
+      (value) =>
+        CommandUnitSchema.safeParse({
+          component_ref: "a/b",
+          command_type: "start",
+          delay_time: value,
+        }),
+    ],
+    [
+      "ConcurrentCommands.delay_time",
+      (value) => ConcurrentCommandsSchema.safeParse({ branch_list: [], delay_time: value }),
+    ],
+    [
+      "NavigationSetParameter.time_limit",
+      (value) =>
+        NavigationSetParameterSchema.safeParse({ target_positions: ["a"], time_limit: value }),
+    ],
+    [
+      "NavigationGetParameterResult.time_limit",
+      (value) =>
+        NavigationGetParameterResultSchema.safeParse({
+          target_positions: ["a"],
+          time_limit: value,
+          routing_policy: "time",
+        }),
+    ],
+    [
+      "PersonDetectedEvent.number",
+      (value) =>
+        PersonDetectedEventSchema.safeParse({ timestamp: "2025-01-15T10:30:00Z", number: value }),
+    ],
+    [
+      "CommandMessageProfile.timeout",
+      (value) => CommandMessageProfileSchema.safeParse({ name: "start", timeout: value }),
+    ],
+  ];
+
+  it.each(fields)("%s takes the whole range", (_, parse) => {
+    expect(parse(INTEGER_MIN).success).toBe(true);
+    expect(parse(INTEGER_MAX).success).toBe(true);
+  });
+
+  it.each(fields)("%s refuses a value outside the range", (_, parse) => {
+    expect(parse(INTEGER_MIN - 1).success).toBe(false);
+    expect(parse(INTEGER_MAX + 1).success).toBe(false);
+  });
+});
+
+describe("minItems", () => {
+  const unit = { component_ref: "a/b", command_type: "start" };
+
+  it("BranchSchema refuses an empty command_list", () => {
+    expect(BranchSchema.safeParse({ command_list: [] }).success).toBe(false);
+    expect(BranchSchema.safeParse({ command_list: [unit] }).success).toBe(true);
+  });
+
+  it("ConcurrentCommandsSchema refuses an empty branch, and takes an empty branch_list", () => {
+    expect(
+      ConcurrentCommandsSchema.safeParse({ branch_list: [{ command_list: [] }] }).success,
+    ).toBe(false);
+    expect(ConcurrentCommandsSchema.safeParse({ branch_list: [] }).success).toBe(true);
   });
 });

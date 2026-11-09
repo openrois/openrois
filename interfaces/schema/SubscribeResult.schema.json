@@ -1,0 +1,38 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "ReturnCode": {
+      "description": "Return code for all RoIS operations.\n\nMaps to RoIS_HRI::ReturnCode_t in the IDL.",
+      "enum": [
+        "OK",
+        "ERROR",
+        "BAD_PARAMETER",
+        "UNSUPPORTED",
+        "OUT_OF_RESOURCES",
+        "TIMEOUT"
+      ],
+      "title": "ReturnCode",
+      "type": "string"
+    },
+    "SubscribeId": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Result of rois.event.subscribe.\n\nMaps to EventIF::subscribe(in event_type, in condition, out subscribe_id).\n\nAttributes:\n    return_code: Outcome of the operation.\n    subscribe_id: Identifier of the subscription. Empty when return_code is not OK.",
+  "properties": {
+    "return_code": {
+      "$ref": "#/$defs/ReturnCode"
+    },
+    "subscribe_id": {
+      "$ref": "#/$defs/SubscribeId",
+      "default": "",
+      "description": "Identifier of the subscription"
+    }
+  },
+  "required": [
+    "return_code"
+  ],
+  "title": "SubscribeResult",
+  "type": "object"
+}

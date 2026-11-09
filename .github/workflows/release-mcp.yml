@@ -1,0 +1,215 @@
+name: Release MCP server
+
+# Publishes openrois-mcp to PyPI when an mcp-v* tag is pushed, for example
+# mcp-v0.1.0-alpha.1. PyPI uses trusted publishing (OIDC), so no long-lived token is stored
+# in the repository. The last job then creates the GitHub release with the wheel and the
+# CHANGELOG section.
+
+on:
+  push:
+    tags: ["mcp-v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-mcp-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check-version:
+    name: Tag matches the package version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.versions.outputs.version }}
+      pypi: ${{ steps.versions.outputs.pypi }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compare the tag with pyproject.toml
+        id: versions
+        # The tag carries the npm form (0.1.0-alpha.1), and PyPI normalizes it to 0.1.0a1.
+        # beta and rc tags normalize the same way. A tag in the PyPI form (0.1.0a1) would
+        # also equal pyproject.toml, and the GitHub release would then be a full release,
+        # because the release action reads a pre-release from a hyphen. So the form comes
+        # first, and it refuses any other label too.
+        run: |
+          tag="${GITHUB_REF_NAME#mcp-v}"
+          if [[ ! "$tag" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?$ ]]; then
+            echo "::error::Tag $tag is not in the npm form, for example 0.1.0-alpha.1"
+            exit 1
+          fi
+          py_version=$(python3 -c "import tomllib;print(tomllib.load(open('services/mcp/pyproject.toml','rb'))['project']['version'])")
+          py_expected=$(sed -E -e 's/-alpha\./a/' -e 's/-beta\./b/' -e 's/-rc\./rc/' <<< "$tag")
+          if [ "$py_version" != "$py_expected" ]; then
+            echo "::error::Tag $tag, PyPI $py_version (expected $py_expected)"
+            exit 1
+          fi
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+          echo "pypi=$py_version" >> "$GITHUB_OUTPUT"
+
+      - name: Write the release notes
+        # This runs before anything is uploaded, so a missing CHANGELOG section stops the
+        # release while the version is still free on PyPI.
+        env:
+          PY_VERSION: ${{ steps.versions.outputs.pypi }}
+        run: python3 .github/scripts/release_notes.py --part services/mcp/CHANGELOG.md "$PY_VERSION" > release-notes.md
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
+
+  test:
+    # The interfaces and the SDK come from PyPI, with nothing from the tree over them, which
+    # is what a consumer gets. Pull request CI tests the tree.
+    name: Python ${{ matrix.python-version }}
+    needs: check-version
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: python -m pip install -e "services/mcp[dev]"
+
+      - name: Lint
+        working-directory: services/mcp
+        run: ruff check src/ tests/
+
+      - name: Type check
+        working-directory: services/mcp
+        run: mypy
+
+      - name: Test
+        working-directory: services/mcp
+        run: pytest
+
+      - name: Build
+        working-directory: services/mcp
+        run: |
+          python -m pip install build
+          python -m build
+
+      - name: The wheel installs from PyPI
+        # This resolves the dependencies from the registry, so a floor that PyPI cannot
+        # satisfy stops the release before anything is uploaded. The console script must
+        # print the version being released.
+        env:
+          PY_VERSION: ${{ needs.check-version.outputs.pypi }}
+        run: |
+          python -m venv /tmp/clean
+          /tmp/clean/bin/pip install services/mcp/dist/*.whl
+          installed=$(/tmp/clean/bin/openrois-mcp --version)
+          if [ "$installed" != "$PY_VERSION" ]; then
+            echo "::error::openrois-mcp --version printed $installed, expected $PY_VERSION"
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v7
+        if: matrix.python-version == '3.12'
+        with:
+          name: python-dist
+          path: services/mcp/dist
+          if-no-files-found: error
+
+  frozen:
+    # The integration tests against the stack that frozen.txt pins, installed from PyPI, so
+    # the server cannot ship against a stack it was not tested with. frozen.txt pins the
+    # stack and not the SDK, whose own releases move it, so the SDK is pinned here to the
+    # floor that pyproject.toml declares: the oldest SDK a consumer can get is the one tested.
+    name: Integration on frozen.txt, Python ${{ matrix.python-version }}
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    env:
+      OPENROIS_GATEWAY_URL: ws://127.0.0.1:8765
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: python-dist
+          path: dist
+
+      - name: Install the frozen stack, the SDK floor and the wheel
+        # The wheel goes in under the same pins, so the tests read the file that goes up,
+        # with the interfaces of the stack.
+        run: |
+          sdk_floor=$(python3 .github/scripts/dependency_floor.py services/mcp/pyproject.toml openrois-sdk)
+          python -m venv /tmp/frozen
+          /tmp/frozen/bin/pip install -r testing/conformance/frozen.txt
+          /tmp/frozen/bin/pip install --constraint testing/conformance/frozen.txt \
+            "openrois-sdk==$sdk_floor" "$(echo dist/*.whl)[dev]"
+          /tmp/frozen/bin/pip list
+          echo /tmp/frozen/bin >> "$GITHUB_PATH"
+
+      - name: Start the gateway and the mock adapter
+        # They stay up for the step below. The suite waits until the adapter has joined.
+        run: |
+          openrois-gateway --log-level warning > gateway.log 2>&1 &
+          python testing/mock-adapter/mock_adapter.py \
+            --config testing/mock-adapter/adapter.fast.yaml --log-level warning \
+            > adapter.log 2>&1 &
+
+      - name: The integration tests
+        # python -m pytest from services/mcp imports the tests from the tree and
+        # openrois.mcp from the installed wheel, since src/ is not on the path.
+        working-directory: services/mcp
+        run: python -m pytest tests/integration
+
+      - name: Logs
+        if: always()
+        run: cat gateway.log adapter.log
+
+  pypi:
+    name: PyPI
+    needs: frozen
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      # The files that passed the clean install are the files that go up, so this job does
+      # not build them again.
+      - uses: actions/download-artifact@v8
+        with:
+          name: python-dist
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+
+  github-release:
+    name: GitHub release
+    needs: [check-version, pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      # The glob names the wheel alone, because the sdist stays on PyPI.
+      - uses: ./.github/actions/github-release
+        with:
+          title: MCP server ${{ needs.check-version.outputs.version }}
+          notes-file: artifacts/release-notes/release-notes.md
+          files: artifacts/python-dist/*.whl

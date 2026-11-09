@@ -1,0 +1,19 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "ConditionT": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Params of rois.system.get_profile.\n\nMaps to SystemIF::get_profile(in condition, out profile).\n\nAttributes:\n    condition: Selection condition on component_ref and component_type. The\n        profile lists only the matching components. Empty means every component.",
+  "properties": {
+    "condition": {
+      "$ref": "#/$defs/ConditionT",
+      "default": "",
+      "description": "Selection condition (CQL2-Text) on the components the profile lists"
+    }
+  },
+  "title": "GetProfileParams",
+  "type": "object"
+}

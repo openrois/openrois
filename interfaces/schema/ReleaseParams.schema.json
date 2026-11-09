@@ -1,0 +1,21 @@
+{
+  "$comment": "GENERATED FROM interfaces/python: DO NOT EDIT. Run scripts/export_schema.py.",
+  "$defs": {
+    "RoISIdentifier": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Params of rois.command.release.\n\nMaps to CommandIF::release(in component_ref).\n\nAttributes:\n    component_ref: The component to release.",
+  "properties": {
+    "component_ref": {
+      "$ref": "#/$defs/RoISIdentifier",
+      "description": "The component to release"
+    }
+  },
+  "required": [
+    "component_ref"
+  ],
+  "title": "ReleaseParams",
+  "type": "object"
+}
