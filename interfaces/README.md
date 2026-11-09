@@ -55,11 +55,11 @@ in its tests, so the languages cannot drift apart.
 
 | Package | Language | Version | Role | Where |
 |---------|----------|---------|------|-------|
-| `openrois-interfaces` | Python 3.12+ | 0.1.0a6 | Source of truth | PyPI |
-| `@openrois/interfaces` | TypeScript (ESM) | 0.1.0-alpha.6 | Generated | npm |
-| `OpenRoIS.Interfaces` | C# (netstandard2.1) | 0.1.0-alpha.6 | Generated | Inside the Unity package |
+| `openrois-interfaces` | Python 3.12+ | 0.1.0 | Source of truth | PyPI |
+| `@openrois/interfaces` | TypeScript (ESM) | 0.1.0 | Generated | npm |
+| `OpenRoIS.Interfaces` | C# (netstandard2.1) | 0.1.0 | Generated | Inside the Unity package |
 
-One tag, `interfaces-v0.1.0-alpha.6`, releases all three at the same version. The C# types
+One tag, `interfaces-v0.1.0`, releases all three at the same version. The C# types
 are not on NuGet: they ship inside the Unity package `org.openrois.sdk`, as a precompiled
 assembly. Each package README describes how to install it, and how to use it from a clone.
 The GitHub release of a tag carries the wheel, the npm tarball and the `.nupkg` as assets.

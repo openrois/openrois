@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-10
+
+### Changed
+
+- The first release numbered 0.1.0, in step with OpenRoIS 0.1.0, with the same models, method catalog and profiles as 0.1.0a6.
+
 ### Fixed
 
 - `pydantic` 2.10 or later is required, because `openrois.interfaces` does not import with earlier versions, which the declared floor of 2.0 allowed.
@@ -94,7 +100,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `BusAdapter` protocol with its request and response models.
 - JSON Schema exported from the models into `interfaces/schema/`.
 
-[unreleased]: https://github.com/openrois/openrois/compare/interfaces-v0.1.0-alpha.6...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/interfaces-v0.1.0...HEAD
+[0.1.0]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0
 [0.1.0a6]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.6
 [0.1.0a5]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.5
 [0.1.0a4]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.4

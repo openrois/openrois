@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-10
+
+### Changed
+
+- The first release numbered 0.1.0, in step with OpenRoIS 0.1.0 and `openrois-interfaces` 0.1.0, with the same types, schemas and condition builders as 0.1.0-alpha.6.
+
 ## [0.1.0-alpha.6] - 2026-11-06
 
 ### Added
@@ -87,7 +93,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `@openrois/interfaces` ESM package, generated from the JSON Schema: zod schemas and inferred types for the core RoIS types and the `PersonDetection`, `Navigation` and `SystemInformation` component models.
 - The `BusAdapter` interface with its error classes.
 
-[unreleased]: https://github.com/openrois/openrois/compare/interfaces-v0.1.0-alpha.6...HEAD
+[unreleased]: https://github.com/openrois/openrois/compare/interfaces-v0.1.0...HEAD
+[0.1.0]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0
 [0.1.0-alpha.6]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.6
 [0.1.0-alpha.5]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.5
 [0.1.0-alpha.4]: https://github.com/openrois/openrois/releases/tag/interfaces-v0.1.0-alpha.4
