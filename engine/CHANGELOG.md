@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** the engine reaches its components through `ComponentSource`, in `openrois.engine.source`, whose operations carry the names of the RoIS operations they serve: `execute`, `set_parameter`, `get_parameter`, `get_command_result`, `query`, `subscribe`, `unsubscribe`, `get_event_detail` and `get_error_detail`. `LocalComponents` and `ChildEngine` implement it. Code that implements or calls `ComponentContract` from `openrois.engine.contract` uses `ComponentSource`, with `execute` for `run`, `get_command_result` for `command_result`, `get_event_detail` for `event_detail` and `get_error_detail` for `error_detail`. Adapters and gateways built on `Engine` need no change.
+
 ## [0.1.0a3] - 2026-11-08
 
 ### Fixed

@@ -16,11 +16,10 @@ from openrois.interfaces.service import CompletedStatus
 from openrois.components.core import (
     CommandFailed,
     Component,
+    command,
     component,
-    invoke,
-    on_set_parameter,
+    event,
     query,
-    subscribe,
 )
 from tests._support import RecordingBinding
 
@@ -35,25 +34,25 @@ class Navigation(Component):
         self.refuse = False
         self.arrive = asyncio.Event()
 
-    @invoke("start")
+    @command("start")
     async def start(self) -> None:
         target = self.parameters["target_positions"][0]
         await self.arrive.wait()
         self.emit("reached_target", target=target, is_final_target=True)
 
-    @invoke("suspend")
+    @command("suspend")
     async def suspend(self) -> None:
         raise CommandFailed(CompletedStatus.OUT_OF_RESOURCES, "brakes are hot")
 
-    @invoke("resume")
+    @command("resume")
     async def resume(self) -> None:
         raise RuntimeError("motor driver lost")
 
-    @subscribe("reached_target")
+    @event("reached_target")
     async def reached_target(self) -> None:
         self.subscribed += 1
 
-    @on_set_parameter
+    @command("set_parameter")
     async def apply(self, values: Mapping[str, Any]) -> None:
         if self.refuse:
             raise ValueError("unknown place")
@@ -187,7 +186,7 @@ class TestArgumentsAndResults:
     def _speech(self) -> Component:
         @component(self.PROFILE)
         class Speech(Component):
-            @invoke("say")
+            @command("say")
             async def say(self, text: str, volume: int = 5) -> dict[str, object]:
                 return {"spoken_ms": len(text) * 100 + volume}
 
@@ -277,7 +276,7 @@ class TestEvents:
 
         silent = Silent()
         silent.rois_bind(RecordingBinding())
-        with pytest.raises(ValueError, match="@subscribe"):
+        with pytest.raises(ValueError, match="@event"):
             silent.emit("reached_target", target="hall")
 
     def test_emit_checks_value_types(self) -> None:

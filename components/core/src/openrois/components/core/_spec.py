@@ -1,7 +1,7 @@
 """What a decorated component class declares, checked against its profile.
 
 ``@component`` builds a ComponentSpec when a class is defined: which method handles
-each command, query and event, the hook for new parameter values, and the profile the
+each command, query and event, the handler that applies new parameter values, and the profile the
 engine serves for the class. A handler that does not match the profile fails here, at
 class definition, so a typo cannot advertise a message the profile does not define.
 """
@@ -22,7 +22,7 @@ from openrois.interfaces.profiles import (
     QueryMessageProfile,
 )
 
-type HandlerKind = Literal["command", "query", "event", "set_parameter"]
+type HandlerKind = Literal["command", "query", "event"]
 
 # The messages whose handlers take arguments by name.
 type MessageWithArguments = CommandMessageProfile | QueryMessageProfile | EventMessageProfile
@@ -30,8 +30,10 @@ type MessageWithArguments = CommandMessageProfile | QueryMessageProfile | EventM
 # The attribute the method decorators set on the functions they mark.
 HANDLER_ATTRIBUTE = "__rois_handler__"
 
+# The command whose handler applies new parameter values. The engine checks and stores
+# the values itself, and the handler only applies them, so it is not a profile message.
+SET_PARAMETER = "set_parameter"
 # The engine answers these itself, so a component never handles them.
-ENGINE_COMMANDS = frozenset({"set_parameter"})
 ENGINE_QUERIES = frozenset({"component_status"})
 
 # A component whose profile includes RoISCommon serves these, handler or not.
@@ -61,7 +63,8 @@ class ComponentSpec:
         commands: The method that handles each command, by command name.
         queries: The method that handles each query, by query name.
         events: The method that runs on a new subscription, by event name.
-        set_parameter_hook: The method that applies new parameter values, if any.
+        set_parameter_hook: The method that handles ``set_parameter`` by applying the new
+            parameter values, if any.
     """
 
     declared: HRIComponentProfile
@@ -101,21 +104,18 @@ def build_spec(cls: type, profile: HRIComponentProfile) -> ComponentSpec:
             raise TypeError(f"{where} must be an async def")
         parameters = list(inspect.signature(method).parameters.values())[1:]
 
-        if handler.kind == "set_parameter":
+        if handler.kind == "command" and handler.name == SET_PARAMETER:
             if not profile.parameter_profiles:
-                raise ValueError(f"{where} is an @on_set_parameter hook, but the profile "
+                raise ValueError(f"{where} handles set_parameter, but the profile "
                                  f"{kind_of_type} declares no parameters")
             if hook is not None:
-                raise ValueError(f"{owner} has two @on_set_parameter hooks: {hook} and "
-                                 f"{attribute}")
+                raise ValueError(f"{owner}.{hook} and {where} both handle the command "
+                                 "'set_parameter'")
             if len(parameters) != 1:
                 raise TypeError(f"{where} must take one argument, the new values")
             hook = attribute
             continue
 
-        if handler.kind == "command" and handler.name in ENGINE_COMMANDS:
-            raise ValueError(f"{where} handles {handler.name}, which the engine runs itself. "
-                             "Apply new parameter values in an @on_set_parameter hook")
         if handler.kind == "query" and handler.name in ENGINE_QUERIES:
             raise ValueError(f"{where} answers {handler.name}, which the engine answers "
                              "itself")

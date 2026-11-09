@@ -32,10 +32,10 @@ from openrois.components.core import (
     CommandFailed,
     Component,
     Resource,
+    command,
     component,
-    invoke,
+    event,
     query,
-    subscribe,
 )
 from openrois.engine import Engine, WsClient
 from openrois.engine.config import AdapterConfig, ConfigError, load_adapter_config
@@ -120,7 +120,7 @@ class MyNavigation(Component):
     def __init__(self, robot: RobotConnection) -> None:
         self._robot = self.uses(robot)
 
-    @invoke("start")
+    @command("start")
     async def start(self) -> None:
         targets = self.parameters.get("target_positions", [])
         if not targets:
@@ -130,11 +130,11 @@ class MyNavigation(Component):
         await self._drive_to(target)
         self.emit("reached_target", target=target, is_final_target=True)
 
-    @invoke("stop")
+    @command("stop")
     async def stop(self) -> None:
         await self._halt()
 
-    @subscribe("reached_target")
+    @event("reached_target")
     async def reached_target(self) -> None:
         pass  # start emits the event when the robot arrives.
 
@@ -236,7 +236,7 @@ class Battery(Component):
     async def battery_level(self) -> dict[str, object]:
         return {"percentage": await self._read_level()}
 
-    @subscribe("battery_low")
+    @event("battery_low")
     async def battery_low(self) -> None:
         # The first subscription starts the monitor. The engine sends each event to every
         # subscription.

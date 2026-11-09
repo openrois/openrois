@@ -1,6 +1,6 @@
 """The components an engine hosts in its own process.
 
-``LocalComponents`` implements the component contract for components that live in the
+``LocalComponents`` is the component source for components that live in the
 engine's process, written with ``openrois-components-core`` or with any class of the
 same shape (``LocalComponent``). It keeps what the components do not have to: the
 resources they share, the parameter store, the running commands and their results, the
@@ -45,7 +45,7 @@ from openrois.interfaces.hri import Argument, CommandUnit, Parameter, Result, Re
 from openrois.interfaces.profiles import HRIComponentProfile, HRIEngineProfileType
 from openrois.interfaces.service import CompletedStatus, ErrorType, NotifyEventParams
 
-from openrois.engine.contract import Deliver, OnError
+from openrois.engine.source import Deliver, OnError
 
 logger = logging.getLogger(__name__)
 
@@ -312,7 +312,7 @@ class _ResourceBinding:
 
 
 class LocalComponents:
-    """The component contract for the components of this process."""
+    """The component source for the components of this process."""
 
     def __init__(self, engine_id: str, *, event_lifetime: float = 60.0) -> None:
         """Initialize an empty set of components.
@@ -470,7 +470,7 @@ class LocalComponents:
         raised = self._engine_raised
         return raised.status if raised is not None else ComponentStatus.READY
 
-    # -- The component contract ----------------------------------------------------------
+    # -- The component source ------------------------------------------------------------
 
     @property
     def engine_ids(self) -> frozenset[str]:
@@ -490,7 +490,7 @@ class LocalComponents:
         # halts it. The engine asks only child engines to keep commands running.
         return
 
-    async def run(self, unit: CommandUnit) -> CompletedStatus:
+    async def execute(self, unit: CommandUnit) -> CompletedStatus:
         received = asyncio.get_running_loop().time()
         hosted = self._hosted[unit.component_ref]
         if unit.command_type == "set_parameter":
@@ -546,7 +546,7 @@ class LocalComponents:
             parameters=[p for p in stored if p.value != ""],
         )
 
-    async def command_result(self, command_id: str) -> GetCommandResultResult:
+    async def get_command_result(self, command_id: str) -> GetCommandResultResult:
         if command_id not in self._results:
             return GetCommandResultResult(return_code=ReturnCode.BAD_PARAMETER)
         return GetCommandResultResult(return_code=ReturnCode.OK, results=self._results[command_id])
@@ -587,14 +587,14 @@ class LocalComponents:
     async def unsubscribe(self, subscribe_id: str) -> None:
         self._subscriptions.pop(subscribe_id, None)
 
-    async def event_detail(self, event_id: str) -> GetEventDetailResult:
+    async def get_event_detail(self, event_id: str) -> GetEventDetailResult:
         self._prune_events()
         event = self._events.get(event_id)
         if event is None:
             return GetEventDetailResult(return_code=ReturnCode.BAD_PARAMETER)
         return GetEventDetailResult(return_code=ReturnCode.OK, results=event[0])
 
-    async def error_detail(self, error_id: str) -> GetErrorDetailResult:
+    async def get_error_detail(self, error_id: str) -> GetErrorDetailResult:
         error = self._errors.get(error_id)
         if error is None:
             return GetErrorDetailResult(return_code=ReturnCode.BAD_PARAMETER)

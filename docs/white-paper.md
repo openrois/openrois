@@ -37,7 +37,7 @@
 3. [Architectural Decisions](#3-architectural-decisions)
 4. [The Recursive Engine](#4-the-recursive-engine)
 5. [Layered Architecture](#5-layered-architecture)
-6. [The Component Contract](#6-the-component-contract)
+6. [One Protocol at Every Hop](#6-one-protocol-at-every-hop)
 7. [Interface Type Pipeline](#7-interface-type-pipeline)
 8. [Developer Experience: The SDKs](#8-developer-experience-the-sdks)
 9. [The Wire Protocol: JSON-RPC 2.0](#9-the-wire-protocol-json-rpc-20)
@@ -82,8 +82,9 @@ through a single, paradigm-neutral SDK.
 This white paper describes the following contributions:
 
 1. A **paradigm-neutral architecture** for RoIS 2.0. The engine answers the RoIS
-   operations and reaches every component through one component contract, which names
-   no transport and no robot paradigm (section 6).
+   operations and reaches every component with those same operations: one protocol at
+   every hop, with no OpenRoIS protocol below RoIS, naming no transport and no robot
+   paradigm (section 6).
 2. A **recursive engine model** where one `Engine` class serves the gateway, every
    adapter, and any tier between them, so the RoIS logic exists once (section 4).
 3. A **single-source-of-truth type pipeline** that authors interfaces as Python
@@ -213,15 +214,15 @@ extensible without rewrites.
 ### 3.1 Paradigm-Neutral Core
 
 The engine and client SDK never assume hardware, a world model, or any
-specific middleware. Inside the engine, one component contract separates what is the
-same for every component (selection, bindings, command sequences, id routing) from where
-a component lives. ROS 2, virtual avatars, AI services, and any future paradigm stay
+specific middleware. The engine keeps what is the same for every component (selection,
+bindings, command sequences, id routing) and passes each checked operation on with the
+RoIS operations themselves, wherever the component lives. ROS 2, virtual avatars, AI services, and any future paradigm stay
 inside components. Adding a new paradigm is an additive sub HRI Engine, never a
 rewrite.
 
-This decision is enforced structurally, not by convention. The `Engine` class and the
-component contract have zero references to ROS, DDS, gRPC, or any game engine, and the
-contract takes and returns only the models of the RoIS method catalog. The only ROS-aware
+This decision is enforced structurally, not by convention. The `Engine` class has zero
+references to ROS, DDS, gRPC, or any game engine, and it passes on and receives only the
+models of the RoIS method catalog. The only ROS-aware
 code in the engine package is the optional spinning of rclpy nodes in `WsClient`.
 
 ### 3.2 Spec-First, Symbolic Data Only
@@ -301,7 +302,7 @@ Unity avatar. Only the adapter behind the gateway changes.
 
 The core architectural contribution of OpenRoIS is the recursive `Engine` class. The
 engine answers the RoIS method catalog for the sessions connected to it and reaches every
-component through the component contract (section 6), whether the component runs in the
+component with that same catalog (section 6), whether the component runs in the
 engine's own process or behind a child engine. The same `Engine` class is used by the
 gateway, by every adapter, and by any tier between them. The difference is what is
 populated, not whether it is an engine.
@@ -326,12 +327,10 @@ flowchart TB
     subgraph Engine["Engine class (openrois.engine)"]
         direction TB
         Catalog["RoIS method catalog<br/>selection, bindings, sequences, id routing"]
-        Contract["Component contract"]
-        Local["LocalComponents<br/>components of this process (adapter)"]
-        Child["ChildEngine x N<br/>child engines over WebSocket (gateway)"]
-        Catalog --> Contract
-        Contract --> Local
-        Contract --> Child
+        Local["Components of this process (adapter)<br/>the RoIS operations, in process"]
+        Child["Child engines x N (gateway)<br/>the RoIS method catalog over WebSocket"]
+        Catalog --> Local
+        Catalog --> Child
     end
 ```
 
@@ -382,10 +381,9 @@ no shared core. The recursive model dissolves this problem:
 - One `Engine` class, one dispatch implementation. The gateway uses it with child
   engines. The adapter uses it with local components. Both are engines.
 - A parent engine reaches a child engine with the method catalog itself, the same
-  methods a client sends. `ChildEngine` implements the component contract as a client of
-  the child engine. `LocalComponents` implements it by calling the components of its
-  process. The engine calls the contract. It does not know which implementation it is
-  calling.
+  methods a client sends, and calls the components of its own process with the same
+  operations and models. The engine does not distinguish the two beyond where it sends
+  the operation.
 - The adapter IS an engine (a sub HRI Engine), not a separate kind of process. It hosts
   local components and connects to a parent engine. This matches the RoIS spec: the Sub
   HRI Engine is an engine, not a passive backend.
@@ -482,7 +480,6 @@ control-plane router when acting as the main engine without local components.
 | Service Application | Client SDK (JavaScript or Unity) | Drives robot scenarios via RoIS interfaces |
 | RoIS interfaces (SystemIF, CommandIF, QueryIF, EventIF), with streaming as two components | JSON-RPC 2.0 methods over WebSocket | Service application to gateway boundary (control plane) |
 | Main HRI Engine to sub HRI Engine | The same JSON-RPC 2.0 methods, sent by the parent engine | Gateway to adapter boundary (control plane) |
-| (no spec term) | Component contract (`ComponentContract`) | Inside an engine: its own components and its child engines behind one interface |
 
 ### 5.2 Gateway Responsibilities
 
@@ -505,109 +502,64 @@ enforcement point for security. It:
 
 ---
 
-## 6. The Component Contract
+## 6. One Protocol at Every Hop
 
-The component contract is the seam inside an engine between what is the same for every
-component and where a component lives. The engine answers the method catalog: it
-validates requests, selects components by condition, holds the bindings, runs command
-sequences, and routes ids. A source behind the contract runs what the engine hands it,
-for the components it owns. Neither side references ROS, DDS, gRPC, or a game engine.
+OpenRoIS has no protocol of its own below RoIS. The RoIS method catalog is the only
+control-plane protocol, at every hop:
+
+1. **Service application to gateway**: the method catalog, JSON-RPC 2.0 over WebSocket.
+2. **Parent engine to child engine**: the same method catalog over the same transport.
+   A gateway reaches an adapter, or a lower gateway, with the requests a client sends,
+   and a result travels up the hierarchy unchanged. Three things are particular to this
+   hop. The parent connects with `rois.system.connect` before it reads the child's
+   profile, as any client does. The parent is the child's only client, so the child skips
+   the bind checks the parent already made. The parent runs command sequences itself, and
+   sends the child each command as its own one-command `execute`.
+3. **Engine to its own components**: the same operations with the same models, as calls
+   inside the process instead of messages. A component written with
+   `openrois-components-core` marks the RoIS messages it handles with `@command`,
+   `@query`, and `@event`, and the engine calls them.
+4. **Component to backend** (data plane): the functional implementation. gRPC, DDS,
+   IPC, WebRTC, cloud API, or any other transport. This is not a middleware boundary.
+   The component owns this connection.
 
 ```mermaid
-classDiagram
-    class ComponentContract {
-        <<interface>>
-        +engine_ids
-        +profiles()
-        +engine_profile()
-        +run(unit) CompletedStatus
-        +on_error(callback)
-        +keep_running(command_id)
-        +set_parameter(ref, parameters)
-        +get_parameter(ref)
-        +command_result(command_id)
-        +query(ref, query_type, arguments)
-        +subscribe(ref, event_type, arguments, deliver)
-        +unsubscribe(subscribe_id)
-        +event_detail(event_id)
-        +error_detail(error_id)
-    }
-
-    class LocalComponents {
-        +shared resources
-        +parameter store
-        +raised statuses and errors
-        +RoIS_Common default
-        +component status
-        +command timeouts
-        +recent events
-    }
-
-    class ChildEngine {
-        +catalog client over WebSocket
-        +pending requests
-        +relayed subscriptions
-    }
-
-    ComponentContract <|.. LocalComponents
-    ComponentContract <|.. ChildEngine
+flowchart LR
+    App["Service application"] -->|RoIS method catalog| Gateway["Gateway<br/>(main HRI Engine)"]
+    Gateway -->|RoIS method catalog| Adapter["Adapter<br/>(sub HRI Engine)"]
+    Gateway -->|RoIS operations, in process| GLocal["Components of the gateway"]
+    Adapter -->|RoIS operations, in process| Local["Components of the adapter"]
+    Local -->|data plane| Backend["Robot, avatar or service"]
 ```
 
-`LocalComponents` is the local implementation. It hosts the components of the engine's
-process, opens and closes the resources they share, stores their parameters, answers
-`component_status` from their state and their raised status, serves the RoIS_Common
-default, applies the timeout of each command, and keeps recent events for
-`get_event_detail`.
-`ChildEngine` is the remote implementation. It reaches a child engine with the same
-catalog requests a client sends, and relays the child's notifications. The engine calls
-the contract. It does not know which implementation it is calling. The contract lives
-in `engine/src/openrois/engine/contract.py`.
+### 6.1 What the Engine Keeps
 
-### 6.1 Why the Contract Speaks the Catalog
+The engine keeps for itself what is the same for every component: it validates
+requests, selects components by condition, holds the bindings, runs command sequences,
+and routes ids. It passes an operation on only once it is checked for one component: a
+ref it owns, a command its profile declares, arguments of the types its profile gives.
+Whether the component runs in the engine's process or behind a child engine, the
+operation and its models are the same, so bindings, conditions, and sequencing exist
+once, in the engine.
 
-The contract takes and returns the models of the method catalog, so a child engine is
-reached with the catalog itself and a result travels up the hierarchy unchanged. The
-engine hands a source only checked requests for one component: a ref it owns, a command
-its profile declares, arguments of the types its profile gives. Bindings, conditions,
-and sequencing stay in the engine, so no source implements them again.
+| RoIS operations | Kept by the engine | Passed on to the child engine or component |
+|-----------------|--------------------|--------------------------------------------|
+| `connect`, `disconnect` | Sessions: disconnect releases the session's binds and subscriptions and aborts its commands | `connect` toward a child engine, once |
+| `search`, `bind`, `bind_any`, `release`, `get_profile` | Selection, bindings by RoSO function, profile aggregation | `get_profile` toward a child engine |
+| `execute`, `get_command_result` | Sequences, command table | `execute` (one command at a time), `get_command_result` |
+| `set_parameter`, `get_parameter` | Bindings, parameter types | `set_parameter`, `get_parameter` |
+| `query` | Selection of one component | `query` |
+| `subscribe`, `unsubscribe`, `get_event_detail` | Selection, subscriptions per session | `subscribe`, `unsubscribe`, `get_event_detail` |
+| `get_error_detail`, `notify_error` | Id routing, the sessions an error concerns | `get_error_detail`, and the errors a component raises |
 
-### 6.2 RoIS Operations Behind the Contract
-
-| RoIS operations | Answered by the engine | Behind the contract |
-|-----------------|------------------------|---------------------|
-| `connect`, `disconnect` | Sessions | Nothing: the engine releases the session's binds and subscriptions and aborts its commands |
-| `search`, `bind`, `bind_any`, `release`, `get_profile` | Selection, bindings by RoSO function, profile aggregation | `profiles()`, `engine_profile()` |
-| `execute`, `get_command_result` | Sequences, command table | `run()`, `command_result()` |
-| `set_parameter`, `get_parameter` | Bindings, parameter types | `set_parameter()`, `get_parameter()` |
-| `query` | Selection of one component | `query()` |
-| `subscribe`, `unsubscribe`, `get_event_detail` | Selection, subscriptions per session | `subscribe()`, `unsubscribe()`, `event_detail()` |
-| `get_error_detail`, `notify_error` | Id routing, the sessions an error concerns | `on_error()`, `error_detail()` |
-
-### 6.3 What Stays Out of the Contract
+### 6.2 What Stays Out of the Control Plane
 
 Data-plane concerns stay out. QoS policies, deadlines, and reliability belong to the
 data plane of whichever component needs them: a ROS 2 component needs DDS QoS, a gRPC
 component does not. Keeping them out means the engine can drive a gRPC robot, a ROS 2
 robot fleet, a virtual avatar, or a set of AI services with the same control-plane code
-path. Because the engine sees only the contract, accidental coupling (for example,
-baking DDS QoS semantics into the engine) is structurally prevented.
-
-### 6.4 Four Contracts
-
-OpenRoIS defines four distinct contracts at four boundaries:
-
-1. **Service application to gateway** (control plane): the method catalog, JSON-RPC 2.0
-   over WebSocket.
-2. **Parent engine to child engine** (control plane): the same method catalog over the
-   same transport. The parent is the child's only client, and sends it each command as
-   its own one-command `execute`.
-3. **Engine to component** (control plane): `LocalComponents` calls the `rois_*`
-   methods of each component. A component written with `openrois-components-core` gets
-   them from `Component`, and its author marks handlers with `@invoke`, `@query`,
-   `@subscribe`, and `@on_set_parameter`.
-4. **Component to backend** (data plane): the functional implementation. gRPC, DDS,
-   IPC, WebRTC, cloud API, or any other transport. This is not a middleware boundary.
-   The component owns this connection.
+path, and accidental coupling (for example, baking DDS QoS semantics into the engine) is
+structurally prevented.
 
 ---
 
@@ -885,7 +837,7 @@ the messages it implements. An adapter hosts its components in a sub HRI Engine
 connected to the gateway.
 
 ```python
-from openrois.components.core import CommandFailed, Component, component, invoke, subscribe
+from openrois.components.core import CommandFailed, Component, command, component, event
 from openrois.interfaces.components import NAVIGATION_PROFILE
 from openrois.interfaces.service import CompletedStatus
 
@@ -895,7 +847,7 @@ class MyNavigation(Component):
     def __init__(self, robot_url: str) -> None:
         self._robot_url = robot_url
 
-    @invoke("start")
+    @command("start")
     async def start(self) -> None:
         targets = self.parameters.get("target_positions", [])
         if not targets:
@@ -903,7 +855,7 @@ class MyNavigation(Component):
         await self._drive_to(targets[0])  # Calls the robot's API.
         self.emit("reached_target", target=targets[0], is_final_target=True)
 
-    @subscribe("reached_target")
+    @event("reached_target")
     async def reached_target(self) -> None:
         pass  # start emits the event when the robot arrives.
 ```
@@ -929,8 +881,8 @@ Clients then see `robot_1/navigation`. Key characteristics:
   concerned as `rois.system.notify_error`. Components that share a robot connection
   share a `Resource`, which the engine opens, closes and reports for them.
 - Parameter values arrive in `self.parameters`, converted from their profile types, and
-  `@on_set_parameter` applies new values to the backend or refuses them, which answers
-  the client BAD_PARAMETER.
+  the `@command("set_parameter")` handler applies new values to the backend or refuses
+  them, which answers the client BAD_PARAMETER.
 - Built on the same Pydantic types that are the source of truth for the entire project,
   so no type bridge is needed.
 - Async-first (asyncio), with ROS 2 nodes spun in a background thread by a shared
@@ -2043,9 +1995,9 @@ and profiles, run against every adapter, is planned.
 OpenRoIS demonstrates that the OMG RoIS Framework 2.0 can be implemented as a
 practical, paradigm-neutral middleware with clean developer experience. The key
 insight is that the spec's separation of message from transport lets one engine answer
-the RoIS operations for every paradigm. Inside the engine, a single component contract
-keeps ROS 2, virtual avatars, AI services, and any future paradigm in components. Adding
-a new paradigm is an additive adapter, never a rewrite.
+the RoIS operations for every paradigm, with one protocol at every hop. ROS 2, virtual
+avatars, AI services, and any future paradigm stay in components. Adding a new paradigm
+is an additive adapter, never a rewrite.
 
 The recursive engine model uses one `Engine` class for the gateway, the adapters, and
 any tier between them, eliminating duplicate dispatch implementations across languages.

@@ -1,13 +1,14 @@
 """The decorators that declare a component and its handlers.
 
 ``@component(profile)`` declares which RoIS component type a Component subclass is. The
-method decorators mark the messages it implements:
+method decorators mark the messages of its profile it implements, one decorator for each
+kind of RoIS message:
 
-- ``@invoke(command_type)``: a command, run for as long as the command lasts.
-- ``@query(query_type)``: a query.
-- ``@subscribe(event_type)``: an event the component emits. The method runs on each new
-  subscription to it.
-- ``@on_set_parameter``: the hook that applies new parameter values.
+- ``@command(command_type)``: a command message, run for as long as the command lasts.
+  ``@command("set_parameter")`` applies new parameter values.
+- ``@query(query_type)``: a query message.
+- ``@event(event_type)``: an event message the component emits. The method runs on each
+  new subscription to it.
 
 The engine serves the part of the profile the class implements, so a client never sees a
 message the component does not answer.
@@ -51,33 +52,30 @@ def component[C: Component](profile: HRIComponentProfile) -> Callable[[type[C]],
     return declare
 
 
-def invoke[F: Callable[..., Any]](command_type: str) -> Callable[[F], F]:
-    """Mark an async method as the handler of a command, for example ``start``."""
+def command[F: Callable[..., Any]](command_type: str) -> Callable[[F], F]:
+    """Mark an async method as the handler of a command message, for example ``start``.
+
+    The handler of ``set_parameter`` takes one argument, the new values by name, converted
+    from their profile types. The engine checks them against the profile first, and stores
+    them once the handler returns. The handler applies them to the backend, or raises to
+    refuse them, and the engine then keeps the old values.
+    """
     return _mark("command", command_type)
 
 
 def query[F: Callable[..., Any]](query_type: str) -> Callable[[F], F]:
-    """Mark an async method as the handler of a query, for example ``robot_position``."""
+    """Mark an async method as the handler of a query message, for example
+    ``robot_position``."""
     return _mark("query", query_type)
 
 
-def subscribe[F: Callable[..., Any]](event_type: str) -> Callable[[F], F]:
-    """Mark an event the component emits, for example ``reached_target``.
+def event[F: Callable[..., Any]](event_type: str) -> Callable[[F], F]:
+    """Mark an event message the component emits, for example ``reached_target``.
 
     The async method runs on each new subscription to the event, for example to start a
     detector. It may do nothing when the component emits the event on its own.
     """
     return _mark("event", event_type)
-
-
-def on_set_parameter[F: Callable[..., Any]](method: F) -> F:
-    """Mark the async method that applies new parameter values.
-
-    The method receives the new values by name, converted from their profile types,
-    before the engine stores them. It applies them to the backend, or raises to refuse
-    them, and the engine then keeps the old values.
-    """
-    return _mark("set_parameter", "")(method)
 
 
 def _mark[F: Callable[..., Any]](kind: HandlerKind, name: str) -> Callable[[F], F]:

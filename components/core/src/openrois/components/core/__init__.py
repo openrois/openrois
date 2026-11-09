@@ -3,12 +3,12 @@
 A component subclasses Component, declares its type with ``@component(profile)``, and
 marks the messages it implements::
 
-    from openrois.components.core import Component, component, invoke, subscribe
+    from openrois.components.core import Component, command, component
     from openrois.interfaces.components import NAVIGATION_PROFILE
 
     @component(NAVIGATION_PROFILE)
     class Navigation(Component):
-        @invoke("start")
+        @command("start")
         async def start(self) -> None:
             ...
 
@@ -19,11 +19,10 @@ several components share is a Resource, which the engine opens and closes for th
 
 from openrois.components.core.component import CommandFailed, Component, EngineBinding
 from openrois.components.core.decorators import (
+    command,
     component,
-    invoke,
-    on_set_parameter,
+    event,
     query,
-    subscribe,
 )
 from openrois.components.core.resource import Resource, ResourceBinding
 
@@ -33,9 +32,8 @@ __all__ = [
     "EngineBinding",
     "Resource",
     "ResourceBinding",
+    "command",
     "component",
-    "invoke",
-    "on_set_parameter",
+    "event",
     "query",
-    "subscribe",
 ]

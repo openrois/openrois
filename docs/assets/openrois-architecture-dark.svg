@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 612" width="960" height="612" role="img" aria-labelledby="t d">
   <title id="t">OpenRoIS architecture</title>
-  <desc id="d">Four rows. Service Application: a web application with the JavaScript SDK and a Unity application with the Unity SDK. Main HRI Engine: the gateway process with the main engine and its child engine registry, a profile aggregator, a component allocator for bind and release, and authentication with JWT and RBAC, which is planned. Sub HRI Engines: a robot adapter, an avatar adapter, and a service adapter, each with a sub engine and a component registry. Implementation Layer: a ROS 2 robot, a virtual avatar in a Unity runtime, and cloud services. Service applications reach the gateway over WebSocket with JSON-RPC 2.0 and the five RoIS interfaces. The gateway reaches adapters over the same transport with the five-method Component Contract. Adapters reach their hosts over ROS 2, IPC, or gRPC. Media flows over WebRTC on a separate data plane, outside RoIS scope. At build time, Python Pydantic models are exported to JSON Schema and generated into C# and TypeScript types, drift-checked against the normative RoIS files.</desc>
+  <desc id="d">Four rows. Service Application: a web application with the JavaScript SDK and a Unity application with the Unity SDK. Main HRI Engine: the gateway process with the main engine and its child engine registry, a profile aggregator, a component allocator for bind and release, and authentication with JWT and RBAC, which is planned. Sub HRI Engines: a robot adapter, an avatar adapter, and a service adapter, each with a sub engine and a component registry. Implementation Layer: a ROS 2 robot, a virtual avatar in a Unity runtime, and cloud services. Service applications reach the gateway over WebSocket with JSON-RPC 2.0 and the five RoIS interfaces. The gateway reaches adapters over the same transport with the same RoIS method catalog, the methods a client sends. Adapters reach their hosts over ROS 2, IPC, or gRPC. Media flows out of band on a separate data plane, outside RoIS scope. At build time, Python Pydantic models are exported to JSON Schema and generated into C# and TypeScript types, drift-checked against the normative RoIS files.</desc>
 <style>
   .bt { font: 600 13px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f3864; }
   .bs { font: 400 11.5px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #3d4b5c; }
@@ -53,7 +53,7 @@
 <path d="M805,262 L810,270 L815,262 Z" fill="#8fb8e0"/>
 <rect x="310.6" y="230" width="448.8" height="34" rx="5" fill="#0f1620"/>
 <text x="535" y="244" text-anchor="middle" class="wire1">WebSocket + JSON-RPC 2.0 (TLS)</text>
-<text x="535" y="259" text-anchor="middle" class="wire2" style="fill:#aebbca">Component Contract: <tspan class="code">discover, invoke, query, subscribe, unsubscribe</tspan></text>
+<text x="535" y="259" text-anchor="middle" class="wire2" style="fill:#aebbca">RoIS method catalog: <tspan class="code">the same methods a client sends</tspan></text>
 <text x="150" y="316.5" text-anchor="end" class="role">Sub</text>
 <text x="150" y="331.5" text-anchor="end" class="role">HRI Engines</text>
 <rect x="170" y="270" width="230" height="100" rx="9" fill="none" stroke="#46576b" stroke-width="1" stroke-dasharray="4 3"/>
@@ -106,7 +106,7 @@
 <path d="M900,431 H928 V63 H907" fill="none" stroke="#ff7b72" stroke-width="1.6" stroke-dasharray="6 4"/>
 <path d="M908,58 L900,63 L908,68 Z" fill="#ff7b72"/>
 <path d="M907,426 L915,431 L907,436 Z" fill="#ff7b72" transform="translate(-7,0)"/>
-<text class="data" transform="translate(944,247) rotate(90)" text-anchor="middle">media over WebRTC, outside RoIS scope</text>
+<text class="data" transform="translate(944,247) rotate(90)" text-anchor="middle">media out of band, outside RoIS scope</text>
 <text x="150" y="514.0" text-anchor="end" class="role">Build time</text>
 <rect x="170" y="482" width="730" height="58" rx="9" fill="none" stroke="#46576b" stroke-width="1" stroke-dasharray="4 3"/>
 <rect x="182" y="474" width="457.3" height="16" fill="#0f1620"/>

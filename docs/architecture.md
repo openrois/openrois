@@ -5,10 +5,10 @@
 > virtual avatars, and virtual agents** over the internet.
 >
 > The architecture is deliberately **paradigm-neutral**: the engine and
-> client SDK never assume hardware, a world model, or any specific middleware. A
-> single **Component Contract** abstraction lets the same engine drive a gRPC
-> robot, a ROS 2 robot fleet, an in-process avatar, or a distributed set of
-> services.
+> client SDK never assume hardware, a world model, or any specific middleware. The
+> engine reaches every component with the **RoIS method catalog**, the one protocol at
+> every hop, which lets the same engine drive a gRPC robot, a ROS 2 robot fleet, an
+> in-process avatar, or a distributed set of services.
 >
 > A **minimum viable demonstration** exists today: a web service application
 > connects to the gateway, which routes RoIS calls to a sub HRI Engine backed by
@@ -32,7 +32,7 @@
 5. [Client & Service Application SDK](#5-client--service-application-sdk)
 6. [Engine and Gateway](#6-engine-and-gateway)
 7. [Sub HRI Engines](#7-sub-hri-engines)
-8. [The Component Contract](#8-the-component-contract)
+8. [One Protocol at Every Hop](#8-one-protocol-at-every-hop)
 9. [Components](#9-components)
 10. [Component Mapping: Robot vs. Avatar](#10-component-mapping-robot-vs-avatar)
 11. [Deployment Topologies](#11-deployment-topologies)
@@ -134,16 +134,14 @@ Logical Layer (control plane)
 | Service Application | Client SDK (JavaScript, Python or Unity) | Drives robot scenarios via RoIS interfaces |
 | RoIS interfaces (SystemIF, CommandIF, QueryIF, EventIF, StreamingIF) | JSON-RPC 2.0 methods over WebSocket | Service application to gateway boundary (control plane) |
 | Main HRI Engine to sub HRI Engine | The same JSON-RPC 2.0 methods, sent by the parent engine | Gateway to sub HRI Engine boundary (control plane) |
-| (no spec term) | Component contract (`ComponentContract`) | Inside an engine: its own components and its child engines behind one interface |
 
 ### Engine, Gateway, and Adapter
 
 The **engine** is a recursive unit, not a process. It is a Python library that answers
-the RoIS method catalog and reaches every component through the component contract
-([§8](#8-the-component-contract)): the components it hosts in its own process
-(`LocalComponents`) and the components of its child engines (`ChildEngine`). The same
-engine class is used by both the gateway and the adapter, and both sources can be
-populated. The difference between gateway and adapter is what is typically populated, not
+the RoIS method catalog and reaches every component with that same catalog
+([§8](#8-one-protocol-at-every-hop)): the components it hosts in its own process and the components of its child
+engines. The same engine class is used by both the gateway and the adapter, and both
+kinds of component can be populated. The difference between gateway and adapter is what is typically populated, not
 what is allowed:
 
 - **Gateway (main engine)**: typically has child engines (sub HRI Engines connected
@@ -251,7 +249,7 @@ layers align with the RoIS specification.
 
 ### What the MVP Proves
 
-- The **Component Contract** decouples the engine from the robot paradigm.
+- **One protocol at every hop** decouples the engine from the robot paradigm.
   The engine has zero gRPC imports, zero ROS imports, zero robot-specific
   knowledge.
 - The **component package pattern** works: packaged components are imported by
@@ -434,8 +432,8 @@ the profile automatically. No polling needed.
 The engine is a **recursive unit**. One `Engine` class answers the RoIS method catalog
 (16 methods and 4 notifications, see [rois-reference.md](rois-reference.md)) for the
 sessions connected to it: the clients of a gateway, or the parent engine of an adapter.
-It reaches every component through the component contract
-([§8](#8-the-component-contract)), whether the component runs in the engine's process or
+It reaches every component with that same catalog
+([§8](#8-one-protocol-at-every-hop)), whether the component runs in the engine's process or
 behind a child engine. What the engine does is the same for every component:
 
 | Concern | What the engine does |
@@ -517,7 +515,7 @@ URL path.
   ([§13](#13-control-plane-vs-data-plane-streaming)).
 - No media handling and no media signaling. No streaming component ships yet.
 - No paradigm-specific knowledge. The engine never imports DDS, gRPC, ROS,
-  or any game engine library. It sees only the component contract.
+  or any game engine library. It sees only the RoIS operations.
 - No network I/O of its own. The engine is a library. The gateway provides the
   WebSocket server. The adapter provides the WebSocket client.
 
@@ -531,8 +529,8 @@ only transport at this boundary. Sub HRI Engines are standalone processes, not
 in-process plugins. Each sub HRI Engine owns its data-plane transport: gRPC for
 robots with a gRPC API, DDS for ROS 2 robots, IPC for avatars, WebRTC or
 WHEP/WHIP for media, or any other transport its backend requires. The engine
-never imports DDS, gRPC, or any paradigm-specific library. It sees only the
-Component Contract (see [§8](#8-the-component-contract)).
+never imports DDS, gRPC, or any paradigm-specific library. It sees only the RoIS
+operations (see [§8](#8-one-protocol-at-every-hop)).
 
 A robot sub HRI Engine using gRPC connects directly to the robot's gRPC server. A
 robot sub HRI Engine using ROS 2 uses DDS internally for service/action/topic mapping,
@@ -593,72 +591,40 @@ before it forwarded a request, so the child does not check them again.
 
 ---
 
-## 8. The Component Contract
+## 8. One Protocol at Every Hop
 
-The **component contract** is the seam inside an engine between what is the same for
-every component and where a component lives. The engine answers the method catalog: it
-validates requests, selects components by condition, holds the bindings, runs command
-sequences and routes ids. A source behind the contract runs what the engine hands it, for
-the components it owns. Neither side references ROS, DDS, gRPC, or any data-plane
-transport.
+OpenRoIS has no protocol of its own below RoIS. The RoIS method catalog is the only
+control-plane protocol, at every hop:
 
-```python
-class ComponentContract(Protocol):
-    @property
-    def engine_ids(self) -> frozenset[str]: ...  # the engines whose components it holds
-    def profiles(self) -> Mapping[str, HRIComponentProfile]: ...  # by fully qualified ref
-    def engine_profile(self) -> HRIEngineProfileType | None: ...  # a child engine's profile
-    def on_error(self, callback: OnError) -> None: ...  # receives (ref, error_id, error_type)
-    async def run(self, unit: CommandUnit) -> CompletedStatus: ...  # cancel to abort
-    def keep_running(self, command_id) -> None: ...  # the next cancel only stops the wait
-    async def set_parameter(self, ref, parameters) -> tuple[SetParameterResult, CompletedStatus]: ...
-    async def get_parameter(self, ref) -> GetParameterResult: ...
-    async def command_result(self, command_id) -> GetCommandResultResult: ...
-    async def query(self, ref, query_type, arguments) -> QueryResult: ...
-    async def subscribe(self, ref, event_type, arguments, deliver) -> SubscribeResult: ...
-    async def unsubscribe(self, subscribe_id) -> None: ...
-    async def event_detail(self, event_id) -> GetEventDetailResult: ...
-    async def error_detail(self, error_id) -> GetErrorDetailResult: ...
-```
-
-| Implementation | Where the components live | What it keeps |
-|----------------|---------------------------|---------------|
-| `LocalComponents` | In the engine's process | The shared resources, the parameter store, the raised statuses and their errors, `component_status`, command timeouts, start and stop, and the recent events |
-| `ChildEngine` | Behind a child engine, over WebSocket | The pending requests, the commands running on the child and their abort, and the subscriptions and errors it relays |
-
-The contract lives in `engine/src/openrois/engine/contract.py`.
-
-### Why the Contract Speaks the Catalog
-
-The contract takes and returns the models of the method catalog, so a child engine is
-reached with the catalog itself and a result travels up the hierarchy unchanged. The
-engine hands a source only checked requests for one component: a ref it owns, a command
-its profile declares, arguments of the types its profile gives. Bindings, conditions and
-sequencing stay in the engine, so no source implements them again.
-
-Data-plane concerns stay out of it. QoS policies, deadlines and reliability belong to
-the data plane of whichever component needs them: a ROS 2 component needs DDS QoS, a gRPC
-component does not. Keeping them out means the engine can drive a gRPC robot, a ROS 2
-robot fleet, a virtual avatar, or a set of AI services with the same control-plane code
-path. Because the engine sees only the contract, accidental coupling (for example, baking
-DDS QoS semantics into the engine) is structurally prevented.
-
-### Four Contracts
-
-OpenRoIS defines four distinct contracts at four boundaries:
-
-1. **Service application to gateway** (control plane): the method catalog, JSON-RPC 2.0
-   over WebSocket.
-2. **Parent engine to child engine** (control plane): the same method catalog over the
-   same transport. The parent is the child's only client, and sends it each command as
-   its own one-command `execute`.
-3. **Engine to component** (control plane): `LocalComponents` calls the `rois_*` methods
-   of each component. A component written with `openrois-components-core` gets them from
-   `Component`, and its author marks handlers with `@invoke`, `@query`, `@subscribe` and
-   `@on_set_parameter`.
+1. **Service application to gateway**: the method catalog, JSON-RPC 2.0 over WebSocket.
+2. **Parent engine to child engine**: the same method catalog over the same transport.
+   A gateway reaches an adapter, or a lower gateway, with the requests a client sends,
+   and a result travels up the hierarchy unchanged. Three things are particular to this
+   hop. The parent connects with `rois.system.connect` before it reads the child's
+   profile, as any client does. The parent is the child's only client, so the child skips
+   the bind checks the parent already made. The parent runs command sequences itself, and
+   sends the child each command as its own one-command `execute`.
+3. **Engine to its own components**: the same operations with the same models, as calls
+   inside the process instead of messages. A component written with
+   `openrois-components-core` marks the RoIS messages it handles with `@command`,
+   `@query` and `@event`, and the engine calls them.
 4. **Component to backend** (data plane): the functional implementation. gRPC,
    DDS, IPC, WebRTC, cloud API, or any other transport. This is not a middleware
    boundary. The component owns this connection.
+
+The engine keeps for itself what is the same for every component: it validates requests,
+selects components by condition, holds the bindings, runs command sequences and routes
+ids. It passes an operation on only once it is checked for one component: a ref it owns,
+a command its profile declares, arguments of the types its profile gives. Whether the
+component runs in the engine's process or behind a child engine, the operation and its
+models are the same, so bindings, conditions and sequencing exist once, in the engine.
+
+Data-plane concerns stay out of the control plane. QoS policies, deadlines and
+reliability belong to the data plane of whichever component needs them: a ROS 2
+component needs DDS QoS, a gRPC component does not. Keeping them out means the engine can
+drive a gRPC robot, a ROS 2 robot fleet, a virtual avatar, or a set of AI services with
+the same control-plane code path, and accidental coupling (for example, baking DDS QoS
+semantics into the engine) is structurally prevented.
 
 ---
 
@@ -684,11 +650,12 @@ neither those commands nor `component_status` (rois-reference §16).
 A component has two layers: the **interface** and the **implementation**.
 
 The **interface** is the RoIS-facing layer. It handles the RoIS protocol:
-`bind`, `execute`, `subscribe`, `notify_event`. It is the contract between the
+`bind`, `execute`, `subscribe`, `notify_event`. It is the boundary between the
 component and the RoIS framework. The interface is a subclass of `Component` from
 `openrois.components.core`: `@component(profile)` declares the component type with its
-profile, for example `NAVIGATION_PROFILE`, and `@invoke`, `@query`, `@subscribe` and
-`@on_set_parameter` mark the messages the class implements.
+profile, for example `NAVIGATION_PROFILE`, and `@command`, `@query` and `@event` mark
+the command, query and event messages the class implements. `@command("set_parameter")`
+applies new parameter values.
 
 The **implementation** is the functional implementation behind the interface (the
 spec calls this the "functional implementation"). It does the actual work in the
@@ -809,8 +776,8 @@ actuation, world model, and stream source differ.
 
 **Legend:** `yes` = identical. `diff` = same interface, different source/output.
 `paradigm-specific` = different implementation per paradigm. The paradigm-specific
-rows (Reaction, Navigation, Move, Follow) are exactly the ones a Component Contract +
-per-backend component design keeps cleanly separated.
+rows (Reaction, Navigation, Move, Follow) are exactly the ones that one protocol at every
+hop and a per-backend component design keep cleanly separated.
 
 ---
 
@@ -1108,14 +1075,14 @@ Because the gateway filters at `search()`, robots outside a caller's scope are
 
 ## 16. Mapping RoIS Interfaces to the Stack
 
-| RoIS Interface (IDL) | Client SDK (`RoISClient`) | Engine | Behind the component contract |
-|----------------------|---------------------------|--------|-------------------------------|
-| `SystemIF` | `connect`, `disconnect`, `getProfile`, `getErrorDetail` | Sessions, profile aggregation | `profiles()`, `engine_profile()`, `error_detail()` |
-| `CommandIF` | `search`, `bind`, `bindAny`, `release`, `getParameter`, `setParameter`, `execute`, `getCommandResult` | Selection, bindings, sequences, command table | `run()`, `set_parameter()`, `get_parameter()`, `command_result()` |
-| `QueryIF` | `query` | Selection of one component | `query()` |
-| `EventIF` | `subscribe`, `unsubscribe`, `getEventDetail` | Selection, subscriptions per session | `subscribe()`, `unsubscribe()`, `event_detail()` |
+| RoIS Interface (IDL) | Client SDK (`RoISClient`) | Engine | Passed on to the child engine or component |
+|----------------------|---------------------------|--------|--------------------------------------------|
+| `SystemIF` | `connect`, `disconnect`, `getProfile`, `getErrorDetail` | Sessions, profile aggregation | `connect`, `get_profile` and `get_error_detail` toward a child engine |
+| `CommandIF` | `search`, `bind`, `bindAny`, `release`, `getParameter`, `setParameter`, `execute`, `getCommandResult` | Selection, bindings, sequences, command table | `execute` (one command at a time), `set_parameter`, `get_parameter`, `get_command_result` |
+| `QueryIF` | `query` | Selection of one component | `query` |
+| `EventIF` | `subscribe`, `unsubscribe`, `getEventDetail` | Selection, subscriptions per session | `subscribe`, `unsubscribe`, `get_event_detail` |
 | Streaming (AudioStreaming, VideoStreaming) | `execute`, `query`, `subscribe` | The same as any component, bound one per session | Stream control through the component's commands, with media over WebRTC (planned) |
-| `ServiceApplicationBase` (`completed`, `notify_event`, `notify_error`) | Notifications | Sends each notification to the session it belongs to | `on_completed` and `deliver` callbacks |
+| `ServiceApplicationBase` (`completed`, `notify_event`, `notify_error`) | Notifications | Sends each notification to the session it belongs to | The same notifications, from the child engine or the component |
 
 The client column uses the JavaScript names. The Python client writes them in snake case,
 and the Unity client in Pascal case with `Async` at the end.

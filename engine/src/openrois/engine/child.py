@@ -1,6 +1,6 @@
 """A child engine: an adapter or a lower gateway, reached over the method catalog.
 
-``ChildEngine`` implements the component contract for the components of one child
+``ChildEngine`` is the component source for the components of one child
 engine. It sends the child the same catalog requests a client would send, and turns
 the child's notifications back into the engine's callbacks. The parent engine is the
 child's only client, so the child skips the bind checks the parent already made.
@@ -70,7 +70,7 @@ from openrois.interfaces.service import (
 )
 from pydantic import BaseModel, ValidationError
 
-from openrois.engine.contract import Deliver, OnError
+from openrois.engine.source import Deliver, OnError
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ _REFUSED_STATUS = {
 
 
 class ChildEngine:
-    """The component contract for one child engine on a WebSocket connection.
+    """The component source for one child engine on a WebSocket connection.
 
     The connection's reader passes every message from the child to :meth:`handle`,
     in order, on the event loop. A reply is matched to its request, and work that must
@@ -209,7 +209,7 @@ class ChildEngine:
         for task in self._tasks:
             task.cancel()
 
-    # -- The component contract ----------------------------------------------------------
+    # -- The component source ------------------------------------------------------------
 
     @property
     def engine_ids(self) -> frozenset[str]:
@@ -227,7 +227,7 @@ class ChildEngine:
     def keep_running(self, command_id: str) -> None:
         self._kept.add(command_id)
 
-    async def run(self, unit: CommandUnit) -> CompletedStatus:
+    async def execute(self, unit: CommandUnit) -> CompletedStatus:
         try:
             return await self._execute(unit)
         except asyncio.CancelledError:
@@ -279,7 +279,7 @@ class ChildEngine:
             "rois.command.get_parameter", GetParameterParams(component_ref=ref), GetParameterResult
         )
 
-    async def command_result(self, command_id: str) -> GetCommandResultResult:
+    async def get_command_result(self, command_id: str) -> GetCommandResultResult:
         return await self._request(
             "rois.command.get_command_result",
             GetCommandResultParams(command_id=command_id, condition=""),
@@ -331,14 +331,14 @@ class ChildEngine:
             UnsubscribeResult,
         )
 
-    async def event_detail(self, event_id: str) -> GetEventDetailResult:
+    async def get_event_detail(self, event_id: str) -> GetEventDetailResult:
         return await self._request(
             "rois.event.get_event_detail",
             GetEventDetailParams(event_id=event_id, condition=""),
             GetEventDetailResult,
         )
 
-    async def error_detail(self, error_id: str) -> GetErrorDetailResult:
+    async def get_error_detail(self, error_id: str) -> GetErrorDetailResult:
         return await self._request(
             "rois.system.get_error_detail",
             GetErrorDetailParams(error_id=error_id, condition=""),
@@ -544,7 +544,7 @@ class ChildEngine:
         """
         if self._on_error is None or not self._owns(error.error_id):
             return
-        detail = await self.error_detail(error.error_id)
+        detail = await self.get_error_detail(error.error_id)
         ref = next((r.value for r in detail.results if r.name == "component_ref"), "")
         if ref not in self._profiles:
             ref = ""

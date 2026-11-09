@@ -63,10 +63,11 @@ robots and virtual agents alike.
 - **Recursive engine.** A single `Engine` class realizes both the main and the sub HRI
   Engine roles defined by RoIS. The gateway and every adapter share one dispatch
   implementation.
-- **One component contract.** The engine reaches every component through one
-  interface, whether the component runs in its own process or behind a child engine.
-  ROS 2, gRPC, game engines, and cloud APIs stay inside components, so adding a paradigm
-  never touches the core.
+- **The RoIS method catalog at every hop.** The engine reaches every component with the
+  operations of the RoIS method catalog, whether the component runs in its own process
+  or behind a child engine, which it calls with the same requests a client sends. ROS 2,
+  gRPC, game engines, and cloud APIs stay inside components, so adding a paradigm never
+  touches the core.
 - **JSON-RPC 2.0 over WebSocket.** Every operation of the System, Command, Query and
   Event interfaces maps to a namespaced method (`rois.system.*`, `rois.command.*`,
   `rois.query.*`, `rois.event.*`). Streaming is the AudioStreaming and VideoStreaming
@@ -88,8 +89,8 @@ robots and virtual agents alike.
   events from the engine profile at runtime, so one application works with any robot
   behind the gateway.
 - **Decorator-based components.** Adapter authors declare a component with
-  `@component`, `@query`, `@invoke`, `@subscribe` and `@on_set_parameter`, share a robot
-  connection between components as a `Resource`, read their settings from
+  `@component`, mark its RoIS messages with `@command`, `@query` and `@event`, share a
+  robot connection between components as a `Resource`, read their settings from
   `adapter.yaml`, and write only the code that talks to their robot.
 
 ## Architecture
@@ -215,7 +216,7 @@ ROS 2 action, a gRPC service, or an HTTP API. The adapter hosts it in a sub HRI 
 and connects it to the gateway.
 
 ```python
-from openrois.components.core import Component, component, invoke, subscribe
+from openrois.components.core import Component, command, component, event
 from openrois.interfaces.components import NAVIGATION_PROFILE
 
 
@@ -227,13 +228,13 @@ class Navigation(Component):
     async def connect(self) -> None:
         self._robot = await MyRobotClient.open(self._robot_url)
 
-    @invoke("start")
+    @command("start")
     async def start(self) -> None:
         target = self.parameters["target_positions"][0]
         await self._robot.go_to(target)  # the command runs until the robot arrives
         self.emit("reached_target", target=target, is_final_target=True)
 
-    @subscribe("reached_target")
+    @event("reached_target")
     async def reached_target(self) -> None:
         pass  # start emits the event when the robot arrives.
 ```
