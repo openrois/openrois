@@ -1,9 +1,11 @@
-# An OpenRoIS gateway with the mock adapter behind it. From the repository root:
+# An OpenRoIS gateway with the mock adapter behind it, and the Inspector. From the
+# repository root:
 #
 #     docker compose up --build
 #
-# Clients connect to ws://127.0.0.1:8765, where the mock adapter serves mock/navigation,
-# mock/person_detection, mock/system_information and the test fixture mock/fault.
+# Open http://localhost:8080 for the Inspector. Clients connect to ws://127.0.0.1:8765,
+# where the mock adapter serves mock/navigation, mock/person_detection,
+# mock/system_information and the test fixture mock/fault.
 # testing/conformance/wire_check.py checks the stack.
 
 name: openrois
@@ -34,3 +36,11 @@ services:
     # The adapter installs no signal handlers. Under an init process, SIGTERM from
     # "docker compose down" stops it at once instead of after the grace period.
     init: true
+
+  inspector:
+    build:
+      context: .
+      dockerfile: apps/inspector/Dockerfile
+    ports:
+      # Loopback only, like the gateway it connects to from the browser.
+      - "127.0.0.1:8080:8080"

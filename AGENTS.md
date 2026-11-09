@@ -19,7 +19,8 @@ What exists today:
 | Components: component SDK and common components | `components/` | `v0.1.0` |
 | Client SDKs: JavaScript, Python, Unity | `sdk/` | `v0.1.0`. Unity run in Linux players and the Editor only |
 | Applications: MCP server (`openrois-mcp`) | `services/mcp/` | `v0.1.0` |
-| Applications: HRI web client; adapter template | `examples/` | Available |
+| Applications: OpenRoIS Inspector, a service application for the browser | `apps/inspector/` | Available |
+| Examples: adapter template | `examples/` | Available |
 | Test fixtures: mock adapter, conformance list, Unity harness | `testing/` | Available |
 
 Each robot's components live in its adapter repository, not here. The reference example
@@ -78,6 +79,7 @@ its description. The IDL and XSD cross-check tests fail on any other addition.
 | JavaScript SDK | `sdk/javascript` | `npm install`, `npm run build`, `npm test` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway) |
 | Python client SDK | `sdk/python` | `pip install -e ../../interfaces/python -e ".[dev]"`, `pytest` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway), `mypy`, `ruff check src/ tests/` |
 | Unity SDK | `sdk/unity/Tests~` | `dotnet test` (with `OPENROIS_GATEWAY_URL` set, also against a live gateway) |
+| Inspector | `apps/inspector` | build `interfaces/typescript` and `sdk/javascript` first, then `npm install`, `npm test`, `npm run typecheck`, `npm run build` |
 
 `sdk/unity/Tests~` compiles the runtime sources without Unity. `testing/unity-harness` runs them
 in real players and in the Editor. It runs by hand before a tag, because automating it needs a

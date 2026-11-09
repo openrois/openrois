@@ -19,7 +19,7 @@ on:
       - "sdk/javascript/**"
       - "sdk/python/**"
       - "sdk/unity/**"
-      - "examples/hri-client/**"
+      - "apps/inspector/**"
       - ".github/workflows/sdk.yml"
   pull_request:
     paths:
@@ -33,7 +33,7 @@ on:
       - "sdk/javascript/**"
       - "sdk/python/**"
       - "sdk/unity/**"
-      - "examples/hri-client/**"
+      - "apps/inspector/**"
       - ".github/workflows/sdk.yml"
   workflow_dispatch:
 
@@ -239,8 +239,8 @@ jobs:
         working-directory: .
         run: cat gateway.log adapter.log
 
-  hri-client:
-    name: hri-client
+  inspector:
+    name: Inspector
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -252,7 +252,7 @@ jobs:
           cache-dependency-path: |
             interfaces/typescript/package-lock.json
             sdk/javascript/package-lock.json
-            examples/hri-client/package-lock.json
+            apps/inspector/package-lock.json
 
       - name: Build the packages it links
         # Its file: links need both built, and the SDK needs the interfaces of the tree.
@@ -261,13 +261,17 @@ jobs:
           (cd sdk/javascript && npm ci && npm install ../../interfaces/typescript --no-save && npm run build)
 
       - name: Install
-        working-directory: examples/hri-client
+        working-directory: apps/inspector
         run: npm ci
 
       - name: Type check
-        working-directory: examples/hri-client
+        working-directory: apps/inspector
         run: npm run typecheck
 
+      - name: Test
+        working-directory: apps/inspector
+        run: npm test
+
       - name: Build
-        working-directory: examples/hri-client
+        working-directory: apps/inspector
         run: npm run build

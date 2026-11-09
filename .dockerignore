@@ -1,4 +1,4 @@
-# The Docker images install Python packages from this repository. Everything else stays
+# The Docker images build from this repository. Everything else stays
 # out of the build context, and each image lists below what it copies.
 *
 
@@ -7,12 +7,19 @@
 !engine
 !services/gateway
 
+# apps/inspector/Dockerfile
+!interfaces/schema
+!interfaces/typescript
+!sdk/javascript
+!apps/inspector
+
 # testing/mock-adapter/Dockerfile
 !components/core
 !components/common
 !testing/mock-adapter
 
 # Local state inside the included directories.
+**/node_modules
 **/__pycache__
 **/*.py[cod]
 **/.venv

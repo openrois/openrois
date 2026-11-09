@@ -5,3 +5,11 @@ OpenRoIS is developed by Coarobo GK (https://coarobo.com/)
 and the OpenRoIS community (https://openrois.org/).
 
 OpenRoIS is a trademark of Coarobo GK.
+
+The OpenRoIS Inspector (apps/inspector) bundles these third-party fonts, each under
+the SIL Open Font License, Version 1.1, with the license next to the font files in
+apps/inspector/public/fonts:
+
+- Inter, Copyright (c) 2016 The Inter Project Authors (https://github.com/rsms/inter)
+- JetBrains Mono, Copyright 2020 The JetBrains Mono Project Authors
+  (https://github.com/JetBrains/JetBrainsMono)

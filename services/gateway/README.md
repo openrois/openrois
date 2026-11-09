@@ -124,7 +124,7 @@ cd services/gateway && pytest && mypy && ruff check src/ tests/
 ## Status
 
 Alpha, pre-1.0, unstable API. The gateway answers the RoIS method catalog that the
-JavaScript SDK and the HRI client speak, with the RoIS behavior of CP1 to CP3 that
+JavaScript SDK and the OpenRoIS Inspector speak, with the RoIS behavior of CP1 to CP3 that
 [`openrois-engine`](https://github.com/openrois/openrois/blob/dev/engine/README.md) implements, and makes no conformance claim.
 Authentication is planned for `v0.3`, so the gateway binds to loopback by default. Health endpoints and a compose healthcheck are
 next on the [roadmap](https://github.com/openrois/openrois/blob/dev/docs/roadmap.md).
