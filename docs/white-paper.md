@@ -74,7 +74,7 @@ component library that demonstrates the full stack working end to end.
 
 **OpenRoIS** is that implementation. It is an open-source, Apache-2.0 licensed
 middleware that implements the OMG RoIS Framework 2.0 and lets service applications
-control **physical robots, virtual avatars, and AI services** over the internet
+control **physical robots, digital avatars, and AI services** over the internet
 through a single, paradigm-neutral SDK.
 
 ### 1.1 Contributions
@@ -216,7 +216,7 @@ extensible without rewrites.
 The engine and client SDK never assume hardware, a world model, or any
 specific middleware. The engine keeps what is the same for every component (selection,
 bindings, command sequences, id routing) and passes each checked operation on with the
-RoIS operations themselves, wherever the component lives. ROS 2, virtual avatars, AI services, and any future paradigm stay
+RoIS operations themselves, wherever the component lives. ROS 2, digital avatars, AI services, and any future paradigm stay
 inside components. Adding a new paradigm is an additive sub HRI Engine, never a
 rewrite.
 
@@ -291,7 +291,7 @@ testable in isolation. See section 14 for the package management boundary.
 ### 3.7 The SDK Is the Product
 
 Adoption is driven by how easy it is to write a scenario. The SDK is identical
-whether the host is a physical robot, a virtual avatar, or a distributed service.
+whether the host is a physical robot, a digital avatar, or a distributed service.
 The host paradigm is hidden behind the gateway. A researcher who writes a scenario
 against the SDK does not need to know whether the target is a ROS 2 robot or a
 Unity avatar. Only the adapter behind the gateway changes.
@@ -557,7 +557,7 @@ once, in the engine.
 Data-plane concerns stay out. QoS policies, deadlines, and reliability belong to the
 data plane of whichever component needs them: a ROS 2 component needs DDS QoS, a gRPC
 component does not. Keeping them out means the engine can drive a gRPC robot, a ROS 2
-robot fleet, a virtual avatar, or a set of AI services with the same control-plane code
+robot fleet, a digital avatar, or a set of AI services with the same control-plane code
 path, and accidental coupling (for example, baking DDS QoS semantics into the engine) is
 structurally prevented.
 
@@ -911,10 +911,10 @@ OpenRoIS extension (section 9.1).
 
 ### 8.5 Paradigm Transparency
 
-The same SDK calls drive a real ROS 2 robot and a virtual avatar. Only the adapter
+The same SDK calls drive a real ROS 2 robot and a digital avatar. Only the adapter
 behind the gateway changes. This is the core value proposition for researchers: a
 scenario written once can be tested against a mock robot, deployed against a real
-ROS 2 robot, and reused against a virtual avatar without code changes.
+ROS 2 robot, and reused against a digital avatar without code changes.
 
 ---
 
@@ -1958,7 +1958,7 @@ transports. OpenRoIS does not compete with ROS 2. It uses ROS 2 as a data-plane
 transport for robot adapters. RoIS operations map to ROS 2 primitives: synchronous
 operations to services, long-running operations to actions, async push to topics.
 The value OpenRoIS adds is a **standardized symbolic interface** above ROS 2, so
-that the same service application can also drive a virtual avatar or a distributed
+that the same service application can also drive a digital avatar or a distributed
 service without rewriting the scenario logic.
 
 ### 17.3 OpenRoIS and Unity
@@ -2033,5 +2033,5 @@ items. Reference components are the natural entry point for new contributors.
 ---
 
 *OpenRoIS is an open-source middleware for the OMG RoIS Framework 2.0. Control
-physical robots, virtual avatars, and AI services from one paradigm-neutral SDK.
+physical robots, digital avatars, and AI services from one paradigm-neutral SDK.
 Apache-2.0. Alpha, pre-1.0, unstable API.*

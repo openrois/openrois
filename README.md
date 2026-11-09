@@ -8,7 +8,7 @@
 
 <p align="center">
   <strong>Open-source middleware implementing the OMG Robotic Interaction Service (RoIS) Framework 2.0</strong><br>
-  Write a service application once. Run it on physical robots, virtual avatars, and AI services.
+  Write a service application once. Run it on physical robots, digital avatars, and AI services.
 </p>
 
 <p align="center">
@@ -49,7 +49,7 @@ commands.
 A specification alone does not provide the maintained implementation, SDKs, and
 adapters that adoption requires. **OpenRoIS is an openly developed implementation of
 RoIS 2.0** that carries the standard from specification to practice, for physical
-robots and virtual agents alike.
+robots and digital avatars alike.
 
 <p align="center">
   <picture>

@@ -2,7 +2,7 @@
 
 > A practical architecture for implementing the OMG **RoIS Framework 2.0** as an
 > open-source middleware that lets service applications control **physical robots,
-> virtual avatars, and virtual agents** over the internet.
+> digital avatars, and AI services** over the internet.
 >
 > The architecture is deliberately **paradigm-neutral**: the engine and
 > client SDK never assume hardware, a world model, or any specific middleware. The
@@ -52,7 +52,7 @@
 ### Goals
 
 - Provide a **conformant RoIS 2.0 implementation** usable across **physical robots,
-  virtual avatars, and virtual agents**.
+  digital avatars, and AI services**.
 - **Demonstrate the full stack end to end**: a web service application controls a
   real robot through the gateway, sub HRI Engine, and component layers, using only
   RoIS interfaces. This is the MVP, not the end goal.
@@ -107,7 +107,7 @@ Logical Layer (control plane)
   WebSocket + JSON-RPC 2.0: the data is small and structured.
 - **Implementation Layer** (data plane): the actual backends, which the spec calls
   **functional implementations**. These can be gRPC services, ROS 2 applications,
-  cloud APIs, virtual avatars, sensor rooms, streaming services, or computation
+  cloud APIs, digital avatars, sensor rooms, streaming services, or computation
   services (image annotation, TTS, STT, auto-translation). The implementation can
   be local (gRPC client on the robot) or remote (cloud GPU inference service). The
   component always runs on a sub HRI Engine. The functional implementation can be
@@ -459,7 +459,7 @@ network, and both speak JSON-RPC 2.0 over WebSocket.
 
 The **gateway** is the process that hosts the main engine and faces the
 network. It is the only internet-facing process and the single enforcement point
-for security once authentication and authorization land (`v0.3` on the roadmap).
+for security once authentication and authorization land (`v0.4` on the roadmap).
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -489,7 +489,7 @@ logic lives in the engine, which is fully open source.
 
 - **Terminate the control-plane transport** (WebSocket, with TLS in front of it) and,
   once authentication lands, authenticate every connection before any RoIS message is
-  processed (planned, `v0.3`).
+  processed (planned, `v0.4`).
 - **Hold the bindings** of its clients for every engine below it. Clients connect to the
   top engine of a hierarchy.
 - **Route** each call to the sub HRI Engine that owns the target component, and run
@@ -501,7 +501,7 @@ logic lives in the engine, which is fully open source.
   `rois.system.profile_changed` when a sub HRI Engine connects, changes or disconnects.
   Clients re-fetch the profile automatically. No polling needed.
 - **Filter** `search()`/`query()` results and **guard** `bind()`/`execute()` per
-  the caller's authorization scope (planned, `v0.3`).
+  the caller's authorization scope (planned, `v0.4`).
 
 The gateway accepts both adapter connections (on the `/adapter` path) and client
 connections (on any other path) on the same WebSocket port. It distinguishes them by the
@@ -622,7 +622,7 @@ models are the same, so bindings, conditions and sequencing exist once, in the e
 Data-plane concerns stay out of the control plane. QoS policies, deadlines and
 reliability belong to the data plane of whichever component needs them: a ROS 2
 component needs DDS QoS, a gRPC component does not. Keeping them out means the engine can
-drive a gRPC robot, a ROS 2 robot fleet, a virtual avatar, or a set of AI services with
+drive a gRPC robot, a ROS 2 robot fleet, a digital avatar, or a set of AI services with
 the same control-plane code path, and accidental coupling (for example, baking DDS QoS
 semantics into the engine) is structurally prevented.
 
@@ -753,7 +753,7 @@ models across paradigms, and **7** of those are *identical*. The perception and 
 components run the same ML models whether the input is a robot camera or a webcam. Only
 actuation, world model, and stream source differ.
 
-| RoIS Component | Physical Robot | Virtual Avatar | Shared? |
+| RoIS Component | Physical Robot | Digital Avatar | Shared? |
 |----------------|----------------|----------------|---------|
 | Person Detection | YOLO on camera | YOLO on webcam / virtual sensor | yes |
 | Person Localization | depth + tracker | world position / webcam depth | diff coord system |
@@ -1013,7 +1013,7 @@ Example JWT claims used downstream for authorization:
 Recommended path: engine-internal JWT for the prototype, then OIDC provider for
 multi-tenant deployments. The current engine does not authenticate or authorize
 connections at all, so the alpha should run only on trusted networks. Authentication
-and authorization are `v0.3` on the [roadmap](roadmap.md).
+and authorization are `v0.4` on the [roadmap](roadmap.md).
 
 ---
 
