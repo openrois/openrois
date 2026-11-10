@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "openrois-mcp"
 version = "0.1.0"
-description = "OpenRoIS MCP server: physical robots, digital avatars and AI services as tools for an AI agent"
+description = "OpenRoIS MCP server: physical robots, virtual avatars and AI services as tools for an AI agent"
 readme = "README.md"
 license = "Apache-2.0"
 authors = [
