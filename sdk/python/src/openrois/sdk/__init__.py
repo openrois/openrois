@@ -1,6 +1,6 @@
 """OpenRoIS Python client SDK: connect to an OpenRoIS engine over WebSocket.
 
-A client discovers the components of every connected physical robot, digital avatar, or AI
+A client discovers the components of every connected physical robot, virtual avatar, or AI
 service, and drives them through the standard RoIS interfaces. Asyncio only.
 
 Public API:
