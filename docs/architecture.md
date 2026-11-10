@@ -2,7 +2,7 @@
 
 > A practical architecture for implementing the OMG **RoIS Framework 2.0** as an
 > open-source middleware that lets service applications control **physical robots,
-> digital avatars, and AI services** over the internet.
+> virtual avatars, and AI services** over the internet.
 >
 > The architecture is deliberately **paradigm-neutral**: the engine and
 > client SDK never assume hardware, a world model, or any specific middleware. The
@@ -52,7 +52,7 @@
 ### Goals
 
 - Provide a **conformant RoIS 2.0 implementation** usable across **physical robots,
-  digital avatars, and AI services**.
+  virtual avatars, and AI services**.
 - **Demonstrate the full stack end to end**: a web service application controls a
   real robot through the gateway, sub HRI Engine, and component layers, using only
   RoIS interfaces. This is the MVP, not the end goal.
@@ -107,7 +107,7 @@ Logical Layer (control plane)
   WebSocket + JSON-RPC 2.0: the data is small and structured.
 - **Implementation Layer** (data plane): the actual backends, which the spec calls
   **functional implementations**. These can be gRPC services, ROS 2 applications,
-  cloud APIs, digital avatars, sensor rooms, streaming services, or computation
+  cloud APIs, virtual avatars, sensor rooms, streaming services, or computation
   services (image annotation, TTS, STT, auto-translation). The implementation can
   be local (gRPC client on the robot) or remote (cloud GPU inference service). The
   component always runs on a sub HRI Engine. The functional implementation can be
@@ -622,7 +622,7 @@ models are the same, so bindings, conditions and sequencing exist once, in the e
 Data-plane concerns stay out of the control plane. QoS policies, deadlines and
 reliability belong to the data plane of whichever component needs them: a ROS 2
 component needs DDS QoS, a gRPC component does not. Keeping them out means the engine can
-drive a gRPC robot, a ROS 2 robot fleet, a digital avatar, or a set of AI services with
+drive a gRPC robot, a ROS 2 robot fleet, a virtual avatar, or a set of AI services with
 the same control-plane code path, and accidental coupling (for example, baking DDS QoS
 semantics into the engine) is structurally prevented.
 
@@ -753,7 +753,7 @@ models across paradigms, and **7** of those are *identical*. The perception and 
 components run the same ML models whether the input is a robot camera or a webcam. Only
 actuation, world model, and stream source differ.
 
-| RoIS Component | Physical Robot | Digital Avatar | Shared? |
+| RoIS Component | Physical Robot | Virtual Avatar | Shared? |
 |----------------|----------------|----------------|---------|
 | Person Detection | YOLO on camera | YOLO on webcam / virtual sensor | yes |
 | Person Localization | depth + tracker | world position / webcam depth | diff coord system |
