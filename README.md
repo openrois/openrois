@@ -8,7 +8,7 @@
 
 <p align="center">
   <strong>Open-source middleware implementing the OMG Robotic Interaction Service (RoIS) Framework 2.0</strong><br>
-  Write a service application once. Run it on physical robots, digital avatars, and AI services.
+  Write a service application once. Run it on physical robots, virtual avatars, and AI services.
 </p>
 
 <p align="center">
@@ -49,7 +49,7 @@ commands.
 A specification alone does not provide the maintained implementation, SDKs, and
 adapters that adoption requires. **OpenRoIS is an openly developed implementation of
 RoIS 2.0** that carries the standard from specification to practice, for physical
-robots and digital avatars alike.
+robots and virtual avatars alike.
 
 <p align="center">
   <picture>
@@ -270,10 +270,10 @@ makes no conformance claim. The rest of the RoIS surface is being built in the o
 |-----------|--------|------------------|
 | **`v0.1.0`** (November 2026) | ![Released](https://img.shields.io/badge/Released-2E7D32) | Every package at `0.1.0`, released together. A physical Reachy Mini and a simulated one behind one gateway, driven by one application and by an AI agent |
 | **`v0.2`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | RoIS conformance: components declared by XML profiles at run time, the types checked against the normative RoIS files on every change, a test suite that adapter authors run against their own adapter, and a conformance claim. Applications and engines that recover when a gateway or an adapter restarts |
-| **`v0.3`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | A physical robot and a digital avatar behind one gateway, controlled by one application that does not know which is which |
+| **`v0.3`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | A physical robot and a virtual avatar behind one gateway, controlled by one application that does not know which is which |
 | **`v0.4`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | Authentication at the WebSocket upgrade and authorization per RoIS operation. Until then, a reverse proxy in front of the gateway terminates TLS ([SECURITY.md](SECURITY.md)). An adapter for a second robot |
 | **`v0.5`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | Media for the AudioStreaming and VideoStreaming components. OpenRoIS does not prescribe a media transport: a streaming component returns a descriptor of its stream, and an optional WebRTC integration serves deployments that have none |
-| **`v1.0`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | A stable API, and the first release with semantic versioning guarantees. It stands on the milestones above: the conformance claim, authentication, and reference adapters for two robots and a digital avatar, on Linux, Windows and macOS |
+| **`v1.0`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | A stable API, and the first release with semantic versioning guarantees. It stands on the milestones above: the conformance claim, authentication, and reference adapters for two robots and a virtual avatar, on Linux, Windows and macOS |
 | Beyond `v1.0` | ![Beyond 1.0](https://img.shields.io/badge/Beyond%201.0-8B98A8) | The remaining basic RoIS HRI Components, each released when it is ready. A registry of community components and adapters, and a Hub that shows operators the adapters, sessions and health of a deployment |
 
 The [roadmap](docs/roadmap.md) also describes each layer of the stack.

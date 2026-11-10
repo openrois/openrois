@@ -1,9 +1,9 @@
 # About OpenRoIS SDK
 
 Use the OpenRoIS SDK package to connect a Unity application to an OpenRoIS gateway and
-drive physical robots, digital avatars, and AI services through the standard interfaces
+drive physical robots, virtual avatars, and AI services through the standard interfaces
 of the [OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0). The same calls work
-for a physical robot and for a digital avatar, which lets one Unity application serve
+for a physical robot and for a virtual avatar, which lets one Unity application serve
 as the front end of either.
 
 This version of the package is an alpha: pre-1.0, with an unstable API. See the
