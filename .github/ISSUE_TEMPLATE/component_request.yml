@@ -1,5 +1,5 @@
 name: Component or platform support
-description: Request or offer components for a robot, avatar, or service.
+description: Request or offer components for a physical robot, virtual avatar, or digital service.
 labels: ["component"]
 body:
   - type: markdown
@@ -13,7 +13,7 @@ body:
     id: platform
     attributes:
       label: Platform
-      placeholder: "Robot, avatar runtime, or service, with model or version"
+      placeholder: "Physical robot, virtual avatar runtime, or digital service, with model or version"
     validations:
       required: true
   - type: textarea

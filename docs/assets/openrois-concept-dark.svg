@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" width="960" height="420" role="img" aria-labelledby="title desc">
   <title id="t">What OpenRoIS changes</title>
-  <desc id="d">Left: without a standard interface, N applications are each integrated against M platforms, N times M integrations. Right: with OpenRoIS, applications speak the RoIS interfaces over JSON-RPC 2.0 to a gateway (main HRI Engine), and each platform is integrated once by an adapter (sub HRI Engine), which the gateway reaches with the same RoIS method catalog, N plus M integrations.</desc>
+  <desc id="d">Left: with vendor-specific interfaces, N applications are each integrated against M platforms, whether physical robots, virtual avatars, or digital services, which is N times M integrations. Right: with OpenRoIS, applications speak the RoIS method catalog over JSON-RPC 2.0 to a gateway (main HRI Engine), and each platform is integrated once by an adapter (sub HRI Engine), which the gateway reaches with the same RoIS method catalog, which is N plus M integrations.</desc>
   <title id="title">What OpenRoIS changes</title>
-  <desc id="desc">Without a standard interface, every application is integrated against every platform, which is N times M integrations. With OpenRoIS, applications use the RoIS interfaces through one gateway and each platform is integrated once by an adapter, which is N plus M integrations.</desc>
+  <desc id="desc">With vendor-specific interfaces, every application is integrated against every platform, which is N times M integrations. With OpenRoIS, applications use the RoIS method catalog through one gateway and each physical robot, virtual avatar, or digital service is integrated once by an adapter, which is N plus M integrations.</desc>
   <defs>
     <style>
       .card { fill: #0f1620; stroke: #2a3a4d; }
@@ -27,8 +27,8 @@
   <rect class="card" x="0.5" y="0.5" width="959" height="419" rx="14"/>
 
   <!-- Panel A: vendor-specific integration -->
-  <text class="title" x="240" y="42" text-anchor="middle">Without a standard interface</text>
-  <text class="sub" x="240" y="62" text-anchor="middle">Each application is written against each platform</text>
+  <text class="title" x="240" y="42" text-anchor="middle">Vendor-specific interfaces</text>
+  <text class="sub" x="240" y="62" text-anchor="middle">Every application is rewritten for every platform</text>
 
   <g>
     <line class="tangle" x1="110" y1="124" x2="110" y2="286"/>
@@ -54,11 +54,11 @@
   <text class="pill" x="240" y="209" text-anchor="middle" style="fill:#ff8a80">N × M integrations</text>
 
   <rect class="host" x="50" y="286" width="120" height="40" rx="6"/>
-  <text class="lbl" x="110" y="311" text-anchor="middle">Robot</text>
+  <text class="lbl" x="110" y="311" text-anchor="middle">Physical robot</text>
   <rect class="host" x="180" y="286" width="120" height="40" rx="6"/>
-  <text class="lbl" x="240" y="311" text-anchor="middle">Avatar</text>
+  <text class="lbl" x="240" y="311" text-anchor="middle">Virtual avatar</text>
   <rect class="host" x="310" y="286" width="120" height="40" rx="6"/>
-  <text class="lbl" x="370" y="311" text-anchor="middle">AI service</text>
+  <text class="lbl" x="370" y="311" text-anchor="middle">Digital service</text>
 
   <text class="sub" x="240" y="388" text-anchor="middle">A change of platform forces a rewrite of every application</text>
 
@@ -66,8 +66,8 @@
   <line x1="480" y1="36" x2="480" y2="392" stroke="#2a3a4d" stroke-width="1" stroke-dasharray="4 5"/>
 
   <!-- Panel B: mediated by OpenRoIS -->
-  <text class="title" x="720" y="42" text-anchor="middle">With OpenRoIS</text>
-  <text class="sub" x="720" y="62" text-anchor="middle">Applications speak RoIS, platforms plug in once</text>
+  <text class="title" x="720" y="42" text-anchor="middle">One standard interface</text>
+  <text class="sub" x="720" y="62" text-anchor="middle">One application drives every platform, one adapter each</text>
 
   <g>
     <line class="clean" x1="590" y1="124" x2="590" y2="152"/>
@@ -86,13 +86,13 @@
   <rect class="app" x="795" y="84" width="110" height="40" rx="6"/>
   <text class="lbl" x="850" y="109" text-anchor="middle">App C</text>
 
-  <text class="wire" x="720" y="142" text-anchor="middle">RoIS interfaces, JSON-RPC 2.0</text>
+  <text class="wire" x="720" y="142" text-anchor="middle">RoIS method catalog (JSON-RPC 2.0)</text>
 
   <rect class="core" x="530" y="152" width="380" height="48" rx="7"/>
   <text class="lbl" x="720" y="173" text-anchor="middle">OpenRoIS gateway</text>
   <text class="small" x="720" y="190" text-anchor="middle">main HRI Engine</text>
 
-  <text class="wire" x="720" y="218" text-anchor="middle">RoIS method catalog</text>
+  <text class="wire" x="720" y="218" text-anchor="middle">RoIS method catalog (JSON-RPC 2.0)</text>
 
   <rect class="adpt" x="530" y="228" width="120" height="44" rx="6"/>
   <text class="lbl" x="590" y="247" text-anchor="middle">Adapter</text>
@@ -105,14 +105,14 @@
   <text class="small" x="850" y="263" text-anchor="middle">sub HRI Engine</text>
 
   <rect class="host" x="530" y="286" width="120" height="40" rx="6"/>
-  <text class="lbl" x="590" y="311" text-anchor="middle">Robot</text>
+  <text class="lbl" x="590" y="311" text-anchor="middle">Physical robot</text>
   <rect class="host" x="660" y="286" width="120" height="40" rx="6"/>
-  <text class="lbl" x="720" y="311" text-anchor="middle">Avatar</text>
+  <text class="lbl" x="720" y="311" text-anchor="middle">Virtual avatar</text>
   <rect class="host" x="790" y="286" width="120" height="40" rx="6"/>
-  <text class="lbl" x="850" y="311" text-anchor="middle">AI service</text>
+  <text class="lbl" x="850" y="311" text-anchor="middle">Digital service</text>
 
   <rect class="mask" x="652" y="340" width="136" height="24" rx="12"/>
   <rect x="652" y="340" width="136" height="24" rx="12" fill="none" stroke="#2f7d32" stroke-width="1.2"/>
   <text class="pill" x="720" y="356" text-anchor="middle" style="fill:#7ee787">N + M integrations</text>
-  <text class="sub" x="720" y="388" text-anchor="middle">Write the application once, integrate each platform once</text>
+  <text class="sub" x="720" y="388" text-anchor="middle">The same RoIS method catalog at every hop</text>
 </svg>

@@ -4,7 +4,7 @@
 
 JavaScript client SDK for [OpenRoIS](https://openrois.org/), an open-source middleware implementing the [OMG RoIS Framework 2.0](https://www.omg.org/spec/RoIS/2.0).
 
-Connect to an OpenRoIS engine, discover the components of every connected physical robot, virtual avatar, or AI service, and drive them through the standard RoIS interfaces. Runs in browsers and in Node.js.
+Connect to an OpenRoIS engine, discover the components of every connected physical robot, virtual avatar, or digital service, and drive them through the standard RoIS interfaces. Runs in browsers and in Node.js.
 
 > **Alpha, pre-1.0, unstable API.**
 

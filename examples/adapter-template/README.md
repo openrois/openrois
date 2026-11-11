@@ -1,6 +1,6 @@
 # Adapter Template
 
-A starting point for connecting your own robot, avatar, or service to OpenRoIS.
+A starting point for connecting your own physical robot, virtual avatar, or digital service to OpenRoIS.
 
 An adapter is a sub HRI Engine: it hosts an `Engine` with the components it implements,
 reads its settings from `adapter.yaml` with the engine's adapter loader, and connects out

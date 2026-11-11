@@ -128,9 +128,12 @@ descriptions.
   ("Get Started", "Project Status"). Sentence case for body text and table cells.
 - Technical, precise, confident. No marketing language. State what the software does,
   not what it "empowers".
-- Say "physical robots, virtual avatars, and AI services", not "robots" alone. Never
-  "virtual agents", "digital avatars" or "digital agents"; the title of the published
-  paper is the one place that keeps "Virtual Agents".
+- Name the kinds of system OpenRoIS serves with two words each: "physical robot",
+  "virtual avatar" and "digital service" behind an adapter, and "AI agent" for an AI model
+  that drives them as a service application. Say "physical robots, virtual avatars, and
+  digital services" where the kinds are listed. "The robot" alone is fine in prose about
+  one machine. Never "AI services", "virtual agents", "digital avatars" or "digital
+  agents".
 - Say "Alpha, pre-1.0, unstable API". Never claim production readiness before v1.0.
 - Mark anything not implemented as "in progress" or "planned", in documentation and in
   code comments alike. Do not describe a target design as if it already works.
