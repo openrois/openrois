@@ -59,6 +59,6 @@ the steps to reproduce it, and the impact you expect.
 In scope: the OpenRoIS engine, gateway, component framework, SDKs, interface types, and
 the examples in this repository.
 
-Out of scope: vulnerabilities in the robots, avatars, or services behind an adapter, in
+Out of scope: vulnerabilities in the physical robots, virtual avatars, or digital services behind an adapter, in
 third-party dependencies (please report those upstream), and the known absence of
 authentication described above, which is tracked on the roadmap.

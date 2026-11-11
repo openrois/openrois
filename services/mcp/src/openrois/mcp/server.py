@@ -18,7 +18,7 @@ from openrois.mcp.config import AUTO_BIND_DEFAULT, Settings
 from openrois.mcp.session import AgentError, ClientFactory, Session, connect_client
 
 INSTRUCTIONS = """\
-This server drives the physical robots, virtual avatars and AI services behind an OpenRoIS
+This server drives the physical robots, virtual avatars and digital services behind an OpenRoIS
 gateway through the OMG RoIS Framework 2.0 interfaces.
 
 1. list_components shows every component, its type, its status for this session and what

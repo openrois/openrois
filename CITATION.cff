@@ -9,12 +9,14 @@ title: >-
 abstract: >-
   OpenRoIS is a community-driven open-source middleware that implements the
   OMG Robotic Interaction Service (RoIS) Framework 2.0. It provides a recursive
-  engine that realizes the main and sub HRI Engine roles, a five-method
-  component contract, a JSON-RPC 2.0 mapping of the five RoIS interfaces over
-  WebSocket, a single-source-of-truth type pipeline in which Python models are
-  exported to JSON Schema and generated into TypeScript and C# types, client
-  SDKs for web and Unity, and a Python adapter SDK with ROS 2 support, so that
-  one service application can address physical robots and virtual agents.
+  engine that realizes the main and sub HRI Engine roles, a single protocol in
+  which the RoIS method catalog over JSON-RPC 2.0 and WebSocket is the only
+  interface at every hop, a single-source-of-truth type pipeline in which
+  Python models are exported to JSON Schema and generated into TypeScript and
+  C# types, client SDKs for JavaScript, Python, and Unity, a component SDK, a
+  browser inspector, and a Model Context Protocol (MCP) server for AI agents,
+  so that one service application, scripted or an AI agent, can address
+  physical robots, virtual avatars, and digital services.
 authors:
   - name: OpenRoIS Community
 repository-code: "https://github.com/openrois/openrois"
@@ -27,7 +29,8 @@ preferred-citation:
   status: in-press
   title: >-
     OpenRoIS: A Community-Driven Open-Source Middleware Implementing the Robotic
-    Interaction Service (RoIS) Framework for Physical Robots and Virtual Agents
+    Interaction Service (RoIS) Framework for Physical Robots, Virtual Avatars,
+    and AI Agents
   authors:
     - family-names: Carrera Villalobos
       given-names: Sebastian
@@ -43,6 +46,8 @@ preferred-citation:
       given-names: Yukiko
     - family-names: Miyashita
       given-names: Takahiro
+    - family-names: Ishiguro
+      given-names: Hiroshi
     - family-names: El Hafi
       given-names: Lotfi
   conference:

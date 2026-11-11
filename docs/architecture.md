@@ -2,13 +2,13 @@
 
 > A practical architecture for implementing the OMG **RoIS Framework 2.0** as an
 > open-source middleware that lets service applications control **physical robots,
-> virtual avatars, and AI services** over the internet.
+> virtual avatars, and digital services** over the internet.
 >
 > The architecture is deliberately **paradigm-neutral**: the engine and
 > client SDK never assume hardware, a world model, or any specific middleware. The
 > engine reaches every component with the **RoIS method catalog**, the one protocol at
-> every hop, which lets the same engine drive a gRPC robot, a ROS 2 robot fleet, an
-> in-process avatar, or a distributed set of services.
+> every hop, which lets the same engine drive a physical robot over gRPC or ROS 2, a
+> virtual avatar in process, or a distributed set of digital services.
 >
 > A **minimum viable demonstration** exists today: a web service application
 > connects to the gateway, which routes RoIS calls to a sub HRI Engine backed by
@@ -52,14 +52,14 @@
 ### Goals
 
 - Provide a **conformant RoIS 2.0 implementation** usable across **physical robots,
-  virtual avatars, and AI services**.
+  virtual avatars, and digital services**.
 - **Demonstrate the full stack end to end**: a web service application controls a
   real robot through the gateway, sub HRI Engine, and component layers, using only
   RoIS interfaces. This is the MVP, not the end goal.
 - Keep the **interfaces paradigm-neutral**: the engine and SDK must not
   assume hardware, a world model, or any specific middleware.
 - Allow a **service application in a remote location** to control any RoIS host
-  (robot or avatar) securely.
+  (physical robot, virtual avatar or digital service) securely.
 - Expose a **simple client SDK** (JavaScript, Python and Unity)
   so a scenario can be written in a few lines, identically regardless of the host
   paradigm.
@@ -194,7 +194,7 @@ flowchart TB
 
     subgraph L2["Gateway (hosts Engine, main)"]
         direction LR
-        Auth["Auth<br/>JWT / RBAC (planned)"]
+        Auth["Auth<br/>(planned)"]
         Session["Sessions"]
         WSServer["WebSocket Server<br/>JSON-RPC 2.0"]
         Router["RoIS Router<br/>SystemIF, CommandIF, QueryIF, EventIF, StreamingIF (planned)"]
@@ -204,13 +204,13 @@ flowchart TB
         direction LR
         RobotSubEngine["Robot Sub HRI Engine<br/>(gRPC, ROS 2, etc.)"]
         AvatarSubEngine["Avatar Sub HRI Engine"]
-        ServiceSubEngine["AI Service Sub HRI Engine"]
+        ServiceSubEngine["Digital Service Sub HRI Engine"]
     end
 
-    L1 -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| L2
-    L2 -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| RobotSubEngine
-    L2 -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| AvatarSubEngine
-    L2 -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| ServiceSubEngine
+    L1 -->|"WebSocket<br/>JSON-RPC 2.0"| L2
+    L2 -->|"WebSocket<br/>JSON-RPC 2.0"| RobotSubEngine
+    L2 -->|"WebSocket<br/>JSON-RPC 2.0"| AvatarSubEngine
+    L2 -->|"WebSocket<br/>JSON-RPC 2.0"| ServiceSubEngine
 ```
 
 The spec's "main HRI Engine" maps to the **engine** hosted by the gateway. Each
@@ -266,7 +266,7 @@ layers align with the RoIS specification.
 - Authentication and RBAC.
 - Media streaming.
 - The full 17-component library.
-- Mixed paradigm (robot and avatar on one gateway).
+- Mixed paradigm (a physical robot and a virtual avatar on one gateway).
 
 ---
 
@@ -418,8 +418,8 @@ the engine profile, whose `component_ids` lists every component of every connect
 HRI Engine, and `component_profiles`, the profile of each of those components. The application populates its UI, command set, and query set
 from the profile data. A component that does not list `suspend` in its command
 profiles does not have a suspend button in the UI. This is the mechanism that
-makes the same service application work across different robots, avatars, and
-service sub HRI Engines without modification.
+makes the same service application work across different physical robots, virtual
+avatars, and digital services without modification.
 
 When a sub HRI Engine connects or disconnects, the gateway broadcasts a
 `rois.system.profile_changed` notification. The service application re-fetches
@@ -622,7 +622,7 @@ models are the same, so bindings, conditions and sequencing exist once, in the e
 Data-plane concerns stay out of the control plane. QoS policies, deadlines and
 reliability belong to the data plane of whichever component needs them: a ROS 2
 component needs DDS QoS, a gRPC component does not. Keeping them out means the engine can
-drive a gRPC robot, a ROS 2 robot fleet, a virtual avatar, or a set of AI services with
+drive a gRPC robot, a ROS 2 robot fleet, a virtual avatar, or a set of digital services with
 the same control-plane code path, and accidental coupling (for example, baking DDS QoS
 semantics into the engine) is structurally prevented.
 
@@ -824,10 +824,10 @@ flowchart TB
         App -->|"WebSocket<br/>JSON-RPC 2.0"| GW
     end
 
-    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| SubEngine1["Sub HRI Engine"]
+    GW -->|"WebSocket<br/>JSON-RPC 2.0"| SubEngine1["Sub HRI Engine"]
     SubEngine1 --> Robot1["Service Robot 1"]
 
-    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| SubEngine2["Sub HRI Engine"]
+    GW -->|"WebSocket<br/>JSON-RPC 2.0"| SubEngine2["Sub HRI Engine"]
     SubEngine2 --> Robot2["Service Robot 2"]
 ```
 
@@ -842,16 +842,16 @@ robots are in a third.
 ```mermaid
 flowchart TB
     App["Service Application<br/>(remote)"]
-    App -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| GW
+    App -->|"WebSocket<br/>JSON-RPC 2.0"| GW
 
     subgraph Cloud["Gateway Host (cloud or edge)"]
         GW["Gateway"]
     end
 
-    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| SubEngine1["Sub HRI Engine"]
+    GW -->|"WebSocket<br/>JSON-RPC 2.0"| SubEngine1["Sub HRI Engine"]
     SubEngine1 --> Robot1["Service Robot 1"]
 
-    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| SubEngine2["Sub HRI Engine"]
+    GW -->|"WebSocket<br/>JSON-RPC 2.0"| SubEngine2["Sub HRI Engine"]
     SubEngine2 --> Robot2["Service Robot 2"]
 ```
 
@@ -876,16 +876,16 @@ application does not know or care where a component's implementation lives:
 ```mermaid
 flowchart TB
     App["Service Application"]
-    App -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| GW
+    App -->|"WebSocket<br/>JSON-RPC 2.0"| GW
 
     subgraph Cloud["Gateway Host (cloud)"]
         GW["Gateway"]
     end
 
-    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| PerceptionSubEngine["Perception Sub HRI Engine<br/>(separate process, own profile)"]
+    GW -->|"WebSocket<br/>JSON-RPC 2.0"| PerceptionSubEngine["Perception Sub HRI Engine<br/>(separate process, own profile)"]
     PerceptionSubEngine --> CloudImpl["Cloud Implementations<br/>(GPU inference, Whisper API)<br/>Implementation Layer"]
 
-    GW -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| RobotSubEngine["Robot Sub HRI Engine"]
+    GW -->|"WebSocket<br/>JSON-RPC 2.0"| RobotSubEngine["Robot Sub HRI Engine"]
     RobotSubEngine --> Robot["Service Robot<br/>(gRPC, ROS 2, etc.)<br/>Implementation Layer"]
 ```
 
@@ -905,8 +905,8 @@ transport**.
 
 | Plane | Boundary | Transport | Why |
 |-------|----------|-----------|-----|
-| Control plane | Service application to Gateway | **WebSocket + TLS** | NAT/firewall friendly, browser-native, easy auth, async events. Matches the spec's Annex F.2.3 WebSocket example. |
-| Control plane | Gateway to Sub HRI Engine | **WebSocket + TLS, JSON-RPC 2.0** | NAT-friendly, one protocol for all sub HRI Engines. No alternatives at this boundary. |
+| Control plane | Service application to Gateway | **WebSocket**, with TLS from a reverse proxy in front of the gateway | NAT/firewall friendly, browser-native, easy auth, async events. Matches the spec's Annex F.2.3 WebSocket example. |
+| Control plane | Gateway to Sub HRI Engine | **WebSocket, JSON-RPC 2.0** | NAT-friendly, one protocol for all sub HRI Engines. No alternatives at this boundary. |
 | Data plane | Sub HRI Engine to backend | **Chosen by the sub HRI Engine** | gRPC, DDS, IPC, WebRTC, WHEP/WHIP, RTSP, or any other. The gateway never knows or cares. |
 | Data plane | Media (camera/mic or rendered) | **Described, not prescribed** | The streaming component returns a descriptor of its stream. WebRTC is the planned optional default. |
 
@@ -1191,7 +1191,7 @@ in openrois-adapter-reachy-mini. Only the component SDK lives in the monorepo, u
 |---------|-------------|--------------|
 | Service application (web) | **TypeScript (React)** | Unity (C#), Godot |
 | Service application (desktop) | **Unity (C#)** | Godot, Unreal |
-| Service application (scripts, AI services) | **Python (asyncio)** | TypeScript (Node.js) |
+| Service application (scripts, AI agents) | **Python (asyncio)** | TypeScript (Node.js) |
 | Robot data-plane transport | **gRPC** (direct API), **ROS 2 / DDS** (ROS ecosystem) | CORBA, RTC |
 | Engine language | **Python** | TypeScript, C#/.NET |
 | Interface source of truth | **Pydantic to JSON Schema to C#/TS** | Protobuf, raw IDL |
@@ -1199,7 +1199,7 @@ in openrois-adapter-reachy-mini. Only the component SDK lives in the monorepo, u
 | Data plane (robot, ROS 2) | ROS 2 / DDS | none |
 | Data plane (robot, gRPC) | gRPC | none |
 | Data plane (avatar/services) | IPC, WebSocket, or other | none |
-| Control plane (all boundaries) | **WebSocket + TLS, JSON-RPC 2.0** | none |
+| Control plane (all boundaries) | **WebSocket, JSON-RPC 2.0** | none |
 | RPC envelope | JSON-RPC 2.0 | Protobuf, CBOR |
 | Media | Any, described by the streaming component; optional WebRTC integration (aiortc / GStreamer webrtcbin) as the default | none prescribed |
 | SFU (large fleets) | mediasoup, LiveKit | Janus |

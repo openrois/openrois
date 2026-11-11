@@ -4,7 +4,7 @@
 
 The OpenRoIS component SDK: write a RoIS HRI Component as a Python class. A component
 declares the RoIS type it implements, marks the messages it supports, and talks to its
-robot, avatar or AI service in its own code. The engine that hosts it stores its
+physical robot, virtual avatar or digital service in its own code. The engine that hosts it stores its
 parameters, answers `component_status`, tracks its commands and serves the part of the
 profile it implements.
 

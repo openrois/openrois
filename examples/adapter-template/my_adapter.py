@@ -1,4 +1,4 @@
-"""Adapter template: the starting point of an adapter for your robot, avatar or service.
+"""Adapter template: the starting point of an adapter for your physical robot, virtual avatar or digital service.
 
 Copy this directory and fill in every ``IMPLEMENT YOUR CODE HERE`` block with calls to
 the API of your platform: an HTTP client, a gRPC stub, a ROS 2 node, a serial port. The

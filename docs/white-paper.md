@@ -74,7 +74,7 @@ component library that demonstrates the full stack working end to end.
 
 **OpenRoIS** is that implementation. It is an open-source, Apache-2.0 licensed
 middleware that implements the OMG RoIS Framework 2.0 and lets service applications
-control **physical robots, virtual avatars, and AI services** over the internet
+control **physical robots, virtual avatars, and digital services** over the internet
 through a single, paradigm-neutral SDK.
 
 ### 1.1 Contributions
@@ -216,7 +216,7 @@ extensible without rewrites.
 The engine and client SDK never assume hardware, a world model, or any
 specific middleware. The engine keeps what is the same for every component (selection,
 bindings, command sequences, id routing) and passes each checked operation on with the
-RoIS operations themselves, wherever the component lives. ROS 2, virtual avatars, AI services, and any future paradigm stay
+RoIS operations themselves, wherever the component lives. ROS 2, virtual avatars, digital services, and any future paradigm stay
 inside components. Adding a new paradigm is an additive sub HRI Engine, never a
 rewrite.
 
@@ -448,7 +448,7 @@ flowchart TB
         direction LR
         RobotAdapter["Robot Adapter<br/>(gRPC, ROS 2, etc.)"]
         AvatarAdapter["Avatar Adapter"]
-        ServiceAdapter["AI Service Adapter"]
+        ServiceAdapter["Digital Service Adapter"]
     end
 
     L1 -->|"WebSocket / TLS<br/>JSON-RPC 2.0"| L2
@@ -557,7 +557,7 @@ once, in the engine.
 Data-plane concerns stay out. QoS policies, deadlines, and reliability belong to the
 data plane of whichever component needs them: a ROS 2 component needs DDS QoS, a gRPC
 component does not. Keeping them out means the engine can drive a gRPC robot, a ROS 2
-robot fleet, a virtual avatar, or a set of AI services with the same control-plane code
+robot fleet, a virtual avatar, or a set of digital services with the same control-plane code
 path, and accidental coupling (for example, baking DDS QoS semantics into the engine) is
 structurally prevented.
 
@@ -663,7 +663,7 @@ flowchart TB
     end
 
     SDKs -->|"WebSocket + JSON-RPC 2.0"| Gateway["Gateway"]
-    Gateway --> Adapters["Robot, Avatar, AI Service Adapters<br/>components written with the Python component SDK"]
+    Gateway --> Adapters["Physical Robot, Virtual Avatar, Digital Service Adapters<br/>components written with the Python component SDK"]
 ```
 
 ### 8.1 JavaScript SDK for Web (Primary Client)
@@ -1997,7 +1997,7 @@ OpenRoIS demonstrates that the OMG RoIS Framework 2.0 can be implemented as a
 practical, paradigm-neutral middleware with clean developer experience. The key
 insight is that the spec's separation of message from transport lets one engine answer
 the RoIS operations for every paradigm, with one protocol at every hop. ROS 2, virtual
-avatars, AI services, and any future paradigm stay in components. Adding a new paradigm
+avatars, digital services, and any future paradigm stay in components. Adding a new paradigm
 is an additive adapter, never a rewrite.
 
 The recursive engine model uses one `Engine` class for the gateway, the adapters, and
@@ -2033,5 +2033,5 @@ items. Reference components are the natural entry point for new contributors.
 ---
 
 *OpenRoIS is an open-source middleware for the OMG RoIS Framework 2.0. Control
-physical robots, virtual avatars, and AI services from one paradigm-neutral SDK.
+physical robots, virtual avatars, and digital services from one paradigm-neutral SDK.
 Apache-2.0. Alpha, pre-1.0, unstable API.*

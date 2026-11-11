@@ -8,7 +8,7 @@
 
 <p align="center">
   <strong>Open-source middleware implementing the OMG Robotic Interaction Service (RoIS) Framework 2.0</strong><br>
-  Write a service application once. Run it on physical robots, virtual avatars, and AI services.
+  Write a service application once. Run it on physical robots, virtual avatars, and digital services, or let an AI agent drive them.
 </p>
 
 <p align="center">
@@ -49,12 +49,12 @@ commands.
 A specification alone does not provide the maintained implementation, SDKs, and
 adapters that adoption requires. **OpenRoIS is an openly developed implementation of
 RoIS 2.0** that carries the standard from specification to practice, for physical
-robots and virtual avatars alike.
+robots, virtual avatars, and digital services alike.
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/openrois-concept-dark.svg">
-    <img src="docs/assets/openrois-concept.svg" alt="Without a standard interface, N applications and M platforms need N times M integrations. With OpenRoIS, they need N plus M." width="860">
+    <img src="docs/assets/openrois-concept.svg" alt="With vendor-specific interfaces, N applications and M platforms, whether physical robots, virtual avatars, or digital services, need N times M integrations. With OpenRoIS, they need N plus M." width="860">
   </picture>
 </p>
 
@@ -98,7 +98,7 @@ robots and virtual avatars alike.
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/openrois-architecture-dark.svg">
-    <img src="docs/assets/openrois-architecture.svg" alt="OpenRoIS architecture: service applications use an SDK to reach the gateway, which hosts the main HRI Engine and forwards calls over JSON-RPC to adapters hosting sub HRI Engines for robots, avatars, and services." width="860">
+    <img src="docs/assets/openrois-architecture.svg" alt="OpenRoIS architecture: service applications, among them an AI agent through the MCP server, use an SDK to reach the gateway, which hosts the main HRI Engine and forwards calls over JSON-RPC to adapters hosting sub HRI Engines for physical robots, virtual avatars, and digital services." width="860">
   </picture>
 </p>
 
@@ -357,10 +357,11 @@ in the proceedings, please cite its preprint on arXiv,
 @misc{carrera2026openrois,
   author        = {Carrera Villalobos, Sebastian and Arellano, Christopher Nolan and
                    Hitzmann, Arne and Morais Brito, Edilson and Utsumi, Akira and
-                   Horikawa, Yukiko and Miyashita, Takahiro and El Hafi, Lotfi},
+                   Horikawa, Yukiko and Miyashita, Takahiro and Ishiguro, Hiroshi and
+                   El Hafi, Lotfi},
   title         = {{OpenRoIS}: A Community-Driven Open-Source Middleware Implementing
                    the Robotic Interaction Service ({RoIS}) Framework for Physical
-                   Robots and Virtual Agents},
+                   Robots, Virtual Avatars, and {AI} Agents},
   year          = {2026},
   eprint        = {2609.21178},
   archivePrefix = {arXiv},
