@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" width="960" height="420" role="img" aria-labelledby="title desc">
   <title id="t">What OpenRoIS changes</title>
-  <desc id="d">Left: with vendor-specific interfaces, N applications are each integrated against M platforms, whether physical robots, virtual avatars, or digital services, which is N times M integrations. Right: with OpenRoIS, applications speak the RoIS method catalog over JSON-RPC 2.0 to a gateway (main HRI Engine), and each platform is integrated once by an adapter (sub HRI Engine), which the gateway reaches with the same RoIS method catalog, which is N plus M integrations.</desc>
+  <desc id="d">Left: with vendor-specific interfaces, N applications, such as a web application, an AI agent, or a Unity application, are each integrated against M platforms, whether physical robots, virtual avatars, or digital services, which is N times M integrations. Right: with OpenRoIS, applications speak the RoIS method catalog over JSON-RPC 2.0 to a gateway (main HRI Engine), and each platform is integrated once by an adapter (sub HRI Engine), which the gateway reaches with the same RoIS method catalog, which is N plus M integrations.</desc>
   <title id="title">What OpenRoIS changes</title>
   <desc id="desc">With vendor-specific interfaces, every application is integrated against every platform, which is N times M integrations. With OpenRoIS, applications use the RoIS method catalog through one gateway and each physical robot, virtual avatar, or digital service is integrated once by an adapter, which is N plus M integrations.</desc>
   <defs>
@@ -43,11 +43,11 @@
   </g>
 
   <rect class="app" x="55" y="84" width="110" height="40" rx="6"/>
-  <text class="lbl" x="110" y="109" text-anchor="middle">App A</text>
+  <text class="lbl" x="110" y="101.5" text-anchor="middle" style="font-size:12.5px"><tspan x="110">Web</tspan><tspan x="110" dy="15">application</tspan></text>
   <rect class="app" x="185" y="84" width="110" height="40" rx="6"/>
-  <text class="lbl" x="240" y="109" text-anchor="middle">App B</text>
+  <text class="lbl" x="240" y="101.5" text-anchor="middle" style="font-size:12.5px"><tspan x="240">AI</tspan><tspan x="240" dy="15">agent</tspan></text>
   <rect class="app" x="315" y="84" width="110" height="40" rx="6"/>
-  <text class="lbl" x="370" y="109" text-anchor="middle">App C</text>
+  <text class="lbl" x="370" y="101.5" text-anchor="middle" style="font-size:12.5px"><tspan x="370">Unity</tspan><tspan x="370" dy="15">application</tspan></text>
 
   <rect class="mask" x="172" y="193" width="136" height="24" rx="12"/>
   <rect x="172" y="193" width="136" height="24" rx="12" fill="none" stroke="#ff7b72" stroke-width="1.2"/>
@@ -80,29 +80,29 @@
   </g>
 
   <rect class="app" x="535" y="84" width="110" height="40" rx="6"/>
-  <text class="lbl" x="590" y="109" text-anchor="middle">App A</text>
+  <text class="lbl" x="590" y="101.5" text-anchor="middle" style="font-size:12.5px"><tspan x="590">Web</tspan><tspan x="590" dy="15">application</tspan></text>
   <rect class="app" x="665" y="84" width="110" height="40" rx="6"/>
-  <text class="lbl" x="720" y="109" text-anchor="middle">App B</text>
+  <text class="lbl" x="720" y="101.5" text-anchor="middle" style="font-size:12.5px"><tspan x="720">AI</tspan><tspan x="720" dy="15">agent</tspan></text>
   <rect class="app" x="795" y="84" width="110" height="40" rx="6"/>
-  <text class="lbl" x="850" y="109" text-anchor="middle">App C</text>
+  <text class="lbl" x="850" y="101.5" text-anchor="middle" style="font-size:12.5px"><tspan x="850">Unity</tspan><tspan x="850" dy="15">application</tspan></text>
 
   <text class="wire" x="720" y="142" text-anchor="middle">RoIS method catalog (JSON-RPC 2.0)</text>
 
   <rect class="core" x="530" y="152" width="380" height="48" rx="7"/>
   <text class="lbl" x="720" y="173" text-anchor="middle">OpenRoIS gateway</text>
-  <text class="small" x="720" y="190" text-anchor="middle">main HRI Engine</text>
+  <text class="small" x="720" y="190" text-anchor="middle">Main HRI Engine</text>
 
   <text class="wire" x="720" y="218" text-anchor="middle">RoIS method catalog (JSON-RPC 2.0)</text>
 
   <rect class="adpt" x="530" y="228" width="120" height="44" rx="6"/>
   <text class="lbl" x="590" y="247" text-anchor="middle">Adapter</text>
-  <text class="small" x="590" y="263" text-anchor="middle">sub HRI Engine</text>
+  <text class="small" x="590" y="263" text-anchor="middle">Sub HRI Engine</text>
   <rect class="adpt" x="660" y="228" width="120" height="44" rx="6"/>
   <text class="lbl" x="720" y="247" text-anchor="middle">Adapter</text>
-  <text class="small" x="720" y="263" text-anchor="middle">sub HRI Engine</text>
+  <text class="small" x="720" y="263" text-anchor="middle">Sub HRI Engine</text>
   <rect class="adpt" x="790" y="228" width="120" height="44" rx="6"/>
   <text class="lbl" x="850" y="247" text-anchor="middle">Adapter</text>
-  <text class="small" x="850" y="263" text-anchor="middle">sub HRI Engine</text>
+  <text class="small" x="850" y="263" text-anchor="middle">Sub HRI Engine</text>
 
   <rect class="host" x="530" y="286" width="120" height="40" rx="6"/>
   <text class="lbl" x="590" y="311" text-anchor="middle">Physical robot</text>

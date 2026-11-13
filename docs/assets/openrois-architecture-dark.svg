@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 612" width="960" height="612" role="img" aria-labelledby="t d">
   <title id="t">OpenRoIS architecture</title>
-  <desc id="d">Four rows. Service Application: a web application with the JavaScript SDK, an AI agent with the MCP server and the Python SDK, and a Unity application with the Unity SDK. Main HRI Engine: the gateway process, a WebSocket server, with the main engine and its child engine registry, a profile aggregator, a component allocator for bind and release, and authentication, which is planned and on the roadmap. Sub HRI Engines: one adapter each for a physical robot, a virtual avatar, which is planned, and a digital service, each with a sub engine and a component registry. Implementation Layer: a Reachy Mini, physical or simulated, a Unity runtime, which is planned, and cloud services. Service Applications reach the gateway over WebSocket with JSON-RPC 2.0 and the RoIS method catalog in the system, command, query and event namespaces. The gateway reaches adapters over the same transport with the same RoIS method catalog, the methods a client sends. Adapters reach their hosts over an SDK, IPC, or gRPC. Media flows out of band on a separate data plane, outside RoIS scope. At build time, Python Pydantic models are exported to JSON Schema and generated into C# and TypeScript types, cross-checked against the normative RoIS files.</desc>
+  <desc id="d">Four rows. Service Application: a web application with the JavaScript SDK, an AI agent with the MCP server and the Python SDK, and a Unity application with the Unity SDK. Main HRI Engine: the gateway process, a WebSocket server, with the main engine and its child engine registry, a profile aggregator, a component allocator for bind and release, and authentication at the WebSocket upgrade. Sub HRI Engines: one adapter process each, with a sub engine and a component registry, serving PersonDetection, Navigation and more, Reaction, SpeechSynthesis and more, and SpeechRecognition and more. Implementation Layer: physical robots such as the Reachy Mini and the Kachaka, virtual avatars such as Unity and Unreal Engine, and digital services such as Whisper and an LLM. Service Applications reach the gateway over WebSocket with JSON-RPC 2.0 and the RoIS method catalog in the system, command, query and event namespaces. The gateway reaches adapters over the same transport with the same RoIS method catalog, the methods a client sends. Adapters reach their hosts over an SDK, gRPC, or IPC. Media flows out of band on a separate data plane, outside RoIS scope. At build time, Python Pydantic models are exported to JSON Schema and generated into C# and TypeScript types, cross-checked against the normative RoIS files.</desc>
 <style>
   .bt { font: 600 13px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f3864; }
   .bs { font: 400 11.5px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #3d4b5c; }
@@ -40,16 +40,16 @@
 <text x="187" y="144" class="hdr">Gateway process (WebSocket server)</text>
 <rect x="186" y="156" width="164" height="52" rx="6" fill="#e2f0d9" stroke="#4e7a38" stroke-width="1.2"/>
 <text x="268.0" y="179.0" text-anchor="middle" class="bt" style="font-size:13px">Engine (main)</text>
-<text x="268.0" y="195.0" text-anchor="middle" class="bs">child engine registry</text>
+<text x="268.0" y="195.0" text-anchor="middle" class="bs">Child engine registry</text>
 <rect x="364" y="156" width="164" height="52" rx="6" fill="#e2f0d9" stroke="#4e7a38" stroke-width="1.2"/>
 <text x="446.0" y="179.0" text-anchor="middle" class="bt" style="font-size:13px">Profile aggregator</text>
-<text x="446.0" y="195.0" text-anchor="middle" class="bs">one engine profile</text>
+<text x="446.0" y="195.0" text-anchor="middle" class="bs">One engine profile</text>
 <rect x="542" y="156" width="164" height="52" rx="6" fill="#e2f0d9" stroke="#4e7a38" stroke-width="1.2"/>
 <text x="624.0" y="179.0" text-anchor="middle" class="bt" style="font-size:13px">Component allocator</text>
-<text x="624.0" y="195.0" text-anchor="middle" class="bs">bind, release</text>
+<text x="624.0" y="195.0" text-anchor="middle" class="bs"><tspan class="bsm">bind</tspan>, <tspan class="bsm">release</tspan></text>
 <rect x="720" y="156" width="164" height="52" rx="6" fill="#e2f0d9" stroke="#4e7a38" stroke-width="1.2"/>
-<text x="802.0" y="179.0" text-anchor="middle" class="bt" style="font-size:13px">Auth (planned)</text>
-<text x="802.0" y="195.0" text-anchor="middle" class="bs">on the roadmap</text>
+<text x="802.0" y="179.0" text-anchor="middle" class="bt" style="font-size:13px">Authentication</text>
+<text x="802.0" y="195.0" text-anchor="middle" class="bs">At the WebSocket upgrade</text>
 <line x1="300" y1="224" x2="300" y2="263" stroke="#8fb8e0" stroke-width="1.6"/>
 <path d="M295,262 L300,270 L305,262 Z" fill="#8fb8e0"/>
 <line x1="810" y1="224" x2="810" y2="263" stroke="#8fb8e0" stroke-width="1.6"/>
@@ -60,33 +60,33 @@
 <text x="150" y="316.5" text-anchor="end" class="role">Sub</text>
 <text x="150" y="331.5" text-anchor="end" class="role">HRI Engines</text>
 <rect x="170" y="270" width="230" height="100" rx="9" fill="none" stroke="#46576b" stroke-width="1" stroke-dasharray="4 3"/>
-<rect x="182" y="262" width="92" height="16" fill="#0f1620"/>
-<text x="187" y="274" class="hdr">Physical robot</text>
+<rect x="182" y="262" width="98" height="16" fill="#0f1620"/>
+<text x="187" y="274" class="hdr">Adapter process</text>
 <rect x="182" y="284" width="206" height="42" rx="6" fill="#fff2cc" stroke="#a6821a" stroke-width="1.2"/>
 <text x="285.0" y="302.0" text-anchor="middle" class="bt" style="font-size:13px">Engine (sub)</text>
-<text x="285.0" y="318.0" text-anchor="middle" class="bs">component registry</text>
+<text x="285.0" y="318.0" text-anchor="middle" class="bs">Component registry</text>
 <rect x="182" y="332" width="206" height="28" rx="6" fill="#fff2cc" stroke="#a6821a" stroke-width="1.2"/>
-<text x="285.0" y="350.5" text-anchor="middle" class="bs">PersonDetection, Reaction, …</text>
+<text x="285.0" y="350.5" text-anchor="middle" class="bs">PersonDetection, Navigation, …</text>
 <rect x="420" y="270" width="230" height="100" rx="9" fill="none" stroke="#46576b" stroke-width="1" stroke-dasharray="4 3"/>
-<rect x="432" y="262" width="142" height="16" fill="#0f1620"/>
-<text x="437" y="274" class="hdr">Virtual avatar (planned)</text>
+<rect x="432" y="262" width="98" height="16" fill="#0f1620"/>
+<text x="437" y="274" class="hdr">Adapter process</text>
 <rect x="432" y="284" width="206" height="42" rx="6" fill="#fff2cc" stroke="#a6821a" stroke-width="1.2"/>
 <text x="535.0" y="302.0" text-anchor="middle" class="bt" style="font-size:13px">Engine (sub)</text>
-<text x="535.0" y="318.0" text-anchor="middle" class="bs">component registry</text>
+<text x="535.0" y="318.0" text-anchor="middle" class="bs">Component registry</text>
 <rect x="432" y="332" width="206" height="28" rx="6" fill="#fff2cc" stroke="#a6821a" stroke-width="1.2"/>
 <text x="535.0" y="350.5" text-anchor="middle" class="bs">Reaction, SpeechSynthesis, …</text>
 <rect x="670" y="270" width="230" height="100" rx="9" fill="none" stroke="#46576b" stroke-width="1" stroke-dasharray="4 3"/>
-<rect x="682" y="262" width="90" height="16" fill="#0f1620"/>
-<text x="687" y="274" class="hdr">Digital service</text>
+<rect x="682" y="262" width="98" height="16" fill="#0f1620"/>
+<text x="687" y="274" class="hdr">Adapter process</text>
 <rect x="682" y="284" width="206" height="42" rx="6" fill="#fff2cc" stroke="#a6821a" stroke-width="1.2"/>
 <text x="785.0" y="302.0" text-anchor="middle" class="bt" style="font-size:13px">Engine (sub)</text>
-<text x="785.0" y="318.0" text-anchor="middle" class="bs">component registry</text>
+<text x="785.0" y="318.0" text-anchor="middle" class="bs">Component registry</text>
 <rect x="682" y="332" width="206" height="28" rx="6" fill="#fff2cc" stroke="#a6821a" stroke-width="1.2"/>
 <text x="785.0" y="350.5" text-anchor="middle" class="bs">SpeechRecognition, …</text>
 <line x1="285.0" y1="370" x2="285.0" y2="401" stroke="#8fb8e0" stroke-width="1.6"/>
 <path d="M280.0,400 L285.0,408 L290.0,400 Z" fill="#8fb8e0"/>
-<rect x="267" y="381" width="36" height="16" rx="3" fill="#0f1620"/>
-<text x="285.0" y="393" text-anchor="middle" class="wire2" style="fill:#aebbca">SDK</text>
+<rect x="252" y="381" width="66" height="16" rx="3" fill="#0f1620"/>
+<text x="285.0" y="393" text-anchor="middle" class="wire2" style="fill:#aebbca">SDK, gRPC</text>
 <line x1="535.0" y1="370" x2="535.0" y2="401" stroke="#8fb8e0" stroke-width="1.6"/>
 <path d="M530.0,400 L535.0,408 L540.0,400 Z" fill="#8fb8e0"/>
 <rect x="518.4" y="381" width="33.2" height="16" rx="3" fill="#0f1620"/>
@@ -98,34 +98,34 @@
 <text x="150" y="427.5" text-anchor="end" class="role">Implementation</text>
 <text x="150" y="442.5" text-anchor="end" class="role">Layer</text>
 <rect x="170" y="408" width="230" height="46" rx="6" fill="#ededed" stroke="#707070" stroke-width="1.2"/>
-<text x="285.0" y="428.0" text-anchor="middle" class="bt" style="font-size:13px">Reachy Mini</text>
-<text x="285.0" y="444.0" text-anchor="middle" class="bs">physical or simulated</text>
+<text x="285.0" y="428.0" text-anchor="middle" class="bt" style="font-size:13px">Physical robots</text>
+<text x="285.0" y="444.0" text-anchor="middle" class="bs">Reachy Mini, Kachaka</text>
 <rect x="420" y="408" width="230" height="46" rx="6" fill="#ededed" stroke="#707070" stroke-width="1.2"/>
-<text x="535.0" y="428.0" text-anchor="middle" class="bt" style="font-size:13px">Unity runtime</text>
-<text x="535.0" y="444.0" text-anchor="middle" class="bs">planned</text>
+<text x="535.0" y="428.0" text-anchor="middle" class="bt" style="font-size:13px">Virtual avatars</text>
+<text x="535.0" y="444.0" text-anchor="middle" class="bs">Unity, Unreal Engine</text>
 <rect x="670" y="408" width="230" height="46" rx="6" fill="#ededed" stroke="#707070" stroke-width="1.2"/>
-<text x="785.0" y="428.0" text-anchor="middle" class="bt" style="font-size:13px">Cloud services</text>
+<text x="785.0" y="428.0" text-anchor="middle" class="bt" style="font-size:13px">Digital services</text>
 <text x="785.0" y="444.0" text-anchor="middle" class="bs">Whisper, LLM</text>
 <path d="M900,431 H928 V63 H907" fill="none" stroke="#ff7b72" stroke-width="1.6" stroke-dasharray="6 4"/>
 <path d="M908,58 L900,63 L908,68 Z" fill="#ff7b72"/>
 <path d="M907,426 L915,431 L907,436 Z" fill="#ff7b72" transform="translate(-7,0)"/>
-<text class="data" transform="translate(944,247) rotate(90)" text-anchor="middle">media out of band, outside RoIS scope</text>
+<text class="data" transform="translate(944,247) rotate(90)" text-anchor="middle">Media out of band, outside RoIS scope</text>
 <text x="150" y="514.0" text-anchor="end" class="role">Build time</text>
 <rect x="170" y="482" width="730" height="58" rx="9" fill="none" stroke="#46576b" stroke-width="1" stroke-dasharray="4 3"/>
-<rect x="182" y="474" width="462" height="16" fill="#0f1620"/>
-<text x="187" y="486" class="hdr">Interface type pipeline, cross-checked against the normative RoIS files</text>
+<rect x="182" y="474" width="520" height="16" fill="#0f1620"/>
+<text x="187" y="486" class="hdr">Interface type pipeline (build time), cross-checked against the normative RoIS files</text>
 <rect x="186" y="496" width="196" height="32" rx="6" fill="#e2f0d9" stroke="#4e7a38" stroke-width="1.2"/>
 <text x="284.0" y="516.5" text-anchor="middle" class="bs">Python Pydantic models (authored)</text>
 <rect x="438" y="496" width="194" height="32" rx="6" fill="#e2f0d9" stroke="#4e7a38" stroke-width="1.2"/>
 <text x="535.0" y="516.5" text-anchor="middle" class="bs">JSON Schema (canonical)</text>
 <rect x="688" y="496" width="196" height="32" rx="6" fill="#deebf7" stroke="#2e5c8a" stroke-width="1.2" stroke-dasharray="5 3"/>
-<text x="786.0" y="516.5" text-anchor="middle" class="bs">C# and TypeScript types (generated)</text>
+<text x="786.0" y="516.5" text-anchor="middle" class="bs" style="font-size:10.5px">C# and TypeScript types (generated)</text>
 <line x1="382" y1="512" x2="431" y2="512" stroke="#8fb8e0" stroke-width="1.4"/>
 <path d="M430,507 L438,512 L430,517 Z" fill="#8fb8e0"/>
 <line x1="632" y1="512" x2="681" y2="512" stroke="#8fb8e0" stroke-width="1.4"/>
 <path d="M680,507 L688,512 L680,517 Z" fill="#8fb8e0"/>
-<text x="410" y="531" text-anchor="middle" class="wire2" style="fill:#aebbca">export</text>
-<text x="660" y="531" text-anchor="middle" class="wire2" style="fill:#aebbca">generate</text>
+<text x="410" y="531" text-anchor="middle" class="wire2" style="fill:#aebbca">Export</text>
+<text x="660" y="531" text-anchor="middle" class="wire2" style="fill:#aebbca">Generate</text>
 <rect x="170" y="562" width="18" height="14" rx="3" fill="#deebf7" stroke="#2e5c8a" stroke-width="1.1"/>
 <text x="195" y="573.5" class="legend">Service Application</text>
 <rect x="331.0" y="562" width="18" height="14" rx="3" fill="#e2f0d9" stroke="#4e7a38" stroke-width="1.1"/>

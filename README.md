@@ -256,8 +256,10 @@ Each robot's components live in its adapter repository, not in this one. The ref
 adapter is [openrois-adapter-reachy-mini](https://github.com/openrois/openrois-adapter-reachy-mini),
 which serves a Pollen Robotics Reachy Mini, real or simulated, with PersonDetection,
 Reaction, SpeechSynthesis and SystemInformation from its
-`openrois.components.reachy_mini` package. Coarobo maintains an adapter for the Kachaka
-robot.
+`openrois.components.reachy_mini` package. A second adapter,
+[openrois-adapter-kachaka](https://github.com/openrois/openrois-adapter-kachaka), serves a
+Preferred Robotics Kachaka with Move, Navigation, PersonDetection and SystemInformation
+from its `openrois.components.kachaka` package, over the gRPC API of the robot.
 
 ## Project Status
 
@@ -268,10 +270,10 @@ makes no conformance claim. The rest of the RoIS surface is being built in the o
 
 | Milestone | Status | What it delivers |
 |-----------|--------|------------------|
-| **`v0.1.0`** (November 2026) | ![Released](https://img.shields.io/badge/Released-2E7D32) | Every package at `0.1.0`, released together. A physical Reachy Mini and a simulated one behind one gateway, driven by one application and by an AI agent |
+| **`v0.1.0`** (November 2026) | ![Released](https://img.shields.io/badge/Released-2E7D32) | Every package at `0.1.0`, released together. A physical Reachy Mini and a physical Kachaka behind one gateway, driven by a scripted application, the OpenRoIS Inspector, and an AI agent. A physical and a simulated Reachy Mini behind one gateway under one application |
 | **`v0.2`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | RoIS conformance: components declared by XML profiles at run time, the types checked against the normative RoIS files on every change, a test suite that adapter authors run against their own adapter, and a conformance claim. Applications and engines that recover when a gateway or an adapter restarts |
 | **`v0.3`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | A physical robot and a virtual avatar behind one gateway, controlled by one application that does not know which is which |
-| **`v0.4`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | Authentication at the WebSocket upgrade and authorization per RoIS operation. Until then, a reverse proxy in front of the gateway terminates TLS ([SECURITY.md](SECURITY.md)). An adapter for a second robot |
+| **`v0.4`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | Authentication at the WebSocket upgrade and authorization per RoIS operation. Until then, a reverse proxy in front of the gateway terminates TLS ([SECURITY.md](SECURITY.md)) |
 | **`v0.5`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | Media for the AudioStreaming and VideoStreaming components. OpenRoIS does not prescribe a media transport: a streaming component returns a descriptor of its stream, and an optional WebRTC integration serves deployments that have none |
 | **`v1.0`** | ![Planned](https://img.shields.io/badge/Planned-6E7781) | A stable API, and the first release with semantic versioning guarantees. It stands on the milestones above: the conformance claim, authentication, and reference adapters for two robots and a virtual avatar, on Linux, Windows and macOS |
 | Beyond `v1.0` | ![Beyond 1.0](https://img.shields.io/badge/Beyond%201.0-8B98A8) | The remaining basic RoIS HRI Components, each released when it is ready. A registry of community components and adapters, and a Hub that shows operators the adapters, sessions and health of a deployment |
@@ -361,7 +363,7 @@ in the proceedings, please cite its preprint on arXiv,
                    El Hafi, Lotfi},
   title         = {{OpenRoIS}: A Community-Driven Open-Source Middleware Implementing
                    the Robotic Interaction Service ({RoIS}) Framework for Physical
-                   Robots, Virtual Avatars, and {AI} Agents},
+                   Robots, Virtual Avatars, and Digital Services},
   year          = {2026},
   eprint        = {2609.21178},
   archivePrefix = {arXiv},
