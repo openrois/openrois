@@ -25,7 +25,8 @@ What exists today:
 
 Each robot's components live in its adapter repository, not here. The reference example
 is `openrois.components.reachy_mini` in openrois-adapter-reachy-mini (openrois
-organization). The Kachaka components live in the Kachaka adapter maintained by Coarobo.
+organization). The Kachaka components live in `openrois.components.kachaka`, in
+openrois-adapter-kachaka (openrois organization).
 
 See [docs/roadmap.md](docs/roadmap.md) for what comes next, and
 [openrois.org](https://openrois.org/) for the living documentation.

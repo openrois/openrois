@@ -634,8 +634,9 @@ The monorepo ships the component SDK (`openrois-components-core`). Each robot's
 components live in its adapter repository. The reference example is
 `openrois.components.reachy_mini`, from
 [openrois-adapter-reachy-mini](https://github.com/openrois/openrois-adapter-reachy-mini)
-in the openrois organization. The Kachaka components live in the Kachaka adapter of the
-Coarobo organization.
+in the openrois organization. The Kachaka components live in `openrois.components.kachaka`,
+from [openrois-adapter-kachaka](https://github.com/openrois/openrois-adapter-kachaka), also
+in the openrois organization.
 
 A **host** is anything that provides components: a robot, an avatar process, or a
 bank of services. Each host exposes one **sub HRI Engine** plus its components. Most
